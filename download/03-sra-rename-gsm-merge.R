@@ -99,12 +99,19 @@ gsm |>
   ) |>
   dplyr::group_by(experiment_name) |>
   tidyr::nest() |>
-  dplyr::ungroup() |>
+  dplyr::ungroup() ->
+  gsm_nest
+
+gsm_nest |>
   dplyr::mutate(
     rename = purrr::map2(
       .x = experiment_name,
       .y = data,
       .f = \(.x, .y) {
+        # .x <- gsm_nest$experiment_name[[1]]
+        # .y <- gsm_nest$data[[1]]
+
+
         gsmdir <- file.path(
           datadir,
           .x
@@ -116,22 +123,49 @@ gsm |>
           recursive = T
         )
 
-        .x
+
         .y |>
           tibble::rowid_to_column() |>
           dplyr::mutate(
-            rename = purrr::map(
+            rename = purrr::map2(
               .x = rowid,
               .y = srrdir,
               .f = \(.rowid, .srrdir) {
+                # .rowid <- a$rowid[[1]]
+                # .srrdir <- a$srrdir[[1]]
+
                 .srrid <- basename(.srrdir)
-                .from <- file.path(
+                .from_R1 <- file.path(
                   .srrdir,
-                  "{.srrid}_1.fastq.gz"
+                  "{.srrid}_1.fastq" |> glue::glue()
                 )
+                .to_R1 <- file.path(
+                  gsmdir,
+                  "{.x}_S1_L00{.rowid}_R1_001.fastq" |> glue::glue()
+                )
+                if(file.exists(.to_R1)) {
+                  file.remove(.to_R1)
+                }
                 file.symlink(
-                  from =
+                  from = .from_R1,
+                  to = .to_R1
                 )
+                .from_R2 <- file.path(
+                  .srrdir,
+                  "{.srrid}_2.fastq" |> glue::glue()
+                )
+                .to_R2 <- file.path(
+                  gsmdir,
+                  "{.x}_S1_L00{.rowid}_R2_001.fastq" |> glue::glue()
+                )
+                if(file.exists(.to_R2)) {
+                  file.remove(.to_R2)
+                }
+                file.symlink(
+                  from = .from_R2,
+                  to = .to_R2
+                )
+
               }
             )
           )
@@ -139,6 +173,7 @@ gsm |>
       }
     )
   )
+
 
 # footer ------------------------------------------------------------------
 
