@@ -25,7 +25,7 @@ library(logger)
 # %: hash
 # default: default value specified here.
 
-gseid <- "GSE163668"
+gseid <- "GSE226602"
 
 verbose <- FALSE
 spec <- "

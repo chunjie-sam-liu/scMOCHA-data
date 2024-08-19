@@ -170,7 +170,7 @@ gsm |>
           "nohup java -Dconfig.file=/home/liuc9/github/scMOCHA/config/slurm.conf \\",
           "-jar /home/liuc9/tools/cromwell-78.jar \\",
           "run /home/liuc9/github/scMOCHA/scMOCHA.wdl \\",
-          "-i {.jsonfile} 1>{.logfile} 2>{.errfile} &" |> glue::glue()
+          "-i {.jsonfile} 1>{.logfile} 2>{.errfile} " |> glue::glue()
         )
 
         readr::write_lines(
@@ -206,7 +206,54 @@ readr::write_lines(
   )
 )
 
-# footer ------------------------------------------------------------------
+# create job array --------------------------------------------------------
+
+dir.create(
+  path = file.path(
+    datadir, "errout"
+  ),
+  showWarnings = F,
+  recursive = T
+)
+
+slrm_header <- c(
+  "#!/usr/bin/env bash",
+  "# @AUTHOR: Chun-Jie Liu",
+  "# @CONTACT: chunjie.sam.liu.at.gmail.com",
+  "# @DATE: {lubridate::now()}" |> glue::glue(),
+  "",
+  "#SBATCH --job-name=02.{gseid}.runwdl" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl.vscode-terminal:/565d84ffd6ee234e22ec6d0b37934647/7_%A-%a.out" |> glue::glue(),
+  "#SBATCH --error={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
+  "#SBATCH --cpus-per-task=10",
+  "#SBATCH --mem=50G",
+  "#SBATCH --array=1-{length(conf_scmocha$scmocha_sh)}" |> glue::glue(),
+  "#SBATCH --time=720:00:00",
+  "",
+  ""
+)
+
+slrm_array <- c(
+  "input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |> glue::glue(),
+  "",
+  "",
+  "index=$((SLURM_ARRAY_TASK_ID - 1))",
+  'file="${input_files[$index]}"',
+  "",
+  "",
+  'srun bash "${file}"'
+)
+
+readr::write_lines(
+  c(slrm_header, slrm_array),
+  file = file.path(
+    datadir,
+    "02.{gseid}.runwdl.slrm" |> glue::glue()
+  )
+)
+
+
+249 * 0.7# footer ------------------------------------------------------------------
 
 # future::plan(future::sequential)
 
