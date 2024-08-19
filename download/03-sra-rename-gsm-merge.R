@@ -118,8 +118,22 @@ gsm |>
 
         .x
         .y |>
+          tibble::rowid_to_column() |>
           dplyr::mutate(
-            sym
+            rename = purrr::map(
+              .x = rowid,
+              .y = srrdir,
+              .f = \(.rowid, .srrdir) {
+                .srrid <- basename(.srrdir)
+                .from <- file.path(
+                  .srrdir,
+                  "{.srrid}_1.fastq.gz"
+                )
+                file.symlink(
+                  from =
+                )
+              }
+            )
           )
 
       }
