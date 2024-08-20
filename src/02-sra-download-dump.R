@@ -61,6 +61,7 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
+log_warn(gseid)
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 datadir <- file.path(
@@ -146,11 +147,11 @@ srafiles |>
       .f = \(.x, .y) {
         .srrid <- basename(.x)
 
-        dir.create(
-          path = .x,
-          showWarnings = F,
-          recursive = T
-        )
+        # dir.create(
+        #   path = .x,
+        #   showWarnings = F,
+        #   recursive = T
+        # )
 
         cmd_dump <- c(
           "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x}" |> glue::glue()
