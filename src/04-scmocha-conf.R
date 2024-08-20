@@ -306,7 +306,7 @@ inputs_json <- list(
   "scMOCHABatch.reso" = 0.1,
   "scMOCHABatch.cellrefname" = "pbmcref",
   "scMOCHABatch.celllevel" = "celltype.l1",
-  "scMOCHABatch.memory" = "50 GB",
+  "scMOCHABatch.memory" = "50GB",
   "scMOCHABatch.boot_disk_size_gb" = "12",
   "scMOCHABatch.disk_space" = "50",
   "scMOCHABatch.cpu" = "10",
