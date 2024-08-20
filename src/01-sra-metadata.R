@@ -114,7 +114,7 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # body --------------------------------------------------------------------
 
 
-
+log_warn(gseid)
 datadir <- file.path(
   basedir, gseid
 )
