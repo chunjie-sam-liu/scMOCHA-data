@@ -63,7 +63,7 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
-
+log_warn(gseid)
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 datadir <- file.path(
   basedir, gseid
