@@ -20,7 +20,7 @@ library(logger)
 
 # args --------------------------------------------------------------------
 
-gseid <- "GSE163668"
+gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -103,41 +103,28 @@ sratable |>
   ) |>
   dplyr::mutate(
     prefetch = "prefetch --max-size 50G {srrid} --output-directory {datadir}" |> glue::glue()
-  ) |>
-  dplyr::mutate(
-    srafile = file.path(
-      srrdir,
-      glue::glue("{srrid}.sralite")
-    )
-  ) |>
-  dplyr::mutate(
-    srafile_exist = file.exists(srafile)
   ) ->
-  srafiles
+  sratable_prefetch
 
 readr::write_lines(
-  glue::glue("{ srafiles$prefetch} &"),
+  glue::glue("{ sratable_prefetch$prefetch} &"),
   file = file.path(
     datadir,
     "00.{gseid}.prefetch.sh" |> glue::glue()
   )
 )
 
-cmd_slrm <- c(
-  "#!/usr/bin/env bash",
-  "# @AUTHOR: Chun-Jie Liu",
-  "# @CONTACT: chunjie.sam.liu.at.gmail.com",
-  "# @DATE: {lubridate::now()}" |> glue::glue(),
-  "",
-  "#SBATCH --signal=USR2",
-  "#SBATCH --ntasks=1",
-  "#SBATCH --cpus-per-task=10",
-  "#SBATCH --mem=50G",
-  "#SBATCH --time=720:00:00",
-  "#SBATCH --output={datadir}/01.{gseid}.dump.job.%j" |> glue::glue(),
-  "#module load R/4.1.0"
-)
-
+sratable_prefetch |>
+  dplyr::mutate(
+    srafile = file.path(
+      srrdir,
+      glue::glue("{srrid}.sra")
+    )
+  ) |>
+  dplyr::mutate(
+    srafile_exist = file.exists(srafile)
+  ) ->
+  srafiles
 
 srafiles |>
   dplyr::mutate(
@@ -146,47 +133,34 @@ srafiles |>
       .y = srafile,
       .f = \(.x, .y) {
         .srrid <- basename(.x)
-
-        # dir.create(
-        #   path = .x,
-        #   showWarnings = F,
-        #   recursive = T
-        # )
-
         cmd_dump <- c(
           "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x}" |> glue::glue()
         )
 
         cmd <- c(
-          # cmd_slrm,
           cmd_dump
         )
-
-        # dump_slrm_file <- file.path(
-        #   .x,
-        #   "dump_{.srrid}.slrm" |> glue::glue()
-        # )
-        # readr::write_lines(
-        #   cmd,
-        #   file = dump_slrm_file
-        # )
-
         cmd
       }
     )
   ) ->
   srafile_dump
 
-readr::write_lines(
-  c(
-    cmd_slrm,
-    srafile_dump$dump_cmd
-  ),
+# save to runfile ---------------------------------------------------------
+
+
+data.table::fwrite(
+  x = srafile_dump,
   file = file.path(
     datadir,
-    "01.{gseid}.dump.slrm" |> glue::glue()
+    "{gseid}.runfile.csv" |>glue::glue()
   )
 )
+
+
+# dump sh -----------------------------------------------------------------
+
+
 
 readr::write_lines(
   glue::glue("{ srafile_dump$dump_cmd} &"),
@@ -196,13 +170,57 @@ readr::write_lines(
   )
 )
 
-data.table::fwrite(
-  x = srafile_dump,
+# dump slrm ---------------------------------------------------------------
+
+
+dir.create(
+  file.path(
+    datadir,
+    "errout"
+  ),
+  showWarnings = F,
+  recursive = T
+)
+
+slrm_header <- c(
+  "#!/usr/bin/env bash",
+  "# @AUTHOR: Chun-Jie Liu",
+  "# @CONTACT: chunjie.sam.liu.at.gmail.com",
+  "# @DATE: {lubridate::now()}" |> glue::glue(),
+  "",
+  "#SBATCH --job-name=01.{gseid}.dump" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/01.{gseid}.dump._%A-%a.out" |> glue::glue(),
+  "#SBATCH --error={datadir}/errout/01.{gseid}.dump._%A-%a.err" |> glue::glue(),
+  "#SBATCH --cpus-per-task=10",
+  "#SBATCH --mem=50G",
+  "#SBATCH --array=1-{length(srafile_dump$dump_cmd)}" |> glue::glue(),
+  "#SBATCH --time=720:00:00",
+  "",
+  ""
+)
+
+slrm_array <- c(
+  "input_files=($(sed 's/ &//' {datadir}/01.{gseid}.dump.sh))" |> glue::glue(),
+  "",
+  "",
+  "index=$((SLURM_ARRAY_TASK_ID - 1))",
+  'file="${input_files[$index]}"',
+  "",
+  "",
+  'srun "${file}"'
+)
+
+readr::write_lines(
+  c(slrm_header, slrm_array),
   file = file.path(
     datadir,
-    "{gseid}.runfile.csv" |>glue::glue()
+    "01.{gseid}.dump.slrm" |> glue::glue()
   )
 )
+
+
+
+
 
 
 

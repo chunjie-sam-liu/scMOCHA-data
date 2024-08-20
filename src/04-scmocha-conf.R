@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -131,8 +131,8 @@ gsm |>
           "scMOCHA.perlscript" = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl",
           "scMOCHA.jar_path" = "/scr1/users/liuc9/tools/haplogrep3",
           "scMOCHA.sqlite_path" = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
-          "scMOCHA.nFeature_RNA_min" =  500,
-          "scMOCHA.nFeature_RNA_max" =  8000,
+          "scMOCHA.nFeature_RNA_min" = 500,
+          "scMOCHA.nFeature_RNA_max" = 8000,
           "scMOCHA.x10_version" = "v3"
         )
 
@@ -183,12 +183,11 @@ gsm |>
           srrdir = .ydir,
           scmocha_sh = runwdl_sh_file
         )
-
       }
     )
   ) |>
   tidyr::unnest(cols = scmocha) ->
-  conf_scmocha
+conf_scmocha
 
 data.table::fwrite(
   x = conf_scmocha,
@@ -223,7 +222,7 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=02.{gseid}.runwdl" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl.vscode-terminal:/565d84ffd6ee234e22ec6d0b37934647/7_%A-%a.out" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl._%A-%a.out" |> glue::glue(),
   "#SBATCH --error={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
   "#SBATCH --cpus-per-task=10",
   "#SBATCH --mem=50G",
@@ -289,17 +288,14 @@ inputs_json <- list(
     datadir,
     "{gseid}.srrid.list" |> glue::glue()
   ),
-
   "scMOCHABatch.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
   "scMOCHABatch.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
   "scMOCHABatch.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
   "scMOCHABatch.mt_features_gmoviz" = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
-
   "scMOCHABatch.output_dir_list" = file.path(
     datadir,
     "{gseid}.srrid.list" |> glue::glue()
   ),
-
   "scMOCHABatch.chrM" = "MT",
   "scMOCHABatch.low_coverage_threshold" = 10,
   "scMOCHABatch.npcs" = 10,
@@ -318,8 +314,8 @@ inputs_json <- list(
   "scMOCHABatch.perlscript" = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl",
   "scMOCHABatch.jar_path" = "/scr1/users/liuc9/tools/haplogrep3",
   "scMOCHABatch.sqlite_path" = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
-  "scMOCHABatch.nFeature_RNA_min" =  500,
-  "scMOCHABatch.nFeature_RNA_max" =  8000,
+  "scMOCHABatch.nFeature_RNA_min" = 500,
+  "scMOCHABatch.nFeature_RNA_max" = 8000,
   "scMOCHABatch.x10_version" = "v3"
 )
 
