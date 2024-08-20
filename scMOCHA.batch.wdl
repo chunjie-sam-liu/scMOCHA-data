@@ -5,16 +5,22 @@ workflow scMOCHABatch {
   String version = "v0.2.1"
 
   # Cell ranger inputs
-  Array[String] output_ids
-  Array[String] fastqss
-  Array[String] sample_ids
+  File output_id_list
+  Array[String] output_ids = read_lines(output_id_list)
+
+  File fastqs_list
+  Array[String] fastqss = read_lines(fastqs_list)
+
+  File sample_id_list
+  Array[String] sample_ids = read_lines(sample_id_list)
 
   String transcriptome = "/home/liuc9/data/refdata/mgatk_index/Human"
   File rCRS = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta"
   File mt_exons_df = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
   File mt_features_gmoviz = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz"
 
-  Array[String] output_dirs
+  File output_dir_list
+  Array[String] output_dirs = read_lines(output_dir_list)
 
   # mgatk inputs
   String chrM = "MT"

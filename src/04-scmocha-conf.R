@@ -234,7 +234,8 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
-  "input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |> glue::glue(),
+  "#input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |> glue::glue(),
+  "input_files=($(sed 's/bash \\(.*\\) &/\\1/' {datadir}/02.{gseid}.runwdl.sh))" |> glue::glue(),
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -248,12 +249,125 @@ readr::write_lines(
   c(slrm_header, slrm_array),
   file = file.path(
     datadir,
-    "02.{gseid}.runwdl.slrm" |> glue::glue()
+    "02.1.{gseid}.runwdl.slrm" |> glue::glue()
   )
 )
 
 
-249 * 0.7# footer ------------------------------------------------------------------
+
+# for batch scMOCHA solving database conflicts ----------------------------
+
+# input srr id
+readr::write_lines(
+  x = conf_scmocha$srrid,
+  file = file.path(
+    datadir,
+    "{gseid}.srrid.list" |> glue::glue()
+  )
+)
+
+# input srr dir
+readr::write_lines(
+  x = conf_scmocha$srrdir,
+  file = file.path(
+    datadir,
+    "{gseid}.srrdir.list" |> glue::glue()
+  )
+)
+
+
+inputs_json <- list(
+  "scMOCHABatch.output_id_list" = file.path(
+    datadir,
+    "{gseid}.srrid.list" |> glue::glue()
+  ),
+  "scMOCHABatch.fastqs_list" = file.path(
+    datadir,
+    "{gseid}.srrdir.list" |> glue::glue()
+  ),
+  "scMOCHABatch.sample_id_list" = file.path(
+    datadir,
+    "{gseid}.srrid.list" |> glue::glue()
+  ),
+
+  "scMOCHABatch.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
+  "scMOCHABatch.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
+  "scMOCHABatch.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
+  "scMOCHABatch.mt_features_gmoviz" = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
+
+  "scMOCHABatch.output_dir_list" = file.path(
+    datadir,
+    "{gseid}.srrid.list" |> glue::glue()
+  ),
+
+  "scMOCHABatch.chrM" = "MT",
+  "scMOCHABatch.low_coverage_threshold" = 10,
+  "scMOCHABatch.npcs" = 10,
+  "scMOCHABatch.reso" = 0.1,
+  "scMOCHABatch.cellrefname" = "pbmcref",
+  "scMOCHABatch.celllevel" = "celltype.l1",
+  "scMOCHABatch.memory" = "50 GB",
+  "scMOCHABatch.boot_disk_size_gb" = "12",
+  "scMOCHABatch.disk_space" = "50",
+  "scMOCHABatch.cpu" = "10",
+  "scMOCHABatch.scmocha_version" = "latest",
+  "scMOCHABatch.docker" = "chunjiesamliu/scmocha",
+  "scMOCHABatch.partition" = "defq",
+  "scMOCHABatch.account" = "liuc9",
+  "scMOCHABatch.IMAGE" = "/scr1/users/liuc9/sif/scmocha_latest.sif",
+  "scMOCHABatch.perlscript" = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl",
+  "scMOCHABatch.jar_path" = "/scr1/users/liuc9/tools/haplogrep3",
+  "scMOCHABatch.sqlite_path" = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
+  "scMOCHABatch.nFeature_RNA_min" =  500,
+  "scMOCHABatch.nFeature_RNA_max" =  8000,
+  "scMOCHABatch.x10_version" = "v3"
+)
+
+
+inputs_json_file <- file.path(
+  datadir,
+  "02.2.{gseid}.batch.json" |> glue::glue()
+)
+
+errfile <- file.path(
+  datadir,
+  "02.2.{gseid}.batch.err" |> glue::glue()
+)
+logfile <- file.path(
+  datadir,
+  "02.2.{gseid}.batch.log" |> glue::glue()
+)
+
+runwdl_batch_cmd <- c(
+  "#!/usr/bin/env bash",
+  "# @AUTHOR: Chun-Jie Liu",
+  "# @CONTACT: chunjie.sam.liu.at.gmail.com",
+  "# @DATE: {lubridate::now()}" |> glue::glue(),
+  "",
+  "module load Java/15.0.1",
+  "nohup java -Dconfig.file=/home/liuc9/github/scMOCHA/config/slurm.conf \\",
+  "-jar /home/liuc9/tools/cromwell-78.jar \\",
+  "run /home/liuc9/github/scMOCHA-data/scMOCHA.batch.wdl \\",
+  "-i {inputs_json_file} 1>{logfile} 2>{errfile} &" |> glue::glue()
+)
+
+jsonlite::write_json(
+  x = inputs_json,
+  path = inputs_json_file,
+  auto_unbox = TRUE
+)
+
+
+readr::write_lines(
+  x = runwdl_batch_cmd,
+  file = file.path(
+    datadir,
+    "02.2.{gseid}.batch.sh" |> glue::glue()
+  )
+)
+
+
+# 249 * 0.7# footer ------------------------------------------------------------------
 
 # future::plan(future::sequential)
 
