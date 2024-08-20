@@ -25,7 +25,7 @@ library(logger)
 # %: hash
 # default: default value specified here.
 
-gseid <- "GSE226602"
+gseid <- "GSE163668"
 
 verbose <- FALSE
 spec <- "
@@ -131,15 +131,32 @@ dir.create(
 gse <- GEOquery::getGEO(
   GEO = gseid,
   destdir = datadir,
-  GSEMatrix = FALSE
+  GSEMatrix = TRUE
 )
 
-strsplit(
-  x = gse@header$relation[[2]],
-  split = "term=",
-)[[1]][[2]] ->
-  srpid
 
+gse[[1]] |>
+  Biobase::phenoData() |>
+  Biobase::pData() ->
+  gse_pheno
+
+data.table::fwrite(
+  x = gse_pheno,
+  file = file.path(
+    datadir,
+    "{gseid}.pheno.csv" |> glue::glue()
+  )
+)
+
+
+# strsplit(
+#   x = gse@header$relation[[2]],
+#   split = "term=",
+# )[[1]][[2]] ->
+#   srpid
+
+# gse[[1]] |>
+#   Biobase::
 
 
 # sradb -------------------------------------------------------------------
@@ -161,7 +178,7 @@ study_table <- dplyr::tbl(
 )
 
 sra_table |>
-  dplyr::filter(study_accession == srpid) |>
+  dplyr::filter(study_name == gseid) |>
   dplyr::inner_join(study_table, by = "study_accession") |>
   as.data.table() ->
   sra_df
@@ -236,23 +253,6 @@ cleaned_sample_df_sra |>
   )
 
 
-gse <- GEOquery::getGEO(
-  GEO = gseid,
-  destdir = datadir
-)
-
-gse[[1]] |>
-  Biobase::phenoData() |>
-  Biobase::pData() ->
-  gse_pheno
-
-data.table::fwrite(
-  x = gse_pheno,
-  file = file.path(
-    datadir,
-    "{gseid}.pheno.csv" |> glue::glue()
-  )
-)
 
 
 
