@@ -126,6 +126,14 @@ sratable_prefetch |>
   ) ->
   srafiles
 
+readr::write_lines(
+  glue::glue("file {srafiles$srafile}"),
+  file = file.path(
+    datadir,
+    "00.{gseid}.prefetch.check.sh" |> glue::glue()
+  )
+)
+
 srafiles |>
   dplyr::mutate(
     dump_cmd = purrr::map2_chr(
