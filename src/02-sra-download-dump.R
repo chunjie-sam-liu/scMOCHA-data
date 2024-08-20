@@ -82,7 +82,16 @@ sratable <- data.table::fread(
 )
 
 sratable |>
-  dplyr::select(srrid = run_accession) |>
+  dplyr::select(run_accession = Run, experiment_name = `Sample Name`, experiment_accession = Experiment) |>
+  data.table::fwrite(
+    file = file.path(
+      datadir,
+      "{gseid}.metadata.gsm.csv" |> glue::glue()
+    )
+  )
+
+sratable |>
+  dplyr::select(srrid = Run) |>
   dplyr::mutate(
     srrdir = file.path(
       datadir, srrid
