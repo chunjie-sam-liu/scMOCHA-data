@@ -208,14 +208,18 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
-  "input_files=($(sed 's/ &//' {datadir}/01.{gseid}.dump.sh))" |> glue::glue(),
+  "declare -a cmds",
+  "while IFS= read -r line; do",
+  "  line=$(echo ${line}|sed 's/ *&$//')",
+  "  cmds+=(\"${line}\")",
+  "done < \"{datadir}/01.{gseid}.dump.sh\"" |> glue::glue(),
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
-  'file="${input_files[$index]}"',
+  'cmd="${cmds[$index]}"',
   "",
   "",
-  'srun "${file}"'
+  "srun ${cmd}"
 )
 
 readr::write_lines(
