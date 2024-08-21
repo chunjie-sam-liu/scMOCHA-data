@@ -21,7 +21,7 @@ library(logger)
 # args --------------------------------------------------------------------
 
 
-gseid <- "GSE163668"
+gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -58,8 +58,100 @@ log_layout(layout_glue_colors)
 
 # future::plan(future::multisession, workers = 10)
 
+# rename ------------------------------------------------------------------
+
+# https://www.10xgenomics.com/support/single-cell-gene-expression/documentation/steps/sequencing/sequencing-requirements-for-single-cell-3
+
+# v4 r1=28, i7=10, i5=10, r2=90
+# v3/v3.1 r1=28, i7=10, i5=10,r2=90
+# v3/v3.1 r1=28, i7=8, i5=0,r2=91
+# v2, r1=26, i7=8, i5=0, r2=98
+
+rename_code <- c(
+  "28"="R1",
+  "26"="R1",
+  "30"="R1",
+  "10"="I1",
+  "8"="I1",
+  "90"="R2",
+  "91"="R2",
+  "98"="R2",
+  "150"="R2"
+)
+
+rename_code2 <- c(
+
+)
 # function ----------------------------------------------------------------
 
+fn_get_fastq_read_length <- function(.fastq) {
+  # .fastq <- .fastqs$fastq[[1]]
+
+  .line <- readr::read_lines(file = .fastq, n_max = 1)
+  stringr::str_split(.line, "length=", simplify = T)[[2]]
+}
+
+fn_rename <- function(.srrdir) {
+  .fastqs <-
+    tibble::tibble(
+      from = list.files(
+        path = .srrdir,
+        pattern = "fastq$",
+        full.names = T
+      )
+    )
+
+
+  .fastqs |>
+    dplyr::mutate(
+      rl = purrr::map_chr(
+        .x = from,
+        .f = fn_get_fastq_read_length
+      )
+    ) |>
+    dplyr::arrange(rl) ->
+    .fastqs_rl
+
+  # .fastqs_rl |>
+  #   dplyr::mutate(
+  #     read_type = plyr::revalue(
+  #       x = rl,
+  #       replace = rename_code
+  #     )
+  #   ) ->
+  #   .fastqs_rl_rt
+
+  .fastqs_rl |>
+    dplyr::mutate(
+      rl = as.integer(rl)
+    ) |>
+    dplyr::mutate(
+      rt = dplyr::case_when(
+        rl < 25 ~ "I1",
+        rl <= 30 ~ "R1",
+        TRUE ~ "R2"
+      )
+    ) |>
+    dplyr::group_by(rt) |>
+    dplyr::mutate(n = dplyr::n()) |>
+    dplyr::mutate(idx = 1:dplyr::n()) |>
+    dplyr::ungroup() |>
+    tidyr::separate(
+      col = rt,
+      into = c("ir", "irn"),
+      sep = -1,
+      remove = F
+    ) |>
+    dplyr::mutate(read_type = ifelse(
+      n == 1,
+      glue::glue("{ir}{irn}"),
+      glue::glue("{ir}{idx}")
+    )) ->
+    .fastqs_rl_rt
+
+  .fastqs_rl_rt
+
+}
 
 # load data ---------------------------------------------------------------
 
@@ -102,6 +194,7 @@ gsm |>
   dplyr::ungroup() ->
   gsm_nest
 
+
 gsm_nest |>
   dplyr::mutate(
     rename = purrr::map2(
@@ -125,51 +218,50 @@ gsm_nest |>
 
 
         .y |>
-          tibble::rowid_to_column() |>
+          tibble::rowid_to_column() ->
+          .y_idx
+
+        .y_idx |>
           dplyr::mutate(
             rename = purrr::map2(
               .x = rowid,
               .y = srrdir,
               .f = \(.rowid, .srrdir) {
-                # .rowid <- a$rowid[[1]]
-                # .srrdir <- a$srrdir[[1]]
+                # .rowid <- .y_idx$rowid[[1]]
+                # .srrdir <- .y_idx$srrdir[[1]]
 
-                .srrid <- basename(.srrdir)
-                .from_R1 <- file.path(
-                  .srrdir,
-                  "{.srrid}_1.fastq" |> glue::glue()
-                )
-                .to_R1 <- file.path(
-                  gsmdir,
-                  "{.x}_S1_L00{.rowid}_R1_001.fastq" |> glue::glue()
-                )
-                if(file.exists(.to_R1)) {
-                  file.remove(.to_R1)
-                }
-                file.symlink(
-                  from = .from_R1,
-                  to = .to_R1
-                )
-                .from_R2 <- file.path(
-                  .srrdir,
-                  "{.srrid}_2.fastq" |> glue::glue()
-                )
-                .to_R2 <- file.path(
-                  gsmdir,
-                  "{.x}_S1_L00{.rowid}_R2_001.fastq" |> glue::glue()
-                )
-                if(file.exists(.to_R2)) {
-                  file.remove(.to_R2)
-                }
-                file.symlink(
-                  from = .from_R2,
-                  to = .to_R2
-                )
+                .rt <- fn_rename(.srrdir)
 
+                .rt |>
+                  dplyr::mutate(
+                    targetname = "{.x}_S1_L00{.rowid}_{read_type}_001.fastq" |> glue::glue()
+                  ) |>
+                  dplyr::mutate(
+                    to = file.path(gsmdir, targetname)
+                  ) ->
+                  .rt_from_to
+
+                .rt_from_to |>
+                  dplyr::mutate(
+                    a = purrr::map2(
+                      .x = from,
+                      .y = to,
+                      .f = \(.from, .to) {
+                        if(file.exists(.to)) {
+                          file.remove(.to)
+                        }
+                        log_error(.from)
+                        log_success(.to)
+                        file.symlink(
+                          from = .from,
+                          to = .to
+                        )
+                      }
+                    )
+                  )
               }
             )
           )
-
       }
     )
   )
