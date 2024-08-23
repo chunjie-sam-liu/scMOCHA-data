@@ -839,8 +839,30 @@ ggsave(
   device = "pdf"
 )
 
+
+# save to xlsx ------------------------------------------------------------
+
+names(p_ups) <- unique(metadata_anno_depth_variant$disease)
+
+
+p_ups |>
+  purrr::map("v") |>
+  writexl::write_xlsx(
+    path = file.path(
+      outdir,
+      "/upset-variants.xlsx"
+    )
+  )
+
+
 # footer ------------------------------------------------------------------
 
 # future::plan(future::sequential)
 
 # save image --------------------------------------------------------------
+save.image(
+  file = file.path(
+    outdir,
+    "03-merge-meta-variant.rda"
+  )
+)

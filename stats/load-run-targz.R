@@ -100,6 +100,23 @@ tibble::tibble(
   dplyr::select(srrdir, srrid) ->
   srr_out
 
+
+outdir <- file.path(
+  datadir,
+  "output"
+)
+dir.create(outdir, showWarnings = F, recursive = T)
+
+
+
+readr::write_lines(
+  x = targz,
+  file = file.path(
+    outdir,
+    "{gseid}.scmocha.out.targz.txt" |> glue::glue()
+  )
+)
+
 srr_out |>
   dplyr::mutate(
     cell_stats = purrr::map(
@@ -132,11 +149,6 @@ srr_out |>
   tidyr::unnest(cols = cell_stats) ->
   srr_out_cell_stats
 
-outdir <- file.path(
-  datadir,
-  "output"
-)
-dir.create(outdir, showWarnings = F, recursive = T)
 
 readr::write_rds(
   srr_out_cell_stats,
