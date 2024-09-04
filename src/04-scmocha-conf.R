@@ -85,7 +85,7 @@ runfile <- data.table::fread(
 gsm <- data.table::fread(
   file.path(
     datadir,
-    "{gseid}.metadata.gsm.csv" |> glue::glue()
+    "{gseid}.SraRunTable.GSM" |> glue::glue()
   )
 )
 
@@ -201,7 +201,7 @@ readr::write_lines(
   glue::glue("bash {conf_scmocha$scmocha_sh} &"),
   file = file.path(
     datadir,
-    "02.{gseid}.runwdl.sh" |> glue::glue()
+    "03.{gseid}.runwdl.sh_notrun" |> glue::glue()
   )
 )
 
@@ -234,7 +234,7 @@ slrm_header <- c(
 
 slrm_array <- c(
   "#input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |> glue::glue(),
-  "input_files=($(sed 's/bash \\(.*\\) &/\\1/' {datadir}/02.{gseid}.runwdl.sh))" |> glue::glue(),
+  "input_files=($(sed 's/bash \\(.*\\) &/\\1/' {datadir}/03.{gseid}.runwdl.sh_notrun))" |> glue::glue(),
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -248,7 +248,7 @@ readr::write_lines(
   c(slrm_header, slrm_array),
   file = file.path(
     datadir,
-    "02.1.{gseid}.runwdl.slrm" |> glue::glue()
+    "03.{gseid}.runwdl.slrm_notrun" |> glue::glue()
   )
 )
 
@@ -322,16 +322,16 @@ inputs_json <- list(
 
 inputs_json_file <- file.path(
   datadir,
-  "02.2.{gseid}.batch.json" |> glue::glue()
+  "04.{gseid}.batch.json" |> glue::glue()
 )
 
 errfile <- file.path(
   datadir,
-  "02.2.{gseid}.batch.err" |> glue::glue()
+  "04.{gseid}.batch.err" |> glue::glue()
 )
 logfile <- file.path(
   datadir,
-  "02.2.{gseid}.batch.log" |> glue::glue()
+  "04.{gseid}.batch.log" |> glue::glue()
 )
 
 runwdl_batch_cmd <- c(
@@ -358,7 +358,7 @@ readr::write_lines(
   x = runwdl_batch_cmd,
   file = file.path(
     datadir,
-    "02.2.{gseid}.batch.sh" |> glue::glue()
+    "04.{gseid}.batch.sh" |> glue::glue()
   )
 )
 
