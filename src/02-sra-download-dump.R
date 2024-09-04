@@ -74,23 +74,37 @@ dir.create(
   recursive = T
 )
 
+erroutdir <-   file.path(
+  datadir,
+  "errout"
+)
+dir.create(erroutdir,showWarnings = F,recursive = T)
+
 # body --------------------------------------------------------------------
 
 sratable <- data.table::fread(
   file.path(
     datadir,
-    "{gseid}.metadata.csv" |> glue::glue()
-  )
+    "{gseid}.SraRunTable" |> glue::glue()
+  ),
+  sep = ","
 )
+
+# GSM samples -------------------------------------------------------------
+
 
 sratable |>
   dplyr::select(run_accession = Run, experiment_name = `Sample Name`, experiment_accession = Experiment) |>
   data.table::fwrite(
     file = file.path(
       datadir,
-      "{gseid}.metadata.gsm.csv" |> glue::glue()
+      "{gseid}.SraRunTable.GSM" |> glue::glue()
     )
   )
+
+
+# Prefetch ----------------------------------------------------------------
+
 
 sratable |>
   dplyr::select(srrid = Run) |>
@@ -103,9 +117,11 @@ sratable |>
     srrdir_exists = file.exists(srrdir)
   ) |>
   dplyr::mutate(
-    prefetch = "prefetch --max-size 50G {srrid} --output-directory {datadir}" |> glue::glue()
+    prefetch = "prefetch -p --max-size 50G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.log 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
   ) ->
   sratable_prefetch
+
+
 
 readr::write_lines(
   glue::glue("{ sratable_prefetch$prefetch} &"),
@@ -114,6 +130,10 @@ readr::write_lines(
     "00.{gseid}.prefetch.sh" |> glue::glue()
   )
 )
+
+
+# Check sra file ----------------------------------------------------------
+
 
 sratable_prefetch |>
   dplyr::mutate(
@@ -131,9 +151,12 @@ readr::write_lines(
   glue::glue("file {srafiles$srafile}"),
   file = file.path(
     datadir,
-    "00.{gseid}.prefetch.check.sh" |> glue::glue()
+    "01.{gseid}.prefetch.check.sh" |> glue::glue()
   )
 )
+
+# Generate dump scripts ---------------------------------------------------
+
 
 srafiles |>
   dplyr::mutate(
@@ -142,8 +165,9 @@ srafiles |>
       .y = srafile,
       .f = \(.x, .y) {
         .srrid <- basename(.x)
+
         cmd_dump <- c(
-          "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x}" |> glue::glue()
+          "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.log 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
         )
 
         cmd <- c(
@@ -175,21 +199,11 @@ readr::write_lines(
   glue::glue("{ srafile_dump$dump_cmd} &"),
   file = file.path(
     datadir,
-    "01.{gseid}.dump.sh" |> glue::glue()
+    "02.{gseid}.dump.sh" |> glue::glue()
   )
 )
 
 # dump slrm ---------------------------------------------------------------
-
-
-dir.create(
-  file.path(
-    datadir,
-    "errout"
-  ),
-  showWarnings = F,
-  recursive = T
-)
 
 slrm_header <- c(
   "#!/usr/bin/env bash",
@@ -213,7 +227,7 @@ slrm_array <- c(
   "while IFS= read -r line; do",
   "  line=$(echo ${line}|sed 's/ *&$//')",
   "  cmds+=(\"${line}\")",
-  "done < \"{datadir}/01.{gseid}.dump.sh\"" |> glue::glue(),
+  "done < \"{datadir}/02.{gseid}.dump.sh\"" |> glue::glue(),
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -227,13 +241,9 @@ readr::write_lines(
   c(slrm_header, slrm_array),
   file = file.path(
     datadir,
-    "01.{gseid}.dump.slrm" |> glue::glue()
+    "02.{gseid}.dump.slrm" |> glue::glue()
   )
 )
-
-
-
-
 
 
 
