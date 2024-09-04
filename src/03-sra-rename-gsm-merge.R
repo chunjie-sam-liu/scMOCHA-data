@@ -14,14 +14,14 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
 # args --------------------------------------------------------------------
 
 
-gseid <- "GSE226602"
+# gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -68,20 +68,18 @@ log_layout(layout_glue_colors)
 # v2, r1=26, i7=8, i5=0, r2=98
 
 rename_code <- c(
-  "28"="R1",
-  "26"="R1",
-  "30"="R1",
-  "10"="I1",
-  "8"="I1",
-  "90"="R2",
-  "91"="R2",
-  "98"="R2",
-  "150"="R2"
+  "28" = "R1",
+  "26" = "R1",
+  "30" = "R1",
+  "10" = "I1",
+  "8" = "I1",
+  "90" = "R2",
+  "91" = "R2",
+  "98" = "R2",
+  "150" = "R2"
 )
 
-rename_code2 <- c(
-
-)
+rename_code2 <- c()
 # function ----------------------------------------------------------------
 
 fn_get_fastq_read_length <- function(.fastq) {
@@ -110,7 +108,7 @@ fn_rename <- function(.srrdir) {
       )
     ) |>
     dplyr::arrange(rl) ->
-    .fastqs_rl
+  .fastqs_rl
 
   # .fastqs_rl |>
   #   dplyr::mutate(
@@ -147,10 +145,9 @@ fn_rename <- function(.srrdir) {
       glue::glue("{ir}{irn}"),
       glue::glue("{ir}{idx}")
     )) ->
-    .fastqs_rl_rt
-
   .fastqs_rl_rt
 
+  .fastqs_rl_rt
 }
 
 # load data ---------------------------------------------------------------
@@ -187,12 +184,13 @@ gsm |>
     srrid = run_accession
   ) |>
   dplyr::inner_join(
-    runfile, by = "srrid"
+    runfile,
+    by = "srrid"
   ) |>
   dplyr::group_by(experiment_name) |>
   tidyr::nest() |>
   dplyr::ungroup() ->
-  gsm_nest
+gsm_nest
 
 
 gsm_nest |>
@@ -219,7 +217,7 @@ gsm_nest |>
 
         .y |>
           tibble::rowid_to_column() ->
-          .y_idx
+        .y_idx
 
         .y_idx |>
           dplyr::mutate(
@@ -239,7 +237,7 @@ gsm_nest |>
                   dplyr::mutate(
                     to = file.path(gsmdir, targetname)
                   ) ->
-                  .rt_from_to
+                .rt_from_to
 
                 .rt_from_to |>
                   dplyr::mutate(
@@ -247,7 +245,7 @@ gsm_nest |>
                       .x = from,
                       .y = to,
                       .f = \(.from, .to) {
-                        if(file.exists(.to)) {
+                        if (file.exists(.to)) {
                           file.remove(.to)
                         }
                         log_error(.from)

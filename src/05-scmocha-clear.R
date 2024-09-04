@@ -14,12 +14,12 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
 # args --------------------------------------------------------------------
-gseid <- "GSE226602"
+# gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -59,7 +59,6 @@ log_layout(layout_glue_colors)
 # function ----------------------------------------------------------------
 
 fn_parse_log <- function(logfile) {
-
   logs <- readr::read_lines(
     file = logfile,
     skip_empty_rows = T
@@ -144,7 +143,7 @@ runfile |>
     )
   ) |>
   dplyr::select(rm_cmd) ->
-  rm_cmds
+rm_cmds
 
 
 cmd_rm_fastq <- glue::glue("{rm_cmds$rm_cmd} &")

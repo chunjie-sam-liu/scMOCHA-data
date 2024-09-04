@@ -14,13 +14,13 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
 # args --------------------------------------------------------------------
 
-gseid <- "GSE226602"
+# gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -74,11 +74,11 @@ dir.create(
   recursive = T
 )
 
-erroutdir <-   file.path(
+erroutdir <- file.path(
   datadir,
   "errout"
 )
-dir.create(erroutdir,showWarnings = F,recursive = T)
+dir.create(erroutdir, showWarnings = F, recursive = T)
 
 # body --------------------------------------------------------------------
 
@@ -119,7 +119,7 @@ sratable |>
   dplyr::mutate(
     prefetch = "prefetch -p --max-size 50G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.log 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
   ) ->
-  sratable_prefetch
+sratable_prefetch
 
 
 
@@ -145,7 +145,7 @@ sratable_prefetch |>
   dplyr::mutate(
     srafile_exist = file.exists(srafile)
   ) ->
-  srafiles
+srafiles
 
 readr::write_lines(
   glue::glue("file {srafiles$srafile}"),
@@ -177,7 +177,7 @@ srafiles |>
       }
     )
   ) ->
-  srafile_dump
+srafile_dump
 
 # save to runfile ---------------------------------------------------------
 
@@ -186,7 +186,7 @@ data.table::fwrite(
   x = srafile_dump,
   file = file.path(
     datadir,
-    "{gseid}.runfile.csv" |>glue::glue()
+    "{gseid}.runfile.csv" |> glue::glue()
   )
 )
 
