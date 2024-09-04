@@ -178,7 +178,7 @@ runfile <- data.table::fread(
 gsm <- data.table::fread(
   file.path(
     datadir,
-    "{gseid}.metadata.gsm.csv" |> glue::glue()
+    "{gseid}.SraRunTable.GSM" |> glue::glue()
   )
 )
 
