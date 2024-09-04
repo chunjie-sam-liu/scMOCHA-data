@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -56,7 +56,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 fn_parse_log <- function(logfile) {
-
   logs <- readr::read_lines(
     file = logfile,
     skip_empty_rows = T
@@ -98,7 +97,7 @@ tibble::tibble(
     srrid = basename(srrdir)
   ) |>
   dplyr::select(srrdir, srrid) ->
-  srr_out
+srr_out
 
 
 outdir <- file.path(
@@ -147,7 +146,7 @@ srr_out |>
     )
   ) |>
   tidyr::unnest(cols = cell_stats) ->
-  srr_out_cell_stats
+srr_out_cell_stats
 
 
 readr::write_rds(
