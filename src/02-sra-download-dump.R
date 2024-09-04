@@ -117,7 +117,7 @@ sratable |>
     srrdir_exists = file.exists(srrdir)
   ) |>
   dplyr::mutate(
-    prefetch = "prefetch -p --max-size 50G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.log 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
+    prefetch = "prefetch -p --max-size 50G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
   ) ->
 sratable_prefetch
 
@@ -167,7 +167,7 @@ srafiles |>
         .srrid <- basename(.x)
 
         cmd_dump <- c(
-          "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.log 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
+          "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.err 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
         )
 
         cmd <- c(
@@ -212,7 +212,7 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=01.{gseid}.dump" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/01.{gseid}.dump._%A-%a.out" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/01.{gseid}.dump._%A-%a.err" |> glue::glue(),
   "#SBATCH --error={datadir}/errout/01.{gseid}.dump._%A-%a.err" |> glue::glue(),
   "#SBATCH --cpus-per-task=10",
   "#SBATCH --mem=50G",

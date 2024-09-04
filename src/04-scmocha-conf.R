@@ -222,7 +222,7 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=02.{gseid}.runwdl" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl._%A-%a.out" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
   "#SBATCH --error={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
   "#SBATCH --cpus-per-task=10",
   "#SBATCH --mem=50G",
