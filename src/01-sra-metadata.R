@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -86,24 +86,21 @@ fn_parse_bioprojectid <- function(.of) {
   rvest::read_html(.of) |>
     rvest::html_elements("td") %>%
     .[rvest::html_text2(.) == "BioProject"] ->
-    .ele
+  .ele
 
   .ele |>
     rvest::html_element(xpath = "./parent::tr") |>
     rvest::html_elements("td") %>%
     .[[2]] ->
-    .the_ele
+  .the_ele
 
   .projid <- rvest::html_text2(.the_ele)
   .projid
-
-
 }
 
 fn_parse_sratable <- function(.of) {
   rvest::read_html(.of) |>
     rvest::html_table()
-
 }
 
 
@@ -138,7 +135,7 @@ gse <- GEOquery::getGEO(
 gse[[1]] |>
   Biobase::phenoData() |>
   Biobase::pData() ->
-  gse_pheno
+gse_pheno
 
 data.table::fwrite(
   x = gse_pheno,
