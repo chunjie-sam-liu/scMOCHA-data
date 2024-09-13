@@ -22,16 +22,42 @@ library(logger)
 
 # gseid <- "GSE163668"
 
+
 # s: string, i: integer, f: float, !: boolean
 # @: array
 # %: hash
 # default: default value specified here.
+
+
+
 verbose <- FALSE
+
+# cell ranger chemistry auto detector
+# Assay configuration. NOTE: by default the assay configuration is detected
+# automatically, which is the recommended mode. You usually will not need to specify a
+# chemistry. Options are: 'auto' for autodetection, 'threeprime' for Single Cell 3',
+#           'fiveprime' for  Single Cell 5', 'SC3Pv1' or 'SC3Pv2' or 'SC3Pv3' or 'SC3Pv4' for
+# Single Cell 3' v1/v2/v3/v4, 'SC3Pv3LT' for Single Cell 3' v3 LT, 'SC3Pv3HT' for
+# Single Cell 3' v3 HT, 'SC5P-PE' or 'SC5P-PE-v3' or 'SC5P-R2' or 'SC5P-R2-v3', for
+#           Single Cell 5', paired-end/R2-only, 'SC-FB' for Single Cell Antibody-only 3' v2 or
+#           5'. To analyze the GEX portion of multiome data, chemistry must be set to 'ARC-v1'
+# [default: auto]
+chemistry <- "auto"
+
 spec <- "
 Usage: Rscript foorbar.R [options]
 
 Options:
 <gseid=s> gseid
+<chemistry=s> Assay configuration. NOTE: by default the assay configuration is detected
+          automatically, which is the recommended mode. You usually will not need to specify a
+          chemistry. Options are: 'auto' for autodetection, 'threeprime' for Single Cell 3',
+          'fiveprime' for  Single Cell 5', 'SC3Pv1' or 'SC3Pv2' or 'SC3Pv3' or 'SC3Pv4' for
+          Single Cell 3' v1/v2/v3/v4, 'SC3Pv3LT' for Single Cell 3' v3 LT, 'SC3Pv3HT' for
+          Single Cell 3' v3 HT, 'SC5P-PE' or 'SC5P-PE-v3' or 'SC5P-R2' or 'SC5P-R2-v3', for
+          Single Cell 5', paired-end/R2-only, 'SC-FB' for Single Cell Antibody-only 3' v2 or
+          5'. To analyze the GEX portion of multiome data, chemistry must be set to 'ARC-v1'
+          [default: auto]
 <verbose!> Print messages
 "
 
@@ -108,6 +134,7 @@ gsm |>
           "scMOCHA.output_id" = "{.srrid}" |> glue::glue(),
           "scMOCHA.fastqs" = "{.ydir}" |> glue::glue(),
           "scMOCHA.sample_id" = "{.srrid}" |> glue::glue(),
+          "scMOCHA.chemistry" = "{chemistry}" |> glue::glue(),
           "scMOCHA.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
           "scMOCHA.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
           "scMOCHA.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
