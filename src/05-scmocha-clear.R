@@ -138,7 +138,7 @@ runfile <- data.table::fread(
 )
 
 runfile |>
-  dplyr::filter(srafile_exist) |>
+  # dplyr::filter(srafile_exist) |>
   dplyr::select(srrdir) |>
   dplyr::mutate(
     rm_cmd = purrr::map_chr(
