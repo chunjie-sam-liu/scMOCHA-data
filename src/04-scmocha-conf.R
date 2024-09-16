@@ -311,6 +311,7 @@ inputs_json <- list(
     datadir,
     "{gseid}.srrdir.list" |> glue::glue()
   ),
+  "scMOCHABatch.chemistry" = "{chemistry}" |> glue::glue(),
   "scMOCHABatch.sample_id_list" = file.path(
     datadir,
     "{gseid}.srrid.list" |> glue::glue()
