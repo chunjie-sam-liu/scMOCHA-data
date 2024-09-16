@@ -102,8 +102,10 @@ logfile <- file.path(
   "04.{gseid}.batch.log" |> glue::glue()
 )
 
-targz <- fn_parse_log(logfile = logfile)
+log_warn("load the logfile ", logfile)
 
+targz <- fn_parse_log(logfile = logfile)
+# log_warn("Found the tar.gz files", targz)
 
 readr::write_lines(
   x = targz,
@@ -118,7 +120,13 @@ readr::write_lines(
 
 cmd_cp_targz <- glue::glue("cp {targz} {targzdir} &")
 
-
+readr::write_lines(
+  c(cmd_cp_targz),
+  file = file.path(
+    datadir,
+    "05.{gseid}.scmocha.cptargz.sh" |> glue::glue()
+  )
+)
 # rm fastq file -----------------------------------------------------------
 
 
@@ -149,10 +157,10 @@ rm_cmds
 cmd_rm_fastq <- glue::glue("{rm_cmds$rm_cmd} &")
 
 readr::write_lines(
-  c(cmd_cp_targz, cmd_rm_fastq),
+  c(cmd_rm_fastq),
   file = file.path(
     datadir,
-    "05.{gseid}.scmocha.clear.sh" |> glue::glue()
+    "06.{gseid}.scmocha.clear.sh" |> glue::glue()
   )
 )
 
