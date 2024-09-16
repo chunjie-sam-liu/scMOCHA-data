@@ -14,6 +14,8 @@ workflow scMOCHABatch {
   File sample_id_list
   Array[String] sample_ids = read_lines(sample_id_list)
 
+  String chemistry = "auto"
+
   String transcriptome = "/home/liuc9/data/refdata/mgatk_index/Human"
   File rCRS = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta"
   File mt_exons_df = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
@@ -69,6 +71,7 @@ workflow scMOCHABatch {
         output_id = output_ids[idx],
         fastqs = fastqss[idx],
         sample_id = sample_ids[idx],
+        chemistry = chemistry,
 
         transcriptome = transcriptome,
         rCRS = rCRS,
