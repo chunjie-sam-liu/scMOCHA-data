@@ -311,11 +311,11 @@ inputs_json <- list(
     datadir,
     "{gseid}.srrdir.list" |> glue::glue()
   ),
-  "scMOCHABatch.chemistry" = "{chemistry}" |> glue::glue(),
   "scMOCHABatch.sample_id_list" = file.path(
     datadir,
     "{gseid}.srrid.list" |> glue::glue()
   ),
+  "scMOCHABatch.chemistry" = "{chemistry}" |> glue::glue(),
   "scMOCHABatch.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
   "scMOCHABatch.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
   "scMOCHABatch.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
