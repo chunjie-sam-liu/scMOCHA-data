@@ -1,4 +1,4 @@
-import "/home/liuc9/github/scMOCHA/scMOCHA.wdl" as sub
+import "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/scMOCHA.wdl" as sub
 
 workflow scMOCHABatch {
 
@@ -17,9 +17,9 @@ workflow scMOCHABatch {
   String chemistry = "auto"
 
   String transcriptome = "/home/liuc9/data/refdata/mgatk_index/Human"
-  File rCRS = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta"
-  File mt_exons_df = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
-  File mt_features_gmoviz = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz"
+  File rCRS = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/rCRS.MT.fasta"
+  File mt_exons_df = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_exons.df.rds.gz"
+  File mt_features_gmoviz = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz"
 
   File output_dir_list
   Array[String] output_dirs = read_lines(output_dir_list)
@@ -54,11 +54,11 @@ workflow scMOCHABatch {
   String account = "liuc9"
   File IMAGE = "/scr1/users/liuc9/sif/scmocha_latest.sif"
 
-  File perlscript = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl"
+  File perlscript = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl"
   File jar_path = "/scr1/users/liuc9/tools/haplogrep3"  # /opt/haplogrep3/haplogrep3.jar
   File sqlite_path = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3"
 
-  String bindir = "/home/liuc9/github/scMOCHA/bin"
+  String bindir = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin"
   String conda_root = "/home/liuc9/tools/anaconda3"
   String conda_env = "scmocha"
 
