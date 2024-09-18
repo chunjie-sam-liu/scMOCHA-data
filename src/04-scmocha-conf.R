@@ -89,7 +89,7 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 
-# basedir <- "/home/liuc9/github/scMOCHA-data/data"
+# basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA-data/data"
 basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
@@ -136,10 +136,10 @@ gsm |>
           "scMOCHA.fastqs" = "{.ydir}" |> glue::glue(),
           "scMOCHA.sample_id" = "{.srrid}" |> glue::glue(),
           "scMOCHA.chemistry" = "{chemistry}" |> glue::glue(),
-          "scMOCHA.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
-          "scMOCHA.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
-          "scMOCHA.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
-          "scMOCHA.mt_features_gmoviz" = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
+          "scMOCHA.transcriptome" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mgatk_index/Human",
+          "scMOCHA.rCRS" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/rCRS.MT.fasta",
+          "scMOCHA.mt_exons_df" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_exons.df.rds.gz",
+          "scMOCHA.mt_features_gmoviz" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
           "scMOCHA.output_dir" = "{.srrid}" |> glue::glue(),
           "scMOCHA.chrM" = "MT",
           "scMOCHA.low_coverage_threshold" = 10,
@@ -155,13 +155,11 @@ gsm |>
           "scMOCHA.docker" = "chunjiesamliu/scmocha",
           "scMOCHA.partition" = "defq",
           "scMOCHA.account" = "liuc9",
-          "scMOCHA.IMAGE" = "/scr1/users/liuc9/sif/scmocha_latest.sif",
-          "scMOCHA.perlscript" = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl",
-          "scMOCHA.jar_path" = "/scr1/users/liuc9/tools/haplogrep3",
-          "scMOCHA.sqlite_path" = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
+          "scMOCHA.perlscript" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl",
+          "scMOCHA.jar_path" = "/mnt/isilon/u01_project/large-scale/liuc9/tools/haplogrep3",
+          "scMOCHA.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
           "scMOCHA.nFeature_RNA_min" = 500,
-          "scMOCHA.nFeature_RNA_max" = 8000,
-          "scMOCHA.x10_version" = "v3"
+          "scMOCHA.nFeature_RNA_max" = 8000
         )
 
         conf_file <- file.path(
@@ -195,9 +193,9 @@ gsm |>
           "# @DATE: {lubridate::now()}" |> glue::glue(),
           "",
           "module load Java/15.0.1",
-          "nohup java -Dconfig.file=/home/liuc9/github/scMOCHA/config/slurm.conf \\",
-          "-jar /home/liuc9/tools/cromwell-78.jar \\",
-          "run /home/liuc9/github/scMOCHA/scMOCHA.wdl \\",
+          "nohup java -Dconfig.file=/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/config/slurm.conf \\",
+          "-jar /mnt/isilon/u01_project/large-scale/liuc9/tools/cromwell-78.jar \\",
+          "run /mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/scMOCHA.wdl \\",
           "-i {.jsonfile} 1>{.logfile} 2>{.errfile} " |> glue::glue()
         )
 
@@ -317,10 +315,10 @@ inputs_json <- list(
     "{gseid}.srrid.list" |> glue::glue()
   ),
   "scMOCHABatch.chemistry" = "{chemistry}" |> glue::glue(),
-  "scMOCHABatch.transcriptome" = "/home/liuc9/data/refdata/mgatk_index/Human",
-  "scMOCHABatch.rCRS" = "/home/liuc9/github/scMOCHA/fasta/rCRS.MT.fasta",
-  "scMOCHABatch.mt_exons_df" = "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz",
-  "scMOCHABatch.mt_features_gmoviz" = "/home/liuc9/github/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
+  "scMOCHABatch.transcriptome" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mgatk_index/Human",
+  "scMOCHABatch.rCRS" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/rCRS.MT.fasta",
+  "scMOCHABatch.mt_exons_df" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_exons.df.rds.gz",
+  "scMOCHABatch.mt_features_gmoviz" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz",
   "scMOCHABatch.output_dir_list" = file.path(
     datadir,
     "{gseid}.srrid.list" |> glue::glue()
@@ -339,13 +337,11 @@ inputs_json <- list(
   "scMOCHABatch.docker" = "chunjiesamliu/scmocha",
   "scMOCHABatch.partition" = "defq",
   "scMOCHABatch.account" = "liuc9",
-  "scMOCHABatch.IMAGE" = "/scr1/users/liuc9/sif/scmocha_latest.sif",
-  "scMOCHABatch.perlscript" = "/home/liuc9/github/scMOCHA/bin/get_variants_info.pl",
-  "scMOCHABatch.jar_path" = "/scr1/users/liuc9/tools/haplogrep3",
-  "scMOCHABatch.sqlite_path" = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
+  "scMOCHABatch.perlscript" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl",
+  "scMOCHABatch.jar_path" = "/mnt/isilon/u01_project/large-scale/liuc9/tools/haplogrep3",
+  "scMOCHABatch.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
   "scMOCHABatch.nFeature_RNA_min" = 500,
-  "scMOCHABatch.nFeature_RNA_max" = 8000,
-  "scMOCHABatch.x10_version" = "v3"
+  "scMOCHABatch.nFeature_RNA_max" = 8000
 )
 
 
@@ -370,9 +366,9 @@ runwdl_batch_cmd <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "module load Java/15.0.1",
-  "nohup java -Dconfig.file=/home/liuc9/github/scMOCHA/config/slurm.conf \\",
-  "-jar /home/liuc9/tools/cromwell-78.jar \\",
-  "run /home/liuc9/github/scMOCHA-data/scMOCHA.batch.wdl \\",
+  "nohup java -Dconfig.file=/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/config/slurm.conf \\",
+  "-jar /mnt/isilon/u01_project/large-scale/liuc9/tools/cromwell-78.jar \\",
+  "run /mnt/isilon/u01_project/large-scale/liuc9/scMOCHA-data/scMOCHA.batch.wdl \\",
   "-i {inputs_json_file} 1>{logfile} 2>{errfile} &" |> glue::glue()
 )
 
