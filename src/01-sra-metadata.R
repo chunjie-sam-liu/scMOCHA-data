@@ -106,7 +106,8 @@ fn_parse_sratable <- function(.of) {
 
 # load data ---------------------------------------------------------------
 
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 # body --------------------------------------------------------------------
 

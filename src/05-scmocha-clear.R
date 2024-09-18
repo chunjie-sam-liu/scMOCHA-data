@@ -73,7 +73,8 @@ fn_parse_log <- function(logfile) {
 
 
 # load data ---------------------------------------------------------------
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
 )

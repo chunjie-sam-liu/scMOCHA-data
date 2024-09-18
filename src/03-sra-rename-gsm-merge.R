@@ -153,7 +153,8 @@ fn_rename <- function(.srrdir) {
 # load data ---------------------------------------------------------------
 
 log_warn(gseid)
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
 )

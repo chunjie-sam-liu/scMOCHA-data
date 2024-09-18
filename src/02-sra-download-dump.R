@@ -63,7 +63,8 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 log_warn(gseid)
 
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
 )
@@ -117,7 +118,7 @@ sratable |>
     srrdir_exists = file.exists(srrdir)
   ) |>
   dplyr::mutate(
-    prefetch = "prefetch -p --max-size 50G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
+    prefetch = "prefetch -p --max-size 100G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
   ) ->
 sratable_prefetch
 
@@ -167,7 +168,7 @@ srafiles |>
         .srrid <- basename(.x)
 
         cmd_dump <- c(
-          "fasterq-dump {.y} --temp /scr1/users/liuc9/tmp/fasterq_dump  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.err 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
+          "fasterq-dump {.y} --temp /mnt/isilon/u01_project/large-scale/liuc9/tmp  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.err 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
         )
 
         cmd <- c(
