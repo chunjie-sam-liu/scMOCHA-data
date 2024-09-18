@@ -21,15 +21,15 @@
   "peacock.remoteColor": "#dd0531",
   "search.followSymlinks": false,
   "search.exclude": {
-    "**/data/": true,
-    "**/.vscode/": true,
-    "**/.Rproj.user": true,
     "**/.git/": true,
+    "**/.Rproj.user": true,
+    "**/.vscode/": true,
+    "**/data/": true
   },
   "files.watcherExclude": {
     "data/": true
   },
-  "files.exclude":{
+  "files.exclude": {
     // "**/data": true
   },
   "python.analysis.typeCheckingMode": "off",
