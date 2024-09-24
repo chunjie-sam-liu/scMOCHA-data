@@ -16,7 +16,7 @@ workflow scMOCHABatch {
 
   String chemistry = "auto"
 
-  String transcriptome = "/home/liuc9/data/refdata/mgatk_index/Human"
+  String transcriptome = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mgatk_index/Human"
   File rCRS = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/rCRS.MT.fasta"
   File mt_exons_df = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_exons.df.rds.gz"
   File mt_features_gmoviz = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/fasta/mt_features.grange.gmoviz.rds.gz"
@@ -52,7 +52,7 @@ workflow scMOCHABatch {
   String docker = "chunjiesamliu/scmocha"
   String partition = "defq"
   String account = "liuc9"
-  File IMAGE = "/scr1/users/liuc9/sif/scmocha_latest.sif"
+  File IMAGE = "/mnt/isilon/u01_project/large-scale/liuc9/tools/scmocha_latest.sif"
 
   File perlscript = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl"
   File jar_path = "/scr1/users/liuc9/tools/haplogrep3"  # /opt/haplogrep3/haplogrep3.jar
