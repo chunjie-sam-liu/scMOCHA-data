@@ -64,10 +64,14 @@ fn_parse_log <- function(logfile) {
     skip_empty_rows = T
   )
 
-  output_index <- stringr::str_which(logs, '"outputs": \\{')
-  valid_json <- gsub("^\"|\"$", "", logs[output_index + 1])
-  targz <- jsonlite::fromJSON(paste0("{", valid_json, "}"))
-  targz$scMOCHABatch.output_dir_tar_gzs
+  # output_index <- stringr::str_which(logs, '"outputs": \\{')
+  # valid_json <- gsub("^\"|\"$", "", logs[output_index + 1])
+  # targz <- jsonlite::fromJSON(paste0("{", valid_json, "}"))
+  # targz$scMOCHABatch.output_dir_tar_gzs
+
+  output_index <- stringr::str_which(logs, "scMOCHA.output_dir_tar_gz")
+  stringr::str_remove_all(logs[output_index], "\"| |,|scMOCHA.output_dir_tar_gz|\\:")
+
 }
 
 
@@ -129,7 +133,21 @@ readr::write_lines(
   )
 )
 # rm fastq file -----------------------------------------------------------
+gsms <- basename(targz) |>
+  gsub(".tar.gz", "", x = _)
 
+srarun <- data.table::fread(
+  file.path(
+    datadir,
+    "{gseid}.SraRunTable.GSM" |> glue::glue()
+  )
+)
+
+srarun |>
+  dplyr::filter(
+    experiment_name %in% gsms
+  ) ->
+  toberemoved
 
 runfile <- data.table::fread(
   file.path(
@@ -140,6 +158,7 @@ runfile <- data.table::fread(
 
 runfile |>
   # dplyr::filter(srafile_exist) |>
+  dplyr::filter(srrid %in% toberemoved$run_accession) |>
   dplyr::select(srrdir) |>
   dplyr::mutate(
     rm_cmd = purrr::map_chr(
