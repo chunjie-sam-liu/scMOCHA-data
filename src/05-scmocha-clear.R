@@ -132,6 +132,19 @@ readr::write_lines(
     "05.{gseid}.scmocha.cptargz.sh" |> glue::glue()
   )
 )
+
+# uncompress --------------------------------------------------------------
+
+cped_targzs <- glue::glue("{targzdir}/{basename(targz)}")
+cmd_untar <- glue::glue("tar -zxvf {cped_targzs} -C {targzdir} &")
+readr::write_lines(
+  c(cmd_untar),
+  file = file.path(
+    datadir,
+    "07.{gseid}.scmocha.untargz.sh" |> glue::glue()
+  )
+)
+
 # rm fastq file -----------------------------------------------------------
 gsms <- basename(targz) |>
   gsub(".tar.gz", "", x = _)
