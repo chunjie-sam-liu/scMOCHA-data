@@ -383,7 +383,7 @@ ggsave(
   device = "pdf",
   width = 15,
   height = 8,
-  path = outdir
+  path = "/home/liuc9/github/scMOCHA-data/data/out"
 )
 
 # footer ------------------------------------------------------------------
