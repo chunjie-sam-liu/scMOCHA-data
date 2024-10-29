@@ -60,6 +60,7 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/home/liuc9/github/scMOCHA/06-bigdata"
 gseid <- "GSE226602"
 datadir <- file.path(
   basedir, gseid
@@ -855,6 +856,642 @@ p_ups |>
   )
 
 
+# metadata_anno |> dplyr::glimpse()
+# metadata_anno$anno[[1]]
+
+# heteroplasmy ------------------------------------------------------------
+
+
+metadata_anno |>
+  dplyr::glimpse()
+metadata_anno$srrdir[[1]]
+metadata_anno$anno[[1]] |>
+  dplyr::mutate(
+    v = glue::glue("{Position}{Ref}>{Alt}")
+  ) ->
+  sel_anno
+
+metadata_anno$coverage[[1]] ->
+  sel_cov
+metadata_anno$hetero[[1]] ->
+  forplot
+
+forplot |>
+  dplyr::mutate(
+    variant = factor(variant, forplot$variant |> unique())
+  ) |>
+  # dplyr::filter(variant == "2706A>G") |>
+  ggplot(aes(x = celltype, y = af)) +
+  geom_col(aes(fill = af)) +
+  facet_wrap(~variant) +
+  scale_fill_gradient2(
+    low = "white",
+    mid = "red",
+    high = "#3B0049",
+    midpoint = 0.5
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "none ",
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p;p
+
+ggsave(
+  filename = "GSM7080053-cluster-bar.pdf",
+  plot = p,
+  device = "pdf",
+  path = outdir,
+  width = 17,
+  height = 10
+)
+
+unique(forplot$variant)[c(6, 10:15, 17, 18, 19:27, 30: 36, 38, 40, 43:48, 50, 52, 54, 55, 58, 59, 61:65, 70 )] ->
+  sel_v
+
+forplot |>
+  dplyr::filter(variant %in% sel_v) |>
+  dplyr::mutate(
+    variant = factor(variant, sel_v)
+  ) |>
+  # dplyr::filter(variant == "2706A>G") |>
+  ggplot(aes(x = celltype, y = af)) +
+  geom_col(aes(fill = af)) +
+  facet_wrap(~variant, ncol = 9) +
+  scale_fill_gradient2(
+    low = "white",
+    mid = "red",
+    high = "#3B0049",
+    midpoint = 0.5
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "none ",
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p;p
+
+
+ggsave(
+  filename = "GSM7080053-cluster-bar-sel.pdf",
+  plot = p,
+  device = "pdf",
+  path = outdir,
+  width = 17,
+  height = 8
+)
+
+
+tibble::tibble(
+  variant = sel_v
+) |>
+  dplyr::mutate(pos = gsub(">|A|G|C|T", "", variant)) |>
+  dplyr::mutate(pos = as.integer(pos)) |>
+  dplyr::left_join(sel_cov, by = "pos") |>
+  dplyr::mutate(variant = factor(variant, sel_v)) |>
+  ggplot(aes(x = celltype, y = count)) +
+  geom_col(aes(fill = count)) +
+  facet_wrap(~variant, ncol = 9) +
+  scale_fill_gradient(
+    low = "white",
+    # mid = "red",
+    high = "#3B0049",
+    # midpoint = 0.5
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "none ",
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p_c;p_c
+
+ggsave(
+  filename = "GSM7080053-cluster-bar-sel-cov.pdf",
+  plot = p_c,
+  device = "pdf",
+  path = outdir,
+  width = 17,
+  height = 8
+)
+
+
+# filter ------------------------------------------------------------------
+
+metadata_anno |>
+  dplyr::mutate(
+    hetero_filter = purrr::map(
+      .x = hetero,
+      .f = \(.d) {
+        .d |>
+          dplyr::group_by(variant) |>
+          dplyr::summarise(
+            mean_af = mean(af, na.rm = T)
+          ) ->
+          .dd
+
+
+        .dd$mean_af |> hist()
+        .dd |>
+          dplyr::filter(mean_af < 0.8) |>
+          dplyr::filter(mean_af > 0.05) ->
+          .ddd
+
+        .d |>
+          dplyr::filter(variant %in% .ddd$variant)
+      }
+    )
+  ) ->
+  metadata_anno_filter
+
+
+
+metadata_anno_filter |>
+  dplyr::select(
+    srrid,
+    genotype,
+    disease = disease,
+    dia = disease,
+    age,
+    Sex = gender,
+    hetero_filter
+  ) |>
+  dplyr::mutate(
+    dia = factor(dia, levels = c("Healthy Control", "Alzheimers Disease"))
+  ) |>
+  dplyr::mutate(
+    Sex = factor(Sex),
+    genotype = factor(genotype),
+    disease = factor(disease)
+  ) |>
+  dplyr::mutate(dia = disease) |>
+  dplyr::mutate(Age = age) |>
+  dplyr::mutate(
+    dia = factor(dia, levels = c("Healthy Control", "Alzheimers Disease"))
+  ) |>
+  tidyr::unnest(cols = hetero_filter) ->
+  metadata_anno_filter_sel
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(!is.na(af)) |>
+  dplyr::filter(af >= 0.05) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  dplyr::count(variant, celltype) |>
+  plotme::count_to_sunburst()
+
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(!is.na(af)) |>
+  dplyr::filter(af >= 0.05) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  dplyr::select(variant, celltype) |>
+  dplyr::distinct() |>
+  dplyr::group_by(variant) |>
+  dplyr::count() |>
+  dplyr::ungroup() |>
+  dplyr::filter(n >=8) |>
+  dplyr::select(variant) |>
+  dplyr::distinct() |>
+  head(20) ->
+  sv
+
+metadata_anno_filter_sel |>
+  dplyr::filter(!is.na(af)) |>
+  dplyr::filter(af >= 0.05) |>
+  dplyr::filter(variant %in% sv$variant) |>
+  ggplot(aes(x = af, fill = celltype)) +
+  geom_density() +
+  facet_wrap(~variant)
+
+
+metadata_anno_filter_sel |>
+  # dplyr::filter(variant == "8303A>G") |>
+  dplyr::filter(variant %in% c(
+    # "1602C>A", "1604G>A",
+    # "1610A>T", "1670A>G",
+    "2442T>C",
+    "2517A>T", "2617A>G",
+    "3173G>A", "3176A>T", "3178T>A",
+  "7526A>G",
+    "8303A>G",
+    "8362T>G",
+    "10413A>G"
+  )) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  ggplot(aes(x = age, y = af)) +
+  geom_point(aes(color = dia), show.legend = FALSE) +
+  geom_smooth(method = "loess", se = FALSE, color = "black", linetype = 21) +
+  geom_smooth(aes(color = dia), method = "glm", se = FALSE) +
+  ggsci::scale_color_jama(
+    name = "Disease type"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  facet_grid(
+    rows = vars(variant),
+    cols = vars(celltype),
+    switch = "y"
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "bottom",
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p_cell_age;p_cell_age
+ggsave(
+  filename = "Celltype age.pdf",
+  plo = p_cell_age,
+  device = "pdf",
+  width = 15,
+  height = 8,
+  path = outdir
+)
+the_v <- c(  "7526A>G",
+             "8303A>G")
+
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(variant == "7526A>G") |>
+  dplyr::filter(celltype == "DC") |>
+  dplyr::filter(dia == "Alzheimers Disease") |>
+  ggstatsplot::ggscatterstats(
+    x = age,
+    y = af,
+    color = dia
+  )
+
+metadata_anno_filter_sel |>
+  tidyr::nest(.by = c("variant", "celltype")) |>
+  dplyr::mutate(age_cor = purrr::map(
+    .x = data,
+    .f = \(.d) {
+      tryCatch(
+        expr = {
+          if(nrow(.d) < 6){return(NULL)}
+          cor.test(~af + age, data =.d) |>
+            broom::tidy() |>
+            dplyr::select(
+              cor = estimate,
+              pval = p.value
+            )
+        },
+        error = \(e) {
+          NULL
+        }
+      )
+
+    }
+  )) |>
+  dplyr::mutate(
+    sex_t = purrr::map(
+      .x = data,
+      .f = \(.d) {
+        tryCatch(
+          expr = {
+            t.test(af ~ Sex, .d) |>
+              broom::tidy() |>
+              dplyr::select(pval = p.value)
+          },
+          error = \(e) {
+            NULL
+          }
+        )
+      }
+    )
+  ) |>
+  dplyr::mutate(
+    disease_t = purrr::map(
+      .x = data,
+      .f = \(.d) {
+        tryCatch(
+          expr = {
+            t.test(af ~ disease, .d) |>
+              broom::tidy() |>
+              dplyr::select(pval = p.value)
+          },
+          error = \(e) {
+            NULL
+          }
+        )
+      }
+    )
+  ) ->
+  metadata_anno_filter_sel_test
+
+metadata_anno_filter_sel_test |>
+  dplyr::select(variant, celltype, age_cor) |>
+  tidyr::unnest(cols = age_cor) |>
+  dplyr::filter(pval < 0.05, abs(cor) > 0.5) ->
+  select_v_by_age
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(variant == select_v_by_age$variant) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  ggplot(aes(x = age, y = af)) +
+  geom_point(aes(color = dia), show.legend = FALSE) +
+  geom_smooth(method = "loess", se = FALSE, color = "black", linetype = 21) +
+  geom_smooth(aes(color = dia), method = "glm", se = FALSE) +
+  ggsci::scale_color_jama(
+    name = "Disease type"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  facet_grid(
+    rows = vars(variant),
+    cols = vars(celltype),
+    switch = "y"
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "bottom",
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p_cell_age;p_cell_age
+ggsave(
+  filename = "Celltype age.pdf",
+  plo = p_cell_age,
+  device = "pdf",
+  width = 15,
+  height = 8,
+  path = outdir
+)
+
+metadata_anno_filter_sel_test |>
+  dplyr::select(variant, sex_t) |>
+  tidyr::unnest(cols = sex_t) |>
+  dplyr::filter(pval < 0.05) ->
+  select_v_by_sex
+
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(variant == select_v_by_sex$variant) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  ggplot(aes(
+    x = Sex,
+    y = af,
+  )) +
+  # geom_violin() +
+  geom_boxplot(
+    aes( color = Sex),
+    width = 0.5,
+    show.legend = T
+  ) +
+  # geom_point(position = position_jitter(width = 0.3)) +
+  ggsci::scale_color_aaas(
+    name = "Sex"
+  ) +
+  scale_x_discrete(
+    limits = c("male", "female"),
+    labels = c("Male", "Female")
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  facet_grid(
+    rows = vars(variant),
+    cols = vars(celltype),
+    switch = "y"
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "bottom",
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  )
+
+
+
+metadata_anno_filter_sel_test |>
+  dplyr::select(variant, celltype,  disease_t) |>
+  tidyr::unnest(cols = disease_t) |>
+  dplyr::filter(pval < 0.01)
+
+metadata_anno_filter_sel_test |>
+  dplyr::select(variant, disease_t) |>
+  tidyr::unnest(cols = disease_t) |>
+  dplyr::filter(pval < 0.01) ->
+  select_v_by_disease
+
+
+
+metadata_anno_filter_sel |>
+  dplyr::filter(variant == select_v_by_disease$variant) |>
+  dplyr::mutate(
+    variant = factor(variant)
+  ) |>
+  ggplot(aes(
+    x = dia,
+    y = af,
+  )) +
+  # geom_violin() +
+  geom_boxplot(
+    aes( color = dia),
+    width = 0.5,
+    show.legend = T
+  ) +
+  # geom_point(position = position_jitter(width = 0.3)) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  ) +
+  ggsci::scale_color_jama(
+    name = "Disease type"
+  )+
+  facet_grid(
+    rows = vars(variant),
+    cols = vars(celltype),
+    switch = "y"
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      # size = 18
+    ),
+    legend.position = "bottom",
+    legend.background = element_blank(),
+    legend.key = element_blank(),
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 10,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    )
+  ) ->
+  p_cell_dia;p_cell_dia
+ggsave(
+  filename = "Celltype disease.pdf",
+  plo = p_cell_dia,
+  device = "pdf",
+  width = 15,
+  height = 8,
+  path = outdir
+)
 # footer ------------------------------------------------------------------
 
 # future::plan(future::sequential)

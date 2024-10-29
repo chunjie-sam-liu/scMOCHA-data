@@ -70,6 +70,7 @@ fn_parse_log <- function(logfile) {
 # load data ---------------------------------------------------------------
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- "/home/liuc9/github/scMOCHA/06-bigdata/"
 gseid <- "GSE226602"
 datadir <- file.path(
   basedir, gseid
@@ -83,7 +84,7 @@ datadir <- file.path(
 
 logfile <- file.path(
   datadir,
-  "02.2.{gseid}.batch.log" |> glue::glue()
+  "04.{gseid}.batch.log" |> glue::glue()
 )
 targz <- fn_parse_log(logfile = logfile)
 
@@ -136,11 +137,33 @@ srr_out |>
         .cva <- data.table::fread(
           file.path(.srrdir, "cell_variant_annotation.tsv")
         )
+        .cva |> dplyr::mutate(
+          v = glue::glue("{Position}{Ref}>{Alt}")
+        ) |>
+          dplyr::pull(v) ->
+          .v
+        .cva$Position -> .pos
+
+        .hetero <- data.table::fread(
+          file.path(.srrdir, "cluster.cell_heteroplasmic_df.tsv.gz")
+        ) |>
+          dplyr::rename(celltype = V1) |>
+          tidyr::gather(-celltype, key = variant, value = af) |>
+          dplyr::filter(variant %in% .v)
+
+        .cov <- data.table::fread(
+          file.path(.srrdir, "cluster.coverage.txt.gz"),
+          col.names = c("pos", "celltype", "count")
+        ) |>
+          dplyr::filter(pos %in% .pos)
+
         tibble::tibble(
           cell_stats = list(.cs),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
-          anno = list(.cva)
+          anno = list(.cva),
+          hetero = list(.hetero),
+          coverage = list(.cov)
         )
       }
     )
