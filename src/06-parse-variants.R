@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -64,7 +64,7 @@ targzdir <- file.path(
 outdir <- file.path(
   datadir, "out"
 )
-dir.create(outdir, showWarnings = F,recursive = T)
+dir.create(outdir, showWarnings = F, recursive = T)
 
 srrid_list <- readr::read_lines(
   file = file.path(
@@ -82,16 +82,15 @@ tibble::tibble(
   ) |>
   dplyr::mutate(
     dir_exists = dir.exists(srrdir)
-  )  ->
-  srr_out
-
+  ) ->
+srr_out
 
 srr_out |>
   dplyr::mutate(
-    cell_stats = purrr::map(
-      .x = srrdir,
-      .f = \(.srrdir) {
-        if(!dir.exists(.srrdir)) {
+    cell_stats = parallel::mclapply(
+      X = srrdir,
+      FUN = \(.srrdir) {
+        if (!dir.exists(.srrdir)) {
           return(NULL)
         }
         .cs <- readxl::read_xlsx(
@@ -109,17 +108,41 @@ srr_out |>
         .cva <- data.table::fread(
           file.path(.srrdir, "cell_variant_annotation.tsv")
         )
+        .cva |>
+          dplyr::mutate(
+            v = glue::glue("{Position}{Ref}>{Alt}")
+          ) |>
+          dplyr::pull(v) ->
+        .v
+        .cva$Position -> .pos
+
+        .hetero <- data.table::fread(
+          file.path(.srrdir, "cluster.cell_heteroplasmic_df.tsv.gz")
+        ) |>
+          dplyr::rename(celltype = V1) |>
+          tidyr::gather(-celltype, key = variant, value = af) |>
+          dplyr::filter(variant %in% .v)
+
+        .cov <- data.table::fread(
+          file.path(.srrdir, "cluster.coverage.txt.gz"),
+          col.names = c("pos", "celltype", "count")
+        ) |>
+          dplyr::filter(pos %in% .pos)
+
         tibble::tibble(
           cell_stats = list(.cs),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
-          anno = list(.cva)
+          anno = list(.cva),
+          hetero = list(.hetero),
+          coverage = list(.cov)
         )
-      }
+      },
+      mc.cores = 20
     )
   ) |>
   tidyr::unnest(cols = cell_stats) ->
-  srr_out_cell_stats
+srr_out_cell_stats
 
 readr::write_rds(
   srr_out_cell_stats,
@@ -131,13 +154,15 @@ readr::write_rds(
 
 # variants ----------------------------------------------------------------
 
-srr_out_cell_stats ->variant
+srr_out_cell_stats -> variant
 variant |>
   dplyr::mutate(
     nmut = purrr::map_int(
       .x = anno,
       .f = \(.x) {
-        if(is.null(.x)) {return(NA_integer_)}
+        if (is.null(.x)) {
+          return(NA_integer_)
+        }
         nrow(.x)
       }
     )
@@ -148,14 +173,13 @@ variant |>
       .y = srrid,
       .f = \(.x, .y) {
         log_fatal(gseid, " ", .y)
-        if(is.null(.x)) {
+        if (is.null(.x)) {
           return(
             tibble::tibble(
               Haplogroup = NA_character_,
               Verbose_haplogroup = NA_character_
             )
           )
-
         }
         .x |>
           dplyr::select(Haplogroup, Verbose_haplogroup) |>
@@ -163,9 +187,9 @@ variant |>
           dplyr::filter(Haplogroup != "") |>
           dplyr::distinct() |>
           dplyr::mutate_all(.funs = as.character) ->
-          .xx
+        .xx
 
-        if(nrow(.xx) == 0) {
+        if (nrow(.xx) == 0) {
           tibble::tibble(
             Haplogroup = NA_character_,
             Verbose_haplogroup = NA_character_
@@ -184,9 +208,9 @@ variant |>
     cols = cell_stats
   ) |>
   dplyr::mutate(
-    ratio = round(`number of cells after filtering`/ `estimated number of cells`,2)
+    ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
   ) ->
-  metadata_anno
+metadata_anno
 
 
 
@@ -195,14 +219,14 @@ metadata_anno |>
     srrid,
     `Median UMI/cell` = `median UMI counts per cell`,
     `Median genes/cell` = `median genes per cell`,
-    `# of cells`=`estimated number of cells`,
+    `# of cells` = `estimated number of cells`,
     `# cells after filter` = `number of cells after filtering`,
     `Cell ratio` = ratio,
     `# of variants` = nmut,
     Haplogroup = Haplogroup,
     Haplogroup_v = Verbose_haplogroup
   ) ->
-  metadata_clean
+metadata_clean
 
 metadata_clean |>
   writexl::write_xlsx(
