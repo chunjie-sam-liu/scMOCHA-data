@@ -137,11 +137,12 @@ srr_out |>
         .cva <- data.table::fread(
           file.path(.srrdir, "cell_variant_annotation.tsv")
         )
-        .cva |> dplyr::mutate(
-          v = glue::glue("{Position}{Ref}>{Alt}")
-        ) |>
+        .cva |>
+          dplyr::mutate(
+            v = glue::glue("{Position}{Ref}>{Alt}")
+          ) |>
           dplyr::pull(v) ->
-          .v
+        .v
         .cva$Position -> .pos
 
         .hetero <- data.table::fread(

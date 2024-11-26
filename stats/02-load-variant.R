@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -56,7 +56,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 fn_parse_log <- function(logfile) {
-
   logs <- readr::read_lines(
     file = logfile,
     skip_empty_rows = T
@@ -99,7 +98,7 @@ tibble::tibble(
     srrid = basename(srrdir)
   ) |>
   dplyr::select(srrdir, srrid) ->
-  srr_out
+srr_out
 
 
 outdir <- file.path(
@@ -117,12 +116,12 @@ readr::write_lines(
     "{gseid}.scmocha.out.targz.txt" |> glue::glue()
   )
 )
-
 srr_out |>
   dplyr::mutate(
-    cell_stats = purrr::map(
-      .x = srrdir,
-      .f = \(.srrdir) {
+    cell_stats = parallel::mclapply(
+      X = srrdir,
+      FUN = function(.srrdir) {
+        log_info(basename(.srrdir))
         .cs <- readxl::read_xlsx(
           file.path(.srrdir, "qc_cell_stats.xlsx")
         )
@@ -138,17 +137,19 @@ srr_out |>
         .cva <- data.table::fread(
           file.path(.srrdir, "cell_variant_annotation.tsv")
         )
+        log_success(basename(.srrdir))
         tibble::tibble(
           cell_stats = list(.cs),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
           anno = list(.cva)
         )
-      }
+      },
+      mc.cores = 20
     )
   ) |>
   tidyr::unnest(cols = cell_stats) ->
-  srr_out_cell_stats
+srr_out_cell_stats
 
 
 readr::write_rds(

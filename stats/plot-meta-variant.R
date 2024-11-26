@@ -14,7 +14,7 @@ library(patchwork)
 library(prismatic)
 library(paletteer)
 library(data.table)
-#library(rlang)
+# library(rlang)
 library(GetoptLong)
 library(logger)
 
@@ -97,7 +97,9 @@ variant |>
     nmut = purrr::map_int(
       .x = anno,
       .f = \(.x) {
-        if(is.null(.x)) {return(NA_integer_)}
+        if (is.null(.x)) {
+          return(NA_integer_)
+        }
         nrow(.x)
       }
     )
@@ -108,14 +110,13 @@ variant |>
       .y = srrid,
       .f = \(.x, .y) {
         message(.y)
-        if(is.null(.x)) {
+        if (is.null(.x)) {
           return(
             tibble::tibble(
               Haplogroup = NA_character_,
               Verbose_haplogroup = NA_character_
             )
           )
-
         }
         .x |>
           dplyr::select(Haplogroup, Verbose_haplogroup) |>
@@ -123,9 +124,9 @@ variant |>
           dplyr::filter(Haplogroup != "") |>
           dplyr::distinct() |>
           dplyr::mutate_all(.funs = as.character) ->
-          .xx
+        .xx
 
-        if(nrow(.xx) == 0) {
+        if (nrow(.xx) == 0) {
           tibble::tibble(
             Haplogroup = NA_character_,
             Verbose_haplogroup = NA_character_
@@ -138,15 +139,16 @@ variant |>
   ) |>
   tidyr::unnest(cols = haplogroup) |>
   dplyr::inner_join(
-    pheno, by = "srrid"
+    pheno,
+    by = "srrid"
   ) |>
   tidyr::unnest(
     cols = cell_stats
   ) |>
   dplyr::mutate(
-    ratio = round(`number of cells after filtering`/ `estimated number of cells`,2)
+    ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
   ) ->
-  metadata_anno
+metadata_anno
 
 
 
@@ -157,14 +159,14 @@ metadata_anno |>
     disease, genotype,
     `Median UMI/cell` = `median UMI counts per cell`,
     `Median genes/cell` = `median genes per cell`,
-    `# of cells`=`estimated number of cells`,
+    `# of cells` = `estimated number of cells`,
     `# cells after filter` = `number of cells after filtering`,
     `Cell ratio` = ratio,
     `# of variants` = nmut,
     Haplogroup = Haplogroup,
     Haplogroup_v = Verbose_haplogroup
   ) ->
-  metadata_clean
+metadata_clean
 
 metadata_clean |>
   writexl::write_xlsx(
@@ -183,11 +185,11 @@ metadata_anno |>
   # dplyr::arrange(disease) |>
   dplyr::mutate(color = dplyr::case_match(
     disease,
-    "Alzheimers Disease" ~ggsci::pal_jama()(4)[[1]],
+    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
     "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
   )) |>
   dplyr::arrange(dplyr::desc(dplyr::row_number())) ->
-  for_ratio_plot
+for_ratio_plot
 
 for_ratio_plot |>
   tidyr::unnest(cols = celltype_ratio) |>
@@ -231,7 +233,7 @@ for_ratio_plot |>
     legend.position = "right"
   ) +
   labs(x = "Cell ratio") ->
-  p_cellratio
+p_cellratio
 
 
 ggsave(
@@ -295,7 +297,8 @@ fn_plot_gene <- function() {
       axis.text.x = element_text(size = 14),
       legend.text = element_text(size = 14)
     ) ->
-    pg;pg
+  pg
+  pg
 }
 
 metadata_anno |>
@@ -304,15 +307,15 @@ metadata_anno |>
   # dplyr::arrange(disease) |>
   dplyr::mutate(color = dplyr::case_match(
     disease,
-    "Alzheimers Disease" ~ggsci::pal_jama()(4)[[1]],
+    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
     "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
   )) |>
   dplyr::arrange(dplyr::desc(dplyr::row_number())) ->
-  for_depth_plot
+for_depth_plot
 
 for_depth_plot |>
   tidyr::unnest(cols = depth) |>
-  ggplot(aes(x=pos, y = depth, fill = `color`)) +
+  ggplot(aes(x = pos, y = depth, fill = `color`)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(
     expand = expansion(mult = c(0.01, 0)),
@@ -341,7 +344,7 @@ for_depth_plot |>
     legend.position = c(0.8, 0.5),
     legend.key = element_blank(),
     axis.title.y = element_text(size = 16, color = "black"),
-    axis.text.y = element_text( color = "black"),
+    axis.text.y = element_text(color = "black"),
     legend.text = element_text(
       size = 14,
       color = "black"
@@ -363,7 +366,8 @@ for_depth_plot |>
     strip.position = "right"
   ) +
   labs(y = "Depth") ->
-  p_mt_depth;p_mt_depth
+p_mt_depth
+p_mt_depth
 
 
 wrap_plots(
@@ -372,7 +376,8 @@ wrap_plots(
   ncol = 1,
   heights = c(0.9, 0.1)
 ) ->
-  p_depth;p_depth
+p_depth
+p_depth
 
 ggsave(
   filename = "Sample_depth_merge.pdf",
@@ -391,7 +396,7 @@ metadata_anno |>
   # dplyr::arrange(disease) |>
   dplyr::mutate(color = dplyr::case_match(
     disease,
-    "Alzheimers Disease" ~ggsci::pal_jama()(4)[[1]],
+    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
     "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
   )) |>
   dplyr::arrange(dplyr::desc(dplyr::row_number())) |>
@@ -426,16 +431,16 @@ metadata_anno |>
     Sex = factor(Sex),
     genotype = factor(genotype),
     disease = factor(disease)
-  )  ->
-  metadata_anno_depth_dep
+  ) ->
+metadata_anno_depth_dep
 
 correlation::correlation(
   metadata_anno_depth_dep |>
     dplyr::select(-dep_s, -dep_mea),
   p_adjust = "none"
-)  |>
+) |>
   summary(redundant = TRUE) ->
-  cor_summr
+cor_summr
 
 plot(cor_summr)
 
@@ -468,11 +473,11 @@ cor_summr |>
   ) +
   scale_x_discrete(
     limits = c("nmut", "dep_med", "number of cells after filtering", "median UMI counts per cell", "age"),
-    labels = c("# variants", "median depth", "# cells", "median UMI/cell", "Age" ) |> stringr::str_to_sentence()
+    labels = c("# variants", "median depth", "# cells", "median UMI/cell", "Age") |> stringr::str_to_sentence()
   ) +
   scale_y_discrete(
-    limits = c("nmut", "dep_med", "number of cells after filtering", "median UMI counts per cell", "age" ) |> rev(),
-    labels = c("# variants", "median depth", "# cells", "median UMI/cell", "Age" ) |> rev() |>  stringr::str_to_sentence()
+    limits = c("nmut", "dep_med", "number of cells after filtering", "median UMI counts per cell", "age") |> rev(),
+    labels = c("# variants", "median depth", "# cells", "median UMI/cell", "Age") |> rev() |> stringr::str_to_sentence()
   ) +
   theme(
     panel.background = element_blank(),
@@ -484,7 +489,8 @@ cor_summr |>
       size = 14
     )
   ) ->
-  p_cor;p_cor
+p_cor
+p_cor
 
 ggsave(
   filename = "All-factor-correlations.pdf",
@@ -499,7 +505,7 @@ ggsave(
 # sex ---------------------------------------------------------------------
 
 
-t.test(nmut ~Sex, data = metadata_anno_depth_dep) |>
+t.test(nmut ~ Sex, data = metadata_anno_depth_dep) |>
   broom::tidy()
 metadata_anno_depth_dep |>
   ggplot(aes(
@@ -531,7 +537,8 @@ metadata_anno_depth_dep |>
     x = "Gender",
     y = "# of variants"
   ) ->
-  gender_cor_plot;gender_cor_plot
+gender_cor_plot
+gender_cor_plot
 
 
 ggsave(
@@ -549,21 +556,21 @@ cor.test(
   formula = ~ nmut + age,
   data = metadata_anno_depth_dep
 ) ->
-  cta
+cta
 
 cor.test(
   formula = ~ nmut + age,
   data = metadata_anno_depth_dep |>
     dplyr::filter(disease == "Healthy Control")
 ) ->
-  cta_mci
+cta_mci
 
 cor.test(
   formula = ~ nmut + age,
   data = metadata_anno_depth_dep |>
     dplyr::filter(disease == "Alzheimers Disease")
 ) ->
-  cta_ad
+cta_ad
 
 yhight <- 32
 xwidth <- 50
@@ -667,7 +674,8 @@ metadata_anno_depth_dep |>
     x = "Age",
     y = "# of variants"
   ) ->
-  p_linear_1;p_linear_1
+p_linear_1
+p_linear_1
 
 ggsave(
   filename = "All-factor-correlations-linear-age-nvariant.pdf",
@@ -687,7 +695,9 @@ metadata_anno |>
       .x = anno,
       .y = srrdir,
       .f = function(.x, .y) {
-        if(is.na(.y)) {return(NULL)}
+        if (is.na(.y)) {
+          return(NULL)
+        }
         .x |>
           dplyr::mutate(
             variant = glue::glue("{Position}{Ref}>{Alt}")
@@ -696,24 +706,24 @@ metadata_anno |>
       }
     )
   ) ->
-  metadata_anno_depth_variant
+metadata_anno_depth_variant
 
 metadata_anno_depth_variant |>
   dplyr::mutate(color = dplyr::case_match(
     disease,
-    "Alzheimers Disease" ~ggsci::pal_jama()(4)[[1]],
+    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
     "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
   )) |>
   dplyr::select(srrid, source_name = disease, variant, color) |>
   dplyr::filter(!purrr::map_lgl(.x = variant, .f = is.null)) ->
-  for_variant
+for_variant
 
 fn_upset_plot <- function(.x) {
   # .x <- "nCoV_PBMC(severe)"
   library(ggupset)
   for_variant |>
     dplyr::filter(source_name == .x) ->
-    d
+  d
 
   d |>
     tidyr::unnest(cols = variant) |>
@@ -730,15 +740,15 @@ fn_upset_plot <- function(.x) {
       )
     ) |>
     dplyr::select(-data) ->
-    dd
+  dd
 
 
   dd |>
     ggplot(aes(x = srrid)) +
     geom_bar(width = 0.6, fill = d$color[1]) +
     geom_text(
-      stat='count',
-      aes(label=after_stat(count)),
+      stat = "count",
+      aes(label = after_stat(count)),
       vjust = -0.5,
       color = "black",
       size = 3,
@@ -786,7 +796,7 @@ fn_upset_plot <- function(.x) {
         face = "bold"
       )
     ) ->
-    .p_up
+  .p_up
 
   ggsave(
     plot = .p_up,
@@ -811,13 +821,12 @@ fn_upset_plot <- function(.x) {
     ) |>
     dplyr::arrange(n) |>
     dplyr::select(-srrid) ->
-    .v
+  .v
 
   list(
     v = .v,
     p_up = .p_up
   )
-
 }
 
 for_variant$source_name |>
@@ -825,11 +834,12 @@ for_variant$source_name |>
   purrr::map(
     .f = fn_upset_plot
   ) ->
-  p_ups
+p_ups
 
 (p_ups[[1]]$p_up | p_ups[[2]]$p_up) +
   plot_annotation(tag_levels = "A") ->
-  p_ups_together;p_ups_together
+p_ups_together
+p_ups_together
 
 ggsave(
   plot = p_ups_together,
@@ -861,29 +871,72 @@ p_ups |>
 
 # heteroplasmy ------------------------------------------------------------
 
-
+# GSM7080019
 metadata_anno |>
   dplyr::glimpse()
-metadata_anno$srrdir[[1]]
-metadata_anno$anno[[1]] |>
+metadata_anno$srrdir[[14]]
+metadata_anno$anno[[14]] |>
   dplyr::mutate(
     v = glue::glue("{Position}{Ref}>{Alt}")
   ) ->
-  sel_anno
+sel_anno
 
-metadata_anno$coverage[[1]] ->
-  sel_cov
-metadata_anno$hetero[[1]] ->
-  forplot
+metadata_anno$coverage[[14]] ->
+sel_cov
+metadata_anno$hetero[[14]] ->
+forplot
+
+forplot |>
+  dplyr::group_by(variant) |>
+  dplyr::summarise(maf = sum(af, na.rm = T)) |>
+  dplyr::arrange(-maf) ->
+sort_variant
+
+sel_anno |>
+  # dplyr::filter(Haplogroup == "T2b") |>
+  dplyr::mutate(fill = ifelse(Haplogroup == "T2b", "red", "white")) |>
+  dplyr::mutate(color = ifelse(Haplogroup == "T2b", "white", "black")) |>
+  dplyr::mutate(
+    variant = factor(v, sort_variant$variant)
+  ) |>
+  dplyr::arrange(variant) ->
+t2b_variant
 
 forplot |>
   dplyr::mutate(
-    variant = factor(variant, forplot$variant |> unique())
+    variant = factor(variant, sort_variant$variant |> unique())
   ) |>
+  dplyr::arrange(variant) ->
+forplot_t2b
+
+library(ggh4x)
+forplot_t2b |>
   # dplyr::filter(variant == "2706A>G") |>
   ggplot(aes(x = celltype, y = af)) +
   geom_col(aes(fill = af)) +
-  facet_wrap(~variant) +
+  # facet_wrap(~variant, ncol = 10) +
+  ggh4x::facet_wrap2(
+    ~variant,
+    ncol = 10,
+    strip = ggh4x::strip_themed(
+      # Horizontal strips
+      # background_x = elem_list_rect(fill = c("limegreen", "dodgerblue")),
+      background_x = elem_list_rect(
+        fill = t2b_variant$fill
+      ),
+      text_x = elem_list_text(
+        colour = t2b_variant$color,
+        face = c("bold")
+      ),
+      by_layer_x = FALSE,
+      # # Vertical strips
+      # background_y = elem_list_rect(
+      #   fill = c("gold", "tomato", "deepskyblue")
+      # ),
+      # text_y = elem_list_text(angle = c(0, 90)),
+      # by_layer_y = FALSE
+    )
+  ) +
   scale_fill_gradient2(
     low = "white",
     mid = "red",
@@ -904,32 +957,39 @@ forplot |>
       size = 16,
       hjust = 0.5
     ),
-    strip.background = element_rect(
-      fill = NA,
-      color = "black",
-    ),
-    strip.text = element_text(
-      color = "black",
-      size = 10,
-      face = "bold"
-    ),
+    # strip.background = element_rect(
+    #   # fill = NA,
+    #   # fill = t2b_variant$color,
+    #   color = "black",
+    # ),
+    # strip.text = element_text(
+    #   # color = "black",
+    #   # color = forplot_t2b$t2b,
+    #   size = 10,
+    #   face = "bold"
+    # ),
     axis.line = element_line(
       color = "black"
+    ),
+    axis.text.x = element_text(
+      angle = 45,
+      hjust = 1
     )
   ) ->
-  p;p
+p
+p
 
 ggsave(
-  filename = "GSM7080053-cluster-bar.pdf",
+  filename = "GSM7080019-cluster-bar.pdf",
   plot = p,
   device = "pdf",
   path = outdir,
-  width = 17,
+  width = 20,
   height = 10
 )
 
-unique(forplot$variant)[c(6, 10:15, 17, 18, 19:27, 30: 36, 38, 40, 43:48, 50, 52, 54, 55, 58, 59, 61:65, 70 )] ->
-  sel_v
+unique(forplot$variant)[c(6, 10:15, 17, 18, 19:27, 30:36, 38, 40, 43:48, 50, 52, 54, 55, 58, 59, 61:65, 70)] ->
+sel_v
 
 forplot |>
   dplyr::filter(variant %in% sel_v) |>
@@ -971,9 +1031,13 @@ forplot |>
     ),
     axis.line = element_line(
       color = "black"
+    ),
+    axis.text.x = element_text(
+      angle = 45,
     )
   ) ->
-  p;p
+p
+p
 
 
 ggsave(
@@ -1029,7 +1093,8 @@ tibble::tibble(
       color = "black"
     )
   ) ->
-  p_c;p_c
+p_c
+p_c
 
 ggsave(
   filename = "GSM7080053-cluster-bar-sel-cov.pdf",
@@ -1053,21 +1118,21 @@ metadata_anno |>
           dplyr::summarise(
             mean_af = mean(af, na.rm = T)
           ) ->
-          .dd
+        .dd
 
 
         .dd$mean_af |> hist()
         .dd |>
           dplyr::filter(mean_af < 0.8) |>
           dplyr::filter(mean_af > 0.05) ->
-          .ddd
+        .ddd
 
         .d |>
           dplyr::filter(variant %in% .ddd$variant)
       }
     )
   ) ->
-  metadata_anno_filter
+metadata_anno_filter
 
 
 
@@ -1095,7 +1160,7 @@ metadata_anno_filter |>
     dia = factor(dia, levels = c("Healthy Control", "Alzheimers Disease"))
   ) |>
   tidyr::unnest(cols = hetero_filter) ->
-  metadata_anno_filter_sel
+metadata_anno_filter_sel
 
 
 metadata_anno_filter_sel |>
@@ -1120,11 +1185,11 @@ metadata_anno_filter_sel |>
   dplyr::group_by(variant) |>
   dplyr::count() |>
   dplyr::ungroup() |>
-  dplyr::filter(n >=8) |>
+  dplyr::filter(n >= 8) |>
   dplyr::select(variant) |>
   dplyr::distinct() |>
   head(20) ->
-  sv
+sv
 
 metadata_anno_filter_sel |>
   dplyr::filter(!is.na(af)) |>
@@ -1143,7 +1208,7 @@ metadata_anno_filter_sel |>
     "2442T>C",
     "2517A>T", "2617A>G",
     "3173G>A", "3176A>T", "3178T>A",
-  "7526A>G",
+    "7526A>G",
     "8303A>G",
     "8362T>G",
     "10413A>G"
@@ -1195,7 +1260,8 @@ metadata_anno_filter_sel |>
       color = "black"
     )
   ) ->
-  p_cell_age;p_cell_age
+p_cell_age
+p_cell_age
 ggsave(
   filename = "Celltype age.pdf",
   plo = p_cell_age,
@@ -1204,8 +1270,10 @@ ggsave(
   height = 8,
   path = outdir
 )
-the_v <- c(  "7526A>G",
-             "8303A>G")
+the_v <- c(
+  "7526A>G",
+  "8303A>G"
+)
 
 
 
@@ -1226,8 +1294,10 @@ metadata_anno_filter_sel |>
     .f = \(.d) {
       tryCatch(
         expr = {
-          if(nrow(.d) < 6){return(NULL)}
-          cor.test(~af + age, data =.d) |>
+          if (nrow(.d) < 6) {
+            return(NULL)
+          }
+          cor.test(~ af + age, data = .d) |>
             broom::tidy() |>
             dplyr::select(
               cor = estimate,
@@ -1238,7 +1308,6 @@ metadata_anno_filter_sel |>
           NULL
         }
       )
-
     }
   )) |>
   dplyr::mutate(
@@ -1275,13 +1344,13 @@ metadata_anno_filter_sel |>
       }
     )
   ) ->
-  metadata_anno_filter_sel_test
+metadata_anno_filter_sel_test
 
 metadata_anno_filter_sel_test |>
   dplyr::select(variant, celltype, age_cor) |>
   tidyr::unnest(cols = age_cor) |>
   dplyr::filter(pval < 0.05, abs(cor) > 0.5) ->
-  select_v_by_age
+select_v_by_age
 
 
 metadata_anno_filter_sel |>
@@ -1333,7 +1402,8 @@ metadata_anno_filter_sel |>
       color = "black"
     )
   ) ->
-  p_cell_age;p_cell_age
+p_cell_age
+p_cell_age
 ggsave(
   filename = "Celltype age.pdf",
   plo = p_cell_age,
@@ -1347,7 +1417,7 @@ metadata_anno_filter_sel_test |>
   dplyr::select(variant, sex_t) |>
   tidyr::unnest(cols = sex_t) |>
   dplyr::filter(pval < 0.05) ->
-  select_v_by_sex
+select_v_by_sex
 
 
 
@@ -1362,7 +1432,7 @@ metadata_anno_filter_sel |>
   )) +
   # geom_violin() +
   geom_boxplot(
-    aes( color = Sex),
+    aes(color = Sex),
     width = 0.5,
     show.legend = T
   ) +
@@ -1415,7 +1485,7 @@ metadata_anno_filter_sel |>
 
 
 metadata_anno_filter_sel_test |>
-  dplyr::select(variant, celltype,  disease_t) |>
+  dplyr::select(variant, celltype, disease_t) |>
   tidyr::unnest(cols = disease_t) |>
   dplyr::filter(pval < 0.01)
 
@@ -1423,7 +1493,7 @@ metadata_anno_filter_sel_test |>
   dplyr::select(variant, disease_t) |>
   tidyr::unnest(cols = disease_t) |>
   dplyr::filter(pval < 0.01) ->
-  select_v_by_disease
+select_v_by_disease
 
 
 
@@ -1438,7 +1508,7 @@ metadata_anno_filter_sel |>
   )) +
   # geom_violin() +
   geom_boxplot(
-    aes( color = dia),
+    aes(color = dia),
     width = 0.5,
     show.legend = T
   ) +
@@ -1448,7 +1518,7 @@ metadata_anno_filter_sel |>
   ) +
   ggsci::scale_color_jama(
     name = "Disease type"
-  )+
+  ) +
   facet_grid(
     rows = vars(variant),
     cols = vars(celltype),
@@ -1483,7 +1553,8 @@ metadata_anno_filter_sel |>
       color = "black"
     )
   ) ->
-  p_cell_dia;p_cell_dia
+p_cell_dia
+p_cell_dia
 ggsave(
   filename = "Celltype disease.pdf",
   plo = p_cell_dia,
@@ -1503,3 +1574,7 @@ save.image(
     "03-merge-meta-variant.rda"
   )
 )
+load(file.path(
+  outdir,
+  "03-merge-meta-variant.rda"
+))
