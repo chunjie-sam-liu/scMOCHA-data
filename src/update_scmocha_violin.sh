@@ -26,16 +26,20 @@ update_gsmid() {
   conda activate scmocha
   chem=$(awk -F, '$1 == "SC3Pv3" {print $1}' chemistry.csv)
   # cell cluster annotation
+  echo "$gseid $gsmid azimuth.R"
   Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
     -h5file filtered_feature_bc_matrix.h5 \
     -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
     -c ${chem}
 
   # cell level variant calling
+  echo "$gseid $gsmid variant_calling_cell_raw.py"
   python /home/liuc9/github/scMOCHA/bin/variant_calling_cell_raw.py ./ cell 16569 10 MT
   # cluster level variant calling
+  echo "$gseid $gsmid variant_calling_cluster.py"
   python /home/liuc9/github/scMOCHA/bin/variant_calling_cluster.py ./ cluster 16569 10 MT
   # plot scMOCHA results
+  echo "$gseid $gsmid plot_scMOCHA.R"
   Rscript /home/liuc9/github/scMOCHA/bin/scMOCHA.R \
     -m cell_meta_data.tsv \
     -b barcode_cluster.tsv \
