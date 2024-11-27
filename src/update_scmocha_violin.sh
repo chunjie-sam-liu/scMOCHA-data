@@ -24,13 +24,21 @@ update_gsmid() {
 
   source /home/liuc9/tools/anaconda3/etc/profile.d/conda.sh
   conda activate scmocha
-  chem=$(awk -F, '$1 == "SC3Pv3" {print $1}' chemistry.csv)
-  # cell cluster annotation
-  echo "$gseid $gsmid azimuth.R"
-  Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-    -h5file filtered_feature_bc_matrix.h5 \
-    -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
-    -c ${chem}
+  if [[ -f chemistry.csv ]]; then
+    chem=$(awk -F, '$1 == "SC3Pv3" {print $1}' chemistry.csv)
+    # cell cluster annotation
+    echo "$gseid $gsmid azimuth.R"
+    Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+      -h5file filtered_feature_bc_matrix.h5 \
+      -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
+      -c ${chem}
+  else
+    echo "chemistry.csv not found, using alternative code"
+    # Alternative code here
+    Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+      -h5file filtered_feature_bc_matrix.h5 \
+      -refname_celllevel refname=pbmcref celllevel=celltype.l1
+  fi
 
   # cell level variant calling
   echo "$gseid $gsmid variant_calling_cell_raw.py"
@@ -80,6 +88,6 @@ update_all_gse() {
 }
 
 # update_gse GSE149689
-# update_gsmid GSE149689 GSM4509015
+# update_gsmid GSE226602 GSM7080053
 
-update_all_gse
+# update_all_gse
