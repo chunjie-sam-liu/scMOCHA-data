@@ -89,7 +89,7 @@ srr_out |>
   dplyr::mutate(
     cell_stats = parallel::mclapply(
       X = srrdir,
-      FUN = \(.srrdir) {
+      FUN = purrr::safely(\(.srrdir) {
         if (!dir.exists(.srrdir)) {
           return(NULL)
         }
@@ -105,15 +105,18 @@ srr_out |>
         .celltype_ratio <- data.table::fread(
           file.path(.srrdir, "celltype_ratio.tsv")
         )
+
         .cva <- data.table::fread(
           file.path(.srrdir, "cell_variant_annotation.tsv")
         )
+
         .cva |>
           dplyr::mutate(
             v = glue::glue("{Position}{Ref}>{Alt}")
           ) |>
           dplyr::pull(v) ->
         .v
+
         .cva$Position -> .pos
 
         .hetero <- data.table::fread(
@@ -129,21 +132,35 @@ srr_out |>
         ) |>
           dplyr::filter(pos %in% .pos)
 
+        .haplo_variant <- data.table::fread(
+          file.path(.srrdir, "cluster_cell_violin_haplo_variant.csv")
+        )
+
+        .haplo_violin <- data.table::fread(
+          file.path(.srrdir, "cluster_cell_violin_haplo_forplot.csv")
+        )
+
         tibble::tibble(
           cell_stats = list(.cs),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
           anno = list(.cva),
           hetero = list(.hetero),
-          coverage = list(.cov)
+          coverage = list(.cov),
+          haplo_variant = list(.haplo_variant),
+          haplo_violin = list(.haplo_violin)
         )
-      },
+      }),
       mc.cores = 20
     )
+  ) |>
+  dplyr::mutate(
+    cell_stats = purrr::map(cell_stats, "result")
   ) |>
   tidyr::unnest(cols = cell_stats) ->
 srr_out_cell_stats
 
+log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.rds" |> glue::glue())
 readr::write_rds(
   srr_out_cell_stats,
   file.path(
@@ -172,7 +189,7 @@ variant |>
       .x = anno,
       .y = srrid,
       .f = \(.x, .y) {
-        log_fatal(gseid, " ", .y)
+        log_info(gseid, " ", .y)
         if (is.null(.x)) {
           return(
             tibble::tibble(
@@ -227,7 +244,7 @@ metadata_anno |>
     Haplogroup_v = Verbose_haplogroup
   ) ->
 metadata_clean
-
+log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx")
 metadata_clean |>
   writexl::write_xlsx(
     path = file.path(
@@ -235,6 +252,7 @@ metadata_clean |>
       "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
     )
   )
+log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv")
 data.table::fwrite(
   x = metadata_clean,
   file = file.path(
