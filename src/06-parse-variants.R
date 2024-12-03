@@ -171,19 +171,23 @@ readr::write_rds(
 
 # variants ----------------------------------------------------------------
 
-srr_out_cell_stats -> variant
-variant |>
+# srr_out_cell_stats -> variant
+srr_out_cell_stats |>
   dplyr::mutate(
-    nmut = purrr::map_int(
-      .x = anno,
+    nmut = purrr::map(
+      .x = haplo_variant,
       .f = \(.x) {
         if (is.null(.x)) {
           return(NA_integer_)
         }
-        nrow(.x)
+        tibble::tibble(
+          nmut = nrow(.x),
+          nmut_nohaplo = nrow(.x |> dplyr::filter(color != "white"))
+        )
       }
     )
   ) |>
+  tidyr::unnest(cols = nmut) |>
   dplyr::mutate(
     haplogroup = purrr::map2(
       .x = anno,
@@ -241,9 +245,10 @@ metadata_anno |>
     `Cell ratio` = ratio,
     `# of variants` = nmut,
     Haplogroup = Haplogroup,
-    Haplogroup_v = Verbose_haplogroup
+    `# of somatic variants` = nmut_nohaplo
   ) ->
 metadata_clean
+
 log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx")
 metadata_clean |>
   writexl::write_xlsx(
@@ -252,6 +257,7 @@ metadata_clean |>
       "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
     )
   )
+
 log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv")
 data.table::fwrite(
   x = metadata_clean,
