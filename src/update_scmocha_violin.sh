@@ -25,7 +25,7 @@ update_gsmid() {
   source /home/liuc9/tools/anaconda3/etc/profile.d/conda.sh
   conda activate scmocha
   if [[ -f chemistry.csv ]]; then
-    chem=$(awk -F, '$1 == "SC3Pv3" {print $1}' chemistry.csv)
+    chem=$(sed -n '2p' chemistry.csv | cut -f1 -d,)
     # cell cluster annotation
     echo "$gseid $gsmid azimuth.R"
     Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
@@ -35,9 +35,18 @@ update_gsmid() {
   else
     echo "chemistry.csv not found, using alternative code"
     # Alternative code here
-    Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-      -h5file filtered_feature_bc_matrix.h5 \
-      -refname_celllevel refname=pbmcref celllevel=celltype.l1
+    if [[ "$gseid" = "GSE226602" ]]; then
+      echo "GSE226602"
+      Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+        -h5file filtered_feature_bc_matrix.h5 \
+        -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
+        -c "SC5P-PE"
+    else
+      echo "Other GSEs $gseid"
+      Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+        -h5file filtered_feature_bc_matrix.h5 \
+        -refname_celllevel refname=pbmcref celllevel=celltype.l1
+    fi
   fi
 
   # cell level variant calling
@@ -76,7 +85,7 @@ update_gse() {
 
   for gsmid in $gsmids; do
     echo "Updating $gseid and $gsmid"
-    update_gsmid $gseid $gsmid
+    update_gsmid $gseid $gsmid &
   done
 
 }
