@@ -249,7 +249,6 @@ metadata_anno |>
   ) ->
 metadata_clean
 
-log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx")
 metadata_clean |>
   writexl::write_xlsx(
     path = file.path(
@@ -257,8 +256,8 @@ metadata_clean |>
       "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
     )
   )
+log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx")
 
-log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv")
 data.table::fwrite(
   x = metadata_clean,
   file = file.path(
@@ -267,6 +266,7 @@ data.table::fwrite(
   )
 )
 
+log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv")
 # plot cell estimates -----------------------------------------------------
 
 
