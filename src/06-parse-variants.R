@@ -48,7 +48,48 @@ log_layout(layout_glue_colors)
 # future::plan(future::multisession, workers = 10)
 
 # function ----------------------------------------------------------------
+fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10) {
+  # .haplo_variant <- srr_out_cell_stats$haplo_variant[[1]]
+  # .haplo_violin <- srr_out_cell_stats$haplo_violin[[1]]
 
+  # 1. filter by haplogrep marker variant
+  .haplo_variant |>
+    dplyr::filter(fill != "white") |>
+    dplyr::pull(variant) ->
+  .v_haplo
+
+  # 2. filter by n_cells
+  .n_cells <- 10
+  .haplo_violin |>
+    dplyr::count(variant) |>
+    dplyr::filter(n < .n_cells) |>
+    dplyr::pull(variant) ->
+  .v_n_cells
+
+  # 3. tRNA p9 and RNA editing position
+  .editing_pos <- c(
+    585, 1610, 3238, 4271, 5520, 7526, 8303, # tRNA p9
+    9999, 10413, 12146, 12274, 14734, 15896, # tRNA p9
+    295, 2617, 13710 # RNA editing
+  )
+
+  .haplo_variant |>
+    dplyr::filter(Position %in% .editing_pos) |>
+    dplyr::pull(variant) ->
+  .v_editing
+
+  .haplo_variant |>
+    dplyr::filter(!variant %in% c(.v_haplo, .v_n_cells, .v_editing)) |>
+    dplyr::pull(variant) ->
+  .v_somatic
+
+  list(
+    haplo = .v_haplo,
+    n_cells = .v_n_cells,
+    editing = .v_editing,
+    somatic = .v_somatic
+  )
+}
 
 # load data ---------------------------------------------------------------
 
@@ -140,6 +181,10 @@ srr_out |>
           file.path(.srrdir, "cluster_cell_violin_haplo_forplot.csv")
         )
 
+        .somatic <- readr::read_rds(
+          file.path(.srrdir, "somatic_variant.rds")
+        )
+
         tibble::tibble(
           cell_stats = list(.cs),
           depth = list(.depth),
@@ -148,7 +193,8 @@ srr_out |>
           hetero = list(.hetero),
           coverage = list(.cov),
           haplo_variant = list(.haplo_variant),
-          haplo_violin = list(.haplo_violin)
+          haplo_violin = list(.haplo_violin),
+          somatic = list(.somatic)
         )
       }),
       mc.cores = 20
@@ -157,7 +203,15 @@ srr_out |>
   dplyr::mutate(
     cell_stats = purrr::map(cell_stats, "result")
   ) |>
-  tidyr::unnest(cols = cell_stats) ->
+  tidyr::unnest(cols = cell_stats) |>
+  dplyr::mutate(
+    somatic_variant = purrr::map2(
+      .x = haplo_variant,
+      .y = haplo_violin,
+      .f = fn_somatic_variant,
+      .n_cells = 10
+    )
+  ) ->
 srr_out_cell_stats
 
 log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.rds" |> glue::glue())
