@@ -25,37 +25,38 @@ update_gsmid() {
 
   source /home/liuc9/tools/anaconda3/etc/profile.d/conda.sh
   conda activate scmocha
-  if [[ -f chemistry.csv ]]; then
-    chem=$(sed -n '2p' chemistry.csv | cut -f1 -d,)
-    # cell cluster annotation
-    echo "$gseid $gsmid azimuth.R"
-    Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-      -h5file filtered_feature_bc_matrix.h5 \
-      -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
-      -c ${chem}
-  else
-    echo "chemistry.csv not found, using alternative code"
-    # Alternative code here
-    if [[ "$gseid" = "GSE226602" ]]; then
-      echo "GSE226602"
-      Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-        -h5file filtered_feature_bc_matrix.h5 \
-        -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
-        -c "SC5P-PE"
-    else
-      echo "Other GSEs $gseid"
-      Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-        -h5file filtered_feature_bc_matrix.h5 \
-        -refname_celllevel refname=pbmcref celllevel=celltype.l1
-    fi
-  fi
+  # if [[ -f chemistry.csv ]]; then
+  #   chem=$(sed -n '2p' chemistry.csv | cut -f1 -d,)
+  #   # cell cluster annotation
+  #   echo "$gseid $gsmid azimuth.R"
+  #   Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+  #     -h5file filtered_feature_bc_matrix.h5 \
+  #     -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
+  #     -c ${chem}
+  # else
+  #   echo "chemistry.csv not found, using alternative code"
+  #   # Alternative code here
+  #   if [[ "$gseid" = "GSE226602" ]]; then
+  #     echo "GSE226602"
+  #     Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+  #       -h5file filtered_feature_bc_matrix.h5 \
+  #       -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
+  #       -c "SC5P-PE"
+  #   else
+  #     echo "Other GSEs $gseid"
+  #     Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+  #       -h5file filtered_feature_bc_matrix.h5 \
+  #       -refname_celllevel refname=pbmcref celllevel=celltype.l1
+  #   fi
+  # fi
 
-  # cell level variant calling
-  echo "$gseid $gsmid variant_calling_cell_raw.py"
-  python /home/liuc9/github/scMOCHA/bin/variant_calling_cell_raw.py ./ cell 16569 10 MT
-  # cluster level variant calling
-  echo "$gseid $gsmid variant_calling_cluster.py"
-  python /home/liuc9/github/scMOCHA/bin/variant_calling_cluster.py ./ cluster 16569 10 MT
+  # # cell level variant calling
+  # echo "$gseid $gsmid variant_calling_cell_raw.py"
+  # python /home/liuc9/github/scMOCHA/bin/variant_calling_cell_raw.py ./ cell 16569 10 MT
+  # # cluster level variant calling
+  # echo "$gseid $gsmid variant_calling_cluster.py"
+  # python /home/liuc9/github/scMOCHA/bin/variant_calling_cluster.py ./ cluster 16569 10 MT
+
   # plot scMOCHA results
   echo "$gseid $gsmid plot_scMOCHA.R"
   Rscript /home/liuc9/github/scMOCHA/bin/scMOCHA.R \
