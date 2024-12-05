@@ -48,9 +48,9 @@ log_layout(layout_glue_colors)
 # future::plan(future::multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10) {
-  # .haplo_variant <- srr_out_cell_stats$haplo_variant[[1]]
-  # .haplo_violin <- srr_out_cell_stats$haplo_violin[[1]]
+fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .high_af = 0.95) {
+  # .haplo_variant <- srr_out_cell_stats$haplo_variant[[27]]
+  # .haplo_violin <- srr_out_cell_stats$haplo_violin[[27]]
 
   # 1. filter by haplogrep marker variant
   .haplo_variant |>
@@ -78,8 +78,19 @@ fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10) {
     dplyr::pull(variant) ->
   .v_editing
 
+  # 4. high af in 95% of cells
+  .haplo_violin |>
+    dplyr::group_by(variant) |>
+    dplyr::summarise(
+      afm = mean(af, na.rm = T)
+    ) |>
+    dplyr::filter(afm > .high_af) |>
+    dplyr::pull(variant) ->
+  .v_high_af
+
+  # somatic variant
   .haplo_variant |>
-    dplyr::filter(!variant %in% c(.v_haplo, .v_n_cells, .v_editing)) |>
+    dplyr::filter(!variant %in% c(.v_haplo, .v_n_cells, .v_editing, .v_high_af)) |>
     dplyr::pull(variant) ->
   .v_somatic
 
@@ -87,7 +98,8 @@ fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10) {
     haplo = .v_haplo,
     n_cells = .v_n_cells,
     editing = .v_editing,
-    somatic = .v_somatic
+    somatic = .v_somatic,
+    high_af = .v_high_af
   )
 }
 
