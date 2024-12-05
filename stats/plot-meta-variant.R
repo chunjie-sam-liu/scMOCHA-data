@@ -60,7 +60,7 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-basedir <- "/home/liuc9/github/scMOCHA/06-bigdata"
+# basedir <- "/home/liuc9/github/scMOCHA/06-bigdata"
 gseid <- "GSE226602"
 datadir <- file.path(
   basedir, gseid
@@ -68,7 +68,7 @@ datadir <- file.path(
 
 outdir <- file.path(
   datadir,
-  "output"
+  "out"
 )
 
 
@@ -84,7 +84,7 @@ pheno <- data.table::fread(
 variant <- readr::read_rds(
   file.path(
     outdir,
-    "scmocha_suc_out.rds"
+    "{gseid}.scmocha.out.rds" |> glue::glue()
   )
 )
 
@@ -92,89 +92,94 @@ variant <- readr::read_rds(
 # stat --------------------------------------------------------------------
 
 
-variant |>
-  dplyr::mutate(
-    nmut = purrr::map_int(
-      .x = anno,
-      .f = \(.x) {
-        if (is.null(.x)) {
-          return(NA_integer_)
-        }
-        nrow(.x)
-      }
-    )
-  ) |>
-  dplyr::mutate(
-    haplogroup = purrr::map2(
-      .x = anno,
-      .y = srrid,
-      .f = \(.x, .y) {
-        message(.y)
-        if (is.null(.x)) {
-          return(
-            tibble::tibble(
-              Haplogroup = NA_character_,
-              Verbose_haplogroup = NA_character_
-            )
-          )
-        }
-        .x |>
-          dplyr::select(Haplogroup, Verbose_haplogroup) |>
-          dplyr::filter(!is.na(Haplogroup)) |>
-          dplyr::filter(Haplogroup != "") |>
-          dplyr::distinct() |>
-          dplyr::mutate_all(.funs = as.character) ->
-        .xx
+# variant |>
+#   dplyr::mutate(
+#     nmut = purrr::map_int(
+#       .x = anno,
+#       .f = \(.x) {
+#         if (is.null(.x)) {
+#           return(NA_integer_)
+#         }
+#         nrow(.x)
+#       }
+#     )
+#   ) |>
+#   dplyr::mutate(
+#     haplogroup = purrr::map2(
+#       .x = anno,
+#       .y = srrid,
+#       .f = \(.x, .y) {
+#         message(.y)
+#         if (is.null(.x)) {
+#           return(
+#             tibble::tibble(
+#               Haplogroup = NA_character_,
+#               Verbose_haplogroup = NA_character_
+#             )
+#           )
+#         }
+#         .x |>
+#           dplyr::select(Haplogroup, Verbose_haplogroup) |>
+#           dplyr::filter(!is.na(Haplogroup)) |>
+#           dplyr::filter(Haplogroup != "") |>
+#           dplyr::distinct() |>
+#           dplyr::mutate_all(.funs = as.character) ->
+#         .xx
 
-        if (nrow(.xx) == 0) {
-          tibble::tibble(
-            Haplogroup = NA_character_,
-            Verbose_haplogroup = NA_character_
-          )
-        } else {
-          .xx
-        }
-      }
-    )
-  ) |>
-  tidyr::unnest(cols = haplogroup) |>
+#         if (nrow(.xx) == 0) {
+#           tibble::tibble(
+#             Haplogroup = NA_character_,
+#             Verbose_haplogroup = NA_character_
+#           )
+#         } else {
+#           .xx
+#         }
+#       }
+#     )
+#   ) |>
+#   tidyr::unnest(cols = haplogroup) |>
+#   dplyr::inner_join(
+#     pheno,
+#     by = "srrid"
+#   ) |>
+#   tidyr::unnest(
+#     cols = cell_stats
+#   ) |>
+#   dplyr::mutate(
+#     ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
+#   ) ->
+# metadata_anno
+
+variant |>
   dplyr::inner_join(
     pheno,
     by = "srrid"
-  ) |>
-  tidyr::unnest(
-    cols = cell_stats
-  ) |>
-  dplyr::mutate(
-    ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
   ) ->
 metadata_anno
 
+# metadata_anno |>
+#   dplyr::arrange(disease, age, gender) |>
+#   dplyr::select(
+#     srrid, age, gender,
+#     disease, genotype,
+#     `Median UMI/cell` = `median UMI counts per cell`,
+#     `Median genes/cell` = `median genes per cell`,
+#     `# of cells` = `estimated number of cells`,
+#     `# cells after filter` = `number of cells after filtering`,
+#     `Cell ratio` = ratio,
+#     `# of variants` = nmut,
+#     Haplogroup = Haplogroup,
+#     Haplogroup_v = Verbose_haplogroup
+#   ) ->
+# metadata_clean
 
-
-metadata_anno |>
-  dplyr::arrange(disease, age, gender) |>
-  dplyr::select(
-    srrid, age, gender,
-    disease, genotype,
-    `Median UMI/cell` = `median UMI counts per cell`,
-    `Median genes/cell` = `median genes per cell`,
-    `# of cells` = `estimated number of cells`,
-    `# cells after filter` = `number of cells after filtering`,
-    `Cell ratio` = ratio,
-    `# of variants` = nmut,
-    Haplogroup = Haplogroup,
-    Haplogroup_v = Verbose_haplogroup
-  ) ->
-metadata_clean
-
-metadata_clean |>
-  writexl::write_xlsx(
-    path = file.path(
-      outdir,
-      "/metadata_clean.xlsx"
-    )
-  )
+# metadata_clean |>
+#   writexl::write_xlsx(
+#     path = file.path(
+#       outdir,
+#       "/metadata_clean.xlsx"
+#     )
+#   )
 
 
 # cell ratio --------------------------------------------------------------
