@@ -194,7 +194,7 @@ srr_out |>
           coverage = list(.cov),
           haplo_variant = list(.haplo_variant),
           haplo_violin = list(.haplo_violin),
-          somatic = list(.somatic)
+          somatic_variant = list(.somatic)
         )
       }),
       mc.cores = 20
@@ -203,15 +203,7 @@ srr_out |>
   dplyr::mutate(
     cell_stats = purrr::map(cell_stats, "result")
   ) |>
-  tidyr::unnest(cols = cell_stats) |>
-  dplyr::mutate(
-    somatic_variant = purrr::map2(
-      .x = haplo_variant,
-      .y = haplo_violin,
-      .f = fn_somatic_variant,
-      .n_cells = 10
-    )
-  ) ->
+  tidyr::unnest(cols = cell_stats) ->
 srr_out_cell_stats
 
 log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.rds" |> glue::glue())
