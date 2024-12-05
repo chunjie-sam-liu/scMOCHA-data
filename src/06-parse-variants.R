@@ -211,7 +211,7 @@ readr::write_rds(
   srr_out_cell_stats,
   file.path(
     outdir,
-    "{gseid}.scmocha.out.rds" |> glue::glue()
+    "{gseid}.scmocha.out.rds.gz" |> glue::glue()
   )
 )
 
