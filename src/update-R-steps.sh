@@ -6,8 +6,9 @@
 
 # Number of input parameters
 param=$#
-basedir="/home/liuc9/github/scMOCHA-data/data"
-gseids=(GSE149689 GSE154567 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279 GSE226602)
+basedir="/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# gseids=(GSE149689 GSE154567 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279 GSE226602)
+gseids=(GSE149689 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279 GSE226602)
 
 cp_targz_dir() {
   local gseid=$1
@@ -63,4 +64,24 @@ unzip_targz_dirs() {
   done
 }
 
-unzip_targz_dirs
+# unzip_targz_dirs
+
+parse_variants_gseid() {
+  local gseid=$1
+  echo "Parsing variants for $gseid"
+  # Update the target directory
+  data_dir="$basedir/$gseid"
+  targz_dir="$data_dir/targz"
+
+  Rscript /home/liuc9/github/scMOCHA-data/src/06-parse-variants.R -g ${gseid}
+
+}
+
+parse_variants_gseids() {
+  gseids_for_parse=${gseids}
+  for gseid in ${gseids_for_parse[@]}; do
+    parse_variants_gseid ${gseid} &
+  done
+}
+
+parse_variants_gseids
