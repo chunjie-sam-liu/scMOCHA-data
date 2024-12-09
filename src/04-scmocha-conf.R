@@ -20,8 +20,8 @@ library(logger)
 
 # args --------------------------------------------------------------------
 
-# gseid <- "GSE163668"
-
+# gseid <- "GSE226602"
+#
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -124,8 +124,13 @@ gsm |>
     scmocha = purrr::map(
       .x = srrid,
       .f = \(.x) {
-        .ydir <- file.path(
+        .gsmdir <- file.path(
           datadir,
+          "gsm"
+        )
+
+        .ydir <- file.path(
+          .gsmdir,
           .x
         )
         dir.create(.ydir, showWarnings = F, recursive = T)
@@ -147,6 +152,8 @@ gsm |>
           "scMOCHA.reso" = 0.1,
           "scMOCHA.cellrefname" = "pbmcref",
           "scMOCHA.celllevel" = "celltype.l1",
+          "scMOCHA.nFeature_RNA_min" = 500,
+          "scMOCHA.nFeature_RNA_max" = 8000,
           "scMOCHA.memory" = "50 GB",
           "scMOCHA.boot_disk_size_gb" = "12",
           "scMOCHA.disk_space" = "50",
@@ -157,9 +164,7 @@ gsm |>
           "scMOCHA.account" = "liuc9",
           "scMOCHA.perlscript" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl",
           "scMOCHA.jar_path" = "/mnt/isilon/u01_project/large-scale/liuc9/tools/haplogrep3",
-          "scMOCHA.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
-          "scMOCHA.nFeature_RNA_min" = 500,
-          "scMOCHA.nFeature_RNA_max" = 8000
+          "scMOCHA.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3"
         )
 
         conf_file <- file.path(
@@ -327,6 +332,8 @@ inputs_json <- list(
   "scMOCHABatch.low_coverage_threshold" = 10,
   "scMOCHABatch.npcs" = 10,
   "scMOCHABatch.reso" = 0.1,
+  "scMOCHABatch.nFeature_RNA_min" = 500,
+  "scMOCHABatch.nFeature_RNA_max" = 8000,
   "scMOCHABatch.cellrefname" = "pbmcref",
   "scMOCHABatch.celllevel" = "celltype.l1",
   "scMOCHABatch.memory" = "50GB",
@@ -339,9 +346,7 @@ inputs_json <- list(
   "scMOCHABatch.account" = "liuc9",
   "scMOCHABatch.perlscript" = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin/get_variants_info.pl",
   "scMOCHABatch.jar_path" = "/mnt/isilon/u01_project/large-scale/liuc9/tools/haplogrep3",
-  "scMOCHABatch.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3",
-  "scMOCHABatch.nFeature_RNA_min" = 500,
-  "scMOCHABatch.nFeature_RNA_max" = 8000
+  "scMOCHABatch.sqlite_path" = "/mnt/isilon/u01_project/large-scale/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3"
 )
 
 
