@@ -71,7 +71,6 @@ fn_parse_log <- function(logfile) {
 
   output_index <- stringr::str_which(logs, "scMOCHA.output_dir_tar_gz")
   stringr::str_remove_all(logs[output_index], "\"| |,|scMOCHA.output_dir_tar_gz|\\:")
-
 }
 
 
@@ -134,9 +133,17 @@ readr::write_lines(
 )
 
 # uncompress --------------------------------------------------------------
+untargzdir <- file.path(
+  datadir, "final"
+)
+dir.create(
+  path = untargzdir,
+  showWarnings = F,
+  recursive = T
+)
 
 cped_targzs <- glue::glue("{targzdir}/{basename(targz)}")
-cmd_untar <- glue::glue("tar -zxvf {cped_targzs} -C {targzdir} &")
+cmd_untar <- glue::glue("tar -zxvf {cped_targzs} -C {untargzdir} &")
 readr::write_lines(
   c(cmd_untar),
   file = file.path(
@@ -160,7 +167,7 @@ srarun |>
   dplyr::filter(
     experiment_name %in% gsms
   ) ->
-  toberemoved
+toberemoved
 
 runfile <- data.table::fread(
   file.path(
