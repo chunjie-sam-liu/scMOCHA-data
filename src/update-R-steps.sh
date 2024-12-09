@@ -78,8 +78,7 @@ parse_variants_gseid() {
 }
 
 parse_variants_gseids() {
-  gseids_for_parse=${gseids}
-  for gseid in ${gseids_for_parse[@]}; do
+  for gseid in ${gseids[@]}; do
     parse_variants_gseid ${gseid} &
   done
 }
