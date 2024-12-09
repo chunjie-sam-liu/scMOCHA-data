@@ -88,11 +88,21 @@ update_gse() {
 
   gsmids=$(find "$targz_dir" -maxdepth 1 -type d -name 'GSM*' -exec basename {} \;)
 
+  max_jobs=10
+  current_jobs=0
+
   for gsmid in $gsmids; do
     echo "Updating $gseid and $gsmid"
-    update_gsmid $gseid $gsmid
+    update_gsmid $gseid $gsmid &
+    current_jobs=$((current_jobs + 1))
+
+    if [ "$current_jobs" -ge "$max_jobs" ]; then
+      wait -n
+      current_jobs=$((current_jobs - 1))
+    fi
   done
 
+  wait
 }
 
 update_all_gse() {
