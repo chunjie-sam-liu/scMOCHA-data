@@ -128,15 +128,24 @@ anno_meta_info |>
   dplyr::arrange(disease, age, gender) |>
   dplyr::select(
     Sample = srrid,
-    Haplogroup = Haplogroup,
     Age = age,
+    `# of variants` = nmut,
+    Haplogroup = Haplogroup,
+    `# of somatic variants` = nmut_somatic,
     Gender = gender,
     Disease = disease,
     `# cells after filter` = `number of cells after filtering`,
-    `# of variants` = nmut,
-    `# of somatic variants` = nmut_somatic,
   ) ->
 metadata_clean
+# save to xslx and tsv
+data.table::fwrite(
+  x = metadata_clean,
+  file = file.path(outdir, "GSE226602.age.somatic.csv")
+)
+writexl::write_xlsx(
+  x = metadata_clean,
+  path = file.path(outdir, "GSE226602.age.somatic.xlsx")
+)
 
 # ggstats correlation plot ------------------------------------------------
 
@@ -288,6 +297,14 @@ anno_meta_info_clean |>
 
 anno_meta_info_clean |>
   dplyr::mutate(
+    somatic_variant = purrr::map(
+      .x = somatic_variant,
+      .f = \(.x) {
+        as.character(.x)
+      }
+    )
+  ) |>
+  dplyr::mutate(
     cell_variant = purrr::map2(
       .x = haplo_violin,
       .y = somatic_variant,
@@ -301,6 +318,96 @@ anno_meta_info_clean |>
   ) ->
 anno_meta_info_clean_cell_variant
 
+anno_meta_info_clean_cell_variant |>
+  dplyr::mutate(
+    somatic_variant = purrr::map(
+      .x = somatic_variant,
+      .f = \(.x) {
+        tibble::tibble(
+          variant = .x
+        )
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = somatic_variant) |>
+  dplyr::group_by(variant) |>
+  tidyr::nest() |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    srrid = purrr::map(
+      .x = data,
+      .f = function(.x) {
+        .x |> dplyr::pull(srrid)
+      }
+    )
+  ) |>
+  dplyr::select(-data) ->
+forupset
+
+library(ggupset)
+forupset |>
+  ggplot(aes(x = srrid)) +
+  geom_bar(width = 0.6) +
+  geom_text(
+    stat = "count",
+    aes(label = after_stat(count)),
+    vjust = -0.5,
+    color = "black",
+    size = 3,
+    fontface = "bold"
+  ) +
+  scale_x_upset(order_by = "degree") +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.1), add = 0)
+  ) +
+  theme_combmatrix(
+    combmatrix.label.make_space = TRUE,
+    # combmatrix.panel.point.color.fill = d$color[1],
+    combmatrix.panel.line.size = 0,
+    combmatrix.label.text = element_text(
+      # size = 12,
+      color = "black",
+      face = "bold"
+    ),
+    combmatrix.label.extra_spacing = 1,
+    combmatrix.panel.striped_background.color.one = "white",
+    combmatrix.panel.striped_background.color.two = "grey",
+  ) +
+  labs(
+    y = "# of Variants",
+    x = "",
+    # title = .x
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(size = 0.5, color = "black"),
+    axis.title.y = element_text(
+      size = 16,
+      color = "black",
+      face = "bold"
+    ),
+    axis.text.y = element_text(
+      size = 14,
+      color = "black"
+    ),
+    plot.title = element_text(
+      hjust = 0.5,
+      color = "black",
+      size = 16,
+      face = "bold"
+    )
+  ) ->
+p_upset
+
+# save upset plot
+ggsave(
+  path = outdir_plot,
+  filename = "upset_somatic_variants.pdf",
+  plot = p_upset,
+  width = 27,
+  height = 13
+)
 
 anno_meta_info_clean_cell_variant |>
   dplyr::select(-haplo_violin, -somatic_variant) |>
@@ -309,23 +416,168 @@ anno_meta_info_clean_cell_variant_unnest
 
 anno_meta_info_clean_cell_variant_unnest |> dplyr::glimpse()
 
+fn_plot_mtdna <- function() {
+  mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+
+
+  gtf_gene_df <-
+    readr::read_rds(
+      file = mt_exons_df
+    )
+  library(gggenes)
+  ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
+    # geom_gene_arrow() +
+    geom_gene_arrow(
+      aes(
+        fill = gene_biotype
+      ),
+      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+    ) +
+    scale_fill_brewer(
+      palette = "Set1",
+      name = "Gene type",
+      labels = c("MT rRNA", "MT tRNA", "Protein coding")
+    ) +
+    ggrepel::geom_text_repel(
+      aes(x = (start + end) / 2, label = gene_name, color = gene_biotype),
+      # fill = "white",
+      # nudge_x =1,
+      # nudge_y = -0.1,
+      size = 3,
+      show.legend = F,
+      max.overlaps = Inf,
+    ) +
+    scale_color_brewer(palette = "Set1") +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.03)),
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0), add = c(0, 0))
+    ) +
+    # theme_genes() +
+    theme(
+      legend.position = "bottom",
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      # axis.text.x = element_text(size = 14),
+      # legend.text = element_text(size = 14),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.line.x = element_line(color = "black"),
+      axis.text.x = element_text(
+        vjust = -1,
+      ),
+    ) ->
+  pg
+  pg
+}
+
+forupset |>
+  dplyr::mutate(n = purrr::map_int(srrid, length)) |>
+  dplyr::arrange(desc(n)) |>
+  dplyr::filter(n >= 43) ->
+sel_variants
+
+
 
 anno_meta_info_clean_cell_variant_unnest |>
-  dplyr::filter(variant == "3176A>T", cluster == "B") |>
+  dplyr::filter(variant %in% sel_variants$variant) |>
   dplyr::mutate(
-    depth = exp(depth)
+    af = ifelse(af == 0, NA_real_, af)
   ) |>
   dplyr::mutate(
-    depth = ifelse(depth > 500, 500, depth)
+    af = ifelse(depth < log2(10), NA_real_, af)
   ) |>
-  ggstatsplot::ggscatterstats(
-    x = depth,
-    y = af
-  )
+  dplyr::filter(af > 0) ->
+theforplot
+pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
+library(ggh4x)
 
 
+theforplot |>
+  ggplot() +
+  ggh4x::facet_wrap2(
+    ~cluster,
+    ncol = 1,
+    strip.position = "right",
+    strip = ggh4x::strip_themed(
+      background_y = elem_list_rect(
+        fill = pcc$color
+      ),
+      text_y = elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = FALSE,
+    )
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      x = pos,
+      y = af,
+      color = af
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = .5,
+  ) +
+  scale_color_gradient2(
+    name = "AF",
+    low = "white",
+    mid = "red",
+    high = "#3B0049",
+    midpoint = 0.5,
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    # axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    # axis.title.y = element_blank(),
+    axis.text.y = element_text(color = "black"),
+    # legend.text = element_text(
+    #   size = 14,
+    #   color = "black"
+    # ),
+    # legend.title = element_text(
+    #   size = 16,
+    #   colour = "black"
+    # ),
+    # strip.background = element_blank(),
+    # strip.text = element_text(
+    #   # size = 8,
+    #   color = "black",
+    #   face = "bold"
+    # )
+  ) +
+  labs(y = "AF") ->
+p_af_cell
 
-
+# p_af_cell
+ggsave(
+  path = outdir_plot,
+  filename = "af_allcell.pdf",
+  plot = wrap_plots(
+    p_af_cell,
+    fn_plot_mtdna(),
+    ncol = 1,
+    heights = c(1.3, 0.1)
+  ),
+  width = 25,
+  height = 12
+)
 
 # footer ------------------------------------------------------------------
 
