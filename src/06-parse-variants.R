@@ -232,20 +232,27 @@ readr::write_rds(
 # srr_out_cell_stats -> variant
 srr_out_cell_stats |>
   dplyr::mutate(
-    nmut = purrr::map(
+    nmut = purrr::map_int(
       .x = haplo_variant,
       .f = \(.x) {
         if (is.null(.x)) {
           return(NA_integer_)
         }
-        tibble::tibble(
-          nmut = nrow(.x),
-          nmut_nohaplo = nrow(.x |> dplyr::filter(color != "white"))
-        )
+        nrow(.x)
       }
     )
   ) |>
-  tidyr::unnest(cols = nmut) |>
+  dplyr::mutate(
+    nmut_somatic = purrr::map_int(
+      .x = somatic_variant,
+      .f = \(.x) {
+        if (is.null(.x$somatic)) {
+          return(NA_integer_)
+        }
+        length(.x$somatic)
+      }
+    )
+  ) |>
   dplyr::mutate(
     haplogroup = purrr::map2(
       .x = anno,
@@ -296,14 +303,14 @@ metadata_anno
 metadata_anno |>
   dplyr::select(
     srrid,
+    `# of variants` = nmut,
+    Haplogroup = Haplogroup,
+    `# of somatic variants` = nmut_somatic,
     `Median UMI/cell` = `median UMI counts per cell`,
     `Median genes/cell` = `median genes per cell`,
     `# of cells` = `estimated number of cells`,
     `# cells after filter` = `number of cells after filtering`,
     `Cell ratio` = ratio,
-    `# of variants` = nmut,
-    Haplogroup = Haplogroup,
-    `# of somatic variants` = nmut_nohaplo
   ) ->
 metadata_clean
 
