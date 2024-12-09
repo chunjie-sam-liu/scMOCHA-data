@@ -105,20 +105,24 @@ sratable |>
 
 
 # Prefetch ----------------------------------------------------------------
-
+sradir <- file.path(
+  datadir,
+  "sra"
+)
+dir.create(sradir, showWarnings = F, recursive = T)
 
 sratable |>
   dplyr::select(srrid = Run) |>
   dplyr::mutate(
     srrdir = file.path(
-      datadir, srrid
+      sradir, srrid
     )
   ) |>
   dplyr::mutate(
     srrdir_exists = file.exists(srrdir)
   ) |>
   dplyr::mutate(
-    prefetch = "prefetch -p --max-size 100G {srrid} --output-directory {datadir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
+    prefetch = "prefetch -p --max-size 100G {srrid} --output-directory {sradir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
   ) ->
 sratable_prefetch
 
