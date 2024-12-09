@@ -90,7 +90,7 @@ update_gse() {
 
   for gsmid in $gsmids; do
     echo "Updating $gseid and $gsmid"
-    update_gsmid $gseid $gsmid &
+    update_gsmid $gseid $gsmid
   done
 
 }
