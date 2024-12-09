@@ -206,6 +206,7 @@ gsm_nest |>
 
         gsmdir <- file.path(
           datadir,
+          "gsm",
           .x
         )
 
