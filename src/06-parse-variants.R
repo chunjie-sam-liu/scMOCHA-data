@@ -111,7 +111,7 @@ datadir <- file.path(
 )
 
 targzdir <- file.path(
-  datadir, "final"
+  datadir, "targz"
 )
 
 outdir <- file.path(
