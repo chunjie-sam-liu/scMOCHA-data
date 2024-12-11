@@ -46,19 +46,19 @@ update_gsmid() {
     esac
   fi
 
-  # cell cluster annotation
-  echo "$gseid $gsmid azimuth.R"
-  Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
-    -h5file filtered_feature_bc_matrix.h5 \
-    -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
-    -c ${chem}
+  # # cell cluster annotation
+  # echo "$gseid $gsmid azimuth.R"
+  # Rscript /home/liuc9/github/scMOCHA/bin/azimuth.R \
+  #   -h5file filtered_feature_bc_matrix.h5 \
+  #   -refname_celllevel refname=pbmcref celllevel=celltype.l1 \
+  #   -c ${chem}
 
-  # cell level variant calling
-  echo "$gseid $gsmid variant_calling_cell_raw.py"
-  python /home/liuc9/github/scMOCHA/bin/variant_calling_cell_raw.py ./ cell 16569 10 MT
-  # cluster level variant calling
-  echo "$gseid $gsmid variant_calling_cluster.py"
-  python /home/liuc9/github/scMOCHA/bin/variant_calling_cluster.py ./ cluster 16569 10 MT
+  # # cell level variant calling
+  # echo "$gseid $gsmid variant_calling_cell_raw.py"
+  # python /home/liuc9/github/scMOCHA/bin/variant_calling_cell_raw.py ./ cell 16569 10 MT
+  # # cluster level variant calling
+  # echo "$gseid $gsmid variant_calling_cluster.py"
+  # python /home/liuc9/github/scMOCHA/bin/variant_calling_cluster.py ./ cluster 16569 10 MT
 
   # plot scMOCHA results
   echo "$gseid $gsmid plot_scMOCHA.R"
@@ -111,8 +111,8 @@ update_all_gse() {
   done
 }
 
-# update_gse GSE155673
+update_gse GSE226602
 
 # update_gsmid GSE226602 GSM7080058
 
-update_all_gse
+# update_all_gse
