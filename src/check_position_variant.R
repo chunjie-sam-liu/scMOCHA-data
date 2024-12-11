@@ -362,7 +362,8 @@ fn_plot_mtdna <- function() {
     scale_x_continuous(
       limits = c(0, 17000),
       breaks = seq(0, 17000, 1000),
-      expand = expansion(mult = c(0, 0.03)),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
     ) +
     scale_y_discrete(
       expand = expansion(mult = c(0, 0), add = c(0, 0))
@@ -381,7 +382,8 @@ fn_plot_mtdna <- function() {
       axis.text.x = element_text(
         vjust = -1,
       ),
-    ) ->
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) ->
   pg
   pg
 }
@@ -391,100 +393,97 @@ fn_plot_coverage <- function(thepath, theposes = NULL) {
   pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
     dplyr::arrange(cancer_types)
 
+  if (!is.null(theposes)) {
+    .plot_vline <- geom_vline(
+      xintercept = theposes,
+      linetype = "dashed",
+      color = "red",
+      linetype = 21
+    )
+  } else {
+    .plot_vline <- NULL
+  }
+
   .cluster_coverage |>
     ggplot(aes(x = pos, y = depth, fill = barcode)) +
     geom_bar(stat = "identity", show.legend = FALSE) +
     scale_x_continuous(
-      expand = expansion(mult = c(0.01, 0)),
-      limits = c(1, 17000),
+      limits = c(0, 17000),
       breaks = seq(0, 17000, 1000),
-      labels = seq(0, 17000, 1000)
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
     ) +
-    if (!is.null(theposes)) {
-      {
-        geom_vline(
-          xintercept = theposes,
-          linetype = "dashed",
-          color = "red",
-          linetype = 21
-        )
-      } +
-        scale_y_continuous(
-          expand = c(0.01, 0),
-          # limits = c(0, 520000),
-          label = scales::label_number()
-        ) +
-        scale_fill_manual(
-          name = "Cell type",
-          values = pcc$color
-        ) +
-        ggh4x::facet_wrap2(
-          ~barcode,
-          ncol = 1,
-          strip.position = "right",
-          strip = ggh4x::strip_themed(
-            background_y = ggh4x::elem_list_rect(
-              fill = pcc$color
-            ),
-            text_y = ggh4x::elem_list_text(
-              colour = "white",
-              face = c("bold")
-            ),
-            by_layer_y = FALSE,
-          )
-        ) +
-        theme(
-          plot.margin = margin(t = 0, b = 0, unit = "cm"),
-          panel.background = element_blank(),
-          panel.grid = element_blank(),
-          axis.line.y.left = element_line(color = "black"),
-          # axis.line.x.bottom = element_line(color = "black"),
-          axis.ticks.x = element_blank(),
-          axis.text.x = element_blank(),
-          axis.line.x = element_blank(),
-          axis.title.x = element_blank(),
-          legend.position = c(0.8, 0.5),
-          legend.key = element_blank(),
-          axis.title.y = element_text(color = "black"),
-          axis.text.y = element_text(color = "black"),
-          legend.text = element_text(
-            size = 14,
-            color = "black"
-          ),
-          legend.title = element_text(
-            size = 16,
-            colour = "black"
-          ),
-          strip.background = element_blank(),
-          strip.text = element_text(
-            size = 8,
-            color = "black",
-            face = "bold"
-          )
-        ) +
-        labs(y = "Depth") ->
-      p_mt_depth_celltype
-    }
+    .plot_vline +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      # limits = c(0, 520000),
+      label = scales::label_number()
+    ) +
+    scale_fill_manual(
+      name = "Cell type",
+      values = pcc$color
+    ) +
+    ggh4x::facet_wrap2(
+      ~barcode,
+      ncol = 1,
+      strip.position = "right",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = pcc$color
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
+      )
+    ) +
+    theme(
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      # axis.line.x.bottom = element_line(color = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      legend.position = c(0.8, 0.5),
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+      legend.text = element_text(
+        size = 14,
+        color = "black"
+      ),
+      legend.title = element_text(
+        size = 16,
+        colour = "black"
+      ),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        size = 8,
+        color = "black",
+        face = "bold"
+      )
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) +
+    labs(y = "Depth") ->
+  p_mt_depth_celltype
+
+
 
   .cluster_coverage |>
     dplyr::group_by(pos) |>
     dplyr::summarise(depth = sum(depth, na.rm = T)) |>
     ggplot(aes(x = pos, y = depth)) +
     geom_bar(fill = "grey", stat = "identity", show.legend = FALSE) +
-    if (!is.null(theposes)) {
-      {
-        geom_vline(
-          xintercept = theposes,
-          linetype = "dashed",
-          color = "red",
-          linetype = 21
-        )
-      } +
+    .plot_vline +
     scale_x_continuous(
-      expand = expansion(mult = c(0.01, 0)),
-      limits = c(1, 17000),
+      limits = c(0, 17000),
       breaks = seq(0, 17000, 1000),
-      labels = seq(0, 17000, 1000)
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
     ) +
     scale_y_continuous(
       expand = c(0.01, 0),
@@ -520,8 +519,10 @@ fn_plot_coverage <- function(thepath, theposes = NULL) {
         face = "bold"
       )
     ) +
+    coord_cartesian(xlim = c(0, 17000)) +
     labs(y = "Depth") ->
   p_mt_depth_allcell
+
 
   list(
     p_mt_depth_celltype = p_mt_depth_celltype,
@@ -716,12 +717,6 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     ) ->
   .no_depth
 
-  # .theforplot |>
-  #   dplyr::group_by(variant) |>
-  #   dplyr::summarise(maf = mean(af, na.rm = T)) |>
-  #   dplyr::arrange(-maf) ->
-  # .sort_variant
-
   .cell_anno |>
     dplyr::filter(variant %in% .sort_variant$variant) |>
     dplyr::mutate(fill = ifelse(!is.na(Haplogroup), "#3B0049", "white")) |>
@@ -770,6 +765,12 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       # hjust = "right",
       segment.size = 0,
     ) +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
     theme(
       plot.margin = margin(t = 0, b = 0, unit = "cm"),
       panel.background = element_blank(),
@@ -785,7 +786,8 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       axis.text.y = element_blank(),
       axis.ticks.y = element_blank(), ,
       axis.line.y = element_blank(),
-    ) ->
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) ->
   p_label
 
   .haplo_forplot |>
@@ -823,6 +825,16 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       high = "#3B0049",
       midpoint = 0.5,
     ) +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      limits = c(0, 1),
+    ) +
     theme(
       plot.margin = margin(t = 0, b = 0, unit = "cm"),
       panel.background = element_blank(),
@@ -853,6 +865,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       #   face = "bold"
       # )
     ) +
+    coord_cartesian(xlim = c(0, 17000)) +
     labs(y = "AF") ->
   p_af_cell
 
@@ -870,8 +883,8 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
 
 # load data ---------------------------------------------------------------
 
-# thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
-thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
+thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
+# thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
 
 
 # load sc
@@ -896,10 +909,9 @@ fn_plot_vaf_featureplot_multi(
   .thevariants = thevariants,
   sc = sc
 ) -> p_vaf_feature
-p_vaf_feature
 
 ggsave(
-  filename = "selected_variants_vaf_featureplot-GSE149689-GSM4509020.pdf",
+  filename = "selected_variants_vaf_featureplot.pdf",
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = p_vaf_feature,
   width = 15,
@@ -911,10 +923,9 @@ fn_plot_count_multi(
   cluster_n_forplot,
   thepos = theposes
 ) -> p_count
-p_count
 
 ggsave(
-  filename = "selected_variants_count-GSE149689-GSM4509020.pdf",
+  filename = "selected_variants_count.pdf",
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = p_count,
   width = 20,
@@ -925,26 +936,38 @@ ggsave(
 p_mtdna <- fn_plot_mtdna()
 p_depth <- fn_plot_coverage(thepath, theposes)
 
-wrap_plots(
-  p_depth$p_mt_depth_celltype,
-  p_mtdna,
-  ncol = 1,
-  heights = c(0.7, 0.1)
-) -> p_depth_mtdna
-p_depth_mtdna
-
 ggsave(
-  filename = "depth-celltype-GSE149689-GSM4509020.pdf",
+  filename = "depth-celltype.pdf",
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
-  plot = p_depth_mtdna,
-  width = 20,
-  height = 10,
+  plot = wrap_plots(
+    p_depth$p_mt_depth_celltype,
+    p_mtdna,
+    ncol = 1,
+    heights = c(0.7, 0.1)
+  ),
+  width = 17,
+  height = 9,
 )
 
 
 # hotspots ----------------------------------------------------------------
 p_hotspots <- fn_plot_hotspots(thepath, thevariants)
 
+ggsave(
+  filename = "hotspots_final_af_somatic.pdf",
+  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  plot = wrap_plots(
+    p_hotspots,
+    p_depth$p_mt_depth_allcell,
+    p_mtdna,
+    ncol = 1,
+    heights = c(1.3, 0.4, 0.1),
+    axes = "collect_x"
+  ),
+  device = "pdf",
+  width = 18,
+  height = 9
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
