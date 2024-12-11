@@ -330,9 +330,9 @@ fn_plot_count_multi <- function(cluster_n_forplot, thepos, group_sel = NA) {
 
 # load data ---------------------------------------------------------------
 
-thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
+# thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
+thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
 
-# variant_list_file <- file.path(thepath, "cell_variant_annotation.tsv")
 
 # load sc
 sc <- fn_load_by_path(thepath)
@@ -345,6 +345,7 @@ thevariants <- c(
   "2191A>C", "2192A>T", "2193T>A",
   "3173G>A", "3176A>T", "3178T>A"
 )
+
 theposes <- thevariants |>
   purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
   purrr::map_int(as.integer)
@@ -356,7 +357,7 @@ fn_plot_vaf_featureplot_multi(
 p_vaf_feature
 
 ggsave(
-  filename = "selected_variants_vaf_featureplot.pdf",
+  filename = "selected_variants_vaf_featureplot-GSE149689-GSM4509020.pdf",
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = p_vaf_feature,
   width = 15,
@@ -369,6 +370,13 @@ fn_plot_count_multi(
 ) -> p_count
 p_count
 
+ggsave(
+  filename = "selected_variants_count-GSE149689-GSM4509020.pdf",
+  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  plot = p_count,
+  width = 20,
+  height = 25,
+)
 # body --------------------------------------------------------------------
 
 
