@@ -250,7 +250,7 @@ gsm_nest |>
                         if (file.exists(.to)) {
                           file.remove(.to)
                         }
-                        log_error(.from)
+                        log_success(.from)
                         log_success(.to)
                         file.symlink(
                           from = .from,
