@@ -813,7 +813,7 @@ ggsave(
   filename = "age_group-celltypes_combined_variant_wrap.pdf" |> glue::glue(),
   plot = wrap_plots(
     p_variants,
-    ncol = 4
+    ncol = 3
   ) + plot_annotation(tag_levels = "A"),
   width = 20,
   height = 10
@@ -865,16 +865,26 @@ purrr::map(
       height = 10
     )
   }
+  p_celltypes
+) ->
+p_variants_celltypes
+
+ggsave(
+  path = file.path(outdir_plot, "age_group"),
+  filename = "age_group-celltype_and_variant_wrap.pdf",
+  plot = wrap_plots(
+    p_variants_celltypes,
+    ncol = 8
+    nrow = 6,
+  ) + plot_annotation(tag_levels = "A"),
+  width = 30,
+  height = 15
 )
-
-
-
-
 
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
-save.image(file = file.path(outdir, "GSE226602.rdata"))
+save.image(file = file.path(outdir, "GSE226602.rda"))
 1
