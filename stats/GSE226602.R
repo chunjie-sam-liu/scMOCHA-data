@@ -151,29 +151,29 @@ writexl::write_xlsx(
 
 
 
-ggstatsplot::ggscatterstats(
-  data = metadata_clean,
-  x = Age,
-  y = `# of somatic variants`,
-  title = "Age",
-  xlab = "Age",
-  ylab = "Number of Somatic Variants",
-  ggtheme = ggplot2::theme_minimal()
-) -> p
-p
+# ggstatsplot::ggscatterstats(
+#   data = metadata_clean,
+#   x = Age,
+#   y = `# of somatic variants`,
+#   title = "Age",
+#   xlab = "Age",
+#   ylab = "Number of Somatic Variants",
+#   ggtheme = ggplot2::theme_minimal()
+# ) -> p
+# p
 
 
 
-ggstatsplot::ggscatterstats(
-  data = metadata_clean |> dplyr::filter(Disease == "Healthy Control"),
-  x = Age,
-  y = `# of somatic variants`,
-  title = "Age",
-  xlab = "Age",
-  ylab = "Number of Somatic Variants",
-  ggtheme = ggplot2::theme_minimal()
-) -> p
-p
+# ggstatsplot::ggscatterstats(
+#   data = metadata_clean |> dplyr::filter(Disease == "Healthy Control"),
+#   x = Age,
+#   y = `# of somatic variants`,
+#   title = "Age",
+#   xlab = "Age",
+#   ylab = "Number of Somatic Variants",
+#   ggtheme = ggplot2::theme_minimal()
+# ) -> p
+# p
 
 # Age
 # # of cells after filtering
@@ -287,13 +287,14 @@ ggsave(
   height = 10
 )
 
-
+# depth and umi -----------------------------------------------------------
 anno_meta_info_clean |>
   ggstatsplot::ggscatterstats(
     x = avg_depth,
-    y = ncells
+    y = numi
   )
 
+# p_upset -----------------------------------------------------------------
 
 anno_meta_info_clean |>
   dplyr::mutate(
@@ -329,85 +330,153 @@ anno_meta_info_clean_cell_variant |>
       }
     )
   ) |>
-  tidyr::unnest(cols = somatic_variant) |>
-  dplyr::group_by(variant) |>
-  tidyr::nest() |>
-  dplyr::ungroup() |>
-  dplyr::mutate(
-    srrid = purrr::map(
-      .x = data,
-      .f = function(.x) {
-        .x |> dplyr::pull(srrid)
-      }
-    )
-  ) |>
-  dplyr::select(-data) ->
-forupset
+  dplyr::mutate(color = dplyr::case_match(
+    disease,
+    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
+    "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
+  )) |>
+  tidyr::unnest(cols = somatic_variant) ->
+anno_meta_info_clean_cell_variant_forupset
 
-library(ggupset)
-forupset |>
-  ggplot(aes(x = srrid)) +
-  geom_bar(width = 0.6) +
-  geom_text(
-    stat = "count",
-    aes(label = after_stat(count)),
-    vjust = -0.5,
-    color = "black",
-    size = 3,
-    fontface = "bold"
-  ) +
-  scale_x_upset(order_by = "degree") +
-  scale_y_continuous(
-    expand = expansion(mult = c(0, 0.1), add = 0)
-  ) +
-  theme_combmatrix(
-    combmatrix.label.make_space = TRUE,
-    # combmatrix.panel.point.color.fill = d$color[1],
-    combmatrix.panel.line.size = 0,
-    combmatrix.label.text = element_text(
-      # size = 12,
+fn_upset_plot <- function(.x) {
+  # .x <- "nCoV_PBMC(severe)"
+  library(ggupset)
+  anno_meta_info_clean_cell_variant_forupset |>
+    dplyr::filter(disease == .x) ->
+  d
+
+  d |>
+    tidyr::unnest(cols = variant) |>
+    # dplyr::select(-source_name) |>
+    dplyr::group_by(variant) |>
+    tidyr::nest() |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      srrid = purrr::map(
+        .x = data,
+        .f = function(.x) {
+          .x |> dplyr::pull(srrid)
+        }
+      )
+    ) |>
+    dplyr::select(-data) ->
+  dd
+
+
+  dd |>
+    ggplot(aes(x = srrid)) +
+    geom_bar(width = 0.6, fill = d$color[1]) +
+    geom_text(
+      stat = "count",
+      aes(label = after_stat(count)),
+      vjust = -0.5,
       color = "black",
-      face = "bold"
-    ),
-    combmatrix.label.extra_spacing = 1,
-    combmatrix.panel.striped_background.color.one = "white",
-    combmatrix.panel.striped_background.color.two = "grey",
-  ) +
-  labs(
-    y = "# of Variants",
-    x = "",
-    # title = .x
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_line(size = 0.5, color = "black"),
-    axis.title.y = element_text(
-      size = 16,
-      color = "black",
-      face = "bold"
-    ),
-    axis.text.y = element_text(
-      size = 14,
-      color = "black"
-    ),
-    plot.title = element_text(
-      hjust = 0.5,
-      color = "black",
-      size = 16,
-      face = "bold"
-    )
+      size = 6,
+      fontface = "bold"
+    ) +
+    scale_x_upset(order_by = "degree") +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0.1), add = 0)
+    ) +
+    theme_combmatrix(
+      combmatrix.label.make_space = TRUE,
+      combmatrix.panel.point.color.fill = d$color[1],
+      combmatrix.panel.line.size = 0,
+      combmatrix.label.text = element_text(
+        size = 12,
+        color = "black",
+        face = "bold"
+      ),
+      combmatrix.label.extra_spacing = 5,
+      combmatrix.panel.striped_background.color.one = "white",
+      combmatrix.panel.striped_background.color.two = "grey",
+    ) +
+    labs(
+      y = "# of Variants",
+      x = "",
+      title = .x
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_line(size = 0.5, color = "black"),
+      axis.title.y = element_text(
+        size = 16,
+        color = "black",
+        face = "bold"
+      ),
+      axis.text.y = element_text(
+        size = 14,
+        color = "black"
+      ),
+      plot.title = element_text(
+        hjust = 0.5,
+        color = "black",
+        size = 16,
+        face = "bold"
+      )
+    ) ->
+  .p_up
+
+  ggsave(
+    plot = .p_up,
+    filename = "upset-{.x}.pdf" |> glue::glue(),
+    path = outdir_plot,
+    width = 18,
+    height = 12,
+    device = "pdf"
+  )
+
+  dd |>
+    dplyr::mutate(n = purrr::map_int(
+      .x = srrid,
+      .f = length
+    )) |>
+    dplyr::mutate(
+      sharing = purrr::map_chr(
+        .x = srrid,
+        .f = paste0,
+        collapse = ","
+      )
+    ) |>
+    dplyr::arrange(n) |>
+    dplyr::select(-srrid) ->
+  .v
+
+  list(
+    v = .v,
+    p_up = .p_up
+  )
+}
+
+anno_meta_info_clean_cell_variant_forupset$disease |>
+  unique() |>
+  purrr::map(
+    .f = fn_upset_plot
   ) ->
-p_upset
+p_ups
+
+(p_ups[[1]]$p_up | p_ups[[2]]$p_up) +
+  plot_annotation(tag_levels = "A") ->
+p_ups_together
+p_ups_together
 
 # save upset plot
 ggsave(
   path = outdir_plot,
   filename = "upset_somatic_variants.pdf",
-  plot = p_upset,
-  width = 27,
+  plot = p_ups_together,
+  width = 30,
   height = 13
 )
+
+names(p_ups) <- unique(anno_meta_info_clean_cell_variant_forupset$disease)
+p_ups |>
+  purrr::map("v") |>
+  writexl::write_xlsx(
+    path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot/upset-variants.xlsx"
+  )
+
 
 anno_meta_info_clean_cell_variant |>
   dplyr::select(-haplo_violin, -somatic_variant) |>
@@ -416,6 +485,54 @@ anno_meta_info_clean_cell_variant_unnest
 
 anno_meta_info_clean_cell_variant_unnest |> dplyr::glimpse()
 
+
+
+# forupset |>
+#   dplyr::mutate(n = purrr::map_int(srrid, length)) |>
+#   dplyr::arrange(desc(n)) |>
+#   dplyr::filter(n >= 43) ->
+# sel_variants
+
+p_ups |>
+  purrr::map("v") |>
+  purrr::map(
+    \(.x) {
+      .x |>
+        dplyr::arrange(-n) ->
+      .xx
+      top_90_percent <- round(.xx$n[[1]] * 0.9)
+      .xx |>
+        dplyr::filter(n >= .xx$n[[1]]) |>
+        dplyr::pull(variant)
+    }
+  ) ->
+sel_variants
+
+# venn plot --------------------------------------------------------------
+library(ggvenn)
+
+venn_data <- list(
+  "Alzheimers Disease" = sel_variants[[1]],
+  "Healthy Control" = sel_variants[[2]]
+)
+
+p_venn <- ggvenn(
+  venn_data,
+  fill_color = c("#E41A1C", "#377EB8"),
+  stroke_size = 0.5,
+  set_name_size = 4,
+  text_size = 4
+)
+
+ggsave(
+  path = outdir_plot,
+  filename = "venn_somatic_variants.pdf",
+  plot = p_venn,
+  width = 10,
+  height = 10
+)
+
+# plot hotspots -----------------------------------------------------------
 fn_plot_mtdna <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
@@ -451,7 +568,8 @@ fn_plot_mtdna <- function() {
     scale_x_continuous(
       limits = c(0, 17000),
       breaks = seq(0, 17000, 1000),
-      expand = expansion(mult = c(0, 0.03)),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
     ) +
     scale_y_discrete(
       expand = expansion(mult = c(0, 0), add = c(0, 0))
@@ -470,117 +588,279 @@ fn_plot_mtdna <- function() {
       axis.text.x = element_text(
         vjust = -1,
       ),
-    ) ->
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) ->
   pg
   pg
 }
 
-forupset |>
-  dplyr::mutate(n = purrr::map_int(srrid, length)) |>
-  dplyr::arrange(desc(n)) |>
-  dplyr::filter(n >= 43) ->
-sel_variants
+
+fn_plot_hotspots <- function(sel_variants) {
+  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+    dplyr::arrange(cancer_types)
+
+  anno_meta_info_clean_cell_variant_unnest |>
+    dplyr::filter(variant %in% sel_variants) |>
+    dplyr::mutate(
+      af = ifelse(af == 0, NA_real_, af)
+    ) |>
+    dplyr::mutate(
+      af = ifelse(depth < log2(10), NA_real_, af)
+    ) |>
+    dplyr::filter(af > 0) ->
+  theforplot
+
+  library(ggh4x)
+
+
+  theforplot |>
+    ggplot() +
+    ggh4x::facet_wrap2(
+      ~cluster,
+      ncol = 1,
+      strip.position = "right",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = pcc$color
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
+      )
+    ) +
+    ggbeeswarm::geom_quasirandom(
+      aes(
+        x = pos,
+        y = af,
+        color = af
+      ),
+      size = 1,
+      dodge.width = .75,
+      alpha = .5,
+      varwidth = TRUE
+    ) +
+    scale_color_gradient2(
+      name = "AF",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5,
+    ) +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      limits = c(0, 1),
+    ) +
+    theme(
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      legend.position = "right",
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+    ) +
+    labs(y = "AF") ->
+  p_af_cell
+  p_af_cell
+}
+
+purrr::map(
+  names(sel_variants),
+  .f = \(.x) {
+    .p <- fn_plot_hotspots(sel_variants[[.x]])
+    ggsave(
+      path = outdir_plot,
+      filename = "hotspots-shared-somatic-variants-{.x}.pdf" |> glue::glue(),
+      plot = wrap_plots(
+        .p,
+        fn_plot_mtdna(),
+        ncol = 1,
+        heights = c(1.3, 0.1)
+      ),
+      width = 17,
+      height = 9
+    )
+  }
+)
+
+# cell level analysis -----------------------------------------------------
+the_variants <- c(
+  "2191A>C", "2192A>T", "2193T>A",
+  "3173G>A", "3176A>T", "3178T>A"
+)
+
+one_variant <- "2191A>C"
+the_srrid <- "GSM7080019"
 
 
 
 anno_meta_info_clean_cell_variant_unnest |>
-  dplyr::filter(variant %in% sel_variants$variant) |>
-  dplyr::mutate(
-    af = ifelse(af == 0, NA_real_, af)
-  ) |>
-  dplyr::mutate(
-    af = ifelse(depth < log2(10), NA_real_, af)
-  ) |>
-  dplyr::filter(af > 0) ->
-theforplot
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
-library(ggh4x)
+  dplyr::filter(variant == one_variant) |>
+  # dplyr::filter(cluster == "B") |>
+  dplyr::filter(srrid == the_srrid) ->
+forcellplot
 
+forcellplot |>
+  ggstatsplot::ggbetweenstats(
+    x = cluster,
+    y = af,
+    xlab = "Cluster",
+    ylab = "Allele Frequency",
+    title = glue::glue("{the_srrid} - {one_variant}"),
+    pairwise.display = "significant",
+    p.adjust.method = "BH"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 1)
+  )
 
-theforplot |>
-  ggplot() +
-  ggh4x::facet_wrap2(
-    ~cluster,
-    ncol = 1,
-    strip.position = "right",
-    strip = ggh4x::strip_themed(
-      background_y = elem_list_rect(
-        fill = pcc$color
-      ),
-      text_y = elem_list_text(
-        colour = "white",
-        face = c("bold")
-      ),
-      by_layer_y = FALSE,
-    )
-  ) +
-  ggbeeswarm::geom_quasirandom(
-    aes(
-      x = pos,
-      y = af,
-      color = af
-    ),
-    size = 1,
-    dodge.width = .75,
-    alpha = .5,
-  ) +
-  scale_color_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
-  theme(
-    plot.margin = margin(t = 0, b = 0, unit = "cm"),
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
-    # axis.line.x.bottom = element_line(color = "black"),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.line.x = element_blank(),
-    axis.title.x = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
-    # axis.title.y = element_blank(),
-    axis.text.y = element_text(color = "black"),
-    # legend.text = element_text(
-    #   size = 14,
-    #   color = "black"
-    # ),
-    # legend.title = element_text(
-    #   size = 16,
-    #   colour = "black"
-    # ),
-    # strip.background = element_blank(),
-    # strip.text = element_text(
-    #   # size = 8,
-    #   color = "black",
-    #   face = "bold"
-    # )
-  ) +
-  labs(y = "AF") ->
-p_af_cell
+the_variants |>
+  purrr::map(
+    .f = \(.thevariant) {
+      anno_meta_info_clean_cell_variant_unnest |>
+        dplyr::filter(variant == .thevariant) |>
+        # dplyr::filter(cluster == "B") |>
+        dplyr::filter(srrid == the_srrid) ->
+      .forcellplot
 
-# p_af_cell
+      .forcellplot |>
+        ggstatsplot::ggbetweenstats(
+          x = cluster,
+          y = af,
+          xlab = "Cluster",
+          ylab = "Allele Frequency",
+          title = glue::glue("{the_srrid} - {.thevariant}"),
+          pairwise.display = "significant",
+          p.adjust.method = "BH"
+        ) +
+        scale_y_continuous(
+          limits = c(0, 1)
+        )
+    }
+  ) ->
+p_test_variants_between_clusters
 ggsave(
   path = outdir_plot,
-  filename = "af_allcell.pdf",
+  filename = "test_variants_between_clusters.pdf",
   plot = wrap_plots(
-    p_af_cell,
-    fn_plot_mtdna(),
-    ncol = 1,
-    heights = c(1.3, 0.1)
-  ),
-  width = 25,
-  height = 12
+    p_test_variants_between_clusters,
+    ncol = 3
+  ) + plot_annotation(tag_levels = "A"),
+  width = 20,
+  height = 10
 )
+# age group --------------------------------------------------------------------
+
+anno_meta_info_clean_cell_variant_unnest |>
+  dplyr::mutate(
+    age_group = dplyr::case_when(
+      age < 50 ~ "<50",
+      age >= 50 & age < 60 ~ "50-60",
+      age >= 60 & age < 70 ~ "60-70",
+      age >= 70 ~ ">=70"
+    )
+  ) |>
+  dplyr::mutate(
+    age_group = factor(age_group, levels = c("<50", "50-60", "60-70", ">=70"))
+  ) ->
+anno_meta_info_clean_cell_variant_unnest_age_group
+
+purrr::map(
+  the_variants,
+  .f = \(.x) {
+    anno_meta_info_clean_cell_variant_unnest_age_group |>
+      dplyr::filter(variant == .x) |>
+      # dplyr::filter(srrid == the_srrid) |>
+      ggstatsplot::ggbetweenstats(
+        x = age_group,
+        y = af,
+        xlab = "Age Group",
+        ylab = "Allele Frequency",
+        title = glue::glue("{.x} - celltypes combined"),
+        pairwise.display = "significant",
+        p.adjust.method = "BH"
+      ) ->
+    .p
+
+    ggsave(
+      path = file.path(outdir_plot, "age_group"),
+      filename = "age_group-{.x}-celltypes_combined.pdf" |> glue::glue(),
+      plot = .p,
+      width = 12,
+      height = 7
+    )
+  }
+)
+
+celltypes <- unique(anno_meta_info_clean_cell_variant_unnest_age_group$cluster)
+
+purrr::map(
+  the_variants,
+  .f = \(.x) {
+    celltypes |>
+      purrr::map(
+        .f = \(.y) {
+          anno_meta_info_clean_cell_variant_unnest_age_group |>
+            dplyr::filter(variant == .x) |>
+            # dplyr::filter(srrid == the_srrid) |>
+            dplyr::filter(cluster == .y) |>
+            ggstatsplot::ggbetweenstats(
+              x = age_group,
+              y = af,
+              xlab = "Age Group",
+              ylab = "Allele Frequency",
+              title = glue::glue("{.x} - {.y}"),
+              pairwise.display = "significant",
+              p.adjust.method = "BH"
+            ) ->
+          .p
+
+          ggsave(
+            path = file.path(outdir_plot, "age_group"),
+            filename = "age_group-{.x}-{.y}.pdf" |> glue::glue(),
+            plot = .p,
+            width = 12,
+            height = 7
+          )
+
+          .p
+        }
+      ) ->
+    p_celltypes
+    ggsave(
+      path = file.path(outdir_plot, "age_group"),
+      filename = "age_group-{.x}-celltypes_wrap.pdf" |> glue::glue(),
+      plot = wrap_plots(
+        p_celltypes,
+        ncol = 4
+      ) + plot_annotation(tag_levels = "A"),
+      width = 20,
+      height = 10
+    )
+  }
+)
+
+
+
+
 
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
+save.image(file = file.path(outdir, "GSE226602.rdata"))
+1
