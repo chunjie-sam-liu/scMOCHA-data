@@ -802,7 +802,21 @@ purrr::map(
       width = 12,
       height = 7
     )
+
+    .p
   }
+) ->
+p_variants
+
+ggsave(
+  path = file.path(outdir_plot, "age_group"),
+  filename = "age_group-celltypes_combined_variant_wrap.pdf" |> glue::glue(),
+  plot = wrap_plots(
+    p_variants,
+    ncol = 4
+  ) + plot_annotation(tag_levels = "A"),
+  width = 20,
+  height = 10
 )
 
 celltypes <- unique(anno_meta_info_clean_cell_variant_unnest_age_group$cluster)
