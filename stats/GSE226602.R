@@ -874,7 +874,7 @@ ggsave(
   filename = "age_group-celltype_and_variant_wrap.pdf",
   plot = wrap_plots(
     p_variants_celltypes,
-    ncol = 8
+    ncol = 8,
     nrow = 6,
   ) + plot_annotation(tag_levels = "A"),
   width = 30,
