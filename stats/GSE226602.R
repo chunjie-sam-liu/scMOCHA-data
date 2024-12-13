@@ -752,6 +752,7 @@ the_variants |>
     }
   ) ->
 p_test_variants_between_clusters
+
 ggsave(
   path = outdir_plot,
   filename = "test_variants_between_clusters.pdf",
@@ -778,9 +779,9 @@ anno_meta_info_clean_cell_variant_unnest |>
   ) ->
 anno_meta_info_clean_cell_variant_unnest_age_group
 
-purrr::map(
+parallel::mclapply(
   the_variants,
-  .f = \(.x) {
+  FUN = \(.x) {
     anno_meta_info_clean_cell_variant_unnest_age_group |>
       dplyr::filter(variant == .x) |>
       # dplyr::filter(srrid == the_srrid) |>
@@ -794,6 +795,7 @@ purrr::map(
         p.adjust.method = "BH"
       ) ->
     .p
+    log_success("save plot ", .x)
 
     ggsave(
       path = file.path(outdir_plot, "age_group"),
@@ -804,7 +806,8 @@ purrr::map(
     )
 
     .p
-  }
+  },
+  mc.cores = length(the_variants)
 ) ->
 p_variants
 
@@ -821,39 +824,42 @@ ggsave(
 
 celltypes <- unique(anno_meta_info_clean_cell_variant_unnest_age_group$cluster)
 
-purrr::map(
-  the_variants,
-  .f = \(.x) {
-    celltypes |>
-      purrr::map(
-        .f = \(.y) {
-          anno_meta_info_clean_cell_variant_unnest_age_group |>
-            dplyr::filter(variant == .x) |>
-            # dplyr::filter(srrid == the_srrid) |>
-            dplyr::filter(cluster == .y) |>
-            ggstatsplot::ggbetweenstats(
-              x = age_group,
-              y = af,
-              xlab = "Age Group",
-              ylab = "Allele Frequency",
-              title = glue::glue("{.x} - {.y}"),
-              pairwise.display = "significant",
-              p.adjust.method = "BH"
-            ) ->
-          .p
+parallel::mclapply(
+  X = the_variants,
+  FUN = \(.x) {
+    parallel::mclapply(
+      X = celltypes,
+      FUN = \(.y) {
+        anno_meta_info_clean_cell_variant_unnest_age_group |>
+          dplyr::filter(variant == .x) |>
+          # dplyr::filter(srrid == the_srrid) |>
+          dplyr::filter(cluster == .y) |>
+          ggstatsplot::ggbetweenstats(
+            x = age_group,
+            y = af,
+            xlab = "Age Group",
+            ylab = "Allele Frequency",
+            title = glue::glue("{.x} - {.y}"),
+            pairwise.display = "significant",
+            p.adjust.method = "BH"
+          ) ->
+        .p
 
-          ggsave(
-            path = file.path(outdir_plot, "age_group"),
-            filename = "age_group-{.x}-{.y}.pdf" |> glue::glue(),
-            plot = .p,
-            width = 12,
-            height = 7
-          )
+        log_success("save plot ", .x, " - ", .y)
+        ggsave(
+          path = file.path(outdir_plot, "age_group"),
+          filename = "age_group-{.x}-{.y}.pdf" |> glue::glue(),
+          plot = .p,
+          width = 12,
+          height = 7
+        )
 
-          .p
-        }
-      ) ->
+        .p
+      },
+      mc.cores = length(celltypes)
+    ) ->
     p_celltypes
+
     ggsave(
       path = file.path(outdir_plot, "age_group"),
       filename = "age_group-{.x}-celltypes_wrap.pdf" |> glue::glue(),
@@ -864,8 +870,9 @@ purrr::map(
       width = 20,
       height = 10
     )
-  }
-  p_celltypes
+    p_celltypes
+  },
+  mc.cores = length(the_variants)
 ) ->
 p_variants_celltypes
 
@@ -873,12 +880,12 @@ ggsave(
   path = file.path(outdir_plot, "age_group"),
   filename = "age_group-celltype_and_variant_wrap.pdf",
   plot = wrap_plots(
-    p_variants_celltypes,
+    purrr::flatten(p_variants_celltypes),
     ncol = 8,
-    nrow = 6,
+    nrow = 6
   ) + plot_annotation(tag_levels = "A"),
-  width = 30,
-  height = 15
+  width = 40,
+  height = 20
 )
 
 # footer ------------------------------------------------------------------
