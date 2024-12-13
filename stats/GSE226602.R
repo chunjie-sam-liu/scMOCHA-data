@@ -883,7 +883,7 @@ ggsave(
     purrr::flatten(p_variants_celltypes),
     ncol = 8,
     nrow = 6
-  ) + plot_annotation(tag_levels = "A"),
+  ),
   width = 40,
   height = 20
 )
