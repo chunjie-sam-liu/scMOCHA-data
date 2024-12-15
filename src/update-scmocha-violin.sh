@@ -114,6 +114,6 @@ update_all_gse() {
 
 # update_gse GSE226602
 
-# update_gsmid GSE226602 GSM7080058
+# update_gsmid GSE226602 GSM7080021
 
-update_all_gse
+# update_all_gse
