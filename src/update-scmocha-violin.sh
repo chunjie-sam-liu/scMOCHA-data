@@ -8,7 +8,7 @@
 param=$#
 
 # gseids=(GSE149689 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279 GSE226602)
-gseids=(GSE149689 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279)
+gseids=(GSE149689 GSE155223 GSE155673 GSE157344 GSE163668 GSE166992 GSE171555 GSE181279 GSE226602)
 basedir="/home/liuc9/github/scMOCHA-data/data"
 
 update_gsmid() {
@@ -16,9 +16,9 @@ update_gsmid() {
   local gsmid=$2
 
   data_dir="$basedir/$gseid"
-  targz_dir="$data_dir/targz"
+  final_dir="$data_dir/final"
 
-  gsm_dir="$targz_dir/$gsmid"
+  gsm_dir="$final_dir/$gsmid"
 
   cd "$gsm_dir" || exit
   echo "Updating $gseid and $gsmid"
@@ -83,10 +83,10 @@ update_gse() {
   echo "Updating $gseid"
 
   data_dir="$basedir/$gseid"
-  targz_dir="$data_dir/targz"
-  # find gsmid in the targz_dir
+  final_dir="$data_dir/final"
+  # find gsmid in the final_dir
 
-  gsmids=$(find "$targz_dir" -maxdepth 1 -type d -name 'GSM*' -exec basename {} \;)
+  gsmids=$(find "$final_dir" -maxdepth 1 -type d -name 'GSM*' -exec basename {} \;)
 
   max_jobs=10
   current_jobs=0
