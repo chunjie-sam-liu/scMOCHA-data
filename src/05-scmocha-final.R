@@ -59,21 +59,20 @@ log_layout(layout_glue_colors)
 # function ----------------------------------------------------------------
 
 fn_parse_log <- function(logfile) {
-  logs <- readr::read_lines(
-    file = logfile,
-    skip_empty_rows = T
-  )
+  output_lines <- character()
 
-  # output_index <- stringr::str_which(logs, '"outputs": \\{')
-  # valid_json <- gsub("^\"|\"$", "", logs[output_index + 1])
-  # targz <- jsonlite::fromJSON(paste0("{", valid_json, "}"))
-  # targz$scMOCHABatch.output_dir_tar_gzs
+  con <- file(logfile, "r")
+  on.exit(close(con))
 
-  output_index <- stringr::str_which(logs, "scMOCHA.output_dir_tar_gz")
-  stringr::str_remove_all(logs[output_index], "\"| |,|scMOCHA.output_dir_tar_gz|\\:")
+  while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
+    if (grepl("scMOCHA.output_dir_tar_gz", line)) {
+      cleaned_line <- stringr::str_remove_all(line, "\"| |,|scMOCHA.output_dir_tar_gz|\\:")
+      output_lines <- c(output_lines, cleaned_line)
+    }
+  }
+
+  output_lines
 }
-
-
 
 # load data ---------------------------------------------------------------
 # basedir <- "/home/liuc9/github/scMOCHA-data/data"
