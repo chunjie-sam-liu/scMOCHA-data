@@ -110,8 +110,8 @@ datadir <- file.path(
   basedir, gseid
 )
 
-targzdir <- file.path(
-  datadir, "targz"
+finaldir <- file.path(
+  datadir, "final"
 )
 
 outdir <- file.path(
@@ -131,7 +131,7 @@ tibble::tibble(
   srrid = srrid_list
 ) |>
   dplyr::mutate(
-    srrdir = file.path(targzdir, srrid)
+    srrdir = file.path(finaldir, srrid)
   ) |>
   dplyr::mutate(
     dir_exists = dir.exists(srrdir)
