@@ -97,11 +97,16 @@ srr_out |>
           file.path(.srrdir, "qc_cell_stats.xlsx")
         )
 
-        .depth <- data.table::fread(
-          file.path(.srrdir, "possorted_genome_bam.MT.depth"),
-          col.names = c("chrom", "pos", "depth")
-        ) |>
-          dplyr::select(-chrom)
+        .depth_cluster <- data.table::fread(
+          file.path(.srrdir, "cluster.coverage.txt.gz"),
+          col.names = c("pos", "celltype", "count")
+        )
+
+        .depth <- .depth_cluster |>
+          dplyr::group_by(pos) |>
+          dplyr::summarise(
+            depth = sum(count, na.rm = T)
+          )
 
         .celltype_ratio <- data.table::fread(
           file.path(.srrdir, "celltype_ratio.tsv")
@@ -132,10 +137,7 @@ srr_out |>
           tidyr::gather(-celltype, key = variant, value = af) |>
           dplyr::filter(variant %in% .v)
 
-        .cov <- data.table::fread(
-          file.path(.srrdir, "cluster.coverage.txt.gz"),
-          col.names = c("pos", "celltype", "count")
-        ) |>
+        .cov <- .depth_cluster |>
           dplyr::filter(pos %in% .pos)
 
         .haplo_variant <- data.table::fread(
