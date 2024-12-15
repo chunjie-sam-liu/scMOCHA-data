@@ -139,11 +139,11 @@ srr_out |>
           dplyr::filter(pos %in% .pos)
 
         .haplo_variant <- data.table::fread(
-          file.path(.srrdir, "cluster_cell_violin_haplo_variant.csv")
+          file.path(.srrdir, "violin_haplo_variant.csv")
         )
 
         .haplo_violin <- data.table::fread(
-          file.path(.srrdir, "cluster_cell_violin_haplo_forplot.csv")
+          file.path(.srrdir, "violin_haplo_forplot.csv")
         )
 
         .somatic <- readr::read_rds(
