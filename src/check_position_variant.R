@@ -883,9 +883,12 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
 
 # load data ---------------------------------------------------------------
 
-thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
+# thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
 # thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
+thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE166992/final/GSM5090446"
 
+gsmid <- basename(thepath)
+gseid <- basename(dirname(dirname(thepath)))
 
 # load sc
 sc <- fn_load_by_path(thepath)
@@ -911,7 +914,7 @@ fn_plot_vaf_featureplot_multi(
 ) -> p_vaf_feature
 
 ggsave(
-  filename = "selected_variants_vaf_featureplot.pdf",
+  filename = "selected_variants_vaf_featureplot-{gseid}-{gsmid}.pdf" |> glue::glue(),
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = p_vaf_feature,
   width = 15,
@@ -925,7 +928,7 @@ fn_plot_count_multi(
 ) -> p_count
 
 ggsave(
-  filename = "selected_variants_count.pdf",
+  filename = "selected_variants_count-{gseid}-{gsmid}.pdf" |> glue::glue(),
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = p_count,
   width = 20,
@@ -937,7 +940,7 @@ p_mtdna <- fn_plot_mtdna()
 p_depth <- fn_plot_coverage(thepath, theposes)
 
 ggsave(
-  filename = "depth-celltype.pdf",
+  filename = "depth-celltype-{gseid}-{gsmid}.pdf" |> glue::glue(),
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = wrap_plots(
     p_depth$p_mt_depth_celltype,
@@ -954,7 +957,7 @@ ggsave(
 p_hotspots <- fn_plot_hotspots(thepath, thevariants)
 
 ggsave(
-  filename = "hotspots_final_af_somatic.pdf",
+  filename = "hotspots_final_af_somatic-{gseid}-{gsmid}.pdf" |> glue::glue(),
   path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
   plot = wrap_plots(
     p_hotspots,
