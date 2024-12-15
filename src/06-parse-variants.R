@@ -48,60 +48,7 @@ log_layout(layout_glue_colors)
 # future::plan(future::multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .high_af = 0.95) {
-  # .haplo_variant <- srr_out_cell_stats$haplo_variant[[27]]
-  # .haplo_violin <- srr_out_cell_stats$haplo_violin[[27]]
 
-  # 1. filter by haplogrep marker variant
-  .haplo_variant |>
-    dplyr::filter(fill != "white") |>
-    dplyr::pull(variant) ->
-  .v_haplo
-
-  # 2. filter by n_cells
-  .n_cells <- 10
-  .haplo_violin |>
-    dplyr::count(variant) |>
-    dplyr::filter(n < .n_cells) |>
-    dplyr::pull(variant) ->
-  .v_n_cells
-
-  # 3. tRNA p9 and RNA editing position
-  .editing_pos <- c(
-    585, 1610, 3238, 4271, 5520, 7526, 8303, # tRNA p9
-    9999, 10413, 12146, 12274, 14734, 15896, # tRNA p9
-    295, 2617, 13710 # RNA editing
-  )
-
-  .haplo_variant |>
-    dplyr::filter(Position %in% .editing_pos) |>
-    dplyr::pull(variant) ->
-  .v_editing
-
-  # 4. high af in 95% of cells
-  .haplo_violin |>
-    dplyr::group_by(variant) |>
-    dplyr::summarise(
-      afm = mean(af, na.rm = T)
-    ) |>
-    dplyr::filter(afm > .high_af) |>
-    dplyr::pull(variant) ->
-  .v_high_af
-
-  # somatic variant
-  .haplo_variant |>
-    dplyr::filter(!variant %in% c(.v_haplo, .v_n_cells, .v_editing, .v_high_af)) |>
-    dplyr::pull(variant) ->
-  .v_somatic
-
-  list(
-    haplo = .v_haplo,
-    n_cells = .v_n_cells,
-    editing = .v_editing,
-    somatic = .v_somatic,
-    high_af = .v_high_af
-  )
-}
 
 # load data ---------------------------------------------------------------
 
@@ -149,6 +96,7 @@ srr_out |>
         .cs <- readxl::read_xlsx(
           file.path(.srrdir, "qc_cell_stats.xlsx")
         )
+
         .depth <- data.table::fread(
           file.path(.srrdir, "possorted_genome_bam.MT.depth"),
           col.names = c("chrom", "pos", "depth")
@@ -160,8 +108,13 @@ srr_out |>
         )
 
         .cva <- data.table::fread(
-          file.path(.srrdir, "cell_variant_annotation.tsv")
+          ifelse(
+            file.exists(file.path(.srrdir, "variant_annotation.tsv")),
+            file.path(.srrdir, "variant_annotation.tsv"),
+            file.path(.srrdir, "cell_variant_annotation.tsv")
+          )
         )
+
 
         .cva |>
           dplyr::mutate(
