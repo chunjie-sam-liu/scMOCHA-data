@@ -147,7 +147,7 @@ srr_out |>
         )
 
         .somatic <- readr::read_rds(
-          file.path(.srrdir, "somatic_variant.rds")
+          file.path(.srrdir, "variant_somatic.rds")
         )
 
         tibble::tibble(
@@ -184,6 +184,17 @@ readr::write_rds(
 
 # srr_out_cell_stats -> variant
 srr_out_cell_stats |>
+  dplyr::mutate(
+    depth_mean = purrr::map_dbl(
+      .x = depth,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    )
+  ) |>
   dplyr::mutate(
     nmut = purrr::map_int(
       .x = haplo_variant,
@@ -264,6 +275,7 @@ metadata_anno |>
     `# of cells` = `estimated number of cells`,
     `# cells after filter` = `number of cells after filtering`,
     `Cell ratio` = ratio,
+    `Depth mean` = depth_mean
   ) ->
 metadata_clean
 
