@@ -909,5 +909,6 @@ ggsave(
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
+outdir <- "/home/liuc9/github/scMOCHA-data/data/GSE226602/out"
 save.image(file = file.path(outdir, "GSE226602.rda"))
 1
