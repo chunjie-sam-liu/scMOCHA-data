@@ -43,6 +43,66 @@ log_layout(layout_glue_colors)
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
+fn_plot_mtdna <- function() {
+  mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+
+
+  gtf_gene_df <-
+    readr::read_rds(
+      file = mt_exons_df
+    )
+  library(gggenes)
+  ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
+    # geom_gene_arrow() +
+    geom_gene_arrow(
+      aes(
+        fill = gene_biotype
+      ),
+      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+    ) +
+    scale_fill_brewer(
+      palette = "Set1",
+      name = "Gene type",
+      labels = c("MT rRNA", "MT tRNA", "Protein coding")
+    ) +
+    ggrepel::geom_text_repel(
+      aes(x = (start + end) / 2, label = gene_name, color = gene_biotype),
+      # fill = "white",
+      # nudge_x =1,
+      # nudge_y = -0.1,
+      size = 3,
+      show.legend = F,
+      max.overlaps = Inf,
+    ) +
+    scale_color_brewer(palette = "Set1") +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0), add = c(0, 0))
+    ) +
+    # theme_genes() +
+    theme(
+      legend.position = "bottom",
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      # axis.text.x = element_text(size = 14),
+      # legend.text = element_text(size = 14),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.line.x = element_line(color = "black"),
+      axis.text.x = element_text(
+        vjust = -1,
+      ),
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) ->
+  pg
+  pg
+}
 
 
 # load data ---------------------------------------------------------------
@@ -559,6 +619,328 @@ ggsave(
   ),
   width = 24,
   height = 13,
+  dpi = 300
+)
+
+# depth 2173G>A -----------------------------------------------------------
+thevariants <- c("1670A>G", "3173G>A")
+
+theposes <- thevariants |>
+  purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+  purrr::map_int(as.integer)
+
+gse_cell_ratio_variant_meta |>
+  dplyr::select(gseid, anno, Chemistry) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(gseid, srrid, depth, Chemistry) |>
+  tidyr::unnest(cols = depth) ->
+all_gseid_depth
+
+all_gseid_depth |>
+  dplyr::filter(pos %in% theposes) ->
+theposes_depth
+
+theposes_depth |>
+  dplyr::filter(pos == theposes[2]) |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(
+    mean_depth = mean(depth, na.rm = TRUE)
+  ) |>
+  dplyr::arrange(dplyr::desc(mean_depth)) ->
+theposes_depth_ranked
+
+theposes_depth |>
+  dplyr::filter(pos == theposes[2]) |>
+  dplyr::mutate(
+    gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+  ) ->
+theposes_depth_forplot
+
+theposes_depth_forplot |>
+  ggplot() +
+  geom_violin(
+    aes(
+      x = gseid,
+      y = depth,
+      fill = Chemistry
+    ),
+    alpha = 0.5,
+    # size = 1,
+    color = NA,
+    show.legend = FALSE
+  ) +
+  scale_fill_viridis_d(
+    name = "Chemistry",
+    option = "D",
+    begin = 0.1,
+    end = 0.9
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      x = gseid,
+      y = depth,
+      color = Chemistry
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = .5,
+    varwidth = TRUE
+  ) +
+  scale_color_viridis_d(
+    name = "Chemistry",
+    option = "D",
+  ) +
+  scale_x_discrete(
+    # expand = expansion(mult = c(0.001, 0.001))
+  ) +
+  scale_y_continuous(
+    labels = scales::label_number(),
+    limits = c(0, 40000),
+    breaks = seq(0, 40000, 10000),
+    # expand = expansion(add = c(0.1, 0.1))
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(size = 0.5, color = "black"),
+    axis.title = element_text(
+      size = 16,
+      color = "black",
+      face = "bold"
+    ),
+    axis.text.y = element_text(
+      size = 14,
+      color = "black"
+    ),
+    plot.title = element_text(
+      hjust = 0.5,
+      color = "black",
+      size = 16,
+      face = "bold"
+    ),
+    axis.title.x = element_blank(),
+    legend.position = "inside",
+    legend.position.inside = c(0.8, 0.7)
+  ) +
+  labs(
+    x = "GSE ID",
+    y = "Depth",
+    title = glue::glue("Depth of {theposes[2]}"),
+  ) ->
+p_depth_3173
+
+ggsave(
+  filename = file.path(outdir, "depth_3173.pdf"),
+  plot = p_depth_3173,
+  width = 13,
+  height = 5,
+  dpi = 300
+)
+
+# all position in sc5ppe -------------------------------------------------
+sc5ppe_anno_somatic$union_variants |>
+  purrr::reduce(union) |>
+  sort() ->
+all_sc5ppe_variants
+
+all_sc5ppe_poss <- all_sc5ppe_variants |>
+  purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+  purrr::map_int(as.integer) |>
+  sort()
+
+all_gseid_depth |>
+  dplyr::filter(pos %in% all_sc5ppe_poss) |>
+  dplyr::mutate(
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE"))
+  ) ->
+all_sc5ppe_depth
+
+all_sc5ppe_depth |>
+  dplyr::group_by(Chemistry, srrid) |>
+  dplyr::summarise(
+    depth = mean(depth, na.rm = TRUE)
+  ) |>
+  dplyr::arrange(Chemistry, -depth) |>
+  dplyr::ungroup() ->
+all_sc5ppe_depth_ranked
+
+
+all_sc5ppe_depth_ranked |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
+  ) |>
+  ggplot(aes(
+    x = 1,
+    y = srrid
+  )) +
+  geom_tile(
+    aes(
+      fill = Chemistry
+    )
+  ) +
+  scale_fill_viridis_d(
+    name = "Chemistry",
+    option = "D",
+    direction = -1
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "none",
+    plot.margin = margin(0, 0, 0, 0, unit = "cm")
+  ) ->
+p_tile_all_srrid
+
+all_sc5ppe_depth |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
+    depth_log2 = log2(depth + 1)
+  ) |>
+  dplyr::mutate(
+    posc = as.character(pos)
+  ) |>
+  ggplot(aes(
+    x = posc,
+    y = srrid,
+    fill = depth_log2
+  )) +
+  geom_tile() +
+  scale_fill_gradient2(
+    name = "log2(Depth + 1)",
+    low = "white",
+    mid = "red",
+    high = "#3B0049",
+    midpoint = 0.5
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    plot.margin = margin(0, 0, 0, 0, unit = "cm")
+  ) ->
+p_tile_all_depth
+
+ggsave(
+  filename = file.path(outdir, "depth_all_sc5ppe_position.pdf"),
+  plot = wrap_plots(
+    p_tile_all_srrid,
+    p_tile_all_depth,
+    ncol = 2,
+    widths = c(1, 40)
+  ),
+  width = 14,
+  height = 5,
+  dpi = 300
+)
+
+# all position in sc5ppe -------------------------------------------------
+all_gseid_depth |>
+  dplyr::group_by(
+    Chemistry, pos
+  ) |>
+  dplyr::summarise(
+    depth = mean(depth, na.rm = TRUE)
+  ) |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+  ) ->
+all_gseid_depth_forplot
+
+all_gseid_depth_forplot |>
+  ggplot() +
+  ggh4x::facet_wrap2(
+    ~Chemistry,
+    ncol = 1,
+    strip.position = "right",
+    scales = "free_y",
+    strip = ggh4x::strip_themed(
+      background_y = ggh4x::elem_list_rect(
+        fill = viridis::viridis_pal(option = "D")(3)
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = FALSE,
+    ),
+  ) +
+  geom_col(
+    aes(
+      x = pos,
+      y = depth,
+      fill = Chemistry
+    ),
+  ) +
+  scale_fill_viridis_d(
+    name = "Chemistry",
+    option = "D",
+  ) +
+  scale_x_continuous(
+    limits = c(0, 17000),
+    breaks = seq(0, 17000, 1000),
+    labels = seq(0, 17000, 1000),
+    expand = expansion(mult = c(0, 0.01)),
+  ) +
+  scale_y_continuous(
+    expand = c(0.01, 0),
+    label = scales::label_number(),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    # axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "none",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 17000)) +
+  labs(y = "Depth") ->
+p_depth_all
+
+p_mtdna <- fn_plot_mtdna()
+
+ggsave(
+  filename = file.path(outdir, "depth_all_position_free_y.pdf"),
+  plot = wrap_plots(
+    p_depth_all,
+    p_mtdna,
+    ncol = 1,
+    heights = c(15, 1)
+  ),
+  width = 17,
+  height = 9,
   dpi = 300
 )
 # footer ------------------------------------------------------------------
