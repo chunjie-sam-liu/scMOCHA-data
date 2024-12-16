@@ -150,35 +150,8 @@ writexl::write_xlsx(
 # ggstats correlation plot ------------------------------------------------
 
 
-
-# ggstatsplot::ggscatterstats(
-#   data = metadata_clean,
-#   x = Age,
-#   y = `# of somatic variants`,
-#   title = "Age",
-#   xlab = "Age",
-#   ylab = "Number of Somatic Variants",
-#   ggtheme = ggplot2::theme_minimal()
-# ) -> p
-# p
-
-
-
-# ggstatsplot::ggscatterstats(
-#   data = metadata_clean |> dplyr::filter(Disease == "Healthy Control"),
-#   x = Age,
-#   y = `# of somatic variants`,
-#   title = "Age",
-#   xlab = "Age",
-#   ylab = "Number of Somatic Variants",
-#   ggtheme = ggplot2::theme_minimal()
-# ) -> p
-# p
-
 # Age
 # # of cells after filtering
-anno_meta_info |>
-  dplyr::glimpse()
 
 anno_meta_info |>
   dplyr::mutate(
@@ -211,71 +184,113 @@ anno_meta_info |>
   ) ->
 anno_meta_info_clean
 
+fn_eda <- function(anno_meta_info_clean) {
+  p_ncells <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = ncells,
+          y = nmut_somatic,
+          title = "Number of Cells",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_ncells: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |>
-  ggstatsplot::ggscatterstats(
-    x = ncells,
-    y = nmut_somatic,
-    title = "Number of Cells",
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-  ) -> p_ncells
-p_ncells
+  p_numi <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = numi,
+          y = nmut_somatic,
+          title = "Number of UMI",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_numi: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |>
-  ggstatsplot::ggscatterstats(
-    x = numi,
-    y = nmut_somatic,
-    title = "Number of UMI",
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-  ) -> p_numi
-p_numi
+  p_avg_depth <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = avg_depth,
+          y = nmut_somatic,
+          title = "Average Depth",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_avg_depth: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |>
-  ggstatsplot::ggscatterstats(
-    x = avg_depth,
-    y = nmut_somatic,
-    title = "Average Depth",
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-  ) -> p_avg_depth
-p_avg_depth
+  p_age <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = age,
+          y = nmut_somatic,
+          title = "Age",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_age: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |>
-  ggstatsplot::ggscatterstats(
-    x = age,
-    y = nmut_somatic,
-    title = "Age",
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-  ) -> p_age
-p_age
+  p_gender <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggbetweenstats(
+          x = gender,
+          y = nmut_somatic,
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+          title = "Gender",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_gender: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |> dplyr::glimpse()
+  p_disease <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggbetweenstats(
+          x = disease,
+          y = nmut_somatic,
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+          title = "Disease"
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_disease: ", e)
+      ggplot()
+    }
+  )
 
-anno_meta_info_clean |>
-  ggstatsplot::ggbetweenstats(
-    x = gender,
-    y = nmut_somatic,
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-    title = "Gender",
-  ) -> p_gender
-p_gender
+  wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
+  p_combined
+}
 
-anno_meta_info_clean |>
-  ggstatsplot::ggbetweenstats(
-    x = disease,
-    y = nmut_somatic,
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-    title = "Disease"
-  ) -> p_disease
-p_disease
-
-wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
-p_combined
 
 outdir_plot <- file.path(outdir, "plot")
 dir.create(outdir_plot, showWarnings = FALSE, recursive = TRUE)
@@ -822,6 +837,7 @@ ggsave(
   height = 10
 )
 
+# celltypes -----------------------------------------------------------------
 celltypes <- unique(anno_meta_info_clean_cell_variant_unnest_age_group$cluster)
 
 parallel::mclapply(
