@@ -50,7 +50,7 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
 outdir <- file.path(basedir, "out")
 
-gseids <- c("GSE149689", "GSE155223", "GSE157344", "GSE163668", "GSE166992", "GSE171555", "GSE181279", "GSE226602")
+gseids <- c("GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE163668", "GSE166992", "GSE171555", "GSE181279", "GSE226602")
 
 gseids_meta <- tibble::tibble(
   GSE_ID = c("GSE163668", "GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE166992", "GSE171555", "GSE226602", "GSE181279"),
@@ -77,9 +77,7 @@ tibble::tibble(
         )
       }
     )
-  ) -> gse_cell_ratio_variant
-
-gse_cell_ratio_variant |>
+  ) |>
   dplyr::left_join(
     gseids_meta,
     by = c("gseid" = "GSE_ID")
