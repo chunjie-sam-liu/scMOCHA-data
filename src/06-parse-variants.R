@@ -93,6 +93,11 @@ srr_out |>
         if (!dir.exists(.srrdir)) {
           return(NULL)
         }
+
+        .metrics <- data.table::fread(
+          file.path(.srrdir, "metrics_summary.csv")
+        ) |>
+          purrr::map_dfr(~ as.numeric(gsub("[,%]", "", .x)))
         .cs <- readxl::read_xlsx(
           file.path(.srrdir, "qc_cell_stats.xlsx")
         )
@@ -153,6 +158,7 @@ srr_out |>
         )
 
         tibble::tibble(
+          metrics = list(.metrics),
           cell_stats = list(.cs),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
