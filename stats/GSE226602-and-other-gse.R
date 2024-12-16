@@ -78,12 +78,23 @@ tibble::tibble(
       }
     )
   ) |>
+  dplyr::mutate(
+    anno = purrr::map(
+      .x = gseid,
+      .f = \(.gseid) {
+        readr::read_rds(
+          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
+        )
+      }
+    )
+  ) |>
   dplyr::left_join(
     gseids_meta,
     by = c("gseid" = "GSE_ID")
   ) ->
 gse_cell_ratio_variant_meta
 
+# save gse cell ratio and variant data ------------------------------------
 gse_cell_ratio_variant_meta |>
   dplyr::mutate(
     `Avg # of somatic variants` = purrr::map_dbl(
@@ -94,7 +105,8 @@ gse_cell_ratio_variant_meta |>
 gse_cell_ratio_variant_meta_xlsx
 
 gse_cell_ratio_variant_meta_xlsx |>
-  dplyr::select(-cell_ratio_variant) |>
+  dplyr::select(-cell_ratio_variant, -anno) |>
+  dplyr::arrange(`Avg # of somatic variants`) |>
   writexl::write_xlsx(
     path = file.path(outdir, "gses_cell_ratio_variant_meta.xlsx")
   )
@@ -109,6 +121,7 @@ gse_cell_ratio_variant_meta_xlsx |>
   ) ->
 gseid_ranked
 
+# plot average depth and number of somatic variants ------------------------
 gse_cell_ratio_variant_meta |>
   dplyr::left_join(
     gseid_ranked |> dplyr::select(gseid, label),
@@ -121,7 +134,7 @@ gse_cell_ratio_variant_meta |>
 forplot
 
 cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |> broom::tidy() -> cor_test_all
-cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot, subset = `Depth mean` < 250000) |> broom::tidy() -> cor_test_250k
+cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot, subset = gseid != "GSE181279") |> broom::tidy() -> cor_test_250k
 
 forplot |>
   ggplot(aes(
@@ -141,15 +154,13 @@ forplot |>
     linetype = 21,
     color = "red"
   ) +
-  scale_color_brewer(
+  ggsci::scale_color_aaas(
     name = "GSE ID",
-    palette = "Set1",
-    direction = -1
   ) +
   scale_x_continuous(
     labels = scales::label_number(),
-    limits = c(0, 350000),
-    breaks = seq(0, 350000, 50000),
+    limits = c(0, 60000),
+    breaks = seq(0, 60000, 10000),
   ) +
   scale_y_continuous(
     labels = scales::label_number(),
@@ -180,17 +191,88 @@ forplot |>
     x = "Average Depth",
     y = "Number of Somatic Variants",
     title = glue::glue("All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}"),
-    subtitle = glue::glue("Exclude 3 samples, Pearson's r = {round(cor_test_250k$estimate, 2)}, p-value = {scales::pvalue(cor_test_250k$p.value)}")
+    subtitle = glue::glue("Exclude GSE181279 samples, Pearson's r = {round(cor_test_250k$estimate, 2)}, p-value = {scales::pvalue(cor_test_250k$p.value)}")
   ) ->
 p_somatic_variant
 
 ggsave(
   filename = file.path(outdir, "somatic_variant.pdf"),
   plot = p_somatic_variant,
-  width = 9,
+  width = 10,
   height = 6,
   dpi = 300
 )
+
+# SC5P-PE samples ---------------------------------------------------------
+gse_cell_ratio_variant_meta |>
+  dplyr::filter(Chemistry == "SC5P-PE") |>
+  dplyr::select(-cell_ratio_variant) ->
+sc5ppe_anno
+
+sc5ppe_anno |>
+  dplyr::mutate(
+    somatic_variants = purrr::map(
+      .x = anno,
+      .f = \(.anno) {
+        .anno |>
+          dplyr::select(srrid, somatic_variant) |>
+          dplyr::mutate(
+            somatic_variant = purrr::map(
+              .x = somatic_variant,
+              .f = \(.x) {
+                tibble::tibble(
+                  variant = .x$somatic
+                )
+              }
+            )
+          ) ->
+        .anno_somatic
+
+        .anno_somatic$somatic_variant |>
+          purrr::map(~ .x$variant) |>
+          purrr::reduce(union) ->
+        union_variants
+
+        tibble::tibble(
+          anno_somatic = list(.anno_somatic),
+          union_variants = list(union_variants)
+        )
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = somatic_variants) ->
+sc5ppe_anno_somatic
+
+sc5ppe_anno_somatic
+
+# venn diagram dataset ------------------------------------------------------------
+
+
+ggvenn::ggvenn(
+  data = list(
+    "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
+    "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
+    "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]]
+  ),
+  fill_color = ggsci::pal_npg()(3),
+) ->
+p_venn_sc5ppe
+
+ggsave(
+  filename = file.path(outdir, "venn_gse_sc5ppe.pdf"),
+  plot = p_venn_sc5ppe,
+  width = 7,
+  height = 5,
+  dpi = 300
+)
+
+# venn diagram individual -------------------------------------------------------
+sc5ppe_anno_somatic |>
+  tidyr::unnest(cols = anno_somatic) |>
+  dplyr::select(srrid, somatic_variant) |>
+  dplyr::mutate(somatic_variant = purrr::map(somatic_variant, ~ .x$variant)) |>
+  dplyr::pull(somatic_variant) |>
+  purrr::reduce(intersect)
 
 # footer ------------------------------------------------------------------
 
