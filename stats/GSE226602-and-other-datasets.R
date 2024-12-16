@@ -274,6 +274,293 @@ sc5ppe_anno_somatic |>
   dplyr::pull(somatic_variant) |>
   purrr::reduce(intersect)
 
+
+sc5ppe_anno_somatic |>
+  dplyr::select(gseid, anno) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(gseid, srrid, coverage, haplo_variant, haplo_violin, somatic_variant) ->
+sc5ppe_anno_somatic_detail
+
+
+thevariant <- "3173G>A"
+# thevariant <- "1670A>G"
+
+sc5ppe_anno_somatic_detail |>
+  dplyr::select(gseid, srrid, haplo_violin) |>
+  tidyr::unnest(cols = haplo_violin) |>
+  dplyr::mutate(
+    gseid = factor(gseid, levels = c("GSE166992", "GSE226602", "GSE181279"))
+  ) |>
+  dplyr::filter(variant == thevariant) ->
+sel_variant
+
+pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
+
+
+sel_variant |>
+  dplyr::filter(cluster == "B") |>
+  dplyr::group_by(gseid, srrid) |>
+  dplyr::summarise(
+    mean_af = mean(af, na.rm = TRUE)
+  ) |>
+  dplyr::ungroup() |>
+  dplyr::arrange(gseid, mean_af) ->
+sel_variant_ranked
+
+sel_variant |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = sel_variant_ranked$srrid)
+  ) |>
+  # dplyr::filter(cluster == "B") |>
+  ggplot() +
+  ggh4x::facet_wrap2(
+    ~cluster,
+    ncol = 1,
+    strip.position = "right",
+    strip = ggh4x::strip_themed(
+      background_y = ggh4x::elem_list_rect(
+        fill = pcc$color
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = FALSE,
+    )
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      x = srrid,
+      y = af,
+      color = af
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = .5,
+    varwidth = TRUE
+  ) +
+  scale_color_gradient2(
+    name = "AF",
+    low = "white",
+    mid = "red",
+    high = "#3B0049",
+    midpoint = 0.5,
+  ) +
+  scale_y_continuous(
+    expand = c(0.01, 0),
+    limits = c(0, 1),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+  ) +
+  labs(y = "AF") ->
+p_af
+
+sel_variant |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = sel_variant_ranked$srrid)
+  ) |>
+  dplyr::filter(cluster == "B") |>
+  dplyr::group_by(gseid) |>
+  dplyr::mutate(
+    mid_srrid = srrid[ceiling(dplyr::n() / 2)]
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = 1
+  )) +
+  geom_tile(
+    aes(
+      fill = gseid
+    )
+  ) +
+  geom_text(
+    aes(
+      y = 1,
+      label = ifelse(srrid == mid_srrid, as.character(gseid), "")
+    ),
+  ) +
+  ggsci::scale_fill_jco() +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(), legend.position = "none"
+  ) ->
+p_tile
+
+ggsave(
+  filename = file.path(outdir, "haplo_violin_{thevariant}.pdf" |> glue::glue()),
+  plot =
+    wrap_plots(
+      p_af,
+      p_tile,
+      ncol = 1,
+      heights = c(30, 1)
+    ),
+  width = 24,
+  height = 12,
+  dpi = 300
+)
+# cell type ratio ---------------------------------------------------------
+
+sc5ppe_anno_somatic |>
+  dplyr::select(gseid, anno) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(gseid, srrid, celltype_ratio) |>
+  tidyr::unnest(cols = celltype_ratio) ->
+sc5ppe_anno_celltype
+
+
+
+sc5ppe_anno_celltype |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = sel_variant_ranked$srrid)
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = n,
+  )) +
+  geom_col(
+    aes(
+      fill = celltype
+    ),
+    position = "stack"
+  ) +
+  scale_fill_manual(
+    name = "Cell Type",
+    values = pcc$color
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0.005)),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+  ) +
+  labs(y = "# of cells") ->
+p_celltype_count
+
+sc5ppe_anno_celltype |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = sel_variant_ranked$srrid)
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = ratio,
+  )) +
+  geom_col(
+    aes(
+      fill = celltype
+    ),
+    position = "stack"
+  ) +
+  scale_fill_manual(
+    name = "Cell Type",
+    values = pcc$color
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0.005)),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+  ) +
+  labs(y = "cell ratio") ->
+p_celltype_ratio
+
+
+sc5ppe_anno_somatic |>
+  dplyr::select(gseid, anno) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::mutate(
+    mean_depth = purrr::map_dbl(
+      .x = depth,
+      .f = \(.depth) {
+        mean(.depth$depth, na.rm = TRUE)
+      }
+    )
+  ) |>
+  dplyr::select(srrid, mean_depth) |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = sel_variant_ranked$srrid)
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = mean_depth
+  )) +
+  geom_col(
+    fill = "grey"
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0.005)),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "right",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+  ) +
+  labs(y = "Average Depth") ->
+p_depth_srrid
+
+ggsave(
+  filename = file.path(outdir, "celltype_ratio.pdf" |> glue::glue()),
+  plot = wrap_plots(
+    p_depth_srrid,
+    p_celltype_ratio,
+    p_celltype_count,
+    p_tile,
+    ncol = 1,
+    heights = c(15, 15, 15, 1),
+    guides = "collect"
+  ),
+  width = 24,
+  height = 13,
+  dpi = 300
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
