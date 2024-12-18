@@ -94,6 +94,7 @@ srr_out |>
           return(NULL)
         }
 
+        # .srrdir <- "/home/liuc9/github/scMOCHA/05-Liming/scmocha-mixed-cellline-high-depth2/cromwell-executions/scMOCHA/dc015abc-4cca-4277-bda4-73a8e23b33bc/call-gather_outputfiles/execution/WT"
         .metrics <- data.table::fread(
           file.path(.srrdir, "metrics_summary.csv")
         ) |>
@@ -160,6 +161,7 @@ srr_out |>
         tibble::tibble(
           metrics = list(.metrics),
           cell_stats = list(.cs),
+          depth_cluster = list(.depth_cluster),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
           anno = list(.cva),
