@@ -1161,6 +1161,10 @@ ggsave(
   dpi = 300
 )
 
+# add mixed four cell line reads -------------------------------------------------
+mixed_four_cellline_coverage <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/out/mixed_four_cellline_cluster.coverage.txt.gz", col.names = c("pos", "celltype", "count"))
+
+
 # 10x kit version or seq strategy matters -----------------------------------
 gse_cell_ratio_variant_meta_xlsx |>
   dplyr::select(-cell_ratio_variant, -anno) |>
@@ -1185,6 +1189,7 @@ writexl::write_xlsx(
 
 # save image --------------------------------------------------------------
 outdir <- "/home/liuc9/github/scMOCHA-data/data/out"
+load(file = file.path(outdir, "GSE226602-and-other-datasets.rda"))
 save.image(
   file = file.path(outdir, "GSE226602-and-other-datasets.rda")
 )
