@@ -1187,7 +1187,7 @@ all_gseid_depth_forplot_separated_mixed |>
     ~gseid,
     ncol = 1,
     strip.position = "right",
-    scales = "free_y",
+    # scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
         fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
@@ -1212,7 +1212,7 @@ all_gseid_depth_forplot_separated_mixed |>
   # ) +
   scale_fill_manual(
     name = "Chemistry",
-    values = c(viridis::viridis_pal(option = "D")(3), "grey")
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   scale_x_continuous(
     limits = c(0, 17000),
@@ -1258,7 +1258,7 @@ all_gseid_depth_forplot_separated_mixed |>
 p_depth_all_separated_mixed
 
 ggsave(
-  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.free_y.pdf"),
+  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.pdf"),
   plot = wrap_plots(
     p_depth_all_separated_mixed,
     p_mtdna,
@@ -1303,7 +1303,7 @@ gse_cell_ratio_variant_meta |>
   ) +
   scale_fill_manual(
     name = "Chemistry",
-    values = c(viridis::viridis_pal(option = "D")(3), "grey")
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   ggbeeswarm::geom_quasirandom(
     aes(
