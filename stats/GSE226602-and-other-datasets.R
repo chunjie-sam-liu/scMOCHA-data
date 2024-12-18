@@ -1162,8 +1162,112 @@ ggsave(
 )
 
 # add mixed four cell line reads -------------------------------------------------
-mixed_four_cellline_coverage <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/out/mixed_four_cellline_cluster.coverage.txt.gz", col.names = c("pos", "celltype", "count"))
+mixed_four_cellline_coverage <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/out/mixed_four_cellline_cluster.coverage.txt.gz", col.names = c("pos", "celltype", "count")) |>
+  dplyr::group_by(pos) |>
+  dplyr::summarise(depth = sum(count)) |>
+  dplyr::mutate(
+    Chemistry = "SC3Pv3 Mixed",
+    gseid = "Mixed cellline"
+  ) |>
+  dplyr::select(Chemistry, gseid, pos, depth)
 
+
+all_gseid_depth_forplot_separated |>
+  dplyr::bind_rows(mixed_four_cellline_coverage) |>
+  dplyr::mutate(
+    gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+  ) ->
+all_gseid_depth_forplot_separated_mixed
+
+all_gseid_depth_forplot_separated_mixed |>
+  ggplot() +
+  ggh4x::facet_wrap2(
+    ~gseid,
+    ncol = 1,
+    strip.position = "right",
+    # scales = "free_y",
+    strip = ggh4x::strip_themed(
+      background_y = ggh4x::elem_list_rect(
+        fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "grey")
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = FALSE,
+    ),
+  ) +
+  geom_col(
+    aes(
+      x = pos,
+      y = depth,
+      fill = Chemistry
+    ),
+  ) +
+  # scale_fill_viridis_d(
+  #   name = "Chemistry",
+  #   option = "D",
+  # ) +
+  scale_fill_manual(
+    name = "Chemistry",
+    values = c("SC3Pv3 Mixed" = "grey", viridis::viridis_pal(option = "D")(3))
+  ) +
+  scale_x_continuous(
+    limits = c(0, 17000),
+    breaks = seq(0, 17000, 1000),
+    labels = seq(0, 17000, 1000),
+    expand = expansion(mult = c(0, 0.01)),
+  ) +
+  scale_y_continuous(
+    expand = c(0.01, 0),
+    label = scales::label_number(),
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    # axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "none",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  coord_cartesian(xlim = c(0, 17000)) +
+  labs(y = "Depth") ->
+p_depth_all_separated_mixed
+
+ggsave(
+  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.pdf"),
+  plot = wrap_plots(
+    p_depth_all_separated_mixed,
+    p_mtdna,
+    ncol = 1,
+    heights = c(15, 1)
+  ),
+  width = 24,
+  height = 12,
+  dpi = 300
+)
 
 # 10x kit version or seq strategy matters -----------------------------------
 gse_cell_ratio_variant_meta_xlsx |>
