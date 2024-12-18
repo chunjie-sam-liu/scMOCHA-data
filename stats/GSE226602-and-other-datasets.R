@@ -856,6 +856,7 @@ gse_cell_ratio_variant_meta |>
   tidyr::unnest(cols = anno) |>
   dplyr::select(gseid, srrid, metrics, Chemistry) |>
   tidyr::unnest(cols = metrics) |>
+  dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
     Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
@@ -1186,10 +1187,10 @@ all_gseid_depth_forplot_separated_mixed |>
     ~gseid,
     ncol = 1,
     strip.position = "right",
-    # scales = "free_y",
+    scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
-        fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "grey")
+        fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
       ),
       text_y = ggh4x::elem_list_text(
         colour = "white",
@@ -1211,7 +1212,7 @@ all_gseid_depth_forplot_separated_mixed |>
   # ) +
   scale_fill_manual(
     name = "Chemistry",
-    values = c("SC3Pv3 Mixed" = "grey", viridis::viridis_pal(option = "D")(3))
+    values = c(viridis::viridis_pal(option = "D")(3), "grey")
   ) +
   scale_x_continuous(
     limits = c(0, 17000),
@@ -1257,7 +1258,7 @@ all_gseid_depth_forplot_separated_mixed |>
 p_depth_all_separated_mixed
 
 ggsave(
-  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.pdf"),
+  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.free_y.pdf"),
   plot = wrap_plots(
     p_depth_all_separated_mixed,
     p_mtdna,
@@ -1268,6 +1269,103 @@ ggsave(
   height = 12,
   dpi = 300
 )
+
+
+gse_cell_ratio_variant_meta |>
+  dplyr::select(-cell_ratio_variant) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(gseid, srrid, metrics, Chemistry) |>
+  tidyr::unnest(cols = metrics) |>
+  dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
+  dplyr::bind_rows(
+    tibble::tibble(
+      gseid = "Mixed cellline",
+      srrid = "Mixed cellline",
+      `Number of Reads` = 561027285,
+      Chemistry = "SC3Pv3 Mixed"
+    )
+  ) |>
+  dplyr::mutate(
+    gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+  ) |>
+  ggplot() +
+  geom_violin(
+    aes(
+      x = gseid,
+      y = `Number of Reads`,
+      fill = Chemistry
+    ),
+    alpha = 0.5,
+    # size = 1,
+    color = NA,
+    show.legend = FALSE
+  ) +
+  scale_fill_manual(
+    name = "Chemistry",
+    values = c(viridis::viridis_pal(option = "D")(3), "grey")
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      x = gseid,
+      y = `Number of Reads`,
+      color = Chemistry
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = .5,
+    varwidth = TRUE
+  ) +
+  scale_color_manual(
+    name = "Chemistry",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
+  ) +
+  scale_x_discrete(
+    # expand = expansion(mult = c(0.001, 0.001))
+  ) +
+  scale_y_log10(
+    # labels = scales::label_log(),
+    # limits = c(0, 40000),
+    # breaks = seq(0, 40000, 10000),
+    expand = expansion(add = c(0.1, 0.1))
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_line(size = 0.5, color = "black"),
+    axis.title = element_text(
+      size = 16,
+      color = "black",
+      face = "bold"
+    ),
+    axis.text.y = element_text(
+      size = 14,
+      color = "black"
+    ),
+    plot.title = element_text(
+      hjust = 0.5,
+      color = "black",
+      size = 16,
+      face = "bold"
+    ),
+    axis.title.x = element_blank(),
+    legend.position = "inside",
+    legend.position.inside = c(0.7, 0.7)
+  ) +
+  labs(
+    x = "GSE ID",
+    y = "Total reads",
+  ) ->
+p_total_reads_mixed
+
+ggsave(
+  filename = file.path(outdir, "depth_total_reads_mixed_cellline.pdf"),
+  plot = p_total_reads_mixed,
+  width = 13,
+  height = 5,
+  dpi = 300
+)
+
 
 # 10x kit version or seq strategy matters -----------------------------------
 gse_cell_ratio_variant_meta_xlsx |>
