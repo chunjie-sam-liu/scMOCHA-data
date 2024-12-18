@@ -157,6 +157,12 @@ gse_cell_ratio_variant_meta
 # save gse cell ratio and variant data ------------------------------------
 gse_cell_ratio_variant_meta |>
   dplyr::mutate(
+    `Avg # of variants` = purrr::map_dbl(
+      cell_ratio_variant,
+      ~ mean(.x$`# of variants`)
+    )
+  ) |>
+  dplyr::mutate(
     `Avg # of somatic variants` = purrr::map_dbl(
       cell_ratio_variant,
       ~ mean(.x$`# of somatic variants`)
@@ -931,6 +937,14 @@ ggsave(
   dpi = 300
 )
 
+gse_cell_ratio_variant_meta |>
+  dplyr::select(-cell_ratio_variant) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(gseid, srrid, metrics, Chemistry) |>
+  tidyr::unnest(cols = metrics) |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(avg_totla_reads = mean(`Number of Reads`, na.rm = TRUE)) ->
+avg_totla_reads
 
 # all position in three chemistry -------------------------------------------------
 
@@ -1034,6 +1048,15 @@ ggsave(
   dpi = 300
 )
 
+all_gseid_depth |>
+  dplyr::group_by(gseid, srrid) |>
+  dplyr::summarise(
+    mean_depth = mean(depth, na.rm = TRUE)
+  ) |>
+  dplyr::summarise(
+    avg_mito_reads = mean(mean_depth, na.rm = TRUE)
+  ) ->
+avg_mito_reads
 
 # all position in three chemistry separated dataset -------------------------------------------------
 
@@ -1137,6 +1160,24 @@ ggsave(
   height = 9,
   dpi = 300
 )
+
+# 10x kit version or seq strategy matters -----------------------------------
+gse_cell_ratio_variant_meta_xlsx |>
+  dplyr::select(-cell_ratio_variant, -anno) |>
+  dplyr::left_join(avg_mito_reads, by = "gseid") |>
+  dplyr::left_join(avg_totla_reads, by = "gseid") |>
+  dplyr::relocate(Publication, .after = avg_totla_reads) |>
+  dplyr::mutate(
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE"))
+  ) |>
+  dplyr::arrange(Chemistry, `Avg # of somatic variants`) ->
+gse_cell_ratio_variant_meta_xlsx_final
+
+writexl::write_xlsx(
+  x = gse_cell_ratio_variant_meta_xlsx_final,
+  path = file.path(outdir, "10x-kit-version-matters.xlsx")
+)
+
 
 # footer ------------------------------------------------------------------
 
