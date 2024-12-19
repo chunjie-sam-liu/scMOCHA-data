@@ -103,6 +103,19 @@ sratable |>
     )
   )
 
+# data.table::fread(
+#   file.path(
+#     datadir,
+#     "Metadata_for_{gseid}.txt" |> glue::glue()
+#   )
+# ) |>
+#   dplyr::select(run_accession = srr_ids, experiment_name = gsm_id, experiment_accession = srx_id) |>
+#   data.table::fwrite(
+#     file = file.path(
+#       datadir,
+#       "{gseid}.SraRunTable.GSM" |> glue::glue()
+#     )
+#   )
 
 # Prefetch ----------------------------------------------------------------
 sradir <- file.path(
