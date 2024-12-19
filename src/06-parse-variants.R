@@ -99,8 +99,14 @@ srr_out |>
           file.path(.srrdir, "metrics_summary.csv")
         ) |>
           purrr::map_dfr(~ as.numeric(gsub("[,%]", "", .x)))
+
         .cs <- readxl::read_xlsx(
           file.path(.srrdir, "qc_cell_stats.xlsx")
+        )
+
+        .depth_read <- data.table::fread(
+          file.path(.srrdir, "possorted_genome_bam.MT.depth"),
+          col.names = c("chrom", "pos", "count")
         )
 
         .depth_cluster <- data.table::fread(
@@ -161,6 +167,7 @@ srr_out |>
         tibble::tibble(
           metrics = list(.metrics),
           cell_stats = list(.cs),
+          depth_read = list(.depth_read),
           depth_cluster = list(.depth_cluster),
           depth = list(.depth),
           celltype_ratio = list(.celltype_ratio),
