@@ -159,7 +159,31 @@ tibble::tibble(
         )
       }
     )
+  ) ->
+gse_data_loaded
+
+
+gse_data_loaded |>
+  dplyr::select(-anno) |>
+  tidyr::unnest(cols = cell_ratio_variant) |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(
+    `Avg. mutation` = mean(`# of variants`, na.rm = TRUE),
+    `Avg. somatic mutation` = mean(`# of somatic variants`, na.rm = TRUE),
+    `Avg. total reads` = mean(`Total reads`, na.rm = TRUE),
+    `Avg. mapped reads` = mean(`Depth read mean`, na.rm = TRUE),
+    `Avg. call depth` = mean(`Depth mean`, na.rm = TRUE),
   ) |>
+  dplyr::left_join(
+    gseids_meta,
+    by = c("gseid" = "GSE_ID")
+  ) |>
+  dplyr::slice(match(gseids, gseid)) |>
+  writexl::write_xlsx(
+    path = file.path(outdir, "gses_meta_read.xlsx")
+  )
+
+gse_data_loaded |>
   dplyr::left_join(
     gseids_meta,
     by = c("gseid" = "GSE_ID")
