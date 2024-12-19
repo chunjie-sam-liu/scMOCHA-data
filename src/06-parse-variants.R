@@ -53,6 +53,10 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+basedir <- "/home/liuc9/github/scMOCHA/05-Liming/scmocha-mixed-cellline-high-depth2"
+gseid <- "WT"
+
+
 datadir <- file.path(
   basedir, gseid
 )
