@@ -55,6 +55,7 @@ log_layout(layout_glue_colors)
 basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 # basedir <- "/home/liuc9/github/scMOCHA/05-Liming/scmocha-mixed-cellline-high-depth2"
 # gseid <- "WT"
+# gseid <- "GSE226602"
 
 
 datadir <- file.path(
@@ -99,6 +100,11 @@ srr_out |>
         }
 
         # .srrdir <- "/home/liuc9/github/scMOCHA/05-Liming/scmocha-mixed-cellline-high-depth2/cromwell-executions/scMOCHA/dc015abc-4cca-4277-bda4-73a8e23b33bc/call-gather_outputfiles/execution/WT"
+        .chemistry <- data.table::fread(
+          file.path(.srrdir, "chemistry.csv")
+        ) |>
+          dplyr::pull(name)
+
         .metrics <- data.table::fread(
           file.path(.srrdir, "metrics_summary.csv")
         ) |>
@@ -169,6 +175,7 @@ srr_out |>
         )
 
         tibble::tibble(
+          chemistry = .chemistry,
           metrics = list(.metrics),
           cell_stats = list(.cs),
           depth_read = list(.depth_read),
@@ -309,6 +316,7 @@ metadata_anno |>
   tidyr::unnest(cols = nmut_variant) |>
   dplyr::select(
     srrid,
+    Chemistry = chemistry,
     `# of variants` = nmut,
     Haplogroup = Haplogroup,
     `# of somatic variants` = nmut_somatic,
