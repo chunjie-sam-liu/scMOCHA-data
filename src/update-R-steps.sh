@@ -74,7 +74,7 @@ parse_variants_gseid() {
   data_dir="$basedir/$gseid"
   final_dir="$data_dir/final"
 
-  Rscript /home/liuc9/github/scMOCHA-data/src/06-parse-variants.R -g ${gseid}
+  Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gseid}
 
 }
 
