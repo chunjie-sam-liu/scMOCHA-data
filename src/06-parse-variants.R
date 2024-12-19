@@ -106,18 +106,18 @@ srr_out |>
 
         .depth_read <- data.table::fread(
           file.path(.srrdir, "possorted_genome_bam.MT.depth"),
-          col.names = c("chrom", "pos", "count")
+          col.names = c("chrom", "pos", "depth")
         )
 
         .depth_cluster <- data.table::fread(
           file.path(.srrdir, "cluster.coverage.txt.gz"),
-          col.names = c("pos", "celltype", "count")
+          col.names = c("pos", "celltype", "depth")
         )
 
         .depth <- .depth_cluster |>
           dplyr::group_by(pos) |>
           dplyr::summarise(
-            depth = sum(count, na.rm = T)
+            depth = sum(depth, na.rm = T)
           )
 
         .celltype_ratio <- data.table::fread(
@@ -202,6 +202,24 @@ readr::write_rds(
 # srr_out_cell_stats -> variant
 srr_out_cell_stats |>
   dplyr::mutate(
+    total_reads = purrr::map_dbl(
+      .x = metrics,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        .x$`Number of Reads`
+      }
+    ),
+    depth_read_mean = purrr::map_dbl(
+      .x = depth_read,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    ),
     depth_mean = purrr::map_dbl(
       .x = depth,
       .f = \(.x) {
@@ -221,19 +239,21 @@ srr_out_cell_stats |>
         }
         nrow(.x)
       }
-    )
-  ) |>
-  dplyr::mutate(
-    nmut_somatic = purrr::map_int(
+    ),
+    nmut_variant = purrr::map(
       .x = somatic_variant,
       .f = \(.x) {
-        if (is.null(.x$somatic)) {
-          return(NA_integer_)
-        }
-        length(.x$somatic)
+        .x |>
+          purrr::map_int(length) |>
+          tibble::enframe() |>
+          tidyr::spread(key = name, value = value) ->
+        .xx
+        names(.xx) <- glue::glue("nmut_{names(.xx)}")
+        .xx
       }
     )
   ) |>
+  # tidyr::unnest(cols = nmut_variant)
   dplyr::mutate(
     haplogroup = purrr::map2(
       .x = anno,
@@ -282,6 +302,7 @@ metadata_anno
 
 
 metadata_anno |>
+  tidyr::unnest(cols = nmut_variant) |>
   dplyr::select(
     srrid,
     `# of variants` = nmut,
@@ -291,7 +312,9 @@ metadata_anno |>
     `Median genes/cell` = `median genes per cell`,
     `# of cells` = `estimated number of cells`,
     `# cells after filter` = `number of cells after filtering`,
-    `Cell ratio` = ratio,
+    # `Cell ratio` = ratio,
+    `Total reads` = total_reads,
+    `Depth read mean` = depth_read_mean,
     `Depth mean` = depth_mean
   ) ->
 metadata_clean
