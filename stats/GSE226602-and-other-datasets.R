@@ -108,17 +108,29 @@ fn_plot_mtdna <- function() {
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
-outdir <- file.path(basedir, "out")
+outdir <- file.path(basedir, "out_new")
+dir.create(outdir, showWarnings = FALSE)
 
-gseids <- c("GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE163668", "GSE166992", "GSE171555", "GSE181279", "GSE226602")
+gseids <- c(
+  "GSE155673",
+  "GSE157344",
+  "GSE149689",
+  "GSE171555",
+  "GSE155223",
+  "GSE163668",
+  "GSE226602",
+  "GSE166992",
+  "GSE181279",
+  "WT"
+)
 
 gseids_meta <- tibble::tibble(
-  GSE_ID = c("GSE163668", "GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE166992", "GSE171555", "GSE226602", "GSE181279"),
-  samples = c(38, 20, 18, 12, 33, 9, 48, 50, 5),
-  Disease = c("COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "AD", "AD"),
-  Source = c("PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC"),
-  Chemistry = c("SC5P-R2", "SC3Pv3", "SC5P-R2", "SC3Pv3", "SC3Pv3", "SC5P-PE", "SC5P-R2", "SC5P-PE", "SC5P-PE"),
-  Publication = c("Nature, 2021", "Exp Mol Med, 2022", "Cell Rep, 2023", "Science, 2020", "Nat Commun, 2021", "Cell Rep, 2021", "Med, 2021", "Neuron, 2024", "Front Immunol., 2021")
+  GSE_ID = c("GSE163668", "GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE166992", "GSE171555", "GSE226602", "GSE181279", "WT"),
+  samples = c(38, 20, 18, 12, 33, 9, 48, 50, 5, 1),
+  Disease = c("COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "AD", "AD", "-"),
+  Source = c("PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "Mixed"),
+  Chemistry = c("SC5P-R2", "SC3Pv3", "SC5P-R2", "SC3Pv3", "SC3Pv3", "SC5P-PE", "SC5P-R2", "SC5P-PE", "SC5P-PE", "SC3Pv3 Mixed"),
+  Publication = c("Nature, 2021", "Exp Mol Med, 2022", "Cell Rep, 2023", "Science, 2020", "Nat Commun, 2021", "Cell Rep, 2021", "Med, 2021", "Neuron, 2024", "Front Immunol., 2021", "-")
 )
 
 # body --------------------------------------------------------------------
@@ -156,28 +168,33 @@ gse_cell_ratio_variant_meta
 
 # save gse cell ratio and variant data ------------------------------------
 gse_cell_ratio_variant_meta |>
-  dplyr::mutate(
-    `Avg # of variants` = purrr::map_dbl(
-      cell_ratio_variant,
-      ~ mean(.x$`# of variants`)
-    )
-  ) |>
-  dplyr::mutate(
-    `Avg # of somatic variants` = purrr::map_dbl(
-      cell_ratio_variant,
-      ~ mean(.x$`# of somatic variants`)
-    )
-  ) ->
+  # dplyr::mutate(
+  #   `Avg # of variants` = purrr::map_dbl(
+  #     cell_ratio_variant,
+  #     ~ mean(.x$`# of variants`)
+  #   )
+  # ) |>
+  # dplyr::mutate(
+  #   `Avg # of somatic variants` = purrr::map_dbl(
+  #     cell_ratio_variant,
+  #     ~ mean(.x$`# of somatic variants`)
+  #   )
+  # ) ->
+  tidyr::unnest(cols = cell_ratio_variant) ->
 gse_cell_ratio_variant_meta_xlsx
 
 gse_cell_ratio_variant_meta_xlsx |>
-  dplyr::select(-cell_ratio_variant, -anno) |>
-  dplyr::arrange(`Avg # of somatic variants`) |>
+  dplyr::select(-anno) |>
+  dplyr::arrange(`# of somatic variants`) |>
   writexl::write_xlsx(
     path = file.path(outdir, "gses_cell_ratio_variant_meta.xlsx")
   )
 
 gse_cell_ratio_variant_meta_xlsx |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(
+    `Avg # of somatic variants` = mean(`# of somatic variants`, na.rm = TRUE),
+  ) |>
   dplyr::arrange(dplyr::desc(`Avg # of somatic variants`)) |>
   dplyr::mutate(
     label = glue::glue("{gseid} ({round(`Avg # of somatic variants`, 2)})")
@@ -195,7 +212,7 @@ gse_cell_ratio_variant_meta |>
   ) |>
   tidyr::unnest(cols = cell_ratio_variant) |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()),
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE", "SC3Pv3 Mixed") |> rev()),
   ) ->
 forplot
 
@@ -659,7 +676,7 @@ theposes_depth |>
   dplyr::filter(pos == theposes[2]) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 theposes_depth_forplot
 
@@ -676,11 +693,9 @@ theposes_depth_forplot |>
     color = NA,
     show.legend = FALSE
   ) +
-  scale_fill_viridis_d(
+  scale_fill_manual(
     name = "Chemistry",
-    option = "D",
-    begin = 0.1,
-    end = 0.9
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   ggbeeswarm::geom_quasirandom(
     aes(
@@ -693,9 +708,9 @@ theposes_depth_forplot |>
     alpha = .5,
     varwidth = TRUE
   ) +
-  scale_color_viridis_d(
+  scale_color_manual(
     name = "Chemistry",
-    option = "D",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   scale_x_discrete(
     # expand = expansion(mult = c(0.001, 0.001))
@@ -744,113 +759,115 @@ ggsave(
   dpi = 300
 )
 
+{
+  # all position in sc5ppe -------------------------------------------------
 
-# all position in sc5ppe -------------------------------------------------
-sc5ppe_anno_somatic$union_variants |>
-  purrr::reduce(union) |>
-  sort() ->
-all_sc5ppe_variants
+  sc5ppe_anno_somatic$union_variants |>
+    purrr::reduce(union) |>
+    sort() ->
+  all_sc5ppe_variants
 
-all_sc5ppe_poss <- all_sc5ppe_variants |>
-  purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
-  purrr::map_int(as.integer) |>
-  sort()
+  all_sc5ppe_poss <- all_sc5ppe_variants |>
+    purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+    purrr::map_int(as.integer) |>
+    sort()
 
-all_gseid_depth |>
-  dplyr::filter(pos %in% all_sc5ppe_poss) |>
-  dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE"))
-  ) ->
-all_sc5ppe_depth
+  all_gseid_depth |>
+    dplyr::filter(pos %in% all_sc5ppe_poss) |>
+    dplyr::mutate(
+      Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    ) ->
+  all_sc5ppe_depth
 
-all_sc5ppe_depth |>
-  dplyr::group_by(Chemistry, srrid) |>
-  dplyr::summarise(
-    depth = mean(depth, na.rm = TRUE)
-  ) |>
-  dplyr::arrange(Chemistry, -depth) |>
-  dplyr::ungroup() ->
-all_sc5ppe_depth_ranked
+  all_sc5ppe_depth |>
+    dplyr::group_by(Chemistry, srrid) |>
+    dplyr::summarise(
+      depth = mean(depth, na.rm = TRUE)
+    ) |>
+    dplyr::arrange(Chemistry, -depth) |>
+    dplyr::ungroup() ->
+  all_sc5ppe_depth_ranked
 
 
-all_sc5ppe_depth_ranked |>
-  dplyr::mutate(
-    srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
-  ) |>
-  ggplot(aes(
-    x = 1,
-    y = srrid
-  )) +
-  geom_tile(
-    aes(
-      fill = Chemistry
-    )
-  ) +
-  scale_fill_viridis_d(
-    name = "Chemistry",
-    option = "D",
-    direction = -1
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_blank(),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "none",
-    plot.margin = margin(0, 0, 0, 0, unit = "cm")
-  ) ->
-p_tile_all_srrid
+  all_sc5ppe_depth_ranked |>
+    dplyr::mutate(
+      srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
+    ) |>
+    ggplot(aes(
+      x = 1,
+      y = srrid
+    )) +
+    geom_tile(
+      aes(
+        fill = Chemistry
+      )
+    ) +
+    scale_fill_manual(
+      name = "Chemistry",
+      values = c(viridis::viridis_pal(option = "D")(3), "red")
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_blank(),
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      legend.position = "none",
+      plot.margin = margin(0, 0, 0, 0, unit = "cm")
+    ) ->
+  p_tile_all_srrid
 
-all_sc5ppe_depth |>
-  dplyr::mutate(
-    srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
-    depth_log2 = log2(depth + 1)
-  ) |>
-  dplyr::mutate(
-    posc = as.character(pos)
-  ) |>
-  ggplot(aes(
-    x = posc,
-    y = srrid,
-    fill = depth_log2
-  )) +
-  geom_tile() +
-  scale_fill_gradient2(
-    name = "log2(Depth + 1)",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_blank(),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank(),
-    plot.margin = margin(0, 0, 0, 0, unit = "cm")
-  ) ->
-p_tile_all_depth
+  all_sc5ppe_depth |>
+    dplyr::mutate(
+      srrid = factor(srrid, levels = all_sc5ppe_depth_ranked$srrid),
+      depth_log2 = log2(depth + 1)
+    ) |>
+    dplyr::mutate(
+      posc = as.character(pos)
+    ) |>
+    ggplot(aes(
+      x = posc,
+      y = srrid,
+      fill = depth_log2
+    )) +
+    geom_tile() +
+    scale_fill_gradient2(
+      name = "log2(Depth + 1)",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_blank(),
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      legend.position = "right",
+      legend.key = element_blank(),
+      plot.margin = margin(0, 0, 0, 0, unit = "cm")
+    ) ->
+  p_tile_all_depth
 
-ggsave(
-  filename = file.path(outdir, "depth_all_sc5ppe_position.pdf"),
-  plot = wrap_plots(
-    p_tile_all_srrid,
-    p_tile_all_depth,
-    ncol = 2,
-    widths = c(1, 40)
-  ),
-  width = 14,
-  height = 5,
-  dpi = 300
-)
+  ggsave(
+    filename = file.path(outdir, "depth_all_sc5ppe_position.pdf"),
+    plot = wrap_plots(
+      p_tile_all_srrid,
+      p_tile_all_depth,
+      ncol = 2,
+      widths = c(1, 40)
+    ),
+    width = 14,
+    height = 5,
+    dpi = 300
+  )
+}
 
 # total metrics -----------------------------------------------------------
+
 gse_cell_ratio_variant_meta |>
   dplyr::select(-cell_ratio_variant) |>
   tidyr::unnest(cols = anno) |>
@@ -859,7 +876,7 @@ gse_cell_ratio_variant_meta |>
   dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) |>
   ggplot() +
   geom_violin(
@@ -873,9 +890,9 @@ gse_cell_ratio_variant_meta |>
     color = NA,
     show.legend = FALSE
   ) +
-  scale_fill_viridis_d(
+  scale_fill_manual(
     name = "Chemistry",
-    option = "D",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   ggbeeswarm::geom_quasirandom(
     aes(
@@ -888,9 +905,9 @@ gse_cell_ratio_variant_meta |>
     alpha = .5,
     varwidth = TRUE
   ) +
-  scale_color_viridis_d(
+  scale_color_manual(
     name = "Chemistry",
-    option = "D",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   scale_x_discrete(
     # expand = expansion(mult = c(0.001, 0.001))
@@ -958,7 +975,7 @@ all_gseid_depth |>
   ) |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot
 
@@ -971,7 +988,7 @@ all_gseid_depth_forplot |>
     scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
-        fill = viridis::viridis_pal(option = "D")(3)
+        fill = c(viridis::viridis_pal(option = "D")(3), "red")
       ),
       text_y = ggh4x::elem_list_text(
         colour = "white",
@@ -987,9 +1004,9 @@ all_gseid_depth_forplot |>
       fill = Chemistry
     ),
   ) +
-  scale_fill_viridis_d(
+  scale_fill_manual(
     name = "Chemistry",
-    option = "D",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   scale_x_continuous(
     limits = c(0, 17000),
@@ -1037,7 +1054,7 @@ p_depth_all
 p_mtdna <- fn_plot_mtdna()
 
 ggsave(
-  filename = file.path(outdir, "depth_all_position_free_y.pdf"),
+  filename = file.path(outdir, "depth_all_position.free_y.pdf"),
   plot = wrap_plots(
     p_depth_all,
     p_mtdna,
@@ -1071,7 +1088,7 @@ all_gseid_depth |>
   dplyr::ungroup() |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot_separated
 
@@ -1084,7 +1101,7 @@ all_gseid_depth_forplot_separated |>
     # scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
-        fill = rep(viridis::viridis_pal(option = "D")(3), each = 3)
+        fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
       ),
       text_y = ggh4x::elem_list_text(
         colour = "white",
@@ -1100,9 +1117,9 @@ all_gseid_depth_forplot_separated |>
       fill = Chemistry
     ),
   ) +
-  scale_fill_viridis_d(
+  scale_fill_manual(
     name = "Chemistry",
-    option = "D",
+    values = c(viridis::viridis_pal(option = "D")(3), "red")
   ) +
   scale_x_continuous(
     limits = c(0, 17000),
@@ -1174,7 +1191,7 @@ mixed_four_cellline_coverage <- data.table::fread("/mnt/isilon/u01_project/large
 
 
 all_gseid_depth_forplot_separated |>
-  dplyr::bind_rows(mixed_four_cellline_coverage) |>
+  # dplyr::bind_rows(mixed_four_cellline_coverage) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
     Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
@@ -1187,7 +1204,7 @@ all_gseid_depth_forplot_separated_mixed |>
     ~gseid,
     ncol = 1,
     strip.position = "right",
-    # scales = "free_y",
+    scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
         fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
@@ -1258,7 +1275,7 @@ all_gseid_depth_forplot_separated_mixed |>
 p_depth_all_separated_mixed
 
 ggsave(
-  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.pdf"),
+  filename = file.path(outdir, "depth_all_position.separated.mixed_cellline.free_y.pdf"),
   plot = wrap_plots(
     p_depth_all_separated_mixed,
     p_mtdna,
@@ -1271,100 +1288,100 @@ ggsave(
 )
 
 
-gse_cell_ratio_variant_meta |>
-  dplyr::select(-cell_ratio_variant) |>
-  tidyr::unnest(cols = anno) |>
-  dplyr::select(gseid, srrid, metrics, Chemistry) |>
-  tidyr::unnest(cols = metrics) |>
-  dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
-  dplyr::bind_rows(
-    tibble::tibble(
-      gseid = "Mixed cellline",
-      srrid = "Mixed cellline",
-      `Number of Reads` = 561027285,
-      Chemistry = "SC3Pv3 Mixed"
-    )
-  ) |>
-  dplyr::mutate(
-    gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
-  ) |>
-  ggplot() +
-  geom_violin(
-    aes(
-      x = gseid,
-      y = `Number of Reads`,
-      fill = Chemistry
-    ),
-    alpha = 0.5,
-    # size = 1,
-    color = NA,
-    show.legend = FALSE
-  ) +
-  scale_fill_manual(
-    name = "Chemistry",
-    values = c(viridis::viridis_pal(option = "D")(3), "red")
-  ) +
-  ggbeeswarm::geom_quasirandom(
-    aes(
-      x = gseid,
-      y = `Number of Reads`,
-      color = Chemistry
-    ),
-    size = 1,
-    dodge.width = .75,
-    alpha = .5,
-    varwidth = TRUE
-  ) +
-  scale_color_manual(
-    name = "Chemistry",
-    values = c(viridis::viridis_pal(option = "D")(3), "red")
-  ) +
-  scale_x_discrete(
-    # expand = expansion(mult = c(0.001, 0.001))
-  ) +
-  scale_y_log10(
-    # labels = scales::label_log(),
-    # limits = c(0, 40000),
-    # breaks = seq(0, 40000, 10000),
-    expand = expansion(add = c(0.1, 0.1))
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_line(size = 0.5, color = "black"),
-    axis.title = element_text(
-      size = 16,
-      color = "black",
-      face = "bold"
-    ),
-    axis.text.y = element_text(
-      size = 14,
-      color = "black"
-    ),
-    plot.title = element_text(
-      hjust = 0.5,
-      color = "black",
-      size = 16,
-      face = "bold"
-    ),
-    axis.title.x = element_blank(),
-    legend.position = "inside",
-    legend.position.inside = c(0.7, 0.7)
-  ) +
-  labs(
-    x = "GSE ID",
-    y = "Total reads",
-  ) ->
-p_total_reads_mixed
+# gse_cell_ratio_variant_meta |>
+#   dplyr::select(-cell_ratio_variant) |>
+#   tidyr::unnest(cols = anno) |>
+#   dplyr::select(gseid, srrid, metrics, Chemistry) |>
+#   tidyr::unnest(cols = metrics) |>
+#   dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
+#   dplyr::bind_rows(
+#     tibble::tibble(
+#       gseid = "Mixed cellline",
+#       srrid = "Mixed cellline",
+#       `Number of Reads` = 561027285,
+#       Chemistry = "SC3Pv3 Mixed"
+#     )
+#   ) |>
+#   dplyr::mutate(
+#     gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
+#     Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+#   ) |>
+#   ggplot() +
+#   geom_violin(
+#     aes(
+#       x = gseid,
+#       y = `Number of Reads`,
+#       fill = Chemistry
+#     ),
+#     alpha = 0.5,
+#     # size = 1,
+#     color = NA,
+#     show.legend = FALSE
+#   ) +
+#   scale_fill_manual(
+#     name = "Chemistry",
+#     values = c(viridis::viridis_pal(option = "D")(3), "red")
+#   ) +
+#   ggbeeswarm::geom_quasirandom(
+#     aes(
+#       x = gseid,
+#       y = `Number of Reads`,
+#       color = Chemistry
+#     ),
+#     size = 1,
+#     dodge.width = .75,
+#     alpha = .5,
+#     varwidth = TRUE
+#   ) +
+#   scale_color_manual(
+#     name = "Chemistry",
+#     values = c(viridis::viridis_pal(option = "D")(3), "red")
+#   ) +
+#   scale_x_discrete(
+#     # expand = expansion(mult = c(0.001, 0.001))
+#   ) +
+#   scale_y_log10(
+#     # labels = scales::label_log(),
+#     # limits = c(0, 40000),
+#     # breaks = seq(0, 40000, 10000),
+#     expand = expansion(add = c(0.1, 0.1))
+#   ) +
+#   theme(
+#     panel.background = element_blank(),
+#     panel.grid = element_blank(),
+#     axis.line = element_line(size = 0.5, color = "black"),
+#     axis.title = element_text(
+#       size = 16,
+#       color = "black",
+#       face = "bold"
+#     ),
+#     axis.text.y = element_text(
+#       size = 14,
+#       color = "black"
+#     ),
+#     plot.title = element_text(
+#       hjust = 0.5,
+#       color = "black",
+#       size = 16,
+#       face = "bold"
+#     ),
+#     axis.title.x = element_blank(),
+#     legend.position = "inside",
+#     legend.position.inside = c(0.7, 0.7)
+#   ) +
+#   labs(
+#     x = "GSE ID",
+#     y = "Total reads",
+#   ) ->
+# p_total_reads_mixed
 
-ggsave(
-  filename = file.path(outdir, "depth_total_reads_mixed_cellline.pdf"),
-  plot = p_total_reads_mixed,
-  width = 13,
-  height = 5,
-  dpi = 300
-)
+# ggsave(
+#   filename = file.path(outdir, "depth_total_reads_mixed_cellline.pdf"),
+#   plot = p_total_reads_mixed,
+#   width = 13,
+#   height = 5,
+#   dpi = 300
+# )
 
 
 # 10x kit version or seq strategy matters -----------------------------------
