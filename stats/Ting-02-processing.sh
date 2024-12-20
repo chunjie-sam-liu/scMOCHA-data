@@ -16,10 +16,10 @@ gses=(
 )
 
 done=(
-  GSE161354
+  GSE161354 # done
   GSE175524 # on the run
-  GSE206283
-  GSE226598
+  GSE206283 # done
+  GSE226598 # done
   GSE235050 # on the run
   GSE261140 # error
   GSE279945 # on the run
