@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript --vanilla
+#!/usr/bin/env Rscript
 # Metainfo ----------------------------------------------------------------
 
 # @AUTHOR: Chun-Jie Liu
