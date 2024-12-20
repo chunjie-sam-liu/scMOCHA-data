@@ -15,6 +15,16 @@ gses=(
   GSE279945
 )
 
+done=(
+  GSE161354
+  GSE175524 # on the run
+  GSE206283
+  GSE226598
+  GSE235050 # on the run
+  GSE261140 # error
+  GSE279945 # on the run
+)
+
 # /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R
 sra_metadata() {
   for gse in "${gses[@]}"; do
