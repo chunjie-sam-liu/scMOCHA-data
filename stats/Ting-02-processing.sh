@@ -98,9 +98,9 @@ untargz() {
     bash 07.${gse}.scmocha.untargz.sh
   done
 }
-untargz
+# untargz
 
-wait
+# wait
 # /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R
 collect_variants() {
   for gse in "${gses[@]}"; do
