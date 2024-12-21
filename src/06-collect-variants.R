@@ -24,14 +24,16 @@ library(logger)
 # @: array
 # %: hash
 # default: default value specified here.
-verbose <- FALSE
 # gseid <- "GSE149689"
 
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+verbose <- FALSE
 spec <- "
 Usage: Rscript foorbar.R [options]
-Options:
 
-<gseid=s> gseid, required
+Options:
+<gseid=s> gseid
+<basedir=s> basedir
 <verbose!> Print messages
 "
 
@@ -52,7 +54,7 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
-basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 # basedir <- "/home/liuc9/github/scMOCHA/05-Liming/scmocha-mixed-cellline-high-depth2"
 # gseid <- "WT"
 # gseid <- "GSE226602"

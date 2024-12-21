@@ -43,12 +43,13 @@ verbose <- FALSE
 #           5'. To analyze the GEX portion of multiome data, chemistry must be set to 'ARC-v1'
 # [default: auto]
 chemistry <- "auto"
-
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 spec <- "
 Usage: Rscript foorbar.R [options]
 
 Options:
 <gseid=s> gseid
+<basedir=s> basedir
 <chemistry=s> Assay configuration. NOTE: by default the assay configuration is detected
           automatically, which is the recommended mode. You usually will not need to specify a
           chemistry. Options are: 'auto' for autodetection, 'threeprime' for Single Cell 3',
@@ -90,7 +91,7 @@ log_layout(layout_glue_colors)
 
 
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA-data/data"
-basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
 )

@@ -27,12 +27,14 @@ library(logger)
 # @: array
 # %: hash
 # default: default value specified here.
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 verbose <- FALSE
 spec <- "
 Usage: Rscript foorbar.R [options]
 
 Options:
 <gseid=s> gseid
+<basedir=s> basedir
 <verbose!> Print messages
 "
 
@@ -154,7 +156,7 @@ fn_rename <- function(.srrdir) {
 
 log_warn(gseid)
 # basedir <- "/home/liuc9/github/scMOCHA-data/data"
-basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
   basedir, gseid
 )

@@ -27,12 +27,14 @@ library(logger)
 
 # gseid <- "GSE163668"
 
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 verbose <- FALSE
 spec <- "
 Usage: Rscript foorbar.R [options]
 
 Options:
 <gseid=s> gseid
+<basedir=s> basedir
 <verbose!> Print messages
 "
 
@@ -106,8 +108,7 @@ fn_parse_sratable <- function(.of) {
 
 # load data ---------------------------------------------------------------
 
-# basedir <- "/home/liuc9/github/scMOCHA-data/data"
-basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+
 
 # body --------------------------------------------------------------------
 
