@@ -79,6 +79,27 @@ parse_log() {
 }
 # parse_log
 
+# /home/liuc9/github/scMOCHA-data/data/GSE279945/05.{gseid}.scmocha.cptargz.sh
+
+cptargz() {
+  for gse in "${gses[@]}"; do
+    echo "bash /home/liuc9/github/scMOCHA-data/data/${gse}/05.${gse}.scmocha.cptargz.sh"
+    cd /home/liuc9/github/scMOCHA-data/data/${gse}
+    bash 05.${gse}.scmocha.cptargz.sh
+  done
+}
+# cptargz
+
+# /home/liuc9/github/scMOCHA-data/data/GSE279945/07.GSE279945.scmocha.untargz.sh
+untargz() {
+  for gse in "${gses[@]}"; do
+    echo "bash /home/liuc9/github/scMOCHA-data/data/${gse}/07.${gse}.scmocha.untargz.sh"
+    cd /home/liuc9/github/scMOCHA-data/data/${gse}
+    bash 07.${gse}.scmocha.untargz.sh
+  done
+}
+# untargz
+
 # /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R
 collect_variants() {
   for gse in "${gses[@]}"; do
