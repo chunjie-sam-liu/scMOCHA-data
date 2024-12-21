@@ -21,8 +21,8 @@ done=(
   GSE206283 # done
   GSE226598 # done
   GSE235050 # done
-  GSE261140 # error # not pbmc
-  GSE279945 # on the run
+  GSE261140 # some errors
+  GSE279945 # some errors
 )
 
 # /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R
