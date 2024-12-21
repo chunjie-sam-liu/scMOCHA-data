@@ -98,8 +98,9 @@ untargz() {
     bash 07.${gse}.scmocha.untargz.sh
   done
 }
-# untargz
+untargz
 
+wait
 # /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R
 collect_variants() {
   for gse in "${gses[@]}"; do
@@ -107,4 +108,4 @@ collect_variants() {
     Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} &
   done
 }
-# collect_variants
+collect_variants
