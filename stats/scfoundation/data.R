@@ -64,7 +64,10 @@ project |>
   dplyr::distinct() ->
 project_geo
 
+cmds <- glue::glue("Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R -g {project_geo$ID} -b /home/liuc9/github/scMOCHA-data/data/scfoundation")
 
+
+readr::write_lines(cmds, "/home/liuc9/github/scMOCHA-data/data/scfoundation/cmds.sh")
 
 # footer ------------------------------------------------------------------
 
