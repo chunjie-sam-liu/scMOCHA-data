@@ -17,11 +17,11 @@ gses=(
 
 done=(
   GSE161354 # done
-  GSE175524 # on the run
+  GSE175524 # done
   GSE206283 # done
   GSE226598 # done
-  GSE235050 # on the run
-  GSE261140 # error
+  GSE235050 # done
+  GSE261140 # error # not pbmc
   GSE279945 # on the run
 )
 
