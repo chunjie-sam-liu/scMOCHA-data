@@ -132,6 +132,17 @@ sra_df |>
     .before = 1
   ) ->
 cleaned_sample_df_sra
+
+
+data.table::fwrite(
+  x = cleaned_sample_df_sra,
+  file = file.path(
+    basedir,
+    "1.all.metadata.csv" |> glue::glue()
+  )
+)
+
+
 #
 # footer ------------------------------------------------------------------
 
