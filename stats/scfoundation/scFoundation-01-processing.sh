@@ -59,7 +59,7 @@ prefetch() {
     bash 00.${gse}.prefetch.sh
   done
 }
-prefetch
+# prefetch
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
 prefetch_check() {
@@ -69,7 +69,7 @@ prefetch_check() {
     bash 01.${gse}.prefetch.check.sh
   done
 }
-# prefetch_check
+prefetch_check
 
 # /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R
 sra_rename_gsm_merge() {
