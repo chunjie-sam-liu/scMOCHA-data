@@ -102,7 +102,7 @@ sra_rename_gsm_merge() {
     Rscript /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R -g ${gse} -b ${basedir} &
   done
 }
-sra_rename_gsm_merge
+# sra_rename_gsm_merge
 
 # /home/liuc9/github/scMOCHA-data/src/04-scmocha-conf.R
 scmocha_conf() {
@@ -116,8 +116,8 @@ scmocha_conf() {
 # run 04.{gse}.batch.sh
 scmocha_batch_run() {
   for gse in "${gses[@]}"; do
-    echo "bash /home/liuc9/github/scMOCHA-data/data/04.${gse}.batch.sh"
-    cd /home/liuc9/github/scMOCHA-data/data/${gse}
+    echo "bash /home/liuc9/github/scMOCHA-data/data/scfoundation/04.${gse}.batch.sh"
+    cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
     bash 04.${gse}.batch.sh
   done
 }
@@ -137,7 +137,7 @@ parse_log() {
 cptargz() {
   for gse in "${gses[@]}"; do
     echo "bash /home/liuc9/github/scMOCHA-data/data/${gse}/05.${gse}.scmocha.cptargz.sh"
-    cd /home/liuc9/github/scMOCHA-data/data/${gse}
+    cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
     bash 05.${gse}.scmocha.cptargz.sh
   done
 }
@@ -147,7 +147,7 @@ cptargz() {
 untargz() {
   for gse in "${gses[@]}"; do
     echo "bash /home/liuc9/github/scMOCHA-data/data/${gse}/07.${gse}.scmocha.untargz.sh"
-    cd /home/liuc9/github/scMOCHA-data/data/${gse}
+    cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
     bash 07.${gse}.scmocha.untargz.sh
   done
 }
