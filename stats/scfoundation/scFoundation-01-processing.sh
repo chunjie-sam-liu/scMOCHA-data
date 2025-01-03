@@ -71,6 +71,19 @@ prefetch_check() {
 }
 # prefetch_check
 
+# rm all GL KI and NC_ files
+rm_gl_ki_nc() {
+  for gse in "${gses[@]}"; do
+    # gse="GSE179566"
+    echo "rm /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/sra/*/GL*"
+    rm /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/sra/*/GL*
+    rm /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/sra/*/KI*
+    rm /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/sra/*/NC_*
+  done
+}
+
+# rm_gl_ki_nc
+
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/02.${gseid}.dump.slrm
 dump_slrm() {
   for gse in "${gses[@]}"; do
