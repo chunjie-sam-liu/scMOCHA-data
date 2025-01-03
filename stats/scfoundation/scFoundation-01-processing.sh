@@ -69,7 +69,18 @@ prefetch_check() {
     bash 01.${gse}.prefetch.check.sh
   done
 }
-prefetch_check
+# prefetch_check
+
+# /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/02.${gseid}.dump.slrm
+dump_slrm() {
+  for gse in "${gses[@]}"; do
+    echo "bash /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/02.${gse}.dump.slrm"
+    cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
+    sbatch 02.${gse}.dump.slrm
+  done
+}
+
+# dump_slrm
 
 # /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R
 sra_rename_gsm_merge() {
