@@ -102,7 +102,7 @@ sra_rename_gsm_merge() {
     Rscript /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R -g ${gse} -b ${basedir} &
   done
 }
-# sra_rename_gsm_merge
+sra_rename_gsm_merge
 
 # /home/liuc9/github/scMOCHA-data/src/04-scmocha-conf.R
 scmocha_conf() {
