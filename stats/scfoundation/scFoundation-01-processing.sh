@@ -93,7 +93,7 @@ dump_slrm() {
   done
 }
 
-dump_slrm
+# dump_slrm
 
 # /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R
 sra_rename_gsm_merge() {
