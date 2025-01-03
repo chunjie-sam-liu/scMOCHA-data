@@ -121,16 +121,59 @@ gseids <- c(
   "GSE226602",
   "GSE166992",
   "GSE181279",
-  "WT"
+  "WT",
+  # plus ting,
+  "GSE161354", # done
+  "GSE175524", # done
+  "GSE206283", # done
+  "GSE226598", # done
+  "GSE235050", # done
+  "GSE261140", # some errors
+  "GSE279945"
 )
 
-gseids_meta <- tibble::tibble(
+gseids_meta_raw <- tibble::tibble(
   GSE_ID = c("GSE163668", "GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE166992", "GSE171555", "GSE226602", "GSE181279", "WT"),
   samples = c(38, 20, 18, 12, 33, 9, 48, 50, 5, 1),
   Disease = c("COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "AD", "AD", "-"),
   Source = c("PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "Mixed"),
-  Chemistry = c("SC5P-R2", "SC3Pv3", "SC5P-R2", "SC3Pv3", "SC3Pv3", "SC5P-PE", "SC5P-R2", "SC5P-PE", "SC5P-PE", "SC3Pv3 Mixed"),
+  Chemistry = c("SC5P-R2", "SC3Pv3", "SC5P-R2", "SC3Pv3", "SC3Pv3", "SC5P-PE", "SC5P-R2", "SC5P-PE", "SC5P-PE", "SC3Pv3"),
   Publication = c("Nature, 2021", "Exp Mol Med, 2022", "Cell Rep, 2023", "Science, 2020", "Nat Commun, 2021", "Cell Rep, 2021", "Med, 2021", "Neuron, 2024", "Front Immunol., 2021", "-")
+)
+gseids_meta_ting <- tibble::tibble(
+  GSE_ID = c(
+    "GSE161354", # done
+    "GSE175524", # done
+    "GSE206283", # done
+    "GSE226598", # done
+    "GSE235050", # done
+    "GSE261140", # some errors
+    "GSE279945"
+  ),
+) |>
+  dplyr::mutate(
+    samples = purrr::map(
+      GSE_ID,
+      .f = \(.x) {
+        data.table::fread(
+          file.path(basedir, .x, "out", glue::glue("{.x}.cell_ratio_and_variant_clean.csv"))
+        ) ->
+        .d
+        tibble::tibble(
+          samples = nrow(.d),
+          Disease = "-",
+          Source = "PBMC",
+          Chemistry = unique(.d$Chemistry)[[1]],
+          Publication = "-"
+        )
+      }
+    ),
+  ) |>
+  tidyr::unnest(cols = samples)
+
+gseids_meta <- dplyr::bind_rows(
+  gseids_meta_raw,
+  gseids_meta_ting
 )
 
 # body --------------------------------------------------------------------
@@ -146,7 +189,8 @@ tibble::tibble(
       .f = \(.gseid) {
         data.table::fread(
           file.path(basedir, .gseid, "out", glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv"))
-        )
+        ) |>
+          dplyr::select(-Chemistry)
       }
     )
   ) |>
@@ -175,6 +219,7 @@ gse_data_loaded |>
     `Avg. call depth` = mean(`Depth mean`, na.rm = TRUE),
   ) |>
   dplyr::left_join(
+    # gseids_meta,
     gseids_meta,
     by = c("gseid" = "GSE_ID")
   ) |>
@@ -215,13 +260,14 @@ gse_cell_ratio_variant_meta_xlsx |>
   )
 
 gse_cell_ratio_variant_meta_xlsx |>
-  dplyr::group_by(gseid) |>
+  dplyr::group_by(gseid, Chemistry) |>
   dplyr::summarise(
     `Avg # of somatic variants` = mean(`# of somatic variants`, na.rm = TRUE),
   ) |>
+  dplyr::ungroup() |>
   dplyr::arrange(dplyr::desc(`Avg # of somatic variants`)) |>
   dplyr::mutate(
-    label = glue::glue("{gseid} ({round(`Avg # of somatic variants`, 2)})")
+    label = glue::glue("{gseid} ({Chemistry} {round(`Avg # of somatic variants`, 2)})")
   ) |>
   dplyr::mutate(
     label = factor(label, levels = label)
@@ -236,12 +282,15 @@ gse_cell_ratio_variant_meta |>
   ) |>
   tidyr::unnest(cols = cell_ratio_variant) |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE", "SC3Pv3 Mixed") |> rev()),
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()),
   ) ->
 forplot
 
 cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |> broom::tidy() -> cor_test_all
 cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot, subset = gseid != "GSE181279") |> broom::tidy() -> cor_test_250k
+
+pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
 
 forplot |>
   ggplot(aes(
@@ -261,8 +310,12 @@ forplot |>
     linetype = 21,
     color = "red"
   ) +
-  ggsci::scale_color_aaas(
+  # ggsci::scale_color_aaas(
+  #   name = "GSE ID",
+  # ) +
+  scale_color_manual(
     name = "GSE ID",
+    values = pcc$color
   ) +
   scale_x_continuous(
     labels = scales::label_number(),
@@ -359,9 +412,11 @@ ggvenn::ggvenn(
   data = list(
     "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
     "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
-    "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]]
+    "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]],
+    "GSE161354 (n=8)" = sc5ppe_anno_somatic$union_variants[[4]],
+    "GSE235050 (n=12)" = sc5ppe_anno_somatic$union_variants[[5]]
   ),
-  fill_color = ggsci::pal_npg()(3),
+  fill_color = ggsci::pal_npg()(5),
 ) ->
 p_venn_sc5ppe
 
@@ -396,7 +451,7 @@ sc5ppe_anno_somatic_detail |>
   dplyr::select(gseid, srrid, haplo_violin) |>
   tidyr::unnest(cols = haplo_violin) |>
   dplyr::mutate(
-    gseid = factor(gseid, levels = c("GSE166992", "GSE226602", "GSE181279"))
+    gseid = factor(gseid, levels = c("GSE166992", "GSE226602", "GSE181279", "GSE161354", "GSE235050"))
   ) |>
   dplyr::filter(variant == thevariant) ->
 sel_variant
@@ -700,7 +755,7 @@ theposes_depth |>
   dplyr::filter(pos == theposes[2]) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 theposes_depth_forplot
 
@@ -999,7 +1054,7 @@ all_gseid_depth |>
   ) |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot
 
@@ -1112,7 +1167,7 @@ all_gseid_depth |>
   dplyr::ungroup() |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot_separated
 
