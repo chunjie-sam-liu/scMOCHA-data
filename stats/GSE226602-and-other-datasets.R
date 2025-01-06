@@ -263,11 +263,12 @@ gse_cell_ratio_variant_meta_xlsx |>
   dplyr::group_by(gseid, Chemistry) |>
   dplyr::summarise(
     `Avg # of somatic variants` = mean(`# of somatic variants`, na.rm = TRUE),
+    `# of samples` = dplyr::n()
   ) |>
   dplyr::ungroup() |>
   dplyr::arrange(dplyr::desc(`Avg # of somatic variants`)) |>
   dplyr::mutate(
-    label = glue::glue("{gseid} ({Chemistry} {round(`Avg # of somatic variants`, 2)})")
+    label = glue::glue("{gseid} ({Chemistry}, {`# of samples`}, {round(`Avg # of somatic variants`, 2)})")
   ) |>
   dplyr::mutate(
     label = factor(label, levels = label)
@@ -358,8 +359,8 @@ p_somatic_variant
 ggsave(
   filename = file.path(outdir, "somatic_variant.pdf"),
   plot = p_somatic_variant,
-  width = 10,
-  height = 6,
+  width = 13,
+  height = 7,
   dpi = 300
 )
 
@@ -408,16 +409,56 @@ sc5ppe_anno_somatic
 # venn diagram dataset ------------------------------------------------------------
 
 
-ggvenn::ggvenn(
-  data = list(
-    "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
-    "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
-    "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]],
-    "GSE161354 (n=8)" = sc5ppe_anno_somatic$union_variants[[4]],
-    "GSE235050 (n=12)" = sc5ppe_anno_somatic$union_variants[[5]]
-  ),
-  fill_color = ggsci::pal_npg()(5),
-) ->
+# ggvenn::ggvenn(
+#   data = list(
+#     "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
+#     "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
+#     "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]],
+#     "GSE161354 (n=8)" = sc5ppe_anno_somatic$union_variants[[4]],
+#     "GSE235050 (n=12)" = sc5ppe_anno_somatic$union_variants[[5]]
+#   ),
+#   fill_color = ggsci::pal_npg()(5),
+# ) ->
+# p_venn_sc5ppe
+
+# ggsave(
+#   filename = file.path(outdir, "venn_gse_sc5ppe.pdf"),
+#   plot = p_venn_sc5ppe,
+#   width = 7,
+#   height = 5,
+#   dpi = 300
+# )
+library(ggVennDiagram)
+variant_list <- list(
+  "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
+  "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
+  "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]],
+  "GSE161354 (n=8)" = sc5ppe_anno_somatic$union_variants[[4]],
+  "GSE235050 (n=12)" = sc5ppe_anno_somatic$union_variants[[5]]
+)
+variant_list_df <- variant_list |>
+  ggVennDiagram::Venn() |>
+  ggVennDiagram::process_data()
+
+ggplot() +
+  # geom_polygon(
+  #   aes(X, Y, fill = name, group = id),
+  #   data = ggVennDiagram::venn_regionedge(variant_list_df),
+  #   show.legend = FALSE
+  # ) +
+  geom_path(aes(X, Y, color = id, group = id),
+    data = ggVennDiagram::venn_setedge(variant_list_df),
+    show.legend = FALSE
+  ) +
+  ggsci::scale_color_npg() +
+  geom_text(aes(X, Y, label = name),
+    data = ggVennDiagram::venn_setlabel(variant_list_df)
+  ) +
+  geom_label(aes(X, Y, label = count),
+    data = ggVennDiagram::venn_regionlabel(variant_list_df)
+  ) +
+  coord_equal() +
+  theme_void() ->
 p_venn_sc5ppe
 
 ggsave(
