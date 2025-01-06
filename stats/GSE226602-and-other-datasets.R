@@ -430,11 +430,11 @@ sc5ppe_anno_somatic
 # )
 library(ggVennDiagram)
 variant_list <- list(
-  "GSE166992 (n=9)" = sc5ppe_anno_somatic$union_variants[[1]],
-  "GSE181279 (n=50)" = sc5ppe_anno_somatic$union_variants[[2]],
-  "GSE226602 (n=5)" = sc5ppe_anno_somatic$union_variants[[3]],
-  "GSE161354 (n=8)" = sc5ppe_anno_somatic$union_variants[[4]],
-  "GSE235050 (n=12)" = sc5ppe_anno_somatic$union_variants[[5]]
+  "GSE166992" = sc5ppe_anno_somatic$union_variants[[1]],
+  "GSE181279" = sc5ppe_anno_somatic$union_variants[[2]],
+  "GSE226602" = sc5ppe_anno_somatic$union_variants[[3]],
+  "GSE161354" = sc5ppe_anno_somatic$union_variants[[4]],
+  "GSE235050" = sc5ppe_anno_somatic$union_variants[[5]]
 )
 variant_list_df <- variant_list |>
   ggVennDiagram::Venn() |>
@@ -785,11 +785,15 @@ theposes_depth
 
 theposes_depth |>
   dplyr::filter(pos == theposes[2]) |>
-  dplyr::group_by(gseid) |>
+  dplyr::group_by(gseid, Chemistry) |>
   dplyr::summarise(
     mean_depth = mean(depth, na.rm = TRUE)
   ) |>
-  dplyr::arrange(dplyr::desc(mean_depth)) ->
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+  ) |>
+  dplyr::arrange(Chemistry, dplyr::desc(mean_depth)) ->
 theposes_depth_ranked
 
 theposes_depth |>
@@ -1095,7 +1099,7 @@ all_gseid_depth |>
   ) |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot
 
@@ -1208,9 +1212,18 @@ all_gseid_depth |>
   dplyr::ungroup() |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot_separated
+
+chem_color <- tibble::tibble(
+  color = c(viridis::viridis_pal(option = "D")(3)),
+  Chemistry = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
+)
+
+theposes_depth_ranked |>
+  dplyr::left_join(chem_color, by = "Chemistry") ->
+theposes_depth_ranked_chem_color
 
 all_gseid_depth_forplot_separated |>
   ggplot() +
@@ -1218,10 +1231,11 @@ all_gseid_depth_forplot_separated |>
     ~gseid,
     ncol = 1,
     strip.position = "right",
-    # scales = "free_y",
+    scales = "free_y",
     strip = ggh4x::strip_themed(
       background_y = ggh4x::elem_list_rect(
-        fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
+        # fill = c(rep(viridis::viridis_pal(option = "D")(3), each = 3), "red")
+        fill = theposes_depth_ranked_chem_color$color
       ),
       text_y = ggh4x::elem_list_text(
         colour = "white",
@@ -1239,7 +1253,7 @@ all_gseid_depth_forplot_separated |>
   ) +
   scale_fill_manual(
     name = "Chemistry",
-    values = c(viridis::viridis_pal(option = "D")(3), "red")
+    values = theposes_depth_ranked_chem_color$color |> unique()
   ) +
   scale_x_continuous(
     limits = c(0, 17000),
@@ -1287,18 +1301,23 @@ p_depth_all_separated
 p_mtdna <- fn_plot_mtdna()
 
 ggsave(
-  filename = file.path(outdir, "depth_all_position.separated.pdf"),
+  filename = file.path(outdir, "depth_all_position.separated.free_y.pdf"),
   plot = wrap_plots(
     p_depth_all_separated,
     p_mtdna,
     ncol = 1,
     heights = c(15, 1)
   ),
-  width = 17,
-  height = 9,
+  width = 23,
+  height = 12,
   dpi = 300
 )
 
+#
+#
+#
+#
+#
 # add mixed four cell line reads -------------------------------------------------
 mixed_four_cellline_coverage <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/out/mixed_four_cellline_cluster.coverage.txt.gz", col.names = c("pos", "celltype", "count")) |>
   dplyr::group_by(pos) |>
