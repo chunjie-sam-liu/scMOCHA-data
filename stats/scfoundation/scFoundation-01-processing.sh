@@ -136,7 +136,7 @@ parse_log() {
 
 cptargz() {
   for gse in "${gses[@]}"; do
-    echo "bash /home/liuc9/github/scMOCHA-data/data/${gse}/05.${gse}.scmocha.cptargz.sh"
+    echo "bash /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/05.${gse}.scmocha.cptargz.sh"
     cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
     bash 05.${gse}.scmocha.cptargz.sh
   done
@@ -161,4 +161,4 @@ collect_variants() {
     Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} -b ${basedir} &
   done
 }
-# collect_variants
+collect_variants
