@@ -404,7 +404,18 @@ sc5ppe_anno |>
   tidyr::unnest(cols = somatic_variants) ->
 sc5ppe_anno_somatic
 
-sc5ppe_anno_somatic
+sc5ppe_anno_somatic$union_variants |>
+  purrr::reduce(intersect) |>
+  length()
+
+sc5ppe_anno_somatic |>
+  tidyr::unnest(cols = anno_somatic) |>
+  dplyr::select(srrid, somatic_variant) |>
+  dplyr::pull(somatic_variant) |>
+  purrr::map(~ .x$variant) |>
+  purrr::reduce(
+    intersect
+  )
 
 # venn diagram dataset ------------------------------------------------------------
 
