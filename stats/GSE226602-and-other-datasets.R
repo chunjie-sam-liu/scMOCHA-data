@@ -108,7 +108,7 @@ fn_plot_mtdna <- function() {
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
-outdir <- file.path(basedir, "out_new")
+outdir <- file.path(basedir, "out_new_ting")
 dir.create(outdir, showWarnings = FALSE)
 
 gseids <- c(
@@ -129,7 +129,12 @@ gseids <- c(
   "GSE226598", # done
   "GSE235050", # done
   "GSE261140", # some errors
-  "GSE279945"
+  "GSE279945",
+  # run by ting
+  "GSE214865",
+  "GSE220189",
+  "GSE233844",
+  "GSE175499"
 )
 
 gseids_meta_raw <- tibble::tibble(
@@ -148,7 +153,12 @@ gseids_meta_ting <- tibble::tibble(
     "GSE226598", # done
     "GSE235050", # done
     "GSE261140", # some errors
-    "GSE279945"
+    "GSE279945",
+    # run by ting
+    "GSE214865",
+    "GSE220189",
+    "GSE233844",
+    "GSE175499"
   ),
 ) |>
   dplyr::mutate(
