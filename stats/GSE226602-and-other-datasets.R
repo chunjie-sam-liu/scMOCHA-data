@@ -904,7 +904,7 @@ ggsave(
   dpi = 300
 )
 
-{
+\() {
   # all position in sc5ppe -------------------------------------------------
 
   sc5ppe_anno_somatic$union_variants |>
@@ -1021,7 +1021,7 @@ gse_cell_ratio_variant_meta |>
   dplyr::select(gseid, srrid, `Number of Reads`, Chemistry) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) |>
   ggplot() +
   geom_violin(
@@ -1354,7 +1354,7 @@ all_gseid_depth_forplot_separated |>
   # dplyr::bind_rows(mixed_four_cellline_coverage) |>
   dplyr::mutate(
     gseid = factor(gseid, levels = c(theposes_depth_ranked$gseid, "Mixed cellline")),
-    Chemistry = factor(Chemistry, levels = c("SC3Pv3 Mixed", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
+    Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev())
   ) ->
 all_gseid_depth_forplot_separated_mixed
 
@@ -1546,14 +1546,16 @@ ggsave(
 
 # 10x kit version or seq strategy matters -----------------------------------
 gse_cell_ratio_variant_meta_xlsx |>
-  dplyr::select(-cell_ratio_variant, -anno) |>
+  # dplyr::select(-cell_ratio_variant, -anno) |>
+  dplyr::select(-anno) |>
   dplyr::left_join(avg_mito_reads, by = "gseid") |>
   dplyr::left_join(avg_totla_reads, by = "gseid") |>
   dplyr::relocate(Publication, .after = avg_totla_reads) |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = c("SC3Pv3", "SC5P-R2", "SC5P-PE"))
   ) |>
-  dplyr::arrange(Chemistry, `Avg # of somatic variants`) ->
+  dplyr::glimpse()
+dplyr::arrange(Chemistry, `Avg # of somatic variants`) ->
 gse_cell_ratio_variant_meta_xlsx_final
 
 writexl::write_xlsx(
