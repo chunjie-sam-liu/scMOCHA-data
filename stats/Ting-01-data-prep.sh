@@ -43,7 +43,12 @@ rmmove_running_result() {
 }
 
 # rmmove_running_result
-
+gses=(
+  GSE214865
+  GSE220189
+  GSE233844
+  GSE175499
+)
 # ! make sra dir and put the SRR* dir into sra dir --------------------------------------------------------------------
 make_sra_dir() {
   for gse in "${gses[@]}"; do
@@ -55,7 +60,7 @@ make_sra_dir() {
     mv ${cj_dir}/${gse}/SRR* "${cj_dir}/${gse}/sra"
   done
 }
-# make_sra_dir
+make_sra_dir
 
 # ! move fastq file to gsm --------------------------------------------------------------------
 
@@ -68,4 +73,4 @@ move_fastq_to_gsm() {
     fi
   done
 }
-move_fastq_to_gsm
+# move_fastq_to_gsm
