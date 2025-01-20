@@ -281,8 +281,8 @@ forplot |>
   ) +
   scale_x_continuous(
     labels = scales::label_number(),
-    limits = c(0, 60000),
-    breaks = seq(0, 60000, 10000),
+    # limits = c(0, 60000),
+    # breaks = seq(0, 60000, 10000),
   ) +
   scale_y_continuous(
     labels = scales::label_number(),
@@ -313,7 +313,7 @@ forplot |>
     x = "Average Depth",
     y = "Number of Somatic Variants",
     title = glue::glue("All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}"),
-    subtitle = glue::glue("Exclude GSE181279 samples, Pearson's r = {round(cor_test_250k$estimate, 2)}, p-value = {scales::pvalue(cor_test_250k$p.value)}")
+    # subtitle = glue::glue("Exclude GSE181279 samples, Pearson's r = {round(cor_test_250k$estimate, 2)}, p-value = {scales::pvalue(cor_test_250k$p.value)}")
   ) ->
 p_somatic_variant
 
