@@ -116,16 +116,16 @@ outdir <- file.path(basedir, "out")
 dir.create(outdir, showWarnings = FALSE)
 
 gseids <- c(
-  "GSE140881", # error, sra decompressed, it lost R1
-  "GSE142595", # error, sra decompressed, it R1 -> I1 error, corrected, on the run.
+  "GSE140881", # error, sra decompressed, only one R2 file
+  "GSE142595", # error, sra decompressed, it R1 -> I1 error, corrected, on the run. Seq-Well, not 10x
   "GSE149313",
   "GSE154386",
   "GSE159117",
   "GSE162117",
-  "GSE167825", # not run, not dumped
-  "GSE179566", # not run, sra decompressed, it lost R1
+  "GSE167825", # not run, not dumped, dumping
+  "GSE179566", # not run, sra decompressed, only one R2 file
   "GSE188632",
-  "GSE192391" # not run, not dumped
+  "GSE192391" # not run, not dumped, checking
 )
 
 
