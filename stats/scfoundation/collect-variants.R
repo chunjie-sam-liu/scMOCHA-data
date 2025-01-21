@@ -116,16 +116,16 @@ outdir <- file.path(basedir, "out")
 dir.create(outdir, showWarnings = FALSE)
 
 gseids <- c(
-  "GSE140881", # error
-  "GSE142595", # error
+  "GSE140881", # error, sra decompressed, it lost R1
+  "GSE142595", # error, sra decompressed, it R1 -> I1 error, corrected, on the run.
   "GSE149313",
   "GSE154386",
   "GSE159117",
   "GSE162117",
-  "GSE167825", # not run
-  "GSE179566", # not run
+  "GSE167825", # not run, not dumped
+  "GSE179566", # not run, sra decompressed, it lost R1
   "GSE188632",
-  "GSE192391" # not run
+  "GSE192391" # not run, not dumped
 )
 
 
