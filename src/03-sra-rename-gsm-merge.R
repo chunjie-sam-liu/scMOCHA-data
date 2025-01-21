@@ -84,6 +84,20 @@ rename_code <- c(
   # rl > 30 ~ "R2"
 )
 
+# SFRP       - read1: 26, read2: 30, index1: 0
+# SC5P-R2    - read1: 26, read2: 25, index1: 0
+# SC5P-PE    - read1: 81, read2: 25, index1: 0
+# SC5P-R2-v3 - read1: 26, read2: 25, index1: 0
+# SC5P-PE-v3 - read1: 83, read2: 25, index1: 0
+# SC3Pv1     - read1: 25, read2: 10, index1: 14
+# SC3Pv2     - read1: 26, read2: 25, index1: 0
+# SC3Pv3     - read1: 26, read2: 25, index1: 0
+# SC3Pv3LT   - read1: 26, read2: 25, index1: 0
+# SC3Pv3HT   - read1: 26, read2: 25, index1: 0
+# SC3Pv4     - read1: 26, read2: 25, index1: 0
+# ARC-v1     - read1: 26, read2: 25, index1: 0
+
+
 rename_code2 <- c()
 # function ----------------------------------------------------------------
 

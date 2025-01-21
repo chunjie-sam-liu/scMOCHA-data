@@ -168,7 +168,7 @@ sratable_prefetch |>
 srafiles
 
 readr::write_lines(
-  glue::glue("vdb-validate {srafiles$srafile}"),
+  glue::glue("vdb-validate {srafiles$srafile} 1> {srafiles$srafile}.validate 2>&1 &"),
   file = file.path(
     datadir,
     "01.{gseid}.prefetch.check.sh" |> glue::glue()
