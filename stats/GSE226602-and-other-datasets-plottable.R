@@ -49,7 +49,11 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-filename_ <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting/gses_meta_read.xlsx"
+datadir <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting"
+filename_ <- file.path(
+  datadir,
+  "gses_meta_read.xlsx"
+)
 gses_meta_read <- readxl::read_xlsx(filename_)
 
 # body --------------------------------------------------------------------
@@ -180,7 +184,7 @@ flextable::flextable(df) |>
     j = c("GSE ID", "Chemistry")
   ) |>
   flextable::italic(
-    j = c("GSE ID")
+    j = c("Publication")
   ) |>
   flextable::vline(
     j = c("Chemistry", "Avg. mutation", "Avg. total reads"),
@@ -211,14 +215,14 @@ ft
 
 flextable::save_as_image(
   ft,
-  path = "/home/liuc9/github/scMOCHA-data/data/out_new_ting/gses_meta_read.svg",
+  path = file.path(datadir, "gses_meta_read.svg"),
   width = 20,
   height = 7
 )
 
 flextable::save_as_pptx(
   ft,
-  path = "/home/liuc9/github/scMOCHA-data/data/out_new_ting/gses_meta_read.pptx"
+  path = file.path(datadir, "gses_meta_read.pptx")
 )
 
 # footer ------------------------------------------------------------------
