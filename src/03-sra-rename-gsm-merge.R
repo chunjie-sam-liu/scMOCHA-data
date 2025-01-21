@@ -70,11 +70,11 @@ log_layout(layout_glue_colors)
 # v2, r1=26, i7=8, i5=0, r2=98
 
 rename_code <- c(
-  "28" = "R1",
   "26" = "R1",
+  "28" = "R1",
   "30" = "R1",
-  "10" = "I1",
   "8" = "I1",
+  "10" = "I1",
   "90" = "R2",
   "91" = "R2",
   "98" = "R2",
@@ -127,7 +127,7 @@ fn_rename <- function(.srrdir) {
     ) |>
     dplyr::mutate(
       rt = dplyr::case_when(
-        rl < 25 ~ "I1",
+        rl < 20 ~ "I1",
         rl <= 30 ~ "R1",
         TRUE ~ "R2"
       )
