@@ -122,7 +122,7 @@ gseids <- c(
   "GSE154386",
   "GSE159117",
   "GSE162117",
-  "GSE167825", # not run, not dumped, dumping
+  "GSE167825", # not run, not dumped, dumping, on the run
   "GSE179566", # not run, sra decompressed, only one R2 file
   "GSE188632",
   "GSE192391" # not run, not dumped, checking
