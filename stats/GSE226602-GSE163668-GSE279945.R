@@ -1,0 +1,179 @@
+#!/usr/bin/env Rscript
+# Metainfo ----------------------------------------------------------------
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2025-01-22 15:31:06
+# @DESCRIPTION: filename
+# @VERSION: v0.0.1
+
+
+
+# Library -----------------------------------------------------------------
+
+suppressPackageStartupMessages(library(magrittr))
+library(ggplot2)
+library(patchwork)
+library(prismatic)
+library(paletteer)
+library(data.table)
+# library(rlang)
+library(GetoptLong)
+library(logger)
+
+# args --------------------------------------------------------------------
+
+# s: string, i: integer, f: float, !: boolean
+# @: array
+# %: hash
+# default: default value specified here.
+verbose <- FALSE
+spec <- "
+Usage: Rscript foorbar.R [options]
+Options:
+
+<verbose!> Print messages
+"
+
+GetoptLong.options(help_style = "two-column")
+GetoptLong(spec, template_control = list(opt_width = 21))
+
+# src ---------------------------------------------------------------------
+
+# header ------------------------------------------------------------------
+log_threshold(TRACE)
+log_layout(layout_glue_colors)
+
+# future: :plan(future: :multisession, workers = 10)
+
+# function ----------------------------------------------------------------
+
+
+# load data ---------------------------------------------------------------
+gseid_list <- c("GSE226602", "GSE163668", "GSE279945")
+
+tibble::tibble(
+  gseid = c("GSE226602", "GSE163668", "GSE279945"),
+  chem = c("SC5P-PE", "SC5P-R2", "SC3Pv3")
+) -> gseid_list
+
+basedir <- "/home/liuc9/github/scMOCHA-data/data"
+outdir <- "/home/liuc9/github/scMOCHA-data/data/out_variant_check"
+# body --------------------------------------------------------------------
+
+
+
+# ! load data --------------------------------------------------------------------
+
+
+gseid_list |>
+  dplyr::mutate(
+    cell_ratio_variant = purrr::map(
+      gseid,
+      ~ {
+        data.table::fread(
+          file.path(
+            basedir,
+            .x,
+            "out",
+            glue::glue("{.x}.cell_ratio_and_variant_clean.csv")
+          )
+        )
+      }
+    )
+  ) |>
+  dplyr::mutate(
+    anno = purrr::map(
+      gseid,
+      ~ {
+        readr::read_rds(
+          file.path(
+            basedir,
+            .x,
+            "out",
+            glue::glue("{.x}.scmocha.out.rds.gz")
+          )
+        )
+      }
+    )
+  ) ->
+gseid_list_anno
+
+
+
+# ! merge data --------------------------------------------------------------------
+
+
+
+dplyr::inner_join(
+  gseid_list_anno |>
+    dplyr::select(-chem) |>
+    tidyr::unnest(cols = cell_ratio_variant) |>
+    dplyr::select(-anno),
+  gseid_list_anno |>
+    dplyr::select(-chem) |>
+    tidyr::unnest(cols = anno),
+  by = c("gseid", "srrid")
+) ->
+gseid_list_anno_merged
+
+
+gseid_list_anno_merged |> dplyr::glimpse()
+selected_srrid <- c("GSM4995425", "GSM4995448", "GSM7080044", "GSM8583898")
+
+gseid_list_anno_merged |>
+  dplyr::mutate(
+    label = ifelse(srrid %in% selected_srrid, srrid, "")
+  ) |>
+  ggplot(aes(
+    x = `Depth read mean`,
+    y = `# of somatic variants`,
+    color = chemistry,
+    label = label
+  )) +
+  geom_point() +
+  ggrepel::geom_text_repel(
+    show.legend = FALSE,
+  ) +
+  theme_minimal() -> p
+p
+
+ggsave(
+  file.path(outdir, "p_plotly_select_samples.pdf"),
+  p,
+  width = 8,
+  height = 5
+)
+plotly::ggplotly(p) -> p_plotly_select_samples
+
+p_plotly_select_samples
+
+reticulate::py_run_string("import sys")
+htmlwidgets::saveWidget(
+  p_plotly_select_samples,
+  file.path(outdir, "p_plotly_select_samples.html"),
+  selfcontained = TRUE
+)
+
+
+
+
+# ! selected samples --------------------------------------------------------------------
+
+gseid_list_anno_merged |>
+  dplyr::filter(srrid %in% selected_srrid) |>
+  dplyr::select(gseid, srrid, chemistry, `# of somatic variants`, `# of variants`, srrdir, somatic_variant) |>
+  dplyr::mutate(
+    sv = purrr::map(
+      somatic_variant,
+      ~ {
+        .x$somatic
+      }
+    )
+  )
+
+
+# footer ------------------------------------------------------------------
+
+# future: :plan(future: :sequential)
+
+# save image --------------------------------------------------------------
