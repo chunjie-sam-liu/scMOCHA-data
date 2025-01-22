@@ -169,7 +169,49 @@ gseid_list_anno_merged |>
         .x$somatic
       }
     )
-  )
+  ) -> gseid_list_anno_merged_selected
+
+
+
+gseid_list_anno_merged_selected$sv[[1]]
+gseid_list_anno_merged_selected$sv[[2]]
+
+
+gseid_list_anno_merged_selected$srrdir[[1]]
+
+gseid_list_anno_merged_selected$srrid[[2]]
+gseid_list_anno_merged_selected |>
+  dplyr::select(gseid, srrid, chemistry) |>
+  dplyr::mutate(label = glue::glue("{gseid}-{srrid}-{chemistry}"))
+
+library(ggVennDiagram)
+variant_list <- list(
+  "GSE226602-GSM7080044-SC5P-PE" = gseid_list_anno_merged_selected$sv[[1]],
+  "GSE163668-GSM4995425-SC5P-R2" = gseid_list_anno_merged_selected$sv[[2]]
+)
+variant_list_df <- variant_list |>
+  ggVennDiagram::Venn() |>
+  ggVennDiagram::process_data()
+
+ggplot() +
+  geom_path(aes(X, Y, color = id, group = id),
+    data = ggVennDiagram::venn_setedge(variant_list_df),
+    show.legend = FALSE
+  ) +
+  ggsci::scale_color_npg() +
+  geom_text(aes(X, Y, label = name),
+    data = ggVennDiagram::venn_setlabel(variant_list_df)
+  ) +
+  geom_label(aes(X, Y, label = count),
+    data = ggVennDiagram::venn_regionlabel(variant_list_df)
+  ) +
+  coord_equal() +
+  theme_void() ->
+p_venn
+
+
+
+
 
 
 # footer ------------------------------------------------------------------

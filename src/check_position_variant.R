@@ -886,6 +886,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
 # thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
 # thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
 thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE166992/final/GSM5090446"
+thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044"
 
 gsmid <- basename(thepath)
 gseid <- basename(dirname(dirname(thepath)))
@@ -901,24 +902,31 @@ thevariants <- c(
   "2191A>C", "2192A>T", "2193T>A",
   "3173G>A", "3176A>T", "3178T>A"
 )
+thevariants <- c(
+  "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C",
+  "2285T>C", "2289G>T", "2442T>C", "3173G>A", "3176A>T", "3178T>A", "3727T>C", "3728C>T",
+  "3734A>G", "7428G>A", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "15666T>C"
+)
 
 theposes <- thevariants |>
   purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
   purrr::map_int(as.integer)
 
-# vaf feature -------------------------------------------------------------
+# vaf cell feature -------------------------------------------------------------
 
 fn_plot_vaf_featureplot_multi(
   .thevariants = thevariants,
   sc = sc
 ) -> p_vaf_feature
 
+p_vaf_feature
+
 ggsave(
   filename = "selected_variants_vaf_featureplot-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  path = outdir,
   plot = p_vaf_feature,
   width = 15,
-  height = 7,
+  height = 20,
 )
 
 # count -------------------------------------------------------------------
@@ -929,10 +937,10 @@ fn_plot_count_multi(
 
 ggsave(
   filename = "selected_variants_count-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  path = outdir,
   plot = p_count,
   width = 20,
-  height = 25,
+  height = 48,
 )
 
 # depth -------------------------------------------------------------------
@@ -941,7 +949,7 @@ p_depth <- fn_plot_coverage(thepath, theposes)
 
 ggsave(
   filename = "depth-celltype-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  path = outdir,
   plot = wrap_plots(
     p_depth$p_mt_depth_celltype,
     p_mtdna,
@@ -958,7 +966,7 @@ p_hotspots <- fn_plot_hotspots(thepath, thevariants)
 
 ggsave(
   filename = "hotspots_final_af_somatic-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = "/home/liuc9/github/scMOCHA-data/data/GSE226602/out/plot",
+  path = outdir,
   plot = wrap_plots(
     p_hotspots,
     p_depth$p_mt_depth_allcell,
