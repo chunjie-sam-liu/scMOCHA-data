@@ -262,13 +262,29 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
 
   cluster_n_forplot |>
     dplyr::filter(pos %in% thepos) |>
-    dplyr::mutate(pos = as.character(pos)) |>
+    dplyr::mutate(pos = as.character(pos)) ->
+  cluster_n_forplot_
+
+  gt <- factor(c("A", "G", "C", "T"), levels = c("A", "G", "C", "T"))
+  posref = cluster_n_forplot_$posref |> unique()
+  group = cluster_n_forplot_$group |> unique()
+
+  posref_df <- data.table::data.table(
+    gt = rep(gt, each = length(posref)),
+    posref = rep(posref, length(gt)),
+    group = rep(group, each = length(gt) * length(posref))
+  )
+
+
+  cluster_n_forplot_ |>
+    dplyr::full_join(posref_df, by = c("gt", "posref", "group")) |>
     ggplot(aes(x = posref, y = gt)) +
     geom_tile(aes(fill = ratio)) +
     geom_text(aes(label = label)) +
     scale_fill_gradient(
       low = "white",
-      high = "red"
+      high = "red",
+      na.value = "white"
     ) +
     ggh4x::facet_wrap2(
       ~group,
