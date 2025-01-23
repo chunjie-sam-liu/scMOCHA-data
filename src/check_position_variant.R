@@ -180,8 +180,9 @@ fn_plot_vaf_featureplot_multi <- function(.thevariants, sc) {
     guide_area() +
     plot_layout(guides = "collect") &
     theme(
-      legend.justification = "left",
-      legend.position = "right"
+      legend.direction = "vertical",
+      legend.box = "horizontal",
+      # plot.background = element_rect(color = "black"),
     )
 }
 
@@ -233,7 +234,7 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
 
   cluster_n_temp |>
     dplyr::mutate(
-      label = glue::glue("total coverage = {nv} \n forward = {fw}, reverse = {rv} \n ratio = ({round(ratio, 3) * 100}%)")
+      label = glue::glue("total = {nv} \n forward = {fw} \n reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
     ) ->
   cluster_n_forplot
 
@@ -243,11 +244,13 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
 fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
   pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
     dplyr::arrange(cancer_types)
+
   if (!all(is.na(group_sel))) {
     cluster_n_forplot |>
       dplyr::filter(group %in% group_sel) ->
     cluster_n_forplot
   }
+
   if (length(unique(cluster_n_forplot$group)) > 10) {
     # stop("The number of unique groups exceeds 50.")
     cluster_n_forplot |>
@@ -261,11 +264,32 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
     dplyr::filter(pos %in% thepos) |>
     dplyr::mutate(pos = as.character(pos)) |>
     ggplot(aes(x = posref, y = gt)) +
-    geom_tile(aes(fill = nv)) +
+    geom_tile(aes(fill = ratio)) +
     geom_text(aes(label = label)) +
     scale_fill_gradient(
       low = "white",
       high = "red"
+    ) +
+    ggh4x::facet_wrap2(
+      ~group,
+      ncol = 8,
+      strip.position = "top",
+      strip = ggh4x::strip_themed(
+        background_x = ggh4x::elem_list_rect(
+          fill = pcc$color
+        ),
+        text_x = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
+      )
+    ) +
+    scale_x_discrete(
+      expand = expansion(mult = c(0.01, 0.01))
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0))
     ) +
     theme(
       panel.background = element_blank(),
@@ -293,35 +317,19 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
       axis.line = element_line(
         color = "black"
       )
-    ) +
-    ggh4x::facet_wrap2(
-      ~group,
-      ncol = 8,
-      strip.position = "top",
-      strip = ggh4x::strip_themed(
-        background_x = ggh4x::elem_list_rect(
-          fill = pcc$color
-        ),
-        text_x = ggh4x::elem_list_text(
-          colour = "white",
-          face = c("bold")
-        ),
-        by_layer_y = FALSE,
-      )
     ) ->
   p_tile
   p_tile
 }
 
-fn_plot_count_multi <- function(cluster_n_forplot, thepos, group_sel = NA) {
+fn_plot_count_multi <- function(cluster_n_forplot, theposes, group_sel = NA) {
   theposes |>
     purrr::map(~ fn_plot_count(cluster_n_forplot, thepos = ., group_sel = NA)) |>
     wrap_plots(ncol = 1) +
-    guide_area() +
     plot_layout(guides = "collect") &
     theme(
       legend.justification = "left",
-      legend.position = "none"
+      legend.position = "none",
     ) ->
   p_count
   p_count
@@ -885,100 +893,149 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
 
 # thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
 # thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE149689/targz/GSM4509020"
-thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE166992/final/GSM5090446"
-thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044"
+# thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE166992/final/GSM5090446"
 
-gsmid <- basename(thepath)
-gseid <- basename(dirname(dirname(thepath)))
-
-# load sc
-sc <- fn_load_by_path(thepath)
-# load count
-cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
+# thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044"
+# thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425"
+# thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995448"
+# thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
 
 
 # targeted variant and position ------------------------------------------
+# thevariants <- c(
+#   "2191A>C", "2192A>T", "2193T>A",
+#   "3173G>A", "3176A>T", "3178T>A"
+# )
+# thevariants <- c(
+#   "3173G>A"
+# )
+
+# thepaths <- c(
+#   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
+#   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425",
+#   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995448",
+#   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
+# )
+
+
+
+
+
+
+# ! plot all --------------------------------------------------------------------
+
+
+
+fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
+  log_info("Start to plot ", thepath)
+  # ! parse --------------------------------------------------------------------
+
+
+  gsmid <- basename(thepath)
+  gseid <- basename(dirname(dirname(thepath)))
+
+  theposes <- thevariants |>
+    purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+    purrr::map_int(as.integer)
+
+  # load data ---------------------------------------------------------------
+  # load sc
+  sc <- fn_load_by_path(thepath)
+  # load count
+  cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
+
+
+  # vaf cell umap -------------------------------------------------------------
+
+  fn_plot_vaf_featureplot_multi(
+    .thevariants = thevariants,
+    sc = sc
+  ) -> p_vaf_feature
+
+  # p_vaf_feature
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |> glue::glue(),
+    path = outdir,
+    plot = p_vaf_feature,
+    width = 9,
+    height = 4,
+  )
+
+  # read count -------------------------------------------------------------------
+  fn_plot_count_multi(
+    cluster_n_forplot,
+    theposes = theposes
+  ) -> p_count
+
+  # p_count
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-selected_variants_count.pdf" |> glue::glue(),
+    path = outdir,
+    plot = p_count,
+    width = 15,
+    height = 5,
+  )
+
+  # depth -------------------------------------------------------------------
+  p_mtdna <- fn_plot_mtdna()
+  p_depth <- fn_plot_coverage(thepath, theposes)
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-depth-celltype.pdf" |> glue::glue(),
+    path = outdir,
+    plot = wrap_plots(
+      p_depth$p_mt_depth_celltype,
+      p_mtdna,
+      ncol = 1,
+      heights = c(0.7, 0.1)
+    ),
+    width = 17,
+    height = 9,
+  )
+
+
+  # # hotspots ----------------------------------------------------------------
+  # p_hotspots <- fn_plot_hotspots(thepath, thevariants)
+
+  # ggsave(
+  #   filename = "{gseid}-{gsmid}-hotspots_final_af_somatic.pdf" |> glue::glue(),
+  #   path = outdir,
+  #   plot = wrap_plots(
+  #     p_hotspots,
+  #     p_depth$p_mt_depth_allcell,
+  #     p_mtdna,
+  #     ncol = 1,
+  #     heights = c(1.6, 0.4, 0.1),
+  #     axes = "collect_x"
+  #   ),
+  #   device = "pdf",
+  #   width = 24,
+  #   height = 12
+  # )
+  log_success("Finish to plot ", thepath)
+}
+
+
+
+# ! run --------------------------------------------------------------------
+
 thevariants <- c(
-  "2191A>C", "2192A>T", "2193T>A",
-  "3173G>A", "3176A>T", "3178T>A"
-)
-thevariants <- c(
-  "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C",
-  "2285T>C", "2289G>T", "2442T>C", "3173G>A", "3176A>T", "3178T>A", "3727T>C", "3728C>T",
-  "3734A>G", "7428G>A", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "15666T>C"
+  "3173G>A"
 )
 
-theposes <- thevariants |>
-  purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
-  purrr::map_int(as.integer)
-
-# vaf cell feature -------------------------------------------------------------
-
-fn_plot_vaf_featureplot_multi(
-  .thevariants = thevariants,
-  sc = sc
-) -> p_vaf_feature
-
-p_vaf_feature
-
-ggsave(
-  filename = "selected_variants_vaf_featureplot-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = outdir,
-  plot = p_vaf_feature,
-  width = 15,
-  height = 20,
+thepaths <- c(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425",
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995448",
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
 )
 
-# count -------------------------------------------------------------------
-fn_plot_count_multi(
-  cluster_n_forplot,
-  thepos = theposes
-) -> p_count
-
-ggsave(
-  filename = "selected_variants_count-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = outdir,
-  plot = p_count,
-  width = 20,
-  height = 48,
-)
-
-# depth -------------------------------------------------------------------
-p_mtdna <- fn_plot_mtdna()
-p_depth <- fn_plot_coverage(thepath, theposes)
-
-ggsave(
-  filename = "depth-celltype-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = outdir,
-  plot = wrap_plots(
-    p_depth$p_mt_depth_celltype,
-    p_mtdna,
-    ncol = 1,
-    heights = c(0.7, 0.1)
-  ),
-  width = 17,
-  height = 9,
-)
+thepaths |>
+  purrr::walk(~ fn_plot_all(.x, thevariants = thevariants, outdir = outdir))
 
 
-# hotspots ----------------------------------------------------------------
-p_hotspots <- fn_plot_hotspots(thepath, thevariants)
-
-ggsave(
-  filename = "hotspots_final_af_somatic-{gseid}-{gsmid}.pdf" |> glue::glue(),
-  path = outdir,
-  plot = wrap_plots(
-    p_hotspots,
-    p_depth$p_mt_depth_allcell,
-    p_mtdna,
-    ncol = 1,
-    heights = c(1.6, 0.4, 0.1),
-    axes = "collect_x"
-  ),
-  device = "pdf",
-  width = 24,
-  height = 12
-)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)

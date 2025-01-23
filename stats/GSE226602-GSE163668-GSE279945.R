@@ -177,7 +177,7 @@ gseid_list_anno_merged_selected$sv[[1]]
 gseid_list_anno_merged_selected$sv[[2]]
 
 
-gseid_list_anno_merged_selected$srrdir[[1]]
+gseid_list_anno_merged_selected$srrdir
 
 gseid_list_anno_merged_selected$srrid[[2]]
 gseid_list_anno_merged_selected |>
@@ -208,7 +208,7 @@ ggplot() +
   coord_equal() +
   theme_void() ->
 p_venn
-
+p_venn
 
 
 
