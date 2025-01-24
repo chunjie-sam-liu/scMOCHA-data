@@ -234,7 +234,7 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
 
   cluster_n_temp |>
     dplyr::mutate(
-      label = glue::glue("total = {nv} \n forward = {fw} \n reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
+      label = glue::glue("total = {nv} \n forward = {fw}, reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
     ) ->
   cluster_n_forplot
 
@@ -1032,14 +1032,25 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   # )
   log_success("Finish to plot ", thepath)
 }
-
+fn_plot_all(
+  thepath = "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
+  thevariants = c("153G>A"),
+  outdir = outdir
+)
 
 
 # ! run --------------------------------------------------------------------
+pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
 
 thevariants <- c(
-  "3173G>A"
+  "153A>G", "195T>C", "827A>G", "1002C>T", "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C", "2285T>C", "2289G>T", "2352T>C", "2442T>C",
+  "3173G>A", "3176A>T", "3178T>A", "3547A>G", "3727T>C", "3728C>T", "3734A>G", "3766T>C", "4820G>A", "4977T>C", "6164C>T", "6473C>T", "7428G>A", "8362T>G", "8598T>C", "8730A>G",
+  "9196G>A", "9497T>C", "10604T>A", "10819A>G", "11177C>T", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "14212T>C", "14905G>A", "15047G>A", "15535C>T", "15666T>C", "15747T>C"
 )
+theposes <- thevariants |>
+  purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+  purrr::map_int(as.integer)
 
 thepaths <- c(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
@@ -1048,9 +1059,239 @@ thepaths <- c(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
 )
 
-thepaths |>
-  purrr::walk(~ fn_plot_all(.x, thevariants = thevariants, outdir = outdir))
+# thepaths |>
+#   purrr::walk(~ fn_plot_all(.x, thevariants = thevariants, outdir = outdir))
+fn_get_count_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
+  log_info("Start to plot ", thepath)
+  # ! parse --------------------------------------------------------------------
 
+
+  gsmid <- basename(thepath)
+  gseid <- basename(dirname(dirname(thepath)))
+
+  theposes <- thevariants |>
+    purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+    purrr::map_int(as.integer)
+
+  # load data ---------------------------------------------------------------
+  # load sc
+  sc <- fn_load_by_path(thepath)
+  # load count
+  cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
+
+  log_success("Finish to plot ", thepath)
+
+  list(
+    gseid = gseid,
+    gsmid = gsmid,
+    thevariants = list(thevariants),
+    theposes = list(theposes),
+    cluster_n_forplot = list(cluster_n_forplot)
+  )
+}
+
+
+parallel::mclapply(thepaths, function(path) {
+  fn_get_count_all(path, thevariants = thevariants, outdir = outdir)
+}, mc.cores = length(thepaths)) ->
+load_count
+
+load_count |>
+  purrr::map(
+    ~ {
+      .x |>
+        tibble::enframe() |>
+        tidyr::spread(key = name, value = value) |>
+        tidyr::unnest(cols = c(thevariants, theposes, cluster_n_forplot, gseid, gsmid)) |>
+        dplyr::mutate(
+          cluster_n_forplot = purrr::map2(
+            .x = cluster_n_forplot,
+            .y = theposes,
+            ~ {
+              .x |>
+                dplyr::filter(pos %in% .y)
+            }
+          )
+        )
+    }
+  ) |>
+  dplyr::bind_rows() ->
+load_count_unnest
+
+
+load_count_unnest |>
+  dplyr::select(3, 2, 1) |>
+  tidyr::unnest(cols = c(cluster_n_forplot)) ->
+cluster_n_forplot_
+
+gt <- factor(c("A", "G", "C", "T"), levels = c("A", "G", "C", "T"))
+posref = cluster_n_forplot_$posref |> unique()
+group = cluster_n_forplot_$group |> unique()
+
+posref_df <- data.table::data.table(
+  gt = rep(gt, each = length(posref)),
+  posref = rep(posref, length(gt)),
+  group = rep(group, each = length(gt) * length(posref))
+)
+
+sample_chem <- tibble::tibble(
+  gseid = c("GSE226602", "GSE163668", "GSE163668", "GSE279945"),
+  gsmid = c("GSM7080044", "GSM4995425", "GSM4995448", "GSM8583898"),
+  chemistry = c("SC5P-PE", "SC5P-R2", "SC5P-R2", "SC3Pv3"),
+  color = c("red", "blue", "black", "black")
+) |>
+  dplyr::mutate(
+    gsmid_label = glue::glue("{gsmid} ({chemistry})")
+  )
+
+sc5p_pe_variant <- c(
+  "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C", "2285T>C", "2289G>T", "2442T>C", "3173G>A", "3176A>T", "3178T>A", "3727T>C",
+  "3728C>T", "3734A>G", "7428G>A", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "15666T>C"
+)
+sc5p_r2_variant <- c(
+  "153A>G", "195T>C", "827A>G", "1002C>T", "2352T>C", "3547A>G", "3766T>C", "4820G>A", "4977T>C", "6164C>T", "6473C>T", "8362T>G", "8598T>C", "8730A>G", "9196G>A",
+  "9497T>C", "10604T>A", "10819A>G", "11177C>T", "14212T>C", "14905G>A", "15047G>A", "15535C>T", "15747T>C"
+)
+
+tibble::tibble(
+  pos = theposes,
+  thevariant = thevariants,
+) |>
+  dplyr::mutate(
+    posref = purrr::map_chr(
+      .x = thevariants,
+      ~ {
+        gsub(pattern = ">[AGCT]", "", x = .x)
+      }
+    )
+  ) |>
+  dplyr::arrange(pos) |>
+  dplyr::mutate(
+    variant_group = purrr::map_chr(
+      .x = posref,
+      ~ {
+        gsub(pattern = "[0-9]", "", x = .x)
+      }
+    )
+  ) |>
+  dplyr::mutate(
+    color = ifelse(
+      thevariant %in% sc5p_pe_variant,
+      "red",
+      ifelse(
+        thevariant %in% sc5p_r2_variant,
+        "blue",
+        "black"
+      )
+    )
+  ) ->
+posref_df_rank
+
+
+c("A", "G", "C", "T") |>
+  purrr::map(
+    ~ {
+      cluster_n_forplot_ |>
+        dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
+        dplyr::mutate(
+          gsmid_label = factor(gsmid_label, levels = sample_chem$gsmid_label)
+        ) |>
+        dplyr::filter(group == "B") |>
+        dplyr::filter(pos %in% (posref_df_rank |>
+          dplyr::filter(variant_group == .x) |>
+          dplyr::pull(pos)
+        )) |>
+        dplyr::mutate(
+          posref = factor(posref, levels = posref_df_rank |>
+            dplyr::filter(variant_group == .x) |>
+            dplyr::pull(posref))
+        ) |>
+        ggplot(aes(x = posref, y = gsmid_label)) +
+        geom_tile(aes(fill = ratio)) +
+        geom_text(aes(label = label), size = 5) +
+        scale_fill_gradient(
+          low = "white",
+          high = "red",
+          na.value = "white"
+        ) +
+        ggh4x::facet_wrap2(
+          ~gt,
+          ncol = 1,
+          strip.position = "right",
+          strip = ggh4x::strip_themed(
+            background_y = ggh4x::elem_list_rect(
+              fill = pcc$color
+            ),
+            text_y = ggh4x::elem_list_text(
+              colour = "white",
+              face = c("bold")
+            ),
+            by_layer_x = FALSE,
+          )
+        ) +
+        scale_x_discrete(
+          expand = expansion(mult = c(0.01, 0.01))
+        ) +
+        scale_y_discrete(
+          expand = expansion(mult = c(0, 0))
+        ) +
+        theme(
+          panel.background = element_rect(
+            color = "black",
+            fill = NA,
+            linewidth = 0.2
+          ),
+          panel.grid = element_line(colour = "grey", linetype = "dashed"),
+          panel.grid.major = element_line(
+            colour = "grey",
+            linetype = "dashed",
+            size = 0.2
+          ),
+          # axis.ticks = element_blank(),
+          axis.title = element_blank(),
+          axis.text = element_text(
+            color = "black",
+            size = 18
+          ),
+          axis.text.y = element_text(
+            color = sample_chem$color,
+            size = 14,
+          ),
+          axis.text.x = element_text(
+            color = posref_df_rank |>
+              dplyr::filter(variant_group == .x) |>
+              dplyr::pull(color),
+            size = 14,
+          ),
+          legend.position = "none ",
+          plot.title = element_text(
+            size = 16,
+            hjust = 0.5
+          ),
+          strip.background = element_rect(
+            fill = NA,
+            color = "black",
+          ),
+          strip.text = element_text(
+            color = "black",
+            size = 14,
+            face = "bold"
+          ),
+          axis.line = element_line(
+            color = "black"
+          )
+        ) ->
+      pv
+
+      ggsave(
+        filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
+        path = outdir,
+        plot = pv,
+        width = 26,
+        height = 15,
+      )
+    }
+  )
 
 # footer ------------------------------------------------------------------
 
