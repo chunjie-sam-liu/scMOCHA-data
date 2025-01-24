@@ -941,7 +941,6 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
 # ! plot all --------------------------------------------------------------------
 
 
-
 fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   log_info("Start to plot ", thepath)
   # ! parse --------------------------------------------------------------------
@@ -1038,6 +1037,37 @@ fn_plot_all(
   outdir = outdir
 )
 
+
+
+# !  --------------------------------------------------------------------
+
+
+outdir_sub <- file.path(outdir, "sub")
+dir.create(outdir_sub, showWarnings = FALSE)
+thepaths <- c(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425",
+)
+
+sc5p_pe_variant <- c(
+  "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C", "2285T>C", "2289G>T", "2442T>C", "3173G>A", "3176A>T", "3178T>A", "3727T>C",
+  "3728C>T", "3734A>G", "7428G>A", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "15666T>C"
+)
+sc5p_r2_variant <- c(
+  "153A>G", "195T>C", "827A>G", "1002C>T", "2352T>C", "3547A>G", "3766T>C", "4820G>A", "4977T>C", "6164C>T", "6473C>T", "8362T>G", "8598T>C", "8730A>G", "9196G>A",
+  "9497T>C", "10604T>A", "10819A>G", "11177C>T", "14212T>C", "14905G>A", "15047G>A", "15535C>T", "15747T>C"
+)
+
+fn_plot_all(
+  thepath = thepaths[1],
+  thevariants = sc5p_pe_variant,
+  outdir = outdir_sub
+)
+fn_plot_all(
+  thepath = thepaths[2],
+  thevariants = sc5p_r2_variant,
+  outdir = outdir_sub
+)
 
 # ! run --------------------------------------------------------------------
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
@@ -1292,6 +1322,8 @@ c("A", "G", "C", "T") |>
       )
     }
   )
+
+
 
 # footer ------------------------------------------------------------------
 

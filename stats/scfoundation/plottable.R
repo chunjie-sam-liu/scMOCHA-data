@@ -49,7 +49,7 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-# datadir <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting"
+
 datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out"
 filename_ <- file.path(
   datadir,
@@ -57,10 +57,18 @@ filename_ <- file.path(
 )
 gses_meta_read <- readxl::read_xlsx(filename_)
 
+datadir <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting"
+filename_ <- file.path(
+  datadir,
+  "gses_meta_read.xlsx"
+)
+gses_meta_read_ <- readxl::read_xlsx(filename_)
+
 # body --------------------------------------------------------------------
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 
 gses_meta_read |>
+  dplyr::bind_rows(gses_meta_read_) |>
   dplyr::select(
     `GSE ID` = gseid,
     samples,
@@ -134,7 +142,7 @@ last_indices <- sapply(chem_uniq, function(x) {
   max(which(df$Chemistry == x))
 })
 # RColorBrewer::brewer.pal(5, "Set2") |> prismatic::color()
-
+df$samples |> sum()
 flextable::flextable(df) |>
   flextable::set_header_df(
     the_header,
@@ -224,7 +232,7 @@ flextable::flextable(df) |>
 ft
 ft
 
-
+datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out"
 flextable::save_as_image(
   ft,
   path = file.path(datadir, "gses_meta_read.svg"),
