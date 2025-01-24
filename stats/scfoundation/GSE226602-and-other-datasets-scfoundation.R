@@ -257,6 +257,13 @@ tibble::tibble(
   ) ->
 gse_data_loaded
 
+gse_data_loaded |>
+  dplyr::select(anno) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::select(celltype_ratio) |>
+  tidyr::unnest(cols = celltype_ratio) ->
+a
+
 outdir <- file.path(basedir, "scfoundation", "out")
 
 gse_data_loaded |>
