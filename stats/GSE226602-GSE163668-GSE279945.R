@@ -187,7 +187,9 @@ gseid_list_anno_merged_selected |>
 library(ggVennDiagram)
 variant_list <- list(
   "GSE226602-GSM7080044-SC5P-PE" = gseid_list_anno_merged_selected$sv[[1]],
-  "GSE163668-GSM4995425-SC5P-R2" = gseid_list_anno_merged_selected$sv[[2]]
+  "GSE163668-GSM4995425-SC5P-R2" = gseid_list_anno_merged_selected$sv[[2]],
+  "GSE163668-GSM4995448-SC5P-R2" = gseid_list_anno_merged_selected$sv[[3]],
+  "GSE279945-GSM8583898-SC3Pv3" = gseid_list_anno_merged_selected$sv[[4]]
 )
 variant_list_df <- variant_list |>
   ggVennDiagram::Venn() |>
@@ -209,6 +211,15 @@ ggplot() +
   theme_void() ->
 p_venn
 p_venn
+
+ggsave(
+  file.path(outdir, "p_venn.pdf"),
+  p_venn,
+  width = 8,
+  height = 5
+)
+
+variant_list
 
 
 
