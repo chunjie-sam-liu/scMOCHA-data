@@ -69,6 +69,16 @@ cmds <- glue::glue("Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.
 
 readr::write_lines(cmds, "/home/liuc9/github/scMOCHA-data/data/scfoundation/cmds.sh")
 
+project |>
+  tidyr::separate(col = project_ID, into = c("source", "ID"), sep = "-") |>
+  dplyr::filter(source == "GEO") |>
+  as.data.table() ->
+a
+
+a$ID |>
+  unique() |>
+  length()
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
