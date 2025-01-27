@@ -657,8 +657,8 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
         filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
         path = outdir,
         plot = pv,
-        width = 25,
-        height = 23,
+        width = 26,
+        height = ifelse(.x == "sc3pv2_variant", 16, 22),
       )
     }
   )
