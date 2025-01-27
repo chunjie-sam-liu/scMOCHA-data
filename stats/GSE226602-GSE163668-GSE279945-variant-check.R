@@ -508,82 +508,89 @@ cluster_n_forplot_B |>
 cluster_n_forplot_B_
 
 
+fn_plot_read_count <- function(.d) {
+  .d |>
+    ggplot(aes(x = gsmid_label, y = gt)) +
+    geom_tile(aes(fill = ratio)) +
+    geom_text(aes(label = label), size = 4) +
+    scale_fill_gradient(
+      low = "white",
+      high = "red",
+      na.value = "white"
+    ) +
+    ggh4x::facet_wrap2(
+      ~thevariant,
+      ncol = 5,
+      # nrow = 2,
+      strip.position = "top",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = pcc$color
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_x = FALSE,
+      )
+    ) +
+    scale_x_discrete(
+      expand = expansion(mult = c(0.01, 0.01))
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0))
+    ) +
+    theme(
+      panel.background = element_rect(
+        color = "black",
+        fill = NA,
+        linewidth = 0.2
+      ),
+      panel.grid = element_line(colour = "grey", linetype = "dashed"),
+      panel.grid.major = element_line(
+        colour = "grey",
+        linetype = "dashed",
+        size = 0.2
+      ),
+      axis.title = element_blank(),
+      axis.text = element_text(
+        color = "black",
+        size = 16
+      ),
+      legend.position = "none ",
+      plot.title = element_text(
+        size = 16,
+        hjust = 0.5
+      ),
+      strip.background = element_rect(
+        fill = NA,
+        color = "black",
+      ),
+      strip.text = element_text(
+        color = "black",
+        size = 14,
+        face = "bold"
+      ),
+      axis.line = element_line(
+        color = "black"
+      ),
+      axis.text.x = element_text(
+        color = "black",
+        angle = 90,
+        size = 12,
+        vjust = 0.5
+      )
+    ) -> pv
+  pv
+}
+
 c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
   purrr::map(
     ~ {
       cluster_n_forplot_B_ |>
         dplyr::filter(variant_from == .x) |>
-        ggplot(aes(x = gsmid_label, y = gt)) +
-        geom_tile(aes(fill = ratio)) +
-        geom_text(aes(label = label), size = 4) +
-        scale_fill_gradient(
-          low = "white",
-          high = "red",
-          na.value = "white"
-        ) +
-        ggh4x::facet_wrap2(
-          ~thevariant,
-          ncol = 5,
-          strip.position = "top",
-          strip = ggh4x::strip_themed(
-            background_y = ggh4x::elem_list_rect(
-              fill = pcc$color
-            ),
-            text_y = ggh4x::elem_list_text(
-              colour = "white",
-              face = c("bold")
-            ),
-            by_layer_x = FALSE,
-          )
-        ) +
-        scale_x_discrete(
-          expand = expansion(mult = c(0.01, 0.01))
-        ) +
-        scale_y_discrete(
-          expand = expansion(mult = c(0, 0))
-        ) +
-        theme(
-          panel.background = element_rect(
-            color = "black",
-            fill = NA,
-            linewidth = 0.2
-          ),
-          panel.grid = element_line(colour = "grey", linetype = "dashed"),
-          panel.grid.major = element_line(
-            colour = "grey",
-            linetype = "dashed",
-            size = 0.2
-          ),
-          axis.title = element_blank(),
-          axis.text = element_text(
-            color = "black",
-            size = 16
-          ),
-          legend.position = "none ",
-          plot.title = element_text(
-            size = 16,
-            hjust = 0.5
-          ),
-          strip.background = element_rect(
-            fill = NA,
-            color = "black",
-          ),
-          strip.text = element_text(
-            color = "black",
-            size = 14,
-            face = "bold"
-          ),
-          axis.line = element_line(
-            color = "black"
-          ),
-          axis.text.x = element_text(
-            color = "black",
-            angle = 90,
-            size = 12,
-            vjust = 0.5
-          )
-        ) -> pv
-
+        fn_plot_read_count() ->
+      pv
       ggsave(
         filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
         path = outdir,
@@ -591,6 +598,24 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
         width = 26,
         height = ifelse(.x == "sc3pv2_variant", 16, 22),
       )
+
+      c("A", "G", "C", "T") |>
+        purrr::map(
+          \(.y) {
+            cluster_n_forplot_B_ |>
+              dplyr::filter(variant_from == .x) |>
+              dplyr::filter(variant_group == .y) |>
+              fn_plot_read_count() ->
+            pv
+            ggsave(
+              filename = "selected_variants_ratio_{.x}_{.y}.pdf" |> glue::glue(),
+              path = outdir,
+              plot = pv,
+              width = 26,
+              height = 15,
+            )
+          }
+        )
     }
   )
 
