@@ -172,6 +172,9 @@ fn_get_count_all <- function(thepath, thevariants = thevariants, outdir = outdir
 
 # load data ---------------------------------------------------------------
 
+basedir <- "/home/liuc9/github/scMOCHA-data/data"
+outdir <- "/home/liuc9/github/scMOCHA-data/data/out_variant_check"
+
 thepaths <- c(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425",
@@ -198,6 +201,11 @@ sample_chem <- tibble::tibble(
 ) |>
   dplyr::mutate(
     gsmid_label = glue::glue("{gsmid} ({chemistry})")
+  ) |>
+  dplyr::mutate(
+    gsmid_label = factor(gsmid_label, levels = gsmid_label),
+    gsmid = factor(gsmid, levels = gsmid),
+    chemistry = factor(chemistry, levels = chemistry |> unique())
   )
 
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
@@ -255,18 +263,163 @@ fn_plot_variant_depth_distribution <- function(thepath, thevariants, outdir) {
   )
 }
 
-thepaths |>
-  purrr::map(
-    fn_plot_variant_depth_distribution,
-    thevariants = sc5p_pe_variant,
-    outdir = file.path(
-      outdir,
-      "sc5p_pe_variant"
+fn_plot_variant_depth_combined <- function(.d, .v) {
+  .d |>
+    dplyr::select(pos, depth, gsmid_label) |>
+    ggplot(aes(x = pos, y = depth, fill = gsmid_label)) +
+    geom_bar(stat = "identity", show.legend = FALSE) +
+    scale_x_continuous(
+      limits = c(0, 17000),
+      breaks = seq(0, 17000, 1000),
+      labels = seq(0, 17000, 1000),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    # .plot_vline +
+    geom_vline(
+      xintercept = .v |>
+        purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+        purrr::map_int(as.integer),
+      linetype = "dashed",
+      color = "red",
+      linetype = 21
+    ) +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      # limits = c(0, 520000),
+      label = scales::label_number()
+    ) +
+    scale_fill_manual(
+      name = "Cell type",
+      values = pcc$color
+    ) +
+    ggh4x::facet_wrap2(
+      ~gsmid_label,
+      ncol = 1,
+      strip.position = "right",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = pcc$color
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
+      ),
+      scales = "free_y",
+    ) +
+    theme(
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      # axis.line.x.bottom = element_line(color = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      legend.position = c(0.8, 0.5),
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+      legend.text = element_text(
+        size = 14,
+        color = "black"
+      ),
+      legend.title = element_text(
+        size = 16,
+        colour = "black"
+      ),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        size = 8,
+        color = "black",
+        face = "bold"
+      )
+    ) +
+    coord_cartesian(xlim = c(0, 17000)) +
+    labs(y = "Depth") ->
+  .pd
+
+  pp <- wrap_plots(
+    .pd,
+    .d$p_mtdna[[1]],
+    ncol = 1,
+    heights = c(0.7, 0.1)
+  )
+
+  pp
+}
+
+sample_chem |>
+  dplyr::mutate(
+    p = purrr::map(
+      .x = thepath,
+      fn_plot_variant_depth_distribution,
+      thevariants = sc5p_pe_variant,
+      outdir = file.path(
+        outdir,
+        "sc5p_pe_variant"
+      )
     )
-  ) ->
+  ) |>
+  tidyr::unnest(cols = p) |>
+  dplyr::mutate(
+    cov = purrr::map(
+      .x = p_depth,
+      .f = ~ {
+        .x$p_mt_depth_allcell -> .xx
+        ggplot_build(.xx)$plot$data
+      }
+    ),
+  ) |>
+  tidyr::unnest(cols = c(cov)) ->
 sc5p_pe_variant_plot
 
 
+ggsave(
+  filename = "sc5p_pe_variant_depth_combined.pdf" |> glue::glue(),
+  path = outdir,
+  plot = fn_plot_variant_depth_combined(sc5p_pe_variant_plot, sc5p_pe_variant),
+  width = 17,
+  height = 9,
+)
+
+
+sample_chem |>
+  dplyr::mutate(
+    p = purrr::map(
+      .x = thepath,
+      fn_plot_variant_depth_distribution,
+      thevariants = sc5p_r2_variant,
+      outdir = file.path(
+        outdir,
+        "sc5p_r2_variant"
+      )
+    )
+  ) |>
+  tidyr::unnest(cols = p) |>
+  dplyr::mutate(
+    cov = purrr::map(
+      .x = p_depth,
+      .f = ~ {
+        .x$p_mt_depth_allcell -> .xx
+        ggplot_build(.xx)$plot$data
+      }
+    ),
+  ) |>
+  tidyr::unnest(cols = c(cov)) ->
+sc5p_r2_variant_plot
+
+
+
+ggsave(
+  filename = "sc5p_r2_variant_depth_combined.pdf" |> glue::glue(),
+  path = outdir,
+  plot = fn_plot_variant_depth_combined(sc5p_r2_variant_plot, sc5p_r2_variant),
+  width = 17,
+  height = 9,
+)
 
 
 # ! read count --------------------------------------------------------------------
