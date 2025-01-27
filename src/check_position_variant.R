@@ -234,7 +234,7 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
 
   cluster_n_temp |>
     dplyr::mutate(
-      label = glue::glue("total = {nv} \n forward = {fw}, reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
+      label = glue::glue("total = {nv} \n forward = {fw} \n reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
     ) ->
   cluster_n_forplot
 

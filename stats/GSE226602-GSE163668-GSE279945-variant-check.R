@@ -182,7 +182,8 @@ thepaths <- c(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425",
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995448",
-  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898",
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation/GSE162117/final/GSM4933442"
 )
 
 sc5p_pe_variant <- c(
@@ -193,14 +194,17 @@ sc5p_r2_variant <- c(
   "153A>G", "195T>C", "827A>G", "1002C>T", "2352T>C", "3547A>G", "3766T>C", "4820G>A", "4977T>C", "6164C>T", "6473C>T", "8362T>G", "8598T>C", "8730A>G", "9196G>A",
   "9497T>C", "10604T>A", "10819A>G", "11177C>T", "14212T>C", "14905G>A", "15047G>A", "15535C>T", "15747T>C"
 )
+sc3pv2_variant <- c(
+  "3010G>A", "6260G>A", "8251G>A", "9055G>A", "9150A>G", "9698T>C", "9950T>C", "9974C>T", "10211C>T", "11840C>T", "12016C>A", "15662A>G"
+)
 
 sample_chem <- tibble::tibble(
-  gseid = c("GSE226602", "GSE163668", "GSE163668", "GSE279945"),
-  gsmid = c("GSM7080044", "GSM4995425", "GSM4995448", "GSM8583898"),
+  gseid = c("GSE226602", "GSE163668", "GSE163668", "GSE279945", "GSE162117"),
+  gsmid = c("GSM7080044", "GSM4995425", "GSM4995448", "GSM8583898", "GSM4933442"),
   thepath = thepaths,
-  thevariant = list(sc5p_pe_variant, sc5p_r2_variant, NULL, NULL),
-  chemistry = c("SC5P-PE", "SC5P-R2", "SC5P-R2", "SC3Pv3"),
-  color = c("red", "blue", "black", "black")
+  thevariant = list(sc5p_pe_variant, sc5p_r2_variant, NULL, NULL, sc3pv2_variant),
+  chemistry = c("SC5P-PE", "SC5P-R2", "SC5P-R2", "SC3Pv3", "SC3Pv2"),
+  color = c("red", "blue", "black", "black", "green")
 ) |>
   dplyr::mutate(
     gsmid_label = glue::glue("{gsmid} ({chemistry})")
@@ -217,7 +221,7 @@ pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu
 # body --------------------------------------------------------------------
 
 thevariants <- c(
-  sc5p_pe_variant, sc5p_r2_variant
+  sc5p_pe_variant, sc5p_r2_variant, sc3pv2_variant
 )
 theposes <- thevariants |>
   purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
@@ -354,75 +358,123 @@ fn_plot_variant_depth_combined <- function(.d, .v) {
   pp
 }
 
-sample_chem |>
+tibble::tibble(
+  variant_from = c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant"),
+  thevariants = list(sc5p_pe_variant, sc5p_r2_variant, sc3pv2_variant)
+) |>
   dplyr::mutate(
-    p = purrr::map(
-      .x = thepath,
-      fn_plot_variant_depth_distribution,
-      thevariants = sc5p_pe_variant,
-      outdir = file.path(
-        outdir,
-        "sc5p_pe_variant"
-      )
-    )
-  ) |>
-  tidyr::unnest(cols = p) |>
-  dplyr::mutate(
-    cov = purrr::map(
-      .x = p_depth,
-      .f = ~ {
-        .x$p_mt_depth_allcell -> .xx
-        ggplot_build(.xx)$plot$data
+    p = purrr::walk2(
+      .x = thevariants,
+      .y = variant_from,
+      ~ {
+        sample_chem |>
+          dplyr::mutate(
+            p = purrr::map(
+              .x = thepath,
+              fn_plot_variant_depth_distribution,
+              thevariants = .x,
+              outdir = file.path(
+                outdir,
+                .y
+              )
+            )
+          ) |>
+          tidyr::unnest(cols = p) |>
+          dplyr::mutate(
+            cov = purrr::map(
+              .x = p_depth,
+              .f = ~ {
+                .x$p_mt_depth_allcell -> .xx
+                ggplot_build(.xx)$plot$data
+              }
+            ),
+          ) |>
+          tidyr::unnest(cols = c(cov)) ->
+        .plot
+
+        log_success("Finish to plot ", .y)
+
+        ggsave(
+          filename = "{.y}_depth_combined.pdf" |> glue::glue(),
+          path = outdir,
+          plot = fn_plot_variant_depth_combined(.plot, .x),
+          width = 17,
+          height = 9,
+        )
       }
-    ),
-  ) |>
-  tidyr::unnest(cols = c(cov)) ->
-sc5p_pe_variant_plot
-
-
-ggsave(
-  filename = "sc5p_pe_variant_depth_combined.pdf" |> glue::glue(),
-  path = outdir,
-  plot = fn_plot_variant_depth_combined(sc5p_pe_variant_plot, sc5p_pe_variant),
-  width = 17,
-  height = 9,
-)
-
-
-sample_chem |>
-  dplyr::mutate(
-    p = purrr::map(
-      .x = thepath,
-      fn_plot_variant_depth_distribution,
-      thevariants = sc5p_r2_variant,
-      outdir = file.path(
-        outdir,
-        "sc5p_r2_variant"
-      )
     )
-  ) |>
-  tidyr::unnest(cols = p) |>
-  dplyr::mutate(
-    cov = purrr::map(
-      .x = p_depth,
-      .f = ~ {
-        .x$p_mt_depth_allcell -> .xx
-        ggplot_build(.xx)$plot$data
-      }
-    ),
-  ) |>
-  tidyr::unnest(cols = c(cov)) ->
-sc5p_r2_variant_plot
+  )
+
+# sample_chem |>
+#   dplyr::mutate(
+#     p = purrr::map(
+#       .x = thepath,
+#       fn_plot_variant_depth_distribution,
+#       thevariants = sc5p_pe_variant,
+#       outdir = file.path(
+#         outdir,
+#         "sc5p_pe_variant"
+#       )
+#     )
+#   ) |>
+#   tidyr::unnest(cols = p) |>
+#   dplyr::mutate(
+#     cov = purrr::map(
+#       .x = p_depth,
+#       .f = ~ {
+#         .x$p_mt_depth_allcell -> .xx
+#         ggplot_build(.xx)$plot$data
+#       }
+#     ),
+#   ) |>
+#   tidyr::unnest(cols = c(cov)) ->
+# sc5p_pe_variant_plot
+
+
+# ggsave(
+#   filename = "sc5p_pe_variant_depth_combined.pdf" |> glue::glue(),
+#   path = outdir,
+#   plot = fn_plot_variant_depth_combined(sc5p_pe_variant_plot, sc5p_pe_variant),
+#   width = 17,
+#   height = 9,
+# )
+
+
+# sample_chem |>
+#   dplyr::mutate(
+#     p = purrr::map(
+#       .x = thepath,
+#       fn_plot_variant_depth_distribution,
+#       thevariants = sc5p_r2_variant,
+#       outdir = file.path(
+#         outdir,
+#         "sc5p_r2_variant"
+#       )
+#     )
+#   ) |>
+#   tidyr::unnest(cols = p) |>
+#   dplyr::mutate(
+#     cov = purrr::map(
+#       .x = p_depth,
+#       .f = ~ {
+#         .x$p_mt_depth_allcell -> .xx
+#         ggplot_build(.xx)$plot$data
+#       }
+#     ),
+#   ) |>
+#   tidyr::unnest(cols = c(cov)) ->
+# sc5p_r2_variant_plot
 
 
 
-ggsave(
-  filename = "sc5p_r2_variant_depth_combined.pdf" |> glue::glue(),
-  path = outdir,
-  plot = fn_plot_variant_depth_combined(sc5p_r2_variant_plot, sc5p_r2_variant),
-  width = 17,
-  height = 9,
-)
+# ggsave(
+#   filename = "sc5p_r2_variant_depth_combined.pdf" |> glue::glue(),
+#   path = outdir,
+#   plot = fn_plot_variant_depth_combined(sc5p_r2_variant_plot, sc5p_r2_variant),
+#   width = 17,
+#   height = 9,
+# )
+
 
 
 # ! read count --------------------------------------------------------------------
@@ -507,7 +559,7 @@ tibble::tibble(
       ifelse(
         thevariant %in% sc5p_r2_variant,
         "sc5p_r2_variant",
-        "black"
+        "sc3pv2_variant"
       )
     ),
     variant_group = factor(variant_group, levels = c("A", "G", "C", "T"))
@@ -525,119 +577,23 @@ cluster_n_forplot_B |>
 cluster_n_forplot_B_
 
 
-cluster_n_forplot_B_ |>
-  dplyr::filter(variant_from == "sc5p_pe_variant") |>
-  ggplot(aes(x = gsmid_label, y = gt)) +
-  geom_tile(aes(fill = ratio)) +
-  geom_text(aes(label = label), size = 5) +
-  scale_fill_gradient(
-    low = "white",
-    high = "red",
-    na.value = "white"
-  ) +
-  ggh4x::facet_wrap2(
-    ~thevariant,
-    ncol = 6,
-    strip.position = "top",
-    strip = ggh4x::strip_themed(
-      background_y = ggh4x::elem_list_rect(
-        fill = pcc$color
-      ),
-      text_y = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
-      ),
-      by_layer_x = FALSE,
-    )
-  ) +
-  scale_x_discrete(
-    expand = expansion(mult = c(0.01, 0.01))
-  ) +
-  scale_y_discrete(
-    expand = expansion(mult = c(0, 0))
-  ) +
-  theme(
-    panel.background = element_rect(
-      color = "black",
-      fill = NA,
-      linewidth = 0.2
-    ),
-    panel.grid = element_line(colour = "grey", linetype = "dashed"),
-    panel.grid.major = element_line(
-      colour = "grey",
-      linetype = "dashed",
-      size = 0.2
-    ),
-    axis.title = element_blank(),
-    axis.text = element_text(
-      color = "black",
-      size = 16
-    ),
-    legend.position = "none ",
-    plot.title = element_text(
-      size = 16,
-      hjust = 0.5
-    ),
-    strip.background = element_rect(
-      fill = NA,
-      color = "black",
-    ),
-    strip.text = element_text(
-      color = "black",
-      size = 14,
-      face = "bold"
-    ),
-    axis.line = element_line(
-      color = "black"
-    ),
-    axis.text.x = element_text(
-      color = "black",
-      angle = 90,
-      size = 12,
-      vjust = 0.5
-    )
-  )
-
-
-
-
-
-
-
-
-
-c("A", "G", "C", "T") |>
+c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
   purrr::map(
     ~ {
-      cluster_n_forplot_ |>
-        # dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
-        dplyr::mutate(
-          gsmid_label = factor(gsmid_label, levels = sample_chem$gsmid_label)
-        ) |>
-        dplyr::filter(group == "B") |>
-        dplyr::filter(pos %in% (posref_df_rank |>
-          dplyr::filter(variant_group == .x) |>
-          dplyr::pull(pos)
-        )) |>
-        dplyr::mutate(
-          posref = factor(posref, levels = posref_df_rank |>
-            dplyr::filter(variant_group == .x) |>
-            dplyr::pull(posref))
-        ) ->
-      .m
-      .m |>
-        ggplot(aes(x = posref, y = gsmid_label)) +
+      cluster_n_forplot_B_ |>
+        dplyr::filter(variant_from == .x) |>
+        ggplot(aes(x = gsmid_label, y = gt)) +
         geom_tile(aes(fill = ratio)) +
-        geom_text(aes(label = label), size = 5) +
+        geom_text(aes(label = label), size = 4) +
         scale_fill_gradient(
           low = "white",
           high = "red",
           na.value = "white"
         ) +
         ggh4x::facet_wrap2(
-          ~gt,
-          ncol = 1,
-          strip.position = "right",
+          ~thevariant,
+          ncol = 5,
+          strip.position = "top",
           strip = ggh4x::strip_themed(
             background_y = ggh4x::elem_list_rect(
               fill = pcc$color
@@ -667,21 +623,10 @@ c("A", "G", "C", "T") |>
             linetype = "dashed",
             size = 0.2
           ),
-          # axis.ticks = element_blank(),
           axis.title = element_blank(),
           axis.text = element_text(
             color = "black",
-            size = 18
-          ),
-          axis.text.y = element_text(
-            color = sample_chem$color,
-            size = 14,
-          ),
-          axis.text.x = element_text(
-            color = posref_df_rank |>
-              dplyr::filter(variant_group == .x) |>
-              dplyr::pull(color),
-            size = 14,
+            size = 16
           ),
           legend.position = "none ",
           plot.title = element_text(
@@ -699,19 +644,136 @@ c("A", "G", "C", "T") |>
           ),
           axis.line = element_line(
             color = "black"
+          ),
+          axis.text.x = element_text(
+            color = "black",
+            angle = 90,
+            size = 12,
+            vjust = 0.5
           )
-        ) ->
-      pv
+        ) -> pv
 
       ggsave(
         filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
         path = outdir,
         plot = pv,
-        width = 26,
-        height = 15,
+        width = 25,
+        height = 23,
       )
     }
   )
+
+
+notrun <- \(){
+  c("A", "G", "C", "T") |>
+    purrr::map(
+      ~ {
+        cluster_n_forplot_ |>
+          # dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
+          dplyr::mutate(
+            gsmid_label = factor(gsmid_label, levels = sample_chem$gsmid_label)
+          ) |>
+          dplyr::filter(group == "B") |>
+          dplyr::filter(pos %in% (posref_df_rank |>
+            dplyr::filter(variant_group == .x) |>
+            dplyr::pull(pos)
+          )) |>
+          dplyr::mutate(
+            posref = factor(posref, levels = posref_df_rank |>
+              dplyr::filter(variant_group == .x) |>
+              dplyr::pull(posref))
+          ) ->
+        .m
+        .m |>
+          ggplot(aes(x = posref, y = gsmid_label)) +
+          geom_tile(aes(fill = ratio)) +
+          geom_text(aes(label = label), size = 5) +
+          scale_fill_gradient(
+            low = "white",
+            high = "red",
+            na.value = "white"
+          ) +
+          ggh4x::facet_wrap2(
+            ~gt,
+            ncol = 1,
+            strip.position = "right",
+            strip = ggh4x::strip_themed(
+              background_y = ggh4x::elem_list_rect(
+                fill = pcc$color
+              ),
+              text_y = ggh4x::elem_list_text(
+                colour = "white",
+                face = c("bold")
+              ),
+              by_layer_x = FALSE,
+            )
+          ) +
+          scale_x_discrete(
+            expand = expansion(mult = c(0.01, 0.01))
+          ) +
+          scale_y_discrete(
+            expand = expansion(mult = c(0, 0))
+          ) +
+          theme(
+            panel.background = element_rect(
+              color = "black",
+              fill = NA,
+              linewidth = 0.2
+            ),
+            panel.grid = element_line(colour = "grey", linetype = "dashed"),
+            panel.grid.major = element_line(
+              colour = "grey",
+              linetype = "dashed",
+              size = 0.2
+            ),
+            # axis.ticks = element_blank(),
+            axis.title = element_blank(),
+            axis.text = element_text(
+              color = "black",
+              size = 18
+            ),
+            axis.text.y = element_text(
+              color = sample_chem$color,
+              size = 14,
+            ),
+            axis.text.x = element_text(
+              color = posref_df_rank |>
+                dplyr::filter(variant_group == .x) |>
+                dplyr::pull(color),
+              size = 14,
+            ),
+            legend.position = "none ",
+            plot.title = element_text(
+              size = 16,
+              hjust = 0.5
+            ),
+            strip.background = element_rect(
+              fill = NA,
+              color = "black",
+            ),
+            strip.text = element_text(
+              color = "black",
+              size = 14,
+              face = "bold"
+            ),
+            axis.line = element_line(
+              color = "black"
+            )
+          ) ->
+        pv
+
+        ggsave(
+          filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
+          path = outdir,
+          plot = pv,
+          width = 26,
+          height = 15,
+        )
+      }
+    )
+}
+
+
 
 
 # footer ------------------------------------------------------------------

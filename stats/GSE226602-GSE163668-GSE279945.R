@@ -49,11 +49,11 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-gseid_list <- c("GSE226602", "GSE163668", "GSE279945")
+gseid_list <- c("GSE226602", "GSE163668", "GSE279945", "GSE162117")
 
 tibble::tibble(
-  gseid = c("GSE226602", "GSE163668", "GSE279945"),
-  chem = c("SC5P-PE", "SC5P-R2", "SC3Pv3")
+  gseid = c("GSE226602", "GSE163668", "GSE279945", "GSE162117"),
+  chem = c("SC5P-PE", "SC5P-R2", "SC3Pv3", "SC3Pv2")
 ) -> gseid_list
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
@@ -118,7 +118,11 @@ gseid_list_anno_merged
 
 
 gseid_list_anno_merged |> dplyr::glimpse()
-selected_srrid <- c("GSM4995425", "GSM4995448", "GSM7080044", "GSM8583898")
+selected_srrid <- c("GSM4995425", "GSM4995448", "GSM4933442", "GSM7080044", "GSM8583898")
+
+# selected_srrid <- gseid_list_anno_merged$srrid |>
+#   unique() |>
+#   as.character()
 
 gseid_list_anno_merged |>
   dplyr::mutate(
@@ -143,6 +147,7 @@ ggsave(
   width = 8,
   height = 5
 )
+
 plotly::ggplotly(p) -> p_plotly_select_samples
 
 p_plotly_select_samples
@@ -173,6 +178,8 @@ gseid_list_anno_merged |>
 
 
 
+
+
 gseid_list_anno_merged_selected$sv[[1]]
 gseid_list_anno_merged_selected$sv[[2]]
 
@@ -181,16 +188,32 @@ gseid_list_anno_merged_selected$srrdir
 
 gseid_list_anno_merged_selected$srrid[[2]]
 gseid_list_anno_merged_selected |>
-  dplyr::select(gseid, srrid, chemistry) |>
-  dplyr::mutate(label = glue::glue("{gseid}-{srrid}-{chemistry}"))
+  # dplyr::select(gseid, srrid, chemistry) |>
+  dplyr::mutate(label = glue::glue("{srrid}-{chemistry}")) |>
+  dplyr::select(label, sv) ->
+gseid_list_anno_merged_selected_
+
+
+
+gseid_list_anno_merged_selected_ |>
+  tidyr::spread(key = label, value = sv) |>
+  as.list() |>
+  purrr::map(
+    ~ {
+      .x[[1]]
+    }
+  ) ->
+variant_list
 
 library(ggVennDiagram)
-variant_list <- list(
-  "GSE226602-GSM7080044-SC5P-PE" = gseid_list_anno_merged_selected$sv[[1]],
-  "GSE163668-GSM4995425-SC5P-R2" = gseid_list_anno_merged_selected$sv[[2]],
-  "GSE163668-GSM4995448-SC5P-R2" = gseid_list_anno_merged_selected$sv[[3]],
-  "GSE279945-GSM8583898-SC3Pv3" = gseid_list_anno_merged_selected$sv[[4]]
-)
+# variant_list <- list(
+#   "GSE226602-GSM7080044-SC5P-PE" = gseid_list_anno_merged_selected$sv[[1]],
+#   "GSE163668-GSM4995425-SC5P-R2" = gseid_list_anno_merged_selected$sv[[2]],
+#   "GSE163668-GSM4995448-SC5P-R2" = gseid_list_anno_merged_selected$sv[[3]],
+#   "GSE163668-GSM4995459-SC5P-R2" = gseid_list_anno_merged_selected$sv[[4]],
+#   "GSE279945-GSM8583898-SC3Pv3" = gseid_list_anno_merged_selected$sv[[5]]
+# )
+
 variant_list_df <- variant_list |>
   ggVennDiagram::Venn() |>
   ggVennDiagram::process_data()
