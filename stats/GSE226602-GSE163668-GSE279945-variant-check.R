@@ -143,6 +143,9 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
 fn_get_count_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   log_info("Start to plot ", thepath)
   # ! parse --------------------------------------------------------------------
+  if (!file.exists(outdir)) {
+    dir.create(outdir, showWarnings = FALSE)
+  }
 
 
   gsmid <- basename(thepath)
@@ -436,6 +439,7 @@ load_count |>
         tibble::enframe() |>
         tidyr::spread(key = name, value = value) |>
         tidyr::unnest(cols = c(thevariants, theposes, cluster_n_forplot, gseid, gsmid)) |>
+        dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
         dplyr::mutate(
           cluster_n_forplot = purrr::map2(
             .x = cluster_n_forplot,
@@ -453,9 +457,16 @@ load_count_unnest
 
 
 load_count_unnest |>
-  dplyr::select(3, 2, 1) |>
   tidyr::unnest(cols = c(cluster_n_forplot)) ->
 cluster_n_forplot_
+
+# only B cell
+cluster_n_forplot_ |>
+  dplyr::filter(
+    group == "B"
+  ) ->
+cluster_n_forplot_B
+
 
 gt <- factor(c("A", "G", "C", "T"), levels = c("A", "G", "C", "T"))
 posref = cluster_n_forplot_$posref |> unique()
@@ -466,7 +477,6 @@ posref_df <- data.table::data.table(
   posref = rep(posref, length(gt)),
   group = rep(group, each = length(gt) * length(posref))
 )
-
 
 
 tibble::tibble(
@@ -491,23 +501,116 @@ tibble::tibble(
     )
   ) |>
   dplyr::mutate(
-    color = ifelse(
+    variant_from = ifelse(
       thevariant %in% sc5p_pe_variant,
-      "red",
+      "sc5p_pe_variant",
       ifelse(
         thevariant %in% sc5p_r2_variant,
-        "blue",
+        "sc5p_r2_variant",
         "black"
       )
-    )
+    ),
+    variant_group = factor(variant_group, levels = c("A", "G", "C", "T"))
+  ) |>
+  dplyr::group_by(variant_group, pos) |>
+  dplyr::mutate(
+    posref = factor(posref, levels = posref),
+    thevariant = factor(thevariant, levels = thevariant)
   ) ->
 posref_df_rank
+
+cluster_n_forplot_B |>
+  dplyr::select(-c(posref, thevariant)) |>
+  dplyr::left_join(posref_df_rank, by = c("pos")) ->
+cluster_n_forplot_B_
+
+
+cluster_n_forplot_B_ |>
+  dplyr::filter(variant_from == "sc5p_pe_variant") |>
+  ggplot(aes(x = gsmid_label, y = gt)) +
+  geom_tile(aes(fill = ratio)) +
+  geom_text(aes(label = label), size = 5) +
+  scale_fill_gradient(
+    low = "white",
+    high = "red",
+    na.value = "white"
+  ) +
+  ggh4x::facet_wrap2(
+    ~thevariant,
+    ncol = 6,
+    strip.position = "top",
+    strip = ggh4x::strip_themed(
+      background_y = ggh4x::elem_list_rect(
+        fill = pcc$color
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_x = FALSE,
+    )
+  ) +
+  scale_x_discrete(
+    expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_y_discrete(
+    expand = expansion(mult = c(0, 0))
+  ) +
+  theme(
+    panel.background = element_rect(
+      color = "black",
+      fill = NA,
+      linewidth = 0.2
+    ),
+    panel.grid = element_line(colour = "grey", linetype = "dashed"),
+    panel.grid.major = element_line(
+      colour = "grey",
+      linetype = "dashed",
+      size = 0.2
+    ),
+    axis.title = element_blank(),
+    axis.text = element_text(
+      color = "black",
+      size = 16
+    ),
+    legend.position = "none ",
+    plot.title = element_text(
+      size = 16,
+      hjust = 0.5
+    ),
+    strip.background = element_rect(
+      fill = NA,
+      color = "black",
+    ),
+    strip.text = element_text(
+      color = "black",
+      size = 14,
+      face = "bold"
+    ),
+    axis.line = element_line(
+      color = "black"
+    ),
+    axis.text.x = element_text(
+      color = "black",
+      angle = 90,
+      size = 12,
+      vjust = 0.5
+    )
+  )
+
+
+
+
+
+
+
+
 
 c("A", "G", "C", "T") |>
   purrr::map(
     ~ {
       cluster_n_forplot_ |>
-        dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
+        # dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
         dplyr::mutate(
           gsmid_label = factor(gsmid_label, levels = sample_chem$gsmid_label)
         ) |>
@@ -520,7 +623,9 @@ c("A", "G", "C", "T") |>
           posref = factor(posref, levels = posref_df_rank |>
             dplyr::filter(variant_group == .x) |>
             dplyr::pull(posref))
-        ) |>
+        ) ->
+      .m
+      .m |>
         ggplot(aes(x = posref, y = gsmid_label)) +
         geom_tile(aes(fill = ratio)) +
         geom_text(aes(label = label), size = 5) +
