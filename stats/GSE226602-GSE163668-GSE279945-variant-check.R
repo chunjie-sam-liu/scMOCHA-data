@@ -588,31 +588,28 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
   purrr::map(
     ~ {
       cluster_n_forplot_B_ |>
-        dplyr::filter(variant_from == .x) |>
-        fn_plot_read_count() ->
-      pv
-      ggsave(
-        filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
-        path = outdir,
-        plot = pv,
-        width = 26,
-        height = ifelse(.x == "sc3pv2_variant", 16, 22),
-      )
+        dplyr::filter(variant_from == .x) ->
+      plot_for_
+      plot_for_$thevariant |> unique() -> thevariant_for_plot
 
-      c("A", "G", "C", "T") |>
+
+      thevariant_for_plot |>
+        # split the vector into several vectors, each with 10 elements
+        split(ceiling(seq_along(thevariant_for_plot) / 10)) |>
         purrr::map(
           \(.y) {
-            cluster_n_forplot_B_ |>
-              dplyr::filter(variant_from == .x) |>
-              dplyr::filter(variant_group == .y) |>
+            plot_for_ |>
+              dplyr::filter(thevariant %in% .y) |>
               fn_plot_read_count() ->
             pv
+            vname <- .y |>
+              paste(collapse = "_")
             ggsave(
               filename = "selected_variants_ratio_{.x}_{.y}.pdf" |> glue::glue(),
               path = outdir,
               plot = pv,
               width = 26,
-              height = 15,
+              height = 12,
             )
           }
         )
