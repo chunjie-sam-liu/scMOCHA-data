@@ -245,7 +245,55 @@ ggsave(
 variant_list
 
 
+# stats --------------------------------------------------------------------
 
+gseid_list_anno_merged_selected |>
+  dplyr::mutate(
+    stats = purrr::map2(
+      .x = gseid,
+      .y = srrid,
+      ~ {
+        data.table::fread(
+          file.path(
+            basedir,
+            .x,
+            "final",
+            .y,
+            "cell.variant_stats.tsv.gz"
+          )
+        )
+      }
+    )
+  ) ->
+gseid_list_anno_merged_selected_stats
+
+
+gseid_list_anno_merged_selected_stats$sv[[1]]
+gseid_list_anno_merged_selected_stats$stats[[1]] |>
+  dplyr::mutate(
+    vmr_log = log10(vmr)
+  ) |>
+  # dplyr::filter(
+  #   variant %in% gseid_list_anno_merged_selected_stats$sv[[1]]
+  # ) |>
+  ggplot(aes(x = strand_correlation, y = vmr_log)) +
+  geom_point() +
+  geom_vline(
+    xintercept = 0.65,
+    linetype = 20,
+    color = "red"
+  ) +
+  geom_hline(
+    yintercept = log10(0.01),
+    linetype = 20,
+    color = "red"
+  )
+
+
+gseid_list_anno_merged_selected_stats$stats[[1]] |>
+  dplyr::filter(
+    strand_correlation == 1
+  )
 
 
 # footer ------------------------------------------------------------------
