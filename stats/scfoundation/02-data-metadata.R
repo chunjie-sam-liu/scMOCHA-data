@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2024-12-21 13:42:29
+# @DATE: 2025-02-24 16:22:48
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
@@ -49,35 +49,19 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-project_filename <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/Projects.xlsx"
-
-project <- readxl::read_xlsx(project_filename) |> as.data.table()
+project_filename <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source.csv"
+project_source <- data.table::fread(project_filename)
 
 # body --------------------------------------------------------------------
 
+sqlite_file <- "/mnt/isilon/xing_lab/liuc9/refdata/sradb/SRAmetadb.sqlite"
 
-project |>
-  tidyr::separate(col = project_ID, into = c("source", "ID"), sep = "-") |>
-  dplyr::filter(source == "GEO") |>
-  as.data.table() |>
-  dplyr::select(ID) |>
-  dplyr::distinct() ->
-project_geo
+sra_con <- DBI::dbConnect(
+  RSQLite::SQLite(),
+  sqlite_file
+)
 
-cmds <- glue::glue("Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R -g {project_geo$ID} -b /home/liuc9/github/scMOCHA-data/data/scfoundation")
-
-
-readr::write_lines(cmds, "/home/liuc9/github/scMOCHA-data/data/scfoundation/cmds.sh")
-
-project |>
-  tidyr::separate(col = project_ID, into = c("source", "ID"), sep = "-") |>
-  dplyr::filter(source == "GEO") |>
-  as.data.table() ->
-a
-
-a$ID |>
-  unique() |>
-  length()
+DBI::dbListTables(sra_con)
 
 # footer ------------------------------------------------------------------
 
