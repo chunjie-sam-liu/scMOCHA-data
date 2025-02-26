@@ -60,8 +60,32 @@ sra_con <- DBI::dbConnect(
   RSQLite::SQLite(),
   sqlite_file
 )
+# DBI::dbDisconnect(sra_con)
 
 DBI::dbListTables(sra_con)
+
+sra_table <- dplyr::tbl(sra_con, "sra")
+study_table <- dplyr::tbl(sra_con, "study")
+sample_table <- dplyr::tbl(sra_con, "sample")
+
+
+proj_IDs <- project_source$proj_ID
+
+sra_table |>
+  dplyr::filter(study_name %in% proj_IDs) |>
+  dplyr::inner_join(study_table, by = "study_accession") |>
+  as.data.table() ->
+sra_df
+
+sra_df |>
+  dplyr::pull(sample_accession) |>
+  unque() ->
+sample_accessions
+
+
+
+
+
 
 # footer ------------------------------------------------------------------
 
