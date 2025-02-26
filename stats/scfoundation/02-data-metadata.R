@@ -68,24 +68,113 @@ sra_table <- dplyr::tbl(sra_con, "sra")
 study_table <- dplyr::tbl(sra_con, "study")
 sample_table <- dplyr::tbl(sra_con, "sample")
 
+col_inter <- setdiff(intersect(colnames(sra_table), colnames(study_table)), "study_accession")
+
 
 proj_IDs <- project_source$proj_ID
 
 sra_table |>
   dplyr::filter(study_name %in% proj_IDs) |>
-  dplyr::inner_join(study_table, by = "study_accession") |>
+  dplyr::inner_join(
+    study_table |>
+      dplyr::select(-col_inter),
+    by = "study_accession"
+  ) |>
   as.data.table() ->
 sra_df
 
 sra_df |>
   dplyr::pull(sample_accession) |>
-  unque() ->
+  unique() ->
 sample_accessions
 
 
+sample_df <- sample_table |>
+  dplyr::filter(
+    sample_accession %in% sample_accessions
+  ) |>
+  as.data.table()
+
+DBI::dbDisconnect(sra_con)
+
+cleaned_sample_df <- sample_df %>%
+  dplyr::select(-which(apply(is.na(.), 2, all))) |>
+  dplyr::select(sample_accession, sample_attribute)
+
+
+cleaned_sample_df |>
+  dplyr::mutate(
+    sa = parallel::mclapply(
+      X = sample_attribute,
+      FUN = function(.x) {
+        .x |>
+          stringr::str_split(" \\|\\| ") |>
+          _[[1]] ->
+        .xx
+
+        tibble::tibble(
+          xx = .xx
+        ) |>
+          tidyr::separate(
+            col = xx,
+            into = c("key", "value"),
+            sep = ": ",
+            remove = TRUE
+          ) ->
+        .d
+
+        .d |> dplyr::filter(key == "source_name") -> .dd
+
+        tibble::tibble(
+          source_name = .dd$value,
+          sample_attribute_new = list(.d)
+        ) |>
+          dplyr::mutate(
+            source_name = stringr::str_trim(source_name)
+          )
+      },
+      mc.cores = 20
+    )
+  ) |>
+  tidyr::unnest(cols = sa) ->
+cleaned_sample_source_name
+
+# study_name
+# experiment_name
+
+sra_df |>
+  dplyr::select(-sample_attribute) |>
+  dplyr::inner_join(
+    cleaned_sample_source_name,
+    by = c("sample_accession" = "sample_accession")
+  ) |>
+  dplyr::mutate(
+    proj_ID = study_name,
+    samp_ID = experiment_name
+  ) |>
+  dplyr::relocate(
+    proj_ID, samp_ID,
+    .before = 1
+  ) ->
+cleaned_sample_df_sra
+
+cleaned_sample_df_sra |> dplyr::glimpse()
 
 
 
+project_source |>
+  dplyr::left_join(
+    cleaned_sample_df_sra,
+    by = c("proj_ID" = "proj_ID", "samp_ID" = "samp_ID")
+  ) ->
+project_source_sra
+
+project_source_sra |> dplyr::glimpse()
+
+readr::write_rds(
+  project_source_sra,
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra.rds.gz"
+)
 
 # footer ------------------------------------------------------------------
 
