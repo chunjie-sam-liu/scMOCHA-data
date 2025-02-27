@@ -66,7 +66,7 @@ project_source_sra_proj_ID_source_name |>
   dplyr::arrange(-n) |>
   dplyr::filter(
     grepl(
-      pattern = "pbmc|Periperhal blood",
+      pattern = "pbmc|blood",
       x = source_name,
       ignore.case = TRUE
     )
