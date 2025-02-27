@@ -173,24 +173,20 @@ project_source |>
   )
 
 
-a |>
-  dplyr::filter(source == "GEO") |>
-  as.data.table() |>
-  dplyr::select(ID) |>
-  dplyr::distinct() ->
-project_geo
+project_source |>
+  dplyr::select(proj_source, proj_ID) |>
+  dplyr::distinct() |>
+  dplyr::count(proj_source) |>
+  fn_plot_pie() ->
 
-cmds <- glue::glue("Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R -g {project_geo$ID} -b /home/liuc9/github/scMOCHA-data/data/scfoundation")
+nrow(project_source_proj_ID_pie)
 
-
-readr::write_lines(cmds, "/home/liuc9/github/scMOCHA-data/data/scfoundation/cmds.sh")
-
-project |>
-  tidyr::separate(col = project_ID, into = c("source", "ID"), sep = "-") |>
-  dplyr::filter(source == "GEO") |>
-  as.data.table() ->
-a
-
+ggsave(
+  filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_proj_ID_pie.pdf",
+  plot = project_source_proj_ID_pie,
+  width = 10,
+  height = 10
+)
 
 
 # footer ------------------------------------------------------------------
