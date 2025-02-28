@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#-*- conding:utf-8 -*-
+# -*- conding:utf-8 -*-
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2025-02-28 11:33:36
@@ -38,7 +38,10 @@ def element_to_dict(element):
                 if type(child_dict[child_name]) is list:
                     child_dict[child_name].append(child_content)
                 else:
-                    child_dict[child_name] = [child_dict[child_name], child_content]
+                    child_dict[child_name] = [
+                        child_dict[child_name],
+                        child_content,
+                    ]
             else:
                 child_dict[child_name] = child_content
 
@@ -92,28 +95,31 @@ def parse_args():
     Parse command line arguments.
     """
     parser = argparse.ArgumentParser(
-        description='Convert XML file to JSON format.'
+        description="Convert XML file to JSON format."
     )
     parser.add_argument(
-        '-i', '--input',
+        "-i",
+        "--input",
         required=True,
-        help='Path to input XML file',
-        type=validate_file_path
+        help="Path to input XML file",
+        type=validate_file_path,
     )
     parser.add_argument(
-        '-o', '--output',
-        help='Path to output JSON file. If not specified, will use the input filename with .json extension'
+        "-o",
+        "--output",
+        help="Path to output JSON file. If not specified, will use the input filename with .json extension",
     )
     parser.add_argument(
-        '-p', '--pretty',
-        action='store_true',
-        help='Pretty-print JSON output with indentation'
+        "-p",
+        "--pretty",
+        action="store_true",
+        help="Pretty-print JSON output with indentation",
     )
     parser.add_argument(
-        '--indent',
+        "--indent",
         type=int,
         default=2,
-        help='Indentation level for pretty-printing (default: 2)'
+        help="Indentation level for pretty-printing (default: 2)",
     )
 
     return parser.parse_args()
@@ -131,7 +137,7 @@ def main():
     if args.output:
         json_file = args.output
     else:
-        json_file = str(Path(xml_file).with_suffix('.json'))
+        json_file = str(Path(xml_file).with_suffix(".json"))
 
     # Ensure output directory exists
     ensure_output_dir(json_file)
@@ -141,7 +147,7 @@ def main():
         data = parse_xml_to_json(xml_file)
 
         # Write to JSON file
-        with open(json_file, 'w') as f:
+        with open(json_file, "w") as f:
             indent = args.indent if args.pretty else None
             json.dump(data, f, indent=indent)
 
@@ -154,6 +160,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
