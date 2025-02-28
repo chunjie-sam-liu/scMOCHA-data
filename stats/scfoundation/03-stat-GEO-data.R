@@ -265,6 +265,19 @@ processed_gseid <- c(
   "GSE162117",
   "GSE188632"
 )
+geo_pbmc_dataset <- c(
+  "GSE165496", "GSE165822", "GSE140881", "GSE162708", "GSE163314", "GSE162528", "GSE171555", "GSE165087", "GSE178756",
+  "GSE192391", "GSE159117", "GSE168453", "GSE164690", "GSE167825", "GSE154386", "GSE163633", "GSE162117", "GSE166638",
+  "GSE190839", "GSE142595", "GSE147794", "GSE149313", "GSE153098", "GSE179566", "GSE184703", "GSE188632", "GSE143353",
+  "GSE148215", "GSE152981", "GSE153421", "GSE174125"
+)
+
+geo_pbmc_dataset_unique <- setdiff(geo_pbmc_dataset, processed_gseid)
+geo_pbmc_dataset_unique <- c(
+  "GSE165496", "GSE165822", "GSE140881", "GSE162708", "GSE163314", "GSE162528", "GSE165087", "GSE178756", "GSE192391",
+  "GSE168453", "GSE164690", "GSE167825", "GSE163633", "GSE166638", "GSE190839", "GSE142595", "GSE147794", "GSE153098",
+  "GSE179566", "GSE184703", "GSE143353", "GSE148215", "GSE152981", "GSE153421", "GSE174125"
+)
 
 ggvenn::ggvenn(
   data = list(
@@ -315,6 +328,8 @@ project_source_sra_tissue_grouped |>
   dplyr::select(proj_ID, samp_ID, tissue_group) |>
   dplyr::distinct() ->
 project_source_sra_tissue_grouped_bone_marrow
+
+geo_bone_marrow_dataset <- c("GSE183267", "GSE153056", "GSE163278", "GSE165087", "GSE173320", "GSE154109", "GSE182020", "GSE149136")
 
 project_source_sra_tissue_grouped_bone_marrow |>
   dplyr::count(proj_ID) |>
