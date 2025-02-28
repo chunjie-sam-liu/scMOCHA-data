@@ -28,6 +28,7 @@ library(logger)
 # gseid <- "GSE163668"
 
 basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC"
 verbose <- FALSE
 spec <- "
 Usage: Rscript foorbar.R [options]
@@ -105,6 +106,11 @@ fn_parse_sratable <- function(.of) {
     rvest::html_table()
 }
 
+fn_edirect_gds_gseid <- function(.gseid, datadir = datadir) {
+  .cmd <- "esearch -db gds -query {.gseid}|efetch -format docsum >{datadir}/{.gseid}.edirect.gds.xml" |> glue::glue()
+  # system(.cmd)
+  .cmd
+}
 
 # load data ---------------------------------------------------------------
 
@@ -147,117 +153,15 @@ data.table::fwrite(
   )
 )
 
+cmd_edirect_gds_gseid <- fn_edirect_gds_gseid(gseid, datadir = datadir)
+readr::write_lines(
+  x = cmd_edirect_gds_gseid,
+  file = file.path(
+    datadir,
+    "00.edirect.gds.{gseid}.sh" |> glue::glue()
+  )
+)
 
-############ Give up -----------------------------------------------------------------
-
-# download the sra data from sratable
-
-# strsplit(
-#   x = gse@header$relation[[2]],
-#   split = "term=",
-# )[[1]][[2]] ->
-#   srpid
-
-# gse[[1]] |>
-#   Biobase::
-
-
-# sradb -------------------------------------------------------------------
-#
-#
-# sqlite_file <- "/mnt/isilon/xing_lab/liuc9/refdata/sradb/SRAmetadb.sqlite"
-#
-# sra_con <- DBI::dbConnect(
-#   RSQLite::SQLite(),
-#   sqlite_file
-# )
-# DBI::dbListTables(sra_con)
-#
-# sra_table <- dplyr::tbl(
-#   sra_con, "sra"
-# )
-# study_table <- dplyr::tbl(
-#   sra_con, "study"
-# )
-#
-# sra_table |>
-#   dplyr::filter(study_name == gseid) |>
-#   dplyr::inner_join(study_table, by = "study_accession") |>
-#   as.data.table() ->
-#   sra_df
-# #
-# sample_accessions <- sra_df |>
-#   dplyr::pull(sample_accession)
-#
-# sample_table <- dplyr::tbl(
-#   sra_con, "sample"
-# )
-#
-# sample_df <- sample_table |>
-#   dplyr::filter(
-#     sample_accession %in% sample_accessions
-#   ) |>
-#   as.data.table()
-#
-# cleaned_sample_df <- sample_df  %>%
-#   dplyr::select(-which(apply(is.na(.), 2, all))) |>
-#   dplyr::select(sample_accession, sample_attribute)
-#
-# cleaned_sample_df$sample_attribute[[1]] |>
-#   stringr::str_split(pattern = "\\|\\|", simplify = T) |>
-#   stringr::str_split(pattern = ": ") |>
-#   purrr::map(.f = \(.x) {.x[[1]]}) |>
-#   purrr::reduce(.f = c) ->
-#   new_columns
-#
-# cleaned_sample_df |>
-#   tidyr::separate(
-#     col = sample_attribute,
-#     into = new_columns,
-#     sep = " \\|\\|"
-#   ) %>%
-#   dplyr::mutate_at(
-#     new_columns,
-#     ~ stringr::str_remove(., ".*:")
-#   ) ->
-#   cleaned_sample_df
-#
-#
-# DBI::dbDisconnect(sra_con)
-#
-# sra_df |>
-#   dplyr::inner_join(
-#     cleaned_sample_df,
-#     by = "sample_accession"
-#   ) |>
-#   dplyr::relocate(
-#     run_accession, .before = 1
-#   ) ->
-#   cleaned_sample_df_sra
-#
-#
-#
-# data.table::fwrite(
-#   x = cleaned_sample_df_sra,
-#   file = file.path(
-#     datadir,
-#     "{gseid}.metadata.csv" |> glue::glue()
-#   )
-# )
-#
-# # cleaned_sample_df_sra <- data.table::fread("/scr1/users/liuc9/mitochondrial/realdata/06-bigdata/GSE163668/GSE163668.metadata.csv")
-# cleaned_sample_df_sra |>
-#   dplyr::select(run_accession, experiment_name, experiment_accession) |>
-#   data.table::fwrite(
-#     file = file.path(
-#       datadir,
-#       "{gseid}.metadata.gsm.csv" |> glue::glue()
-#     )
-#   )
-#
-#
-#
-#
 
 # footer ------------------------------------------------------------------
 
