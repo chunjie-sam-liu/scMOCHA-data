@@ -74,4 +74,14 @@ sra_download_dump() {
     Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir}
   done
 }
-sra_download_dump
+# sra_download_dump
+
+# /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/00.${gseid}.prefetch.sh
+prefetch() {
+  for gse in "${gses[@]}"; do
+    echo "bash ${basedir}/${gse}/00.${gse}.prefetch.sh"
+    cd ${basedir}/${gse}
+    bash 00.${gse}.prefetch.sh
+  done
+}
+prefetch
