@@ -100,7 +100,7 @@ sample_name_ <- ifelse("Sample Name" %in% colnames(sratable), "Sample Name", "Sa
 sratable |>
   dplyr::select(
     run_accession = Run,
-    experiment_name = sample_name_,
+    experiment_name = dplyr::all_of(sample_name_),
     experiment_accession = Experiment
   ) |>
   data.table::fwrite(

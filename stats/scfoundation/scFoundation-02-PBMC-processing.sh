@@ -60,8 +60,16 @@ sra_metadata() {
 sra_download_dump() {
   for gse in "${gses[@]}"; do
     echo "python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json"
-    python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json -p
-    python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
+    if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.json" ]]; then
+      python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json -p
+    else
+      echo "File ${basedir}/${gse}/${gse}.edirect.gds.json already exists, skipping xml2json conversion"
+    fi
+    if [[ ! -f "${basedir}/${gse}/${gse}.SraRunTable" ]]; then
+      python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
+    else
+      echo "File ${basedir}/${gse}/${gse}.SraRunTable already exists, skipping json2sraruntable conversion"
+    fi
     echo "Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir}"
     Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir}
   done
