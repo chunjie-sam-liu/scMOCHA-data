@@ -95,9 +95,14 @@ sratable <- data.table::fread(
 
 # GSM samples -------------------------------------------------------------
 
+sample_name_ <- ifelse("Sample Name" %in% colnames(sratable), "Sample Name", "SampleName")
 
 sratable |>
-  dplyr::select(run_accession = Run, experiment_name = `Sample Name`, experiment_accession = Experiment) |>
+  dplyr::select(
+    run_accession = Run,
+    experiment_name = sample_name_,
+    experiment_accession = Experiment
+  ) |>
   data.table::fwrite(
     file = file.path(
       datadir,
