@@ -85,3 +85,13 @@ prefetch() {
   done
 }
 prefetch
+
+# /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
+prefetch_check() {
+  for gse in "${gses[@]}"; do
+    echo "bash ${basedir}/${gse}/01.${gse}.prefetch.check.sh"
+    cd ${basedir}/${gse}
+    bash 01.${gse}.prefetch.check.sh
+  done
+}
+# prefetch_check
