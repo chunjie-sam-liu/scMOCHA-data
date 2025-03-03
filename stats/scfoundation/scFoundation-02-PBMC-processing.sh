@@ -78,6 +78,7 @@ sra_run_table_gseid() {
     echo "File ${basedir}/${gse}/${gse}.edirect.gds.json already exists and is not empty, skipping xml2json conversion"
   fi
   # json2sraruntable
+  # python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
   if [[ ! -f "${basedir}/${gse}/${gse}.SraRunTable" ]] || [[ ! -s "${basedir}/${gse}/${gse}.SraRunTable" ]]; then
     python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
   else
@@ -87,7 +88,7 @@ sra_run_table_gseid() {
 
 sra_run_table() {
   for gse in "${gses[@]}"; do
-    sra_run_table_gseid "${gse}" &
+    sra_run_table_gseid "${gse}" #&
   done
 }
 # sra_run_table
@@ -99,7 +100,7 @@ sra_download_dump() {
     Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir} &
   done
 }
-# sra_download_dump
+sra_download_dump
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/00.${gseid}.prefetch.slrm
 prefetch() {
