@@ -69,7 +69,7 @@ sra_download_dump() {
     Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir} &
   done
 }
-# sra_download_dump
+sra_download_dump
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/00.${gseid}.prefetch.slrm
 prefetch() {
@@ -80,7 +80,7 @@ prefetch() {
     sbatch 00.${gse}.prefetch.slrm
   done
 }
-prefetch
+# prefetch
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
 prefetch_check() {
