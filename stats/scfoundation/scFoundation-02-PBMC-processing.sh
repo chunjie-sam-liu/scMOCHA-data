@@ -58,24 +58,29 @@ sra_metadata() {
 # SraRunTable
 sra_run_table_gseid() {
   local gse=$1
+  # create 00.edirect.gds.${gse}.sh
+  if [[ ! -f "${basedir}/${gse}/00.edirect.gds.${gse}.sh" ]] || [[ ! -s "${basedir}/${gse}/00.edirect.gds.${gse}.sh" ]]; then
+    echo "esearch -db gds -query ${gse} | efetch -format docsum > ${basedir}/${gse}/${gse}.edirect.gds.xml" >${basedir}/${gse}/00.edirect.gds.${gse}.sh
+  else
+    echo "File ${basedir}/${gse}/00.edirect.gds.${gse}.sh already exists and is not empty, skipping edirect gds download"
+  fi
   # edirect gds download xml
-  if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.xml" ]]; then
+  if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.xml" ]] || [[ ! -s "${basedir}/${gse}/${gse}.edirect.gds.xml" ]]; then
     bash ${basedir}/${gse}/00.edirect.gds.${gse}.sh
   else
-    echo "File ${basedir}/${gse}/${gse}.edirect.gds.xml already exists, skipping edirect gds download"
+    echo "File ${basedir}/${gse}/${gse}.edirect.gds.xml already exists and is not empty, skipping edirect gds download"
   fi
   # xml2json
-  echo "python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json"
-  if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.json" ]]; then
+  if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.json" ]] || [[ ! -s "${basedir}/${gse}/${gse}.edirect.gds.json" ]]; then
     python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json -p
   else
-    echo "File ${basedir}/${gse}/${gse}.edirect.gds.json already exists, skipping xml2json conversion"
+    echo "File ${basedir}/${gse}/${gse}.edirect.gds.json already exists and is not empty, skipping xml2json conversion"
   fi
   # json2sraruntable
-  if [[ ! -f "${basedir}/${gse}/${gse}.SraRunTable" ]]; then
+  if [[ ! -f "${basedir}/${gse}/${gse}.SraRunTable" ]] || [[ ! -s "${basedir}/${gse}/${gse}.SraRunTable" ]]; then
     python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
   else
-    echo "File ${basedir}/${gse}/${gse}.SraRunTable already exists, skipping json2sraruntable conversion"
+    echo "File ${basedir}/${gse}/${gse}.SraRunTable already exists and is not empty, skipping json2sraruntable conversion"
   fi
 }
 
