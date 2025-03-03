@@ -153,14 +153,14 @@ data.table::fwrite(
   )
 )
 
-cmd_edirect_gds_gseid <- fn_edirect_gds_gseid(gseid, datadir = datadir)
-readr::write_lines(
-  x = cmd_edirect_gds_gseid,
-  file = file.path(
-    datadir,
-    "00.edirect.gds.{gseid}.sh" |> glue::glue()
-  )
-)
+# cmd_edirect_gds_gseid <- fn_edirect_gds_gseid(gseid, datadir = datadir)
+# readr::write_lines(
+#   x = cmd_edirect_gds_gseid,
+#   file = file.path(
+#     datadir,
+#     "00.edirect.gds.{gseid}.sh" |> glue::glue()
+#   )
+# )
 
 
 # footer ------------------------------------------------------------------
