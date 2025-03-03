@@ -110,7 +110,7 @@ prefetch() {
     sbatch 00.${gse}.prefetch.slrm
   done
 }
-prefetch
+# prefetch
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
 prefetch_check() {

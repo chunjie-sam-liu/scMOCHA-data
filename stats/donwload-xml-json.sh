@@ -43,6 +43,9 @@ sra_run_table_gseid() {
 
 sra_run_table() {
   for gse in "${gses[@]}"; do
-    sra_run_table_gseid "${gse}" &
+    sra_run_table_gseid "${gse}"
   done
 }
+
+sra_run_table
+# sra_run_table_gseid GSE226602

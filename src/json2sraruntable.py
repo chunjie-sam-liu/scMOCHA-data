@@ -53,7 +53,7 @@ def create_output_files(
 
     # Create esearch command with full path
     output_file = os.path.join(dirname, f"{gse_id}.SraRunTable")
-    cmd = f"esearch -db sra -query {bioproject_id} | efetch -format runinfo>{output_file}"
+    cmd = f"esearch -db sra -query {bioproject_id} | efetch -format runinfo | awk 'NR==1 || /RNA-Seq/'>{output_file}"
 
     # Write command to shell script
     shell_script_path = os.path.join(dirname, f"00.edirect.sra.{gse_id}.sh")
