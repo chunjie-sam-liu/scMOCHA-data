@@ -51,40 +51,55 @@ sra_metadata() {
   for gse in "${gses[@]}"; do
     echo "Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R -g ${gse} -b ${basedir}"
     Rscript /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R -g ${gse} -b ${basedir}
-    bash ${basedir}/${gse}/00.edirect.gds.${gse}.sh
   done
 }
 # sra_metadata
 
-# /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R
-sra_download_dump() {
+# SraRunTable
+sra_run_table() {
   for gse in "${gses[@]}"; do
+    # edirect gds download xml
+    if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.xml" ]]; then
+      bash ${basedir}/${gse}/00.edirect.gds.${gse}.sh
+    else
+      echo "File ${basedir}/${gse}/${gse}.edirect.gds.xml already exists, skipping edirect gds download"
+    fi
+    # xml2json
     echo "python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json"
     if [[ ! -f "${basedir}/${gse}/${gse}.edirect.gds.json" ]]; then
       python /home/liuc9/github/scMOCHA-data/src/xml2json.py -i ${basedir}/${gse}/${gse}.edirect.gds.xml -o ${basedir}/${gse}/${gse}.edirect.gds.json -p
     else
       echo "File ${basedir}/${gse}/${gse}.edirect.gds.json already exists, skipping xml2json conversion"
     fi
+    # json2sraruntable
     if [[ ! -f "${basedir}/${gse}/${gse}.SraRunTable" ]]; then
       python /home/liuc9/github/scMOCHA-data/src/json2sraruntable.py -r ${basedir}/${gse}/${gse}.edirect.gds.json
     else
       echo "File ${basedir}/${gse}/${gse}.SraRunTable already exists, skipping json2sraruntable conversion"
     fi
+  done
+}
+# sra_run_table
+
+# /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R
+sra_download_dump() {
+  for gse in "${gses[@]}"; do
     echo "Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir}"
     Rscript /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R -g ${gse} -b ${basedir}
   done
 }
-# sra_download_dump
+sra_download_dump
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/00.${gseid}.prefetch.sh
 prefetch() {
   for gse in "${gses[@]}"; do
     echo "bash ${basedir}/${gse}/00.${gse}.prefetch.sh"
     cd ${basedir}/${gse}
-    bash 00.${gse}.prefetch.sh
+    # bash 00.${gse}.prefetch.sh
+    sbatch 00.${gse}.prefetch.slrm
   done
 }
-prefetch
+# prefetch
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
 prefetch_check() {
