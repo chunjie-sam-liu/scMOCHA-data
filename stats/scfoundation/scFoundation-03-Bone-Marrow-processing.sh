@@ -16,7 +16,8 @@ gses=(
   "GSE149136"
 )
 
-basedir="/home/liuc9/github/scMOCHA-data/data/scfoundation2/Bone-Marrow"
+basedir="/mnt/isilon/u01_project/large-scale/liuc9/raw/scfoundation2/Bone-Marrow"
+basedir=$(realpath "$basedir")
 
 # /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R
 sra_metadata() {

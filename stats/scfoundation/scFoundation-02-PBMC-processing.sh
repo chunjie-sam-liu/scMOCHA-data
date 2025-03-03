@@ -45,6 +45,7 @@ gses_bone_marrow=(
 )
 
 basedir="/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC"
+basedir=$(realpath "$basedir")
 
 # /home/liuc9/github/scMOCHA-data/src/01-sra-metadata.R
 sra_metadata() {
