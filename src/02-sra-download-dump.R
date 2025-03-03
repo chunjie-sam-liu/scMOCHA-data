@@ -156,6 +156,48 @@ readr::write_lines(
   )
 )
 
+# prefetch slrm -----------------------------------------------------------
+
+slrm_header <- c(
+  "#!/usr/bin/env bash",
+  "# @AUTHOR: Chun-Jie Liu",
+  "# @CONTACT: chunjie.sam.liu.at.gmail.com",
+  "# @DATE: {lubridate::now()}" |> glue::glue(),
+  "",
+  "#SBATCH --job-name=00.{gseid}.prefetch" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |> glue::glue(),
+  "#SBATCH --error={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |> glue::glue(),
+  "#SBATCH --cpus-per-task=10",
+  "#SBATCH --mem=80G",
+  "#SBATCH --array=1-{length(sratable_prefetch$prefetch)}" |> glue::glue(),
+  "#SBATCH --time=720:00:00",
+  "",
+  ""
+)
+
+slrm_array <- c(
+  "declare -a cmds",
+  "while IFS= read -r line; do",
+  "  line=${line%%1>*}",
+  "  cmds+=(\"${line}\")",
+  "done < \"{datadir}/00.{gseid}.prefetch.sh\"" |> glue::glue(),
+  "",
+  "",
+  "index=$((SLURM_ARRAY_TASK_ID - 1))",
+  'cmd="${cmds[$index]}"',
+  'echo "Executing command ${cmd}"',
+  "",
+  "",
+  "srun ${cmd}"
+)
+
+readr::write_lines(
+  c(slrm_header, slrm_array),
+  file = file.path(
+    datadir,
+    "00.{gseid}.prefetch.slrm" |> glue::glue()
+  )
+)
 
 # Check sra file ----------------------------------------------------------
 
