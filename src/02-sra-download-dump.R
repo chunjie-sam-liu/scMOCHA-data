@@ -178,7 +178,7 @@ slrm_header <- c(
 slrm_array <- c(
   "declare -a cmds",
   "while IFS= read -r line; do",
-  "  line=${line%%1>*}",
+  "  line=${line%%&}",
   "  cmds+=(\"${line}\")",
   "done < \"{datadir}/00.{gseid}.prefetch.sh\"" |> glue::glue(),
   "",
@@ -337,7 +337,7 @@ slrm_header <- c(
 slrm_array <- c(
   "declare -a cmds",
   "while IFS= read -r line; do",
-  "  line=${line%%1>*}",
+  "  line=${line%%&}",
   "  cmds+=(\"${line}\")",
   "done < \"{datadir}/02.{gseid}.dump.sh\"" |> glue::glue(),
   "",
