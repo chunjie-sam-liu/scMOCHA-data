@@ -111,7 +111,7 @@ prefetch() {
     sbatch 00.${gse}.prefetch.slrm
   done
 }
-prefetch
+# prefetch
 
 # /home/liuc9/github/scMOCHA-data/data/scfoundation/GSE140881/01.${gseid}.prefetch.check.sh
 prefetch_check() {
@@ -127,9 +127,9 @@ prefetch_check() {
 # /home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/GSE140881/02.GSE140881.dump.slrm
 dump_slrm() {
   for gse in "${gses[@]}"; do
-    echo "bash /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}/02.${gse}.dump.slrm"
-    cd /home/liuc9/github/scMOCHA-data/data/scfoundation/${gse}
+    echo "bash ${basedir}/${gse}/02.${gse}.dump.slrm"
+    cd ${basedir}/${gse}
     sbatch 02.${gse}.dump.slrm
   done
 }
-# dump_slrm
+dump_slrm
