@@ -132,4 +132,70 @@ dump_slrm() {
     sbatch 02.${gse}.dump.slrm
   done
 }
-dump_slrm
+# dump_slrm
+
+# /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R
+sra_rename_gsm_merge() {
+  for gse in "${gses[@]}"; do
+    echo "Rscript /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R -g ${gse} -b ${basedir}"
+    Rscript /home/liuc9/github/scMOCHA-data/src/03-sra-rename-gsm-merge.R -g ${gse} -b ${basedir} &
+  done
+}
+# sra_rename_gsm_merge
+
+# /home/liuc9/github/scMOCHA-data/src/04-scmocha-conf.R
+scmocha_conf() {
+  for gse in "${gses[@]}"; do
+    echo "Rscript /home/liuc9/github/scMOCHA-data/src/04-scmocha-conf.R -g ${gse} -b ${basedir}"
+    Rscript /home/liuc9/github/scMOCHA-data/src/04-scmocha-conf.R -g ${gse} -b ${basedir} &
+  done
+}
+# scmocha_conf
+
+# run 04.{gse}.batch.sh
+scmocha_batch_run() {
+  for gse in "${gses[@]}"; do
+    echo "bash ${basedir}/${gse}/04.${gse}.batch.sh"
+    cd ${basedir}/${gse}
+    bash 04.${gse}.batch.sh
+  done
+}
+# scmocha_batch_run
+
+# /home/liuc9/github/scMOCHA-data/src/05-parse-log.R
+parse_log() {
+  for gse in "${gses[@]}"; do
+    echo "Rscript /home/liuc9/github/scMOCHA-data/src/05-parse-log.R -g ${gse} -b ${basedir}"
+    Rscript /home/liuc9/github/scMOCHA-data/src/05-parse-log.R -g ${gse} -b ${basedir} &
+  done
+}
+# parse_log
+
+# /home/liuc9/github/scMOCHA-data/data/GSE279945/05.{gseid}.scmocha.cptargz.sh
+cptargz() {
+  for gse in "${gses[@]}"; do
+    echo "bash ${basedir}/${gse}/05.${gse}.scmocha.cptargz.sh"
+    cd ${basedir}/${gse}
+    bash 05.${gse}.scmocha.cptargz.sh
+  done
+}
+# cptargz
+
+# /home/liuc9/github/scMOCHA-data/data/GSE279945/07.GSE279945.scmocha.untargz.sh
+untargz() {
+  for gse in "${gses[@]}"; do
+    echo "bash ${basedir}/${gse}/07.${gse}.scmocha.untargz.sh"
+    cd ${basedir}/${gse}
+    bash 07.${gse}.scmocha.untargz.sh
+  done
+}
+# untargz
+
+# /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R
+collect_variants() {
+  for gse in "${gses[@]}"; do
+    echo "Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} -b ${basedir}"
+    Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} -b ${basedir} &
+  done
+}
+# collect_variants
