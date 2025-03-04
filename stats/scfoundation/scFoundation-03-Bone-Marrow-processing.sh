@@ -63,7 +63,7 @@ sra_run_table() {
     sra_run_table_gseid "${gse}" #&
   done
 }
-# sra_run_table
+sra_run_table
 
 # /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R
 sra_download_dump() {
