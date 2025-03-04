@@ -160,7 +160,7 @@ scmocha_batch_run() {
     bash 04.${gse}.batch.sh
   done
 }
-scmocha_batch_run
+# scmocha_batch_run
 
 # /home/liuc9/github/scMOCHA-data/src/05-parse-log.R
 parse_log() {
