@@ -67,6 +67,7 @@ log_warn(gseid)
 
 # basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+# basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/Bone-Marrow"
 datadir <- file.path(
   basedir, gseid
 )
@@ -176,11 +177,20 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
+  "inputfile={datadir}/00.{gseid}.prefetch.sh" |> glue::glue(),
+  "",
+  "# Check if input file is empty",
+  "if [ ! -s ${inputfile} ]; then",
+  "  echo \"Error: Input file ${inputfile} is empty or does not exist.\"",
+  "  exit 1",
+  "fi",
+  "",
+  "",
   "declare -a cmds",
   "while IFS= read -r line; do",
   "  line=${line%%&}",
   "  cmds+=(\"${line}\")",
-  "done < \"{datadir}/00.{gseid}.prefetch.sh\"" |> glue::glue(),
+  "done < ${inputfile}",
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -243,11 +253,19 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
+  "inputfile={datadir}/01.{gseid}.prefetch.check.sh" |> glue::glue(),
+  "# Check if input file is empty",
+  "if [ ! -s ${inputfile} ]; then",
+  "  echo \"Error: Input file ${inputfile} is empty or does not exist.\"",
+  "  exit 1",
+  "fi",
+  "",
+  "",
   "declare -a cmds",
   "while IFS= read -r line; do",
   "  line=${line%%&}",
   "  cmds+=(\"${line}\")",
-  "done < \"{datadir}/01.{gseid}.prefetch.check.sh\"" |> glue::glue(),
+  "done < ${inputfile}",
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -335,11 +353,19 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
+  "inputfile={datadir}/02.{gseid}.dump.sh" |> glue::glue(),
+  "# Check if input file is empty",
+  "if [ ! -s ${inputfile} ]; then",
+  "  echo \"Error: Input file ${inputfile} is empty or does not exist.\"",
+  "  exit 1",
+  "fi",
+  "",
+  "",
   "declare -a cmds",
   "while IFS= read -r line; do",
   "  line=${line%%&}",
   "  cmds+=(\"${line}\")",
-  "done < \"{datadir}/02.{gseid}.dump.sh\"" |> glue::glue(),
+  "done < ${inputfile}",
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
