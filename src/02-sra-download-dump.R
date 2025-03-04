@@ -149,13 +149,15 @@ sratable_prefetch
 
 
 
-readr::write_lines(
-  glue::glue("{ sratable_prefetch$prefetch} &"),
-  file = file.path(
-    datadir,
-    "00.{gseid}.prefetch.sh" |> glue::glue()
+if (length(sratable_prefetch$prefetch) > 0) {
+  readr::write_lines(
+    glue::glue("{ sratable_prefetch$prefetch} &"),
+    file = file.path(
+      datadir,
+      "00.{gseid}.prefetch.sh" |> glue::glue()
+    )
   )
-)
+}
 
 # prefetch slrm -----------------------------------------------------------
 
@@ -201,13 +203,15 @@ slrm_array <- c(
   "bash -c \"${cmd}\""
 )
 
-readr::write_lines(
-  c(slrm_header, slrm_array),
-  file = file.path(
-    datadir,
-    "00.{gseid}.prefetch.slrm" |> glue::glue()
+if (length(sratable_prefetch$prefetch) > 0) {
+  readr::write_lines(
+    c(slrm_header, slrm_array),
+    file = file.path(
+      datadir,
+      "00.{gseid}.prefetch.slrm" |> glue::glue()
+    )
   )
-)
+}
 
 # Check sra file ----------------------------------------------------------
 
@@ -224,13 +228,15 @@ sratable_prefetch |>
   ) ->
 srafiles
 
-readr::write_lines(
-  glue::glue("vdb-validate {srafiles$srafile} 1> {srafiles$srafile}.validate 2>&1 &"),
-  file = file.path(
-    datadir,
-    "01.{gseid}.prefetch.check.sh" |> glue::glue()
+if (length(srafiles$srafile) > 0) {
+  readr::write_lines(
+    glue::glue("vdb-validate {srafiles$srafile} 1> {srafiles$srafile}.validate 2>&1 &"),
+    file = file.path(
+      datadir,
+      "01.{gseid}.prefetch.check.sh" |> glue::glue()
+    )
   )
-)
+}
 
 # check sra slrm --------------------------------------------------------------
 
@@ -276,13 +282,15 @@ slrm_array <- c(
   "bash -c \"${cmd}\""
 )
 
-readr::write_lines(
-  c(slrm_header, slrm_array),
-  file = file.path(
-    datadir,
-    "01.{gseid}.prefetch.check.slrm" |> glue::glue()
+if (length(srafiles$srafile) > 0) {
+  readr::write_lines(
+    c(slrm_header, slrm_array),
+    file = file.path(
+      datadir,
+      "01.{gseid}.prefetch.check.slrm" |> glue::glue()
+    )
   )
-)
+}
 
 
 # Generate dump scripts ---------------------------------------------------
@@ -325,13 +333,15 @@ data.table::fwrite(
 
 
 
-readr::write_lines(
-  glue::glue("{ srafile_dump$dump_cmd} &"),
-  file = file.path(
-    datadir,
-    "02.{gseid}.dump.sh" |> glue::glue()
+if (length(srafile_dump$dump_cmd) > 0) {
+  readr::write_lines(
+    glue::glue("{ srafile_dump$dump_cmd} &"),
+    file = file.path(
+      datadir,
+      "02.{gseid}.dump.sh" |> glue::glue()
+    )
   )
-)
+}
 
 # dump slrm ---------------------------------------------------------------
 
@@ -376,14 +386,15 @@ slrm_array <- c(
   "bash -c \"${cmd}\""
 )
 
-readr::write_lines(
-  c(slrm_header, slrm_array),
-  file = file.path(
-    datadir,
-    "02.{gseid}.dump.slrm" |> glue::glue()
+if (length(srafile_dump$dump_cmd) > 0) {
+  readr::write_lines(
+    c(slrm_header, slrm_array),
+    file = file.path(
+      datadir,
+      "02.{gseid}.dump.slrm" |> glue::glue()
+    )
   )
-)
-
+}
 
 
 
