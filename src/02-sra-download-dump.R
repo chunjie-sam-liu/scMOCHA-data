@@ -188,7 +188,7 @@ slrm_array <- c(
   'echo "Executing command ${cmd}"',
   "",
   "",
-  "srun ${cmd}"
+  "bash -c \"${cmd}\""
 )
 
 readr::write_lines(
@@ -255,7 +255,7 @@ slrm_array <- c(
   'echo "Executing command ${cmd}"',
   "",
   "",
-  "srun ${cmd}"
+  "bash -c \"${cmd}\""
 )
 
 readr::write_lines(
@@ -347,7 +347,7 @@ slrm_array <- c(
   'echo "Executing command ${cmd}"',
   "",
   "",
-  "srun ${cmd}"
+  "bash -c \"${cmd}\""
 )
 
 readr::write_lines(
