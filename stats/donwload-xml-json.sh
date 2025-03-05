@@ -88,5 +88,5 @@ sra_run_table() {
     sra_run_table_gseid_force "${gse}" #&
   done
 }
-# sra_run_table
-sra_run_table_gseid_force GSE233844
+sra_run_table
+# sra_run_table_gseid_force GSE233844
