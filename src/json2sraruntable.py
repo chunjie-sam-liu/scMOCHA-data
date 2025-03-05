@@ -69,10 +69,33 @@ def create_output_files(
     print(f"Created shell script: {shell_script_path}")
     print(f"When executed, the script will create: {output_file}")
 
-    # Run the command if requested
+    # Create biosample command
+    biosample_output_file = os.path.join(
+        dirname, f"{gse_id}.edirect.biosample.runinfo"
+    )
+    biosample_cmd = f"esearch -db sra -query {bioproject_id} | elink -target biosample | efetch -format runinfo >{biosample_output_file}"
+
+    # Write biosample command to shell script
+    biosample_shell_script_path = os.path.join(
+        dirname, f"00.edirect.biosample.{gse_id}.sh"
+    )
+    with open(biosample_shell_script_path, "w") as f:
+        f.write("#!/bin/bash\n\n")
+        f.write(f"# BioProject {bioproject_id}\n")
+        f.write(f"# GSE {gse_id}\n\n")
+        f.write(f"{biosample_cmd}\n")
+
+    # Make biosample shell script executable
+    os.chmod(biosample_shell_script_path, 0o755)
+
+    print(f"Created biosample shell script: {biosample_shell_script_path}")
+    print(f"When executed, the script will create: {biosample_output_file}")
+
+    # Run the commands if requested
     if run_cmd:
-        print("Running command...")
+        print("Running commands...")
         run_command(cmd, verbose)
+        run_command(biosample_cmd, verbose)
 
 
 def parse_args():
