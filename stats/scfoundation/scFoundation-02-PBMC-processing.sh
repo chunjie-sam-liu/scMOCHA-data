@@ -8,21 +8,21 @@
 gses=(
   "GSE140881" # only one read
   "GSE142595" # under run, Seq-Well method
-  "GSE143353" # under run
-  "GSE147794" #
-  "GSE148215"
-  "GSE152981"
-  "GSE153098"
-  "GSE153421"
-  "GSE162528"
-  "GSE162708"
-  "GSE163314"
+  "GSE143353" # done
+  "GSE147794" # finished
+  "GSE148215" # under run
+  "GSE152981" # CITE-seq
+  "GSE153098" # not run, CD8
+  "GSE153421" # under run
+  "GSE162528" # not run
+  "GSE162708" # only on sample,
+  "GSE163314" # under run
   "GSE163633"
   "GSE164690"
-  "GSE165087"
+  "GSE165087" # not run
   "GSE165496"
   "GSE165822"
-  "GSE166638"
+  "GSE166638" # Seq-Well
   "GSE167825"
   "GSE168453"
   "GSE174125"
