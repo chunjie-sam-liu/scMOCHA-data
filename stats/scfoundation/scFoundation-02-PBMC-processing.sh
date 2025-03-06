@@ -7,7 +7,7 @@
 
 gses=(
   "GSE140881" # only one read
-  "GSE142595" # under run
+  "GSE142595" # under run, Seq-Well method
   "GSE143353" # under run
   "GSE147794" #
   "GSE148215"
