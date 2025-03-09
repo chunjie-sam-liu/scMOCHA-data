@@ -17,11 +17,11 @@ gses=(
   "GSE162528" # not run
   "GSE162708" # only on sample,
   "GSE163314" # under run
-  "GSE163633"
-  "GSE164690"
+  "GSE163633" # under run
+  "GSE164690" # under run
   "GSE165087" # not run
-  "GSE165496"
-  "GSE165822"
+  "GSE165496" # under run
+  "GSE165822" # under run
   "GSE166638" # Seq-Well
   "GSE167825"
   "GSE168453"
