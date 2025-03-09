@@ -26,9 +26,9 @@ gses=(
   "GSE167825" # under run
   "GSE168453" # under run
   "GSE174125" # under run
-  "GSE178756"
-  "GSE179566"
-  "GSE184703"
+  "GSE178756" # only one sample
+  "GSE179566" # only one sample
+  "GSE184703" # under run
   "GSE190839"
   "GSE192391"
 )
