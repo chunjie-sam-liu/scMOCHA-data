@@ -229,9 +229,9 @@ somatic_variants
 gse_data |>
   dplyr::select(gseid, srrid, srrdir) |>
   dplyr::mutate(
-    raw = parallel::mclapply(
-      X = srrdir,
-      FUN = function(.srrdir) {
+    raw = purrr::map(
+      .x = srrdir,
+      .f = function(.srrdir) {
         barcode_cluster_file <- "barcode_cluster.tsv"
         cluster_umap <- fn_load_cluster(
           .filename = file.path(.srrdir, barcode_cluster_file)
@@ -276,8 +276,7 @@ gse_data |>
           cell_raw_cluster_af = list(cell_raw_cluster_af),
           cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
         )
-      },
-      mc.cores = 50
+      }
     )
   ) ->
 gse_data_af
