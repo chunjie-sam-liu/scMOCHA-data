@@ -95,44 +95,52 @@ fn_load_meta <- function(.filename) {
 
 fn_forplot <- function(.af, .coverage, .meta) {
   # print(.meta)
-  .af |>
-    dplyr::select(barcode, cluster, dplyr::contains(">")) |>
-    tidyr::pivot_longer(
-      cols = -c(barcode, cluster),
-      names_to = "variant",
-      values_to = "af"
-    ) |>
-    dplyr::group_by(barcode, cluster) |>
-    dplyr::summarise(s_af = sum(af, na.rm = T)) |>
-    dplyr::ungroup() |>
-    dplyr::arrange(cluster, -s_af) ->
-  .rank
+  .af <- as.data.table(.af)
 
-  .af |>
-    dplyr::select(barcode, dplyr::contains(">")) |>
-    tidyr::pivot_longer(
-      cols = -barcode,
-      names_to = "variant",
-      values_to = "af"
-    ) |>
-    dplyr::mutate(
-      pos = gsub(pattern = "([[:digit:]]*).*", "\\1", variant) |>
-        as.numeric()
-    ) |>
-    dplyr::left_join(
-      .coverage,
-      by = c("barcode", "pos")
-    ) |>
-    tidyr::replace_na(
-      replace = list(
-        af = 0
-      )
-    ) |>
-    dplyr::mutate(af = ifelse(is.na(depth), NA, af)) |>
-    # dplyr::mutate(af = ifelse(depth < log2(10), -0.1, af)) |>
-    dplyr::mutate(af = ifelse(depth < 10, -0.1, af)) |>
-    dplyr::arrange(pos) ->
-  .forplot
+  # Ensure .af is a data.table
+  setDT(.af)
+
+  # Get columns containing ">"
+  variant_cols <- grep(">", names(.af), value = TRUE)
+
+  # Melt data.table to long format and summarize in one chain
+  .rank <- melt(.af,
+    id.vars = c("barcode", "cluster"),
+    measure.vars = variant_cols,
+    variable.name = "variant",
+    value.name = "af"
+  )[, .(s_af = sum(af, na.rm = TRUE)),
+    by = .(barcode, cluster)
+  ]
+
+  # Sort by cluster and -s_af (modifies in place)
+  setorder(.rank, cluster, -s_af)
+
+  # Select barcode and variant columns, then melt to long format
+  variant_cols <- grep(">", names(.af), value = TRUE)
+  .forplot <- melt(.af[, c("barcode", variant_cols), with = FALSE],
+    id.vars = "barcode",
+    measure.vars = variant_cols,
+    variable.name = "variant",
+    value.name = "af"
+  )
+
+  # Extract position from variant
+  .forplot[, pos := as.numeric(gsub(pattern = "([[:digit:]]*).*", "\\1", variant))]
+
+  # Convert coverage to data.table if not already
+  setDT(.coverage)
+
+  # Perform left join with coverage
+  .forplot <- merge(.forplot, .coverage, by = c("barcode", "pos"), all.x = TRUE)
+
+  # Handle NAs and apply conditions on af
+  .forplot[is.na(af), af := 0]
+  .forplot[is.na(depth), af := NA]
+  .forplot[depth < 10, af := -0.1]
+
+  # Sort by position
+  setorder(.forplot, pos)
 
   .coverage |>
     dplyr::group_by(barcode) |>
@@ -260,16 +268,16 @@ gse_data |>
           .meta = metadata
         )
 
-        list(
-          cluster_umap = cluster_umap,
-          cell_hetero_raw = cell_hetero_raw,
-          cell_coverage = cell_coverage,
-          metadata = metadata,
-          cell_raw_cluster_af = cell_raw_cluster_af,
-          cell_raw_cluster_forplot = cell_raw_cluster_forplot
+        tibble::tibble(
+          cluster_umap = list(cluster_umap),
+          cell_hetero_raw = list(cell_hetero_raw),
+          cell_coverage = list(cell_coverage),
+          metadata = list(metadata),
+          cell_raw_cluster_af = list(cell_raw_cluster_af),
+          cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
         )
       },
-      mc.cores = 100
+      mc.cores = 50
     )
   ) ->
 gse_data_af
