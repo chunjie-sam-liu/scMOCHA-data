@@ -23,9 +23,9 @@ gses=(
   "GSE165496" # under run
   "GSE165822" # under run
   "GSE166638" # Seq-Well
-  "GSE167825"
-  "GSE168453"
-  "GSE174125"
+  "GSE167825" # under run
+  "GSE168453" # under run
+  "GSE174125" # under run
   "GSE178756"
   "GSE179566"
   "GSE184703"
