@@ -269,7 +269,7 @@ gse_data |>
           cell_raw_cluster_forplot = cell_raw_cluster_forplot
         )
       },
-      mc.cores = 20
+      mc.cores = 100
     )
   ) ->
 gse_data_af
