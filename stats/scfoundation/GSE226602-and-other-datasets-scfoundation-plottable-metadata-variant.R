@@ -232,7 +232,7 @@ gse_data |>
     raw = parallel::mclapply(
       X = srrdir,
       FUN = function(.srrdir) {
-        log_info(glue::glue("Processing {basename(srrdir)}"))
+        log_info(glue::glue("Processing {basename(.srrdir)}"))
 
         barcode_cluster_file <- "barcode_cluster.tsv"
         cluster_umap <- fn_load_cluster(
@@ -270,7 +270,7 @@ gse_data |>
         #   .meta = metadata
         # )
         # log_success("Done")
-        log_success(glue::glue("Processing {basename(srrdir)}"))
+        log_success(glue::glue("Processing {basename(.srrdir)}"))
 
         tibble::tibble(
           cluster_umap = list(cluster_umap),
@@ -286,8 +286,49 @@ gse_data |>
   ) ->
 gse_data_af
 
+
+gse_data_af |>
+  # head(11) |>
+  dplyr::mutate(
+    raw = purrr::map2(
+      .x = raw,
+      .y = srrdir,
+      .f = function(.raw, .srrdir) {
+        if (!is.null(nrow(.raw))) {
+          return(.raw)
+        }
+        log_info(glue::glue("Processing {basename(.srrdir)}"))
+
+        barcode_cluster_file <- "barcode_cluster.tsv"
+        cluster_umap <- fn_load_cluster(
+          .filename = file.path(.srrdir, barcode_cluster_file)
+        )
+
+        cell_hetero_raw_file <- "cell.cell_heteroplasmic_df_raw.tsv.gz"
+        cell_hetero_raw <- fn_load_hetero(
+          .filename = file.path(.srrdir, cell_hetero_raw_file)
+        ) |>
+          dplyr::filter(variant %in% somatic_variants)
+
+        cell_meta_data_file <- "cell_meta_data.tsv"
+        metadata <- fn_load_meta(
+          .filename = file.path(.srrdir, cell_meta_data_file)
+        )
+
+        log_success(glue::glue("Processing {basename(.srrdir)}"))
+
+        tibble::tibble(
+          cluster_umap = list(cluster_umap),
+          cell_hetero_raw = list(cell_hetero_raw),
+          metadata = list(metadata)
+        )
+      }
+    )
+  ) ->
+gse_data_af_new
+
 readr::write_rds(
-  gse_data_af,
+  gse_data_af_new,
   file.path(
     foundation_out,
     "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af.rds.gz"
