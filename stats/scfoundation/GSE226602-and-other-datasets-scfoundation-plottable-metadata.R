@@ -514,6 +514,14 @@ ggsave(
   height = 10
 )
 
+ggsave(
+  path = foundation_out,
+  filename = "correlation_somatic_variants_cutoff1.pdf",
+  plot = fn_eda(gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 1)),
+  width = 20,
+  height = 10
+)
+
 
 gse_dataset_metadata_full |>
   dplyr::filter(`# of somatic variants` >= 2) |>
