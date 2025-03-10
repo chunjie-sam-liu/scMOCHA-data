@@ -383,6 +383,151 @@ data.table::fwrite(
   file.path(foundation_out, "gse_dataset_metadata_full.csv")
 )
 
+readr::write_rds(
+  gse_dataset_metadata_full,
+  file.path(foundation_out, "gse_dataset_metadata_full.rds")
+)
+
+
+gse_dataset_metadata_full
+fn_eda <- function(anno_meta_info_clean) {
+  p_ncells <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = "# cells after filter",
+          y = "# of somatic variants",
+          title = "Number of Cells",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_ncells: ", e)
+      ggplot()
+    }
+  )
+
+  p_numi <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = "Median UMI/cell",
+          y = "# of somatic variants",
+          title = "Number of UMI",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_numi: ", e)
+      ggplot()
+    }
+  )
+
+  p_avg_depth <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = "Depth read mean",
+          y = "# of somatic variants",
+          title = "Average Depth",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_avg_depth: ", e)
+      ggplot()
+    }
+  )
+
+  p_age <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggscatterstats(
+          x = "Age_new",
+          y = "# of somatic variants",
+          title = "Age",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_age: ", e)
+      ggplot()
+    }
+  )
+
+  p_gender <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggbetweenstats(
+          x = Gender,
+          y = "# of somatic variants",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+          title = "Gender",
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_gender: ", e)
+      ggplot()
+    }
+  )
+
+  p_disease <- tryCatch(
+    expr = {
+      anno_meta_info_clean |>
+        ggstatsplot::ggbetweenstats(
+          x = disease,
+          y = "# of somatic variants",
+          xlab = "",
+          ylab = "Number of Somatic Variants",
+          title = "Disease"
+        )
+    },
+    error = function(e) {
+      log_fatal("Error in plotting p_disease: ", e)
+      ggplot()
+    }
+  )
+
+  wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
+  p_combined
+}
+
+
+ggsave(
+  path = foundation_out,
+  filename = "correlation_somatic_variants.pdf",
+  plot = fn_eda(gse_dataset_metadata_full),
+  width = 20,
+  height = 10
+)
+
+ggsave(
+  path = foundation_out,
+  filename = "correlation_somatic_variants_cutoff2.pdf",
+  plot = fn_eda(gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 2)),
+  width = 20,
+  height = 10
+)
+
+
+gse_dataset_metadata_full |>
+  dplyr::filter(`# of somatic variants` >= 2) |>
+  dplyr::mutate(
+    a = `# of somatic variants` / `# cells after filter` / `Median UMI/cell` / `# cells after filter`
+  ) |>
+  ggstatsplot::ggscatterstats(
+    x = "Age_new",
+    y = a,
+    title = "Age",
+    xlab = "",
+    ylab = "Number of Somatic Variants",
+  )
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
