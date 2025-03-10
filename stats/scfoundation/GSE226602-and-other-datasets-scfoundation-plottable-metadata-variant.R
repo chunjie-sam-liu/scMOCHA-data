@@ -160,8 +160,8 @@ fn_forplot <- function(.af, .coverage, .meta) {
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
 
-gse_dataset_metadata_full <- data.table::fread(
-  file.path(foundation_out, "gse_dataset_metadata_full.csv")
+gse_dataset_metadata_full <- readr::read_rds(
+  file.path(foundation_out, "gse_dataset_metadata_full.rds")
 )
 gseids <- c(
   "GSE155673",
@@ -229,9 +229,11 @@ somatic_variants
 gse_data |>
   dplyr::select(gseid, srrid, srrdir) |>
   dplyr::mutate(
-    raw = purrr::map(
-      .x = srrdir,
-      .f = function(.srrdir) {
+    raw = parallel::mclapply(
+      X = srrdir,
+      FUN = function(.srrdir) {
+        log_info(glue::glue("Processing {basename(srrdir)}"))
+
         barcode_cluster_file <- "barcode_cluster.tsv"
         cluster_umap <- fn_load_cluster(
           .filename = file.path(.srrdir, barcode_cluster_file)
@@ -243,10 +245,10 @@ gse_data |>
         ) |>
           dplyr::filter(variant %in% somatic_variants)
 
-        cell_coverage_file <- "cell.coverage.txt.gz"
-        cell_coverage <- fn_load_coverage(
-          .filename = file.path(.srrdir, cell_coverage_file)
-        )
+        # cell_coverage_file <- "cell.coverage.txt.gz"
+        # cell_coverage <- fn_load_coverage(
+        #   .filename = file.path(.srrdir, cell_coverage_file)
+        # )
 
         cell_meta_data_file <- "cell_meta_data.tsv"
         metadata <- fn_load_meta(
@@ -254,29 +256,32 @@ gse_data |>
         )
 
 
-        cell_raw_cluster_af <- cluster_umap |>
-          dplyr::left_join(cell_hetero_raw, by = "barcode") |>
-          dplyr::rename(cluster = celltype) |>
-          tidyr::pivot_wider(
-            names_from = variant,
-            values_from = af
-          )
+        # cell_raw_cluster_af <- cluster_umap |>
+        #   dplyr::left_join(cell_hetero_raw, by = "barcode") |>
+        #   dplyr::rename(cluster = celltype) |>
+        #   tidyr::pivot_wider(
+        #     names_from = variant,
+        #     values_from = af
+        #   )
 
-        cell_raw_cluster_forplot <- fn_forplot(
-          .af = cell_raw_cluster_af,
-          .coverage = cell_coverage,
-          .meta = metadata
-        )
+        # cell_raw_cluster_forplot <- fn_forplot(
+        #   .af = cell_raw_cluster_af,
+        #   .coverage = cell_coverage,
+        #   .meta = metadata
+        # )
+        # log_success("Done")
+        log_success(glue::glue("Processing {basename(srrdir)}"))
 
         tibble::tibble(
           cluster_umap = list(cluster_umap),
           cell_hetero_raw = list(cell_hetero_raw),
-          cell_coverage = list(cell_coverage),
+          # cell_coverage = list(cell_coverage),
           metadata = list(metadata),
-          cell_raw_cluster_af = list(cell_raw_cluster_af),
-          cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
+          # cell_raw_cluster_af = list(cell_raw_cluster_af),
+          # cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
         )
-      }
+      },
+      mc.cores = 50
     )
   ) ->
 gse_data_af
