@@ -226,66 +226,73 @@ gse_data |>
   purrr::reduce(union) ->
 somatic_variants
 
-gse_data |>
-  dplyr::select(gseid, srrid, srrdir) |>
-  dplyr::mutate(
-    raw = parallel::mclapply(
-      X = srrdir,
-      FUN = function(.srrdir) {
-        log_info(glue::glue("Processing {basename(.srrdir)}"))
+# gse_data |>
+#   dplyr::select(gseid, srrid, srrdir) |>
+#   dplyr::mutate(
+#     raw = parallel::mclapply(
+#       X = srrdir,
+#       FUN = function(.srrdir) {
+#         log_info(glue::glue("Processing {basename(.srrdir)}"))
 
-        barcode_cluster_file <- "barcode_cluster.tsv"
-        cluster_umap <- fn_load_cluster(
-          .filename = file.path(.srrdir, barcode_cluster_file)
-        )
+#         barcode_cluster_file <- "barcode_cluster.tsv"
+#         cluster_umap <- fn_load_cluster(
+#           .filename = file.path(.srrdir, barcode_cluster_file)
+#         )
 
-        cell_hetero_raw_file <- "cell.cell_heteroplasmic_df_raw.tsv.gz"
-        cell_hetero_raw <- fn_load_hetero(
-          .filename = file.path(.srrdir, cell_hetero_raw_file)
-        ) |>
-          dplyr::filter(variant %in% somatic_variants)
+#         cell_hetero_raw_file <- "cell.cell_heteroplasmic_df_raw.tsv.gz"
+#         cell_hetero_raw <- fn_load_hetero(
+#           .filename = file.path(.srrdir, cell_hetero_raw_file)
+#         ) |>
+#           dplyr::filter(variant %in% somatic_variants)
 
-        # cell_coverage_file <- "cell.coverage.txt.gz"
-        # cell_coverage <- fn_load_coverage(
-        #   .filename = file.path(.srrdir, cell_coverage_file)
-        # )
+#         # cell_coverage_file <- "cell.coverage.txt.gz"
+#         # cell_coverage <- fn_load_coverage(
+#         #   .filename = file.path(.srrdir, cell_coverage_file)
+#         # )
 
-        cell_meta_data_file <- "cell_meta_data.tsv"
-        metadata <- fn_load_meta(
-          .filename = file.path(.srrdir, cell_meta_data_file)
-        )
+#         cell_meta_data_file <- "cell_meta_data.tsv"
+#         metadata <- fn_load_meta(
+#           .filename = file.path(.srrdir, cell_meta_data_file)
+#         )
 
 
-        # cell_raw_cluster_af <- cluster_umap |>
-        #   dplyr::left_join(cell_hetero_raw, by = "barcode") |>
-        #   dplyr::rename(cluster = celltype) |>
-        #   tidyr::pivot_wider(
-        #     names_from = variant,
-        #     values_from = af
-        #   )
+#         # cell_raw_cluster_af <- cluster_umap |>
+#         #   dplyr::left_join(cell_hetero_raw, by = "barcode") |>
+#         #   dplyr::rename(cluster = celltype) |>
+#         #   tidyr::pivot_wider(
+#         #     names_from = variant,
+#         #     values_from = af
+#         #   )
 
-        # cell_raw_cluster_forplot <- fn_forplot(
-        #   .af = cell_raw_cluster_af,
-        #   .coverage = cell_coverage,
-        #   .meta = metadata
-        # )
-        # log_success("Done")
-        log_success(glue::glue("Processing {basename(.srrdir)}"))
+#         # cell_raw_cluster_forplot <- fn_forplot(
+#         #   .af = cell_raw_cluster_af,
+#         #   .coverage = cell_coverage,
+#         #   .meta = metadata
+#         # )
+#         # log_success("Done")
+#         log_success(glue::glue("Processing {basename(.srrdir)}"))
 
-        tibble::tibble(
-          cluster_umap = list(cluster_umap),
-          cell_hetero_raw = list(cell_hetero_raw),
-          # cell_coverage = list(cell_coverage),
-          metadata = list(metadata),
-          # cell_raw_cluster_af = list(cell_raw_cluster_af),
-          # cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
-        )
-      },
-      mc.cores = 50
-    )
-  ) ->
-gse_data_af
+#         tibble::tibble(
+#           cluster_umap = list(cluster_umap),
+#           cell_hetero_raw = list(cell_hetero_raw),
+#           # cell_coverage = list(cell_coverage),
+#           metadata = list(metadata),
+#           # cell_raw_cluster_af = list(cell_raw_cluster_af),
+#           # cell_raw_cluster_forplot = list(cell_raw_cluster_forplot)
+#         )
+#       },
+#       mc.cores = 50
+#     )
+#   ) ->
+# gse_data_af
 
+# gse_data_af_new |>
+#   dplyr::filter(purrr::map_lgl(
+#     .x = raw,
+#     .f = \(.x) {
+#       is.null(nrow(.x))
+#     }
+#   ))
 
 gse_data_af |>
   # head(11) |>
@@ -299,36 +306,52 @@ gse_data_af |>
         }
         log_info(glue::glue("Processing {basename(.srrdir)}"))
 
-        barcode_cluster_file <- "barcode_cluster.tsv"
-        cluster_umap <- fn_load_cluster(
-          .filename = file.path(.srrdir, barcode_cluster_file)
-        )
+        tryCatch(
+          {
+            barcode_cluster_file <- "barcode_cluster.tsv"
+            cluster_umap <- fn_load_cluster(
+              .filename = file.path(.srrdir, barcode_cluster_file)
+            )
 
-        cell_hetero_raw_file <- "cell.cell_heteroplasmic_df_raw.tsv.gz"
-        cell_hetero_raw <- fn_load_hetero(
-          .filename = file.path(.srrdir, cell_hetero_raw_file)
-        ) |>
-          dplyr::filter(variant %in% somatic_variants)
+            cell_hetero_raw_file <- "cell.cell_heteroplasmic_df_raw.tsv.gz"
+            cell_hetero_raw <- fn_load_hetero(
+              .filename = file.path(.srrdir, cell_hetero_raw_file)
+            ) |>
+              dplyr::filter(variant %in% somatic_variants)
 
-        cell_meta_data_file <- "cell_meta_data.tsv"
-        metadata <- fn_load_meta(
-          .filename = file.path(.srrdir, cell_meta_data_file)
-        )
+            cell_meta_data_file <- "cell_meta_data.tsv"
+            metadata <- fn_load_meta(
+              .filename = file.path(.srrdir, cell_meta_data_file)
+            )
 
-        log_success(glue::glue("Processing {basename(.srrdir)}"))
+            log_success(glue::glue("Processing {basename(.srrdir)}"))
 
-        tibble::tibble(
-          cluster_umap = list(cluster_umap),
-          cell_hetero_raw = list(cell_hetero_raw),
-          metadata = list(metadata)
+            tibble::tibble(
+              cluster_umap = list(cluster_umap),
+              cell_hetero_raw = list(cell_hetero_raw),
+              metadata = list(metadata)
+            )
+          },
+          error = function(e) {
+            log_error(glue::glue("Error processing {basename(.srrdir)}: {e$message}"))
+            NULL
+          }
         )
       }
     )
   ) ->
 gse_data_af_new
 
-readr::write_rds(
-  gse_data_af_new,
+
+# readr::write_rds(
+#   gse_data_af_new,
+#   file.path(
+#     foundation_out,
+#     "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af.rds.gz"
+#   )
+# )
+
+gse_data_af_new <- readr::read_rds(
   file.path(
     foundation_out,
     "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af.rds.gz"
