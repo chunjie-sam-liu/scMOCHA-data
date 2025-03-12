@@ -29,8 +29,8 @@ gses=(
   "GSE178756" # only one sample
   "GSE179566" # only one sample
   "GSE184703" # under run
-  "GSE190839"
-  "GSE192391"
+  "GSE190839" # not run
+  "GSE192391" # not run
 )
 
 gses_bone_marrow=(
@@ -110,7 +110,7 @@ sra_run_table() {
     sra_run_table_gseid_force "${gse}" #&
   done
 }
-sra_run_table
+# sra_run_table
 
 # /home/liuc9/github/scMOCHA-data/src/02-sra-download-dump.R
 sra_download_dump() {
@@ -208,7 +208,7 @@ untargz() {
     bash 07.${gse}.scmocha.untargz.sh
   done
 }
-# untargz
+untargz
 
 # /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R
 collect_variants() {
