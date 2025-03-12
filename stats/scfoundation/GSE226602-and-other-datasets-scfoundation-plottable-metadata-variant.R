@@ -358,6 +358,209 @@ gse_data_af_new <- readr::read_rds(
   )
 )
 
+# merge --------------------------------------------------------------------
+
+gse_data
+gse_data_af_new
+gse_dataset_metadata_full
+
+celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other")
+gse_data_af_new |>
+  dplyr::select(gseid, srrid, raw) |>
+  tidyr::unnest(cols = raw) |>
+  dplyr::select(-metadata) |>
+  # head(20) |>
+  dplyr::mutate(
+    cell_hetero_raw_anno = parallel::mclapply(
+      X = seq_along(cluster_umap),
+      FUN = function(i) {
+        .cluster_umap <- cluster_umap[[i]]
+        .cell_hetero_raw <- cell_hetero_raw[[i]]
+
+        .cell_hetero_raw |>
+          dplyr::filter(variant %in% somatic_variants) |>
+          dplyr::left_join(.cluster_umap, by = "barcode") |>
+          dplyr::filter(celltype %in% celltypes)
+      },
+      mc.cores = 20
+    )
+  ) |>
+  dplyr::select(gseid, srrid, cell_hetero_raw_anno) ->
+gse_data_af_new_anno
+
+gse_data_af_new_anno |>
+  tidyr::unnest(cols = cell_hetero_raw_anno) |>
+  as.data.table() ->
+gse_data_af_new_anno_dt
+
+gse_data_af_new |>
+  dplyr::select(gseid, srrid, raw) |>
+  tidyr::unnest(cols = raw) |>
+  dplyr::select(-metadata) |>
+  # head(20) |>
+  dplyr::mutate(
+    cell_hetero_raw_anno = parallel::mclapply(
+      X = seq_along(cluster_umap),
+      FUN = function(i) {
+        .cluster_umap <- cluster_umap[[i]]
+        .cell_hetero_raw <- cell_hetero_raw[[i]]
+
+        .cell_hetero_raw |>
+          dplyr::filter(variant %in% somatic_variants) |>
+          dplyr::left_join(.cluster_umap, by = "barcode") |>
+          dplyr::filter(celltype %in% celltypes) |>
+          dplyr::select(celltype, variant, af) |>
+          dplyr::group_by(celltype, variant) |>
+          dplyr::summarize(af = mean(af, na.rm = TRUE)) |>
+          dplyr::ungroup()
+      },
+      mc.cores = 20
+    )
+  ) |>
+  dplyr::select(gseid, srrid, cell_hetero_raw_anno) ->
+gse_data_af_new_celltype
+
+
+gse_data_af_new_celltype |>
+  tidyr::unnest(cols = cell_hetero_raw_anno) |>
+  dplyr::mutate(
+    celltype_new = glue::glue("{srrid}_{celltype}")
+  ) ->
+gse_data_af_new_celltype_new
+
+gse_data_af_new_celltype_new |>
+  dplyr::select(celltype_new, variant, af) |>
+  tidyr::spread(key = celltype_new, value = af) ->
+gse_data_af_new_celltype_new_wide
+
+
+
+library(ComplexHeatmap)
+library(circlize)
+
+
+# No need to add variant column as it already exists
+gse_data_af_new_celltype_new_wide |>
+  as.data.frame() |>
+  tibble::column_to_rownames(var = "variant") |>
+  as.matrix() ->
+af_mtx
+
+
+
+gse_data_af_new_celltype_new |>
+  dplyr::select(celltype_new, celltype, gseid, srrid) |>
+  dplyr::mutate(celltype = factor(celltype, levels = celltypes)) |>
+  dplyr::distinct() ->
+af_cluster
+pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
+col_clusters <- levels(af_cluster$celltype)
+col_colors <- pcc$color[1:length(levels(af_cluster$celltype))]
+names(col_colors) <- col_clusters
+chm_top <- ComplexHeatmap::HeatmapAnnotation(
+  df = af_cluster,
+  # gap = unit(c(2, 2), "mm"),
+  col = list(
+    celltype = col_colors
+  ),
+  which = "column"
+)
+
+sort(unique(as.numeric(af_mtx))) -> .seq_af
+
+.seq_af
+
+
+# .seq_af |> hist()
+# .seq_af_sub <- c(
+#   -0.1, 0, 0.05, 0.1, 0.15, 0.2,
+#   .seq_af[(.seq_af > 0.2 & .seq_af < 0.8)],
+#   0.8, 0.85, 0.9, 0.95, 1
+# )
+# .seq_af_sub |> hist()
+col_option <- "turbo"
+col_pick = c(
+  "grey",
+  viridis::viridis_pal(
+    alpha = 1,
+    begin = 0,
+    end = 1,
+    direction = 1,
+    option = col_option
+  )(
+    # n_break
+    length(.seq_af) - 1
+  )
+)
+# (a) change the “0” value from dark blue to dark green;
+# col_pick |> color()
+#  (b) reverse the color, use red as “0” and violet as “1”
+col_fun = circlize::colorRamp2(
+  # seq(col_start,
+  #   col_end,
+  #   length.out = n_break
+  # ),
+  .seq_af,
+  col_pick
+)
+
+ComplexHeatmap::Heatmap(
+  matrix = af_mtx,
+  # col = circlize::colorRamp2(
+  #   breaks = c(-0.1, 0, 1),
+  #   colors = c("lightgrey", "gold", "blue"),
+  #   space = "RGB"
+  # ),
+  col = col_fun,
+  name = "Allele Freq",
+  na_col = "white",
+  color_space = "LAB",
+  rect_gp = gpar(col = NA),
+  border = NA,
+  cell_fun = NULL,
+  layer_fun = NULL,
+  jitter = FALSE,
+  # row
+  show_row_names = F,
+  cluster_rows = F,
+  cluster_row_slices = T,
+  clustering_distance_rows = "pearson",
+  clustering_method_rows = "ward.D",
+  row_names_gp = gpar(
+    # fontsize = 20,
+    # col = .gcol$cell_variants
+  ),
+  # column
+  # column_title = paste0("palette = '", col_option, "'"),
+  column_title = NULL,
+  column_title_gp = gpar(fontsize = 40),
+  cluster_columns = FALSE,
+  cluster_column_slices = T,
+  clustering_distance_columns = "pearson",
+  clustering_method_columns = "ward.D",
+  show_column_names = FALSE,
+  row_names_side = "left",
+  top_annotation = chm_top,
+  # left_annotation = hma_left,
+  # right_annotation = hma_right,
+  heatmap_legend_param = list(
+    title = "Allele Freq",
+    at = c(0, 0.5, 1),
+    labels = c("0", "0.5", "1"),
+    legend_direction = "vertical",
+    title_gp = gpar(fontsize = 10)
+  )
+)
+
+# readr::write_rds(
+#   gse_data_af_new_anno_dt,
+#   file.path(
+#     foundation_out,
+#     "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af_new_anno_dt.rds.gz"
+#   )
+# )
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
