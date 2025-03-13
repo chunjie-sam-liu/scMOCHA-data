@@ -17,18 +17,18 @@ gses=(
   "GSE162528" # not run
   "GSE162708" # only on sample,
   "GSE163314" # under run, done
-  "GSE163633" # under run, some are not success, need rerun
-  "GSE164690" # under run, some are not success, need rerun
+  "GSE163633" # under run, some are not success, need rerun, under run
+  "GSE164690" # under run, some are not success, need rerun, done
   "GSE165087" # not run
   "GSE165496" # under run, not run.
   "GSE165822" # under run, not run.
   "GSE166638" # Seq-Well
-  "GSE167825" # under run, some are not success, need rerun
-  "GSE168453" # under run, some are not success, need rerun
+  "GSE167825" # under run, some are not success, need rerun, under run
+  "GSE168453" # under run, some are not success, need rerun, under run
   "GSE174125" # under run, done
   "GSE178756" # only one sample
   "GSE179566" # only one sample
-  "GSE184703" # under run, some are not success, need rerun
+  "GSE184703" # under run, some are not success, need rerun, under run
   "GSE190839" # not run
   "GSE192391" # not run
 )
