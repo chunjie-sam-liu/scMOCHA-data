@@ -9,7 +9,7 @@ gses=(
   "GSE140881" # only one read
   "GSE142595" # under run, Seq-Well method
   "GSE143353" # done
-  "GSE147794" # finished, some are not success, need rerun
+  "GSE147794" # finished, some are not success, need rerun, done
   "GSE148215" # under run, done
   "GSE152981" # CITE-seq
   "GSE153098" # not run, CD8
@@ -17,18 +17,18 @@ gses=(
   "GSE162528" # not run
   "GSE162708" # only on sample,
   "GSE163314" # under run, done
-  "GSE163633" # under run, some are not success, need rerun, under run
+  "GSE163633" # under run, some are not success, need rerun, under run, done
   "GSE164690" # under run, some are not success, need rerun, done
   "GSE165087" # not run
   "GSE165496" # under run, not run.
   "GSE165822" # under run, not run.
   "GSE166638" # Seq-Well
-  "GSE167825" # under run, some are not success, need rerun, under run
-  "GSE168453" # under run, some are not success, need rerun, under run
+  "GSE167825" # under run, some are not success, need rerun, under run, done
+  "GSE168453" # under run, some are not success, need rerun, under run, done
   "GSE174125" # under run, done
   "GSE178756" # only one sample
   "GSE179566" # only one sample
-  "GSE184703" # under run, some are not success, need rerun, under run
+  "GSE184703" # under run, some are not success, need rerun, under run, done
   "GSE190839" # not run
   "GSE192391" # not run
 )
@@ -198,7 +198,7 @@ cptargz() {
     bash 05.${gse}.scmocha.cptargz.sh
   done
 }
-# cptargz
+cptargz
 
 # /home/liuc9/github/scMOCHA-data/data/GSE279945/07.GSE279945.scmocha.untargz.sh
 untargz() {
@@ -217,4 +217,4 @@ collect_variants() {
     Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} -b ${basedir} &
   done
 }
-collect_variants
+# collect_variants
