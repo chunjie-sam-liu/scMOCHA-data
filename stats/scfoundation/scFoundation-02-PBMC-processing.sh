@@ -198,7 +198,7 @@ cptargz() {
     bash 05.${gse}.scmocha.cptargz.sh
   done
 }
-cptargz
+# cptargz
 
 # /home/liuc9/github/scMOCHA-data/data/GSE279945/07.GSE279945.scmocha.untargz.sh
 untargz() {
@@ -217,4 +217,4 @@ collect_variants() {
     Rscript /home/liuc9/github/scMOCHA-data/src/06-collect-variants.R -g ${gse} -b ${basedir} &
   done
 }
-# collect_variants
+collect_variants
