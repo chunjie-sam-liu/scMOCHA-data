@@ -54,8 +54,13 @@ log_layout(layout_glue_colors)
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
-gse_dataset <- readxl::read_excel(file.path(foundation_out, "gses_cell_ratio_variant_meta.xlsx")) |>
+gse_dataset_scfoundation <- readxl::read_excel(file.path(foundation_out, "gses_cell_ratio_variant_meta.xlsx")) |>
   dplyr::filter(gseid != "WT")
+gse_dataset_scfoundation2 <- readxl::read_excel(
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out/gses_cell_ratio_variant_meta.xlsx"
+)
+
+gse_dataset <- dplyr::bind_rows(gse_dataset_scfoundation, gse_dataset_scfoundation2)
 
 gseids <- c(
   "GSE155673",
@@ -82,7 +87,19 @@ gseids <- c(
   "GSE226602",
   "GSE161354",
   "GSE235050",
-  "GSE181279"
+  "GSE181279",
+  # scfoundation2
+  "GSE143353",
+  "GSE148215",
+  "GSE163314",
+  "GSE163633",
+  "GSE164690",
+  "GSE167825",
+  "GSE174125",
+  "GSE184703",
+  "GSE153421",
+  "GSE147794",
+  "GSE168453"
 )
 
 # body --------------------------------------------------------------------
@@ -342,9 +359,33 @@ gse_dataset_load_sel_unnest_age_meta |>
     file.path(foundation_out, "metadata_disease_mess_for_claude.csv")
   )
 
+# after claud process, and then load the data
+# Claud prompt
+.claud_prompt <- function() {
+  based on input and editor output
+  input: metadata_disease_mess_for_claude.csv
+
+  process: accordding each row description ,based on nlp process, please add tow column, disease_ and status_, to give each sample a disease_, status_, for example, disease_ is COVID-19, status_ is Severe, disease_ is Heatlhy, status_ is Unknown, and etc.
+
+  Infected, exposed are COVID-19 status_, plrease correct classify them.
+
+  please refer below as output, only keep the sgeid, srrid and disease_, status_ with comma seprated
+
+  gseid,srrid,disease_,status_
+  GSE155673,GSM4712885,COVID-19,Severe
+  GSE155673,GSM4712887,COVID-19,Moderate
+  GSE155673,GSM4712889,COVID-19,Moderate
+
+  output:metadata_disease_mess_for_claude.out.csv
+
+}
+
+
 gse_dataset_disease_status_ <- data.table::fread(
   file.path(foundation_out, "metadata_disease_mess_for_claude.out.csv")
 )
+
+
 
 gse_dataset_load_sel_unnest_age_meta |>
   dplyr::select(gseid, srrid) |>
@@ -524,9 +565,9 @@ ggsave(
 
 
 gse_dataset_metadata_full |>
-  dplyr::filter(`# of somatic variants` >= 2) |>
+  dplyr::filter(`# of somatic variants` >= 1) |>
   dplyr::mutate(
-    a = `# of somatic variants` / `# cells after filter` / `Median UMI/cell` / `# cells after filter`
+    a = `# of somatic variants` / `Median UMI/cell`
   ) |>
   ggstatsplot::ggscatterstats(
     x = "Age_new",

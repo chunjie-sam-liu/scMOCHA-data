@@ -51,24 +51,45 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out"
-filename_ <- file.path(
-  datadir,
-  "gses_meta_read.xlsx"
+filename_ <- "gses_meta_read.xlsx"
+gses_meta_read <- readxl::read_xlsx(
+  file.path(
+    datadir,
+    filename_
+  )
 )
-gses_meta_read <- readxl::read_xlsx(filename_)
 
 datadir <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting"
-filename_ <- file.path(
-  datadir,
-  "gses_meta_read.xlsx"
+gses_meta_read_ <- readxl::read_xlsx(
+  file.path(
+    datadir,
+    filename_
+  )
 )
-gses_meta_read_ <- readxl::read_xlsx(filename_)
+
+datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out"
+gses_meta_read__ <- readxl::read_xlsx(
+  file.path(
+    datadir,
+    filename_
+  )
+)
 
 # body --------------------------------------------------------------------
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 
 gses_meta_read |>
   dplyr::bind_rows(gses_meta_read_) |>
+  dplyr::bind_rows(gses_meta_read__) ->
+gses_meta_read_all
+
+gses_meta_read_all$gseid |>
+  sort() |>
+  unique() -> gseids
+
+gses_meta_read_all |>
+  dplyr::filter(gseid %in% gseids) |>
+  dplyr::distinct() |>
   dplyr::select(
     `GSE ID` = gseid,
     samples,
