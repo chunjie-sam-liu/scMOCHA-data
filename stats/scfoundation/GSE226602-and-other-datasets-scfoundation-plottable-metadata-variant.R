@@ -299,13 +299,13 @@ gse_data |>
   ) ->
 gse_data_af
 
-# gse_data_af |>
-#   dplyr::filter(purrr::map_lgl(
-#     .x = raw,
-#     .f = \(.x) {
-#       is.null(nrow(.x))
-#     }
-#   ))
+gse_data_af |>
+  dplyr::filter(purrr::map_lgl(
+    .x = raw,
+    .f = \(.x) {
+      is.null(nrow(.x))
+    }
+  ))
 
 gse_data_af |>
   # head(11) |>

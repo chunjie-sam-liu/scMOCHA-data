@@ -16,6 +16,12 @@ gses=(
   "GSE149136"
 )
 
+gses=(
+
+  "GSE182020"
+  "GSE149136"
+)
+
 basedir="/mnt/isilon/u01_project/large-scale/liuc9/raw/scfoundation2/Bone-Marrow"
 basedir=$(realpath "$basedir")
 
