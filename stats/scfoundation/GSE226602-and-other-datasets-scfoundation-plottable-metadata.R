@@ -564,18 +564,18 @@ ggsave(
 )
 
 
-gse_dataset_metadata_full |>
-  dplyr::filter(`# of somatic variants` >= 1) |>
-  dplyr::mutate(
-    a = `# of somatic variants` / `Median UMI/cell`
-  ) |>
-  ggstatsplot::ggscatterstats(
-    x = "Age_new",
-    y = a,
-    title = "Age",
-    xlab = "",
-    ylab = "Number of Somatic Variants",
-  )
+# gse_dataset_metadata_full |>
+#   dplyr::filter(`# of somatic variants` >= 1) |>
+#   dplyr::mutate(
+#     a = `# of somatic variants` / `Median UMI/cell`
+#   ) |>
+#   ggstatsplot::ggscatterstats(
+#     x = "Age_new",
+#     y = a,
+#     title = "Age",
+#     xlab = "",
+#     ylab = "Number of Somatic Variants",
+#   )
 
 # footer ------------------------------------------------------------------
 
