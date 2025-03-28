@@ -356,13 +356,13 @@ gse_data_af |>
 gse_data_af_new
 
 
-readr::write_rds(
-  gse_data_af_new,
-  file.path(
-    foundation_out,
-    "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af.rds.gz"
-  )
-)
+# readr::write_rds(
+#   gse_data_af_new,
+#   file.path(
+#     foundation_out,
+#     "GSE226602-and-other-datasets-scfoundation-plottable-metadata-variant.R.gse_data_af.rds.gz"
+#   )
+# )
 
 gse_data_af_new <- readr::read_rds(
   file.path(
