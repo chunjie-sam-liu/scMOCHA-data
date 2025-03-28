@@ -511,6 +511,169 @@ ggsave(
 
 
 
+
+# ! disease and mha --------------------------------------------------------------------
+
+for_hetero_af_forplot |>
+  dplyr::mutate(
+    somatic_af = ifelse(
+      is.na(somatic_af),
+      0,
+      somatic_af
+    )
+  ) |>
+  # dplyr::filter(
+  #   !is.na(somatic_af)
+  # ) |>
+  dplyr::filter(
+    disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19")
+  ) |>
+  dplyr::mutate(
+    disease = factor(
+      disease,
+      levels = c(
+        "Alzheimer's Disease",
+        "Healthy",
+        "COVID-19"
+      )
+    )
+  ) ->
+for_mhc_disease_boxplot
+
+my_comparisons <- list(
+  c("Alzheimer's Disease", "Healthy"),
+  c("Alzheimer's Disease", "COVID-19"),
+  c("Healthy", "COVID-19")
+)
+
+for_mhc_disease_boxplot |>
+  ggpubr::ggboxplot(
+    x = "disease",
+    y = "somatic_af",
+    color = "disease",
+    palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add = "jitter"
+  ) +
+  ggpubr::stat_compare_means(comparisons = my_comparisons, ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      size = 16,
+      color = "black"
+    ),
+    legend.position = "none"
+  ) +
+  labs(
+    y = "Mean somatic variant AF"
+  ) ->
+p1
+for_mhc_disease_boxplot |>
+  dplyr::filter(
+    somatic_af > 0
+  ) |>
+  ggpubr::ggboxplot(
+    x = "disease",
+    y = "somatic_af",
+    color = "disease",
+    palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add = "jitter"
+  ) +
+  ggpubr::stat_compare_means(comparisons = my_comparisons, ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      size = 16,
+      color = "black"
+    ),
+    legend.position = "none"
+  ) +
+  labs(
+    y = "Mean somatic variant AF"
+  ) ->
+p2
+
+wrap_plots(list(p1, p2), ncol = 2) -> p_combined
+
+ggsave(
+  file.path(outdir, "mhc_disease_boxplot_combined.pdf"),
+  p_combined,
+  width = 10,
+  height = 5
+)
+
+gse_dataset_metadata_full |>
+  dplyr::filter(gseid != "GSE220189") |>
+  dplyr::filter(
+    disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19")
+  ) |>
+  dplyr::mutate(
+    disease = factor(
+      disease,
+      levels = c(
+        "Alzheimer's Disease",
+        "Healthy",
+        "COVID-19"
+      )
+    )
+  ) ->
+for_count_disease_boxplot
+
+for_count_disease_boxplot |>
+  ggpubr::ggboxplot(
+    x = "disease",
+    y = "# of somatic variants",
+    color = "disease",
+    palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add = "jitter"
+  ) +
+  ggpubr::stat_compare_means(comparisons = my_comparisons, ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      size = 16,
+      color = "black"
+    ),
+    legend.position = "none"
+  ) +
+  labs(
+    y = "# of somatic variants"
+  ) ->
+p1_count
+
+for_count_disease_boxplot |>
+  dplyr::filter(
+    `# of somatic variants` > 0
+  ) |>
+  ggpubr::ggboxplot(
+    x = "disease",
+    y = "# of somatic variants",
+    color = "disease",
+    palette = c("#00AFBB", "#E7B800", "#FC4E07"),
+    add = "jitter"
+  ) +
+  ggpubr::stat_compare_means(comparisons = my_comparisons, ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(
+      size = 16,
+      color = "black"
+    ),
+    legend.position = "none"
+  ) +
+  labs(
+    y = "# of somatic variants"
+  ) ->
+p2_count
+
+
+wrap_plots(list(p1_count, p2_count), ncol = 2) -> p_combined_count
+
+ggsave(
+  file.path(outdir, "somatic_variant_disease_boxplot_combined.pdf"),
+  p_combined_count,
+  width = 10,
+  height = 5
+)
 # ! somatic --------------------------------------------------------------------
 
 for_hetero_af_forplot |>
@@ -569,6 +732,11 @@ for_age_plot |>
     by = c("Age_group" = "Age_group")
   ) |>
   ggplot(aes(x = Age_group)) +
+  geom_hline(
+    yintercept = 0.3,
+    linetype = 21,
+    color = "black",
+  ) +
   # ggh4x::facet_wrap2(
   #   ~chemistry,
   #   ncol = 1,
@@ -811,17 +979,100 @@ ggsave(
 
 gse_dataset_metadata_full |>
   dplyr::filter(!is.na(Age_new)) |>
+  dplyr::mutate(
+    disease = dplyr::case_when(
+      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+      TRUE ~ "Other"
+    )
+  ) |>
+  dplyr::mutate(
+    disease = factor(
+      disease,
+      levels = c(
+        "Healthy",
+        "Alzheimer's Disease",
+        "COVID-19",
+        "Unknown",
+        "Other"
+      )
+    )
+  ) |>
   ggplot(aes(
     x = Age_new,
     y = `# of somatic variants`,
     color = disease
   )) +
   geom_point() +
-  scale_color_brewer(palette = "Set3")
+  ggsci::scale_color_aaas(
+    name = "Disease"
+  ) +
+  theme(
+    plot.margin = margin(t = 0.5, b = 0.5, l = 0.5, r = 0.5, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.x.bottom = element_line(color = "black"),
+    # axis.ticks.x = element_blank(),
+    # axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    # axis.title.x = element_blank(),
+    # legend.position = c(0.8, 0.5),
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black"),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    ),
+    axis.title = element_text(
+      size = 16,
+      color = "black"
+    )
+  ) +
+  labs(
+    x = "Age",
+    y = "# of somatic variants"
+  ) ->
+p_age_somatic_af_disease
+
+ggsave(
+  file.path(outdir, "p_age_somatic_af_disease.pdf"),
+  p_age_somatic_af_disease,
+  width = 12,
+  height = 7
+)
 
 
 gse_dataset_metadata_full |>
   dplyr::filter(!is.na(Age_new)) |>
+  dplyr::mutate(
+    disease = dplyr::case_when(
+      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+      TRUE ~ "Other"
+    )
+  ) |>
+  dplyr::mutate(
+    disease = factor(
+      disease,
+      levels = c(
+        "Healthy",
+        "Alzheimer's Disease",
+        "COVID-19",
+        "Unknown",
+        "Other"
+      )
+    )
+  ) |>
   ggplot(aes(
     x = Age_new,
     y = `# of somatic variants`,
