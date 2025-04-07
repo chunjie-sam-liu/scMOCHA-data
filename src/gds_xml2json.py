@@ -6,12 +6,14 @@
 # @DESCRIPTION:
 # @VERSION: v0.0.1
 
-import argparse
 import json
 import os
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Optional
+
+import typer
 
 
 def element_to_dict(element):
@@ -72,7 +74,7 @@ def parse_xml_to_json(xml_file):
     return result
 
 
-def validate_file_path(file_path):
+def validate_file_path(file_path: str) -> str:
     """
     Validate that the input file exists.
     """
@@ -90,52 +92,45 @@ def ensure_output_dir(output_file):
         os.makedirs(output_dir)
 
 
-def parse_args():
-    """
-    Parse command line arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description="Convert XML file to JSON format."
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
-        required=True,
-        help="Path to input XML file",
-        type=validate_file_path,
-    )
-    parser.add_argument(
-        "-o",
+app = typer.Typer(help="Convert XML file to JSON format.")
+
+
+@app.command()
+def convert(
+    input_file: str = typer.Option(
+        ..., "--input", "-i", help="Path to input XML file"
+    ),
+    output_file: Optional[str] = typer.Option(
+        None,
         "--output",
+        "-o",
         help="Path to output JSON file. If not specified, will use the input filename with .json extension",
-    )
-    parser.add_argument(
-        "-p",
+    ),
+    pretty: bool = typer.Option(
+        False,
         "--pretty",
-        action="store_true",
+        "-p",
         help="Pretty-print JSON output with indentation",
-    )
-    parser.add_argument(
-        "--indent",
-        type=int,
-        default=2,
-        help="Indentation level for pretty-printing (default: 2)",
-    )
-
-    return parser.parse_args()
-
-
-def main():
+    ),
+    indent: int = typer.Option(
+        2, "--indent", help="Indentation level for pretty-printing (default: 2)"
+    ),
+):
     """
-    Main function to process XML file and output JSON.
+    Convert XML file to JSON format.
     """
-    args = parse_args()
+    # Validate input file
+    try:
+        validate_file_path(input_file)
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
     # Set input and output files
-    xml_file = args.input
+    xml_file = input_file
 
-    if args.output:
-        json_file = args.output
+    if output_file:
+        json_file = output_file
     else:
         json_file = str(Path(xml_file).with_suffix(".json"))
 
@@ -148,14 +143,19 @@ def main():
 
         # Write to JSON file
         with open(json_file, "w") as f:
-            indent = args.indent if args.pretty else None
-            json.dump(data, f, indent=indent)
+            indent_val = indent if pretty else None
+            json.dump(data, f, indent=indent_val)
 
-        print(f"Successfully parsed {xml_file} to {json_file}")
+        typer.echo(f"Successfully parsed {xml_file} to {json_file}")
 
     except Exception as e:
-        print(f"Error parsing XML: {e}")
-        sys.exit(1)
+        typer.echo(f"Error parsing XML: {e}", err=True)
+        raise typer.Exit(code=1)
+
+
+def main():
+    """Entry point for the application"""
+    app()
 
 
 if __name__ == "__main__":

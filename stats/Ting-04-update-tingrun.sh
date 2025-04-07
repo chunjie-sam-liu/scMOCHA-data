@@ -13,6 +13,7 @@ gseids=(
 )
 
 cj_dir=/home/liuc9/github/scMOCHA-data/data
+basedir=/home/liuc9/github/scMOCHA-data/data
 # make ${gseid}.srrid.list
 
 make_srrid_list() {
@@ -47,4 +48,5 @@ parse_variants_gseids() {
   done
 }
 
-parse_variants_gseids
+# parse_variants_gseids
+parse_variants_gseid GSE220189

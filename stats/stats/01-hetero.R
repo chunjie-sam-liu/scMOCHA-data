@@ -99,6 +99,8 @@ gseids <- c(
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
+
+thegseid <- "GSE220189"
 # body --------------------------------------------------------------------
 tibble::tibble(
   gseid = gseids

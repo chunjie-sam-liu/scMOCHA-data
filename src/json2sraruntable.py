@@ -5,14 +5,17 @@
 # @DATE: 2024-05-10
 # @DESCRIPTION: Parse JSON to get BioProject ID and GSE ID
 
-import argparse
 import json
 import os
 import subprocess
 import sys
+from pathlib import Path
+from typing import Optional
+
+import typer
 
 
-def parse_json(json_file):
+def parse_json(json_file: str):
     """Parse the JSON file to get BioProject ID and GSE ID"""
     with open(json_file, "r") as f:
         data = json.load(f)
@@ -26,7 +29,7 @@ def parse_json(json_file):
     return bioproject_id, gse_id
 
 
-def run_command(cmd, verbose=False):
+def run_command(cmd: str, verbose: bool = False):
     """Run the generated command"""
     if verbose:
         print(f"Executing command: {cmd}")
@@ -40,12 +43,12 @@ def run_command(cmd, verbose=False):
 
 
 def create_output_files(
-    json_file,
-    bioproject_id,
-    gse_id,
-    output_dir=None,
-    run_cmd=False,
-    verbose=False,
+    json_file: str,
+    bioproject_id: str,
+    gse_id: str,
+    output_dir: Optional[str] = None,
+    run_cmd: bool = False,
+    verbose: bool = False,
 ):
     """Create output files"""
     # Get directory from json_file or use provided output_dir
@@ -98,81 +101,80 @@ def create_output_files(
         run_command(biosample_cmd, verbose)
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Parse JSON to get BioProject ID and GSE ID and create SRA run scripts",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "json_file",
+app = typer.Typer(
+    help="Parse JSON to get BioProject ID and GSE ID and create SRA run scripts"
+)
+
+
+@app.command()
+def main(
+    json_file: Path = typer.Argument(
+        ...,
         help="Path to the input JSON file containing BioProject and GSE information",
-    )
-    parser.add_argument(
-        "-o",
+    ),
+    output_dir: Optional[Path] = typer.Option(
+        None,
         "--output-dir",
+        "-o",
         help="Output directory for SraRunTable and shell script (defaults to same directory as JSON)",
-    )
-    parser.add_argument(
-        "-v",
+    ),
+    verbose: bool = typer.Option(
+        False,
         "--verbose",
-        action="store_true",
+        "-v",
         help="Print verbose information during processing",
-    )
-    parser.add_argument(
-        "-r",
+    ),
+    run: bool = typer.Option(
+        False,
         "--run",
-        action="store_true",
+        "-r",
         help="Execute the generated command after creating the shell script",
-    )
-
-    return parser.parse_args()
-
-
-def main():
-    args = parse_args()
-
+    ),
+):
+    """
+    Parse JSON to get BioProject ID and GSE ID and create SRA run scripts.
+    The script generates shell files to fetch SRA run table and BioSample information.
+    """
     # Check if the file exists
-    if not os.path.isfile(args.json_file):
-        print(f"Error: File {args.json_file} does not exist")
+    if not json_file.exists():
+        print(f"Error: File {json_file} does not exist")
         sys.exit(1)
 
     # Check if output directory exists and create if specified
-    if args.output_dir and not os.path.exists(args.output_dir):
+    if output_dir and not output_dir.exists():
         try:
-            os.makedirs(args.output_dir)
-            if args.verbose:
-                print(f"Created output directory: {args.output_dir}")
+            output_dir.mkdir(parents=True)
+            if verbose:
+                print(f"Created output directory: {output_dir}")
         except OSError:
-            print(
-                f"Error: Could not create output directory: {args.output_dir}"
-            )
+            print(f"Error: Could not create output directory: {output_dir}")
             sys.exit(1)
 
     # Parse JSON
-    if args.verbose:
-        print(f"Parsing JSON file: {args.json_file}")
-    bioproject_id, gse_id = parse_json(args.json_file)
+    if verbose:
+        print(f"Parsing JSON file: {json_file}")
+    bioproject_id, gse_id = parse_json(str(json_file))
 
     if not bioproject_id or not gse_id:
         print(
-            f"Error: Could not extract BioProject ID or GSE ID from {args.json_file}"
+            f"Error: Could not extract BioProject ID or GSE ID from {json_file}"
         )
         sys.exit(1)
 
-    if args.verbose:
+    if verbose:
         print(f"Found BioProject ID: {bioproject_id}")
         print(f"Found GSE ID: {gse_id}")
 
     # Create output files and optionally run the command
     create_output_files(
-        args.json_file,
+        str(json_file),
         bioproject_id,
         gse_id,
-        args.output_dir,
-        args.run,
-        args.verbose,
+        str(output_dir) if output_dir else None,
+        run,
+        verbose,
     )
 
 
 if __name__ == "__main__":
-    main()
+    app()

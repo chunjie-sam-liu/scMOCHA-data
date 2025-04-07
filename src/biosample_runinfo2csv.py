@@ -6,12 +6,13 @@
 # @DESCRIPTION: Convert BioSample RunInfo files to CSV format
 # @VERSION: v0.0.1
 
-import argparse
 import csv
 import os
 import re
 import sys
 from pathlib import Path
+
+import typer
 
 
 def parse_runinfo_file(file_path):
@@ -20,7 +21,7 @@ def parse_runinfo_file(file_path):
     Each dictionary represents a sample's information.
     """
     samples = []
-    current_sample = None
+    current_sample = None  # noqa: F841
 
     with open(file_path, "r") as f:
         content = f.read()
@@ -114,77 +115,76 @@ def write_to_csv(samples, csv_file):
         writer.writerows(samples)
 
 
-def validate_file_path(file_path):
+def validate_file_path(file_path: Path) -> Path:
     """
     Validate that the input file exists.
     """
-    if not os.path.isfile(file_path):
+    if not file_path.is_file():
         raise FileNotFoundError(f"Input file not found: {file_path}")
     return file_path
 
 
-def ensure_output_dir(output_file):
+def ensure_output_dir(output_file: Path) -> None:
     """
     Ensure the output directory exists.
     """
-    output_dir = os.path.dirname(output_file)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    output_dir = output_file.parent
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
 
 
-def parse_args():
-    """
-    Parse command line arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description="Convert BioSample RunInfo file to CSV format."
-    )
-    parser.add_argument(
-        "-i",
-        "--input",
-        required=True,
-        help="Path to input BioSample RunInfo file",
-        type=validate_file_path,
-    )
-    parser.add_argument(
-        "-o",
+app = typer.Typer(help="Convert BioSample RunInfo file to CSV format.")
+
+
+@app.command()
+def convert(
+    input_path: Path = typer.Option(
+        ..., "--input", "-i", help="Path to input BioSample RunInfo file"
+    ),
+    output_path: Path = typer.Option(
+        None,
         "--output",
+        "-o",
         help="Path to output CSV file. If not specified, will use the input filename with .csv extension",
-    )
+    ),
+):
+    """
+    Convert BioSample RunInfo file to CSV format.
+    """
+    # Validate input file
+    try:
+        validate_file_path(input_path)
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
 
-    return parser.parse_args()
+    # Set output file
+    if output_path is None:
+        output_path = input_path.with_suffix(".csv")
+
+    # Ensure output directory exists
+    ensure_output_dir(output_path)
+
+    # Parse RunInfo to structured data
+    try:
+        samples = parse_runinfo_file(input_path)
+
+        # Write to CSV file
+        write_to_csv(samples, output_path)
+
+        typer.echo(f"Successfully converted {input_path} to {output_path}")
+        typer.echo(f"Processed {len(samples)} samples")
+
+    except Exception as e:
+        typer.echo(f"Error processing BioSample RunInfo: {e}", err=True)
+        raise typer.Exit(code=1)
 
 
 def main():
     """
     Main function to process BioSample RunInfo file and output CSV.
     """
-    args = parse_args()
-
-    # Set input and output files
-    runinfo_file = args.input
-
-    if args.output:
-        csv_file = args.output
-    else:
-        csv_file = str(Path(runinfo_file).with_suffix(".csv"))
-
-    # Ensure output directory exists
-    ensure_output_dir(csv_file)
-
-    # Parse RunInfo to structured data
-    try:
-        samples = parse_runinfo_file(runinfo_file)
-
-        # Write to CSV file
-        write_to_csv(samples, csv_file)
-
-        print(f"Successfully converted {runinfo_file} to {csv_file}")
-        print(f"Processed {len(samples)} samples")
-
-    except Exception as e:
-        print(f"Error processing BioSample RunInfo: {e}")
-        sys.exit(1)
+    app()
 
 
 if __name__ == "__main__":
