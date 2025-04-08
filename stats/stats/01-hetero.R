@@ -92,30 +92,41 @@ gseids <- c(
   "GSE174125",
   "GSE184703",
   "GSE153421",
-  "GSE147794",
-  "GSE168453"
+  # "GSE168453",
+  "GSE147794"
 )
 
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
 
-thegseid <- "GSE220189"
+thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
 tibble::tibble(
   gseid = gseids
 ) |>
   dplyr::mutate(
-    anno = purrr::map(
-      .x = gseid,
-      .f = \(.gseid) {
+    anno = parallel::mclapply(
+      X = gseid,
+      FUN = function(.gseid) {
+        log_info("Loading {.gseid}... ({which(gseids == .gseid)}/{length(gseids)})")
         .anno <- readr::read_rds(
           file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
         )
-      }
+        log_success("Loaded {.gseid}! ({which(gseids == .gseid)}/{length(gseids)})")
+        return(.anno)
+      },
+      mc.cores = 10
     )
   ) ->
 gse_data_loaded
+
+# gse_data_loaded |>
+#   dplyr::filter(gseid == thegseid) |>
+#   tidyr::unnest(cols = anno) |>
+#   dplyr::select(celltype_ratio) |>
+#   dplyr::slice(1) |>
+#   tidyr::unnest(cols = celltype_ratio)
 
 
 gse_data_loaded |>
@@ -126,13 +137,13 @@ gse_data
 gse_data
 gse_data$haplo_violin[[1]]
 gse_data |>
-  dplyr::filter(gseid != "GSE220189") |>
+  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(gseid, srrid, chemistry, anno, hetero, haplo_violin, somatic_variant) ->
 for_hetero
 
 
 gse_data |>
-  dplyr::filter(gseid != "GSE220189") |>
+  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(srrid, haplo_variant, hetero, celltype_ratio) |>
   dplyr::left_join(
     gse_dataset_metadata_full |> dplyr::select(srrid, Chemistry, disease),
@@ -478,13 +489,12 @@ ggsave(
   dpi = 300
 )
 # for_hetero$somatic_variant[[1]] -> .somatic_variant
-
 for_hetero |>
   dplyr::mutate(
-    mean_heteroplasmy_count = purrr::map2(
-      .x = haplo_violin,
-      .y = somatic_variant,
-      .f = \(.haplo_violin, .somatic_variant) {
+    mean_heteroplasmy_count = parallel::mcmapply(
+      FUN = \(.haplo_violin, .somatic_variant, i, total) {
+        cli::cli_alert_info("Processing {i}/{total} haplo_violin...")
+
         .editing <- .somatic_variant$editing
         .somatic <- .somatic_variant$somatic
         .haplo_violin |>
@@ -535,6 +545,8 @@ for_hetero |>
           ) ->
         .cluster_somatic_cluster
 
+        cli::cli_alert_success("Completed processing {i}/{total}")
+
         tibble::tibble(
           haplo_af = mean(.variant_non_editing$mean_af, na.rm = TRUE),
           somatic_af = mean(.variant_somatic$mean_af, na.rm = TRUE),
@@ -543,7 +555,13 @@ for_hetero |>
           haplo_af_cluster = list(.cluster_non_editing_cluster),
           somatic_af_cluster = list(.cluster_somatic_cluster),
         )
-      }
+      },
+      .haplo_violin = haplo_violin,
+      .somatic_variant = somatic_variant,
+      i = seq_along(haplo_violin),
+      total = length(haplo_violin),
+      mc.cores = 10,
+      SIMPLIFY = FALSE
     )
   ) ->
 for_hetero_af
@@ -952,7 +970,7 @@ ggsave(
 )
 
 gse_dataset_metadata_full |>
-  dplyr::filter(gseid != "GSE220189") |>
+  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::filter(
     disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19")
   ) |>
@@ -1188,7 +1206,7 @@ ggsave(
 # meta --------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
-  dplyr::filter(gseid != "GSE220189") |>
+  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(gseid, srrid, Race, Ethnicity, Gender, Age_group, disease, Chemistry) ->
 gse_dataset_metadata_full_selected
 
