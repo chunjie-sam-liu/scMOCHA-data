@@ -7,9 +7,7 @@
 # @VERSION: v0.0.1
 
 import csv
-import os
 import re
-import sys
 from pathlib import Path
 
 import typer
