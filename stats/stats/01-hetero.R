@@ -96,15 +96,40 @@ gseids <- c(
   "GSE147794"
 )
 
+# not PBMC
+gseids_not_pbmc <- c(
+  "GSE168453", # Pool samples together, not individual samples
+  "GSE163668", #Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
+  "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
+  "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
+  "GSE163314", # Half of the samples are from Colon, not PBMC
+  "GSE164690", # Most of the samples are from tumors (Head and neck squamous cell carcinoma (HNSCC)), not from PBMC
+  "GSE148215" # The samples are human embryonic cells, not PBMC cells
+)
+# enrich cells
+gseids_enrich_cells <- c(
+  "GSE167825", # CD8T cell enriched
+  "GSE175524" # B cell enriched
+  "GSE261140" # CD8T cell enriched
+)
+
+gseids_tobe_excluded <- c(
+  gseids_not_pbmc
+)
+
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
 
-thegseid <- "GSE168453"
+# thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
+
 tibble::tibble(
   gseid = gseids
 ) |>
+  dplyr::filter(
+    !gseid %in% gseids_tobe_excluded
+  ) |>
   dplyr::mutate(
     anno = parallel::mclapply(
       X = gseid,
@@ -120,14 +145,6 @@ tibble::tibble(
     )
   ) ->
 gse_data_loaded
-
-# gse_data_loaded |>
-#   dplyr::filter(gseid == thegseid) |>
-#   tidyr::unnest(cols = anno) |>
-#   dplyr::select(celltype_ratio) |>
-#   dplyr::slice(1) |>
-#   tidyr::unnest(cols = celltype_ratio)
-
 
 gse_data_loaded |>
   tidyr::unnest(cols = anno) ->
