@@ -99,7 +99,7 @@ gseids <- c(
 # not PBMC
 gseids_not_pbmc <- c(
   "GSE168453", # Pool samples together, not individual samples
-  "GSE163668", #Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
+  "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
   "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
   "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
   "GSE163314", # Half of the samples are from Colon, not PBMC
@@ -109,7 +109,7 @@ gseids_not_pbmc <- c(
 # enrich cells
 gseids_enrich_cells <- c(
   "GSE167825", # CD8T cell enriched
-  "GSE175524" # B cell enriched
+  "GSE175524", # B cell enriched
   "GSE261140" # CD8T cell enriched
 )
 
@@ -151,16 +151,13 @@ gse_data_loaded |>
 gse_data
 
 # body --------------------------------------------------------------------
-gse_data
-gse_data$haplo_violin[[1]]
+
 gse_data |>
-  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(gseid, srrid, chemistry, anno, hetero, haplo_violin, somatic_variant) ->
 for_hetero
 
 
 gse_data |>
-  # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(srrid, haplo_variant, hetero, celltype_ratio) |>
   dplyr::left_join(
     gse_dataset_metadata_full |> dplyr::select(srrid, Chemistry, disease),
@@ -365,22 +362,12 @@ ggsave(
   dpi = 300
 )
 
-# gse_data_haplo_variant$haplo_variant[[1]] |> dplyr::glimpse()
-
-# gse_data_haplo_variant$haplo_variant[[1]] |> dplyr::select(
-#   variant,
-#   Locus,
-#   Haplogroup,
-#   ntchange,
-#   Variant_disease = Disease,
-#   is_somatic = color
-# )
-
 gse_data_haplo_variant |>
   dplyr::select(haplo_variant) |>
   tidyr::unnest(cols = haplo_variant) |>
   dplyr::distinct() ->
 all_variants
+
 all_variants |>
   dplyr::filter(color == "white") ->
 haplo_variants
@@ -388,123 +375,126 @@ all_variants |>
   dplyr::filter(color == "black") ->
 somatic_variants
 
-gse_data_haplo_variant |>
-  tidyr::unnest(cols = hetero) |>
-  dplyr::filter(variant %in% somatic_variants$variant) |>
-  dplyr::filter(disease %in% c("Alzheimer's Disease", "Healthy")) |>
-  dplyr::group_by(
-    srrid, disease, variant
-  ) |>
-  dplyr::summarise(af = mean(af, na.rm = TRUE)) |>
-  dplyr::ungroup() |>
-  dplyr::arrange(disease) ->
-for_hetero_af_tile
+\() {
+  gse_data_haplo_variant |>
+    tidyr::unnest(cols = hetero) |>
+    dplyr::filter(variant %in% somatic_variants$variant) |>
+    dplyr::filter(disease %in% c("Alzheimer's Disease", "Healthy")) |>
+    dplyr::group_by(
+      srrid, disease, variant
+    ) |>
+    dplyr::summarise(af = mean(af, na.rm = TRUE)) |>
+    dplyr::ungroup() |>
+    dplyr::arrange(disease) ->
+  for_hetero_af_tile
 
-for_hetero_af_tile |>
-  dplyr::select(variant) |>
-  dplyr::mutate(pos = gsub(variant, pattern = "[ACGT]|>", replacement = "")) |>
-  dplyr::mutate(pos = as.numeric(pos)) |>
-  dplyr::arrange(-pos) |>
-  dplyr::distinct() ->
-rank_variant
+  for_hetero_af_tile |>
+    dplyr::select(variant) |>
+    dplyr::mutate(pos = gsub(variant, pattern = "[ACGT]|>", replacement = "")) |>
+    dplyr::mutate(pos = as.numeric(pos)) |>
+    dplyr::arrange(-pos) |>
+    dplyr::distinct() ->
+  rank_variant
 
-for_hetero_af_tile |>
-  dplyr::group_by(disease, srrid) |>
-  dplyr::count() |>
-  dplyr::ungroup() |>
-  dplyr::arrange(disease, -n) ->
-rank_srrid
+  for_hetero_af_tile |>
+    dplyr::group_by(disease, srrid) |>
+    dplyr::count() |>
+    dplyr::ungroup() |>
+    dplyr::arrange(disease, -n) ->
+  rank_srrid
 
-rank_srrid |>
-  dplyr::mutate(
-    srrid = factor(srrid, levels = rank_srrid$srrid),
-  ) |>
-  dplyr::arrange(srrid) |>
-  dplyr::group_by(disease) |>
-  tibble::rowid_to_column() |>
-  dplyr::mutate(
-    mid_srrid = srrid[ceiling(dplyr::n() / 2)]
-  ) |>
-  ggplot(aes(
-    x = srrid,
-    y = 1
-  )) +
-  geom_tile(
-    aes(
+  rank_srrid |>
+    dplyr::mutate(
+      srrid = factor(srrid, levels = rank_srrid$srrid),
+    ) |>
+    dplyr::arrange(srrid) |>
+    dplyr::group_by(disease) |>
+    tibble::rowid_to_column() |>
+    dplyr::mutate(
+      mid_srrid = srrid[ceiling(dplyr::n() / 2)]
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = 1
+    )) +
+    geom_tile(
+      aes(
+        fill = disease
+      )
+    ) +
+    geom_text(
+      aes(
+        y = 1,
+        label = ifelse(srrid == mid_srrid, as.character(disease), "")
+      ),
+    ) +
+    ggsci::scale_fill_npg() +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_blank(),
+      axis.title = element_blank(),
+      axis.text = element_blank(),
+      axis.ticks = element_blank(),
+      legend.position = "none"
+    ) ->
+  p_tile
+
+
+  for_hetero_af_tile |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid$srrid
+      ),
+      variant = factor(
+        variant,
+        levels = rank_variant$variant
+      )
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = variant,
       fill = disease
-    )
-  ) +
-  geom_text(
-    aes(
-      y = 1,
-      label = ifelse(srrid == mid_srrid, as.character(disease), "")
+    )) +
+    geom_tile(
+      show.legend = F
+    ) +
+    ggsci::scale_fill_npg() +
+    theme(
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      legend.position = "right",
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+    ) +
+    labs(
+      y = "Variant",
+    ) ->
+  p_variants_tile
+
+  ggsave(
+    filename = file.path(outdir, "disease_varaint.pdf" |> glue::glue()),
+    plot = wrap_plots(
+      p_variants_tile,
+      p_tile,
+      ncol = 1,
+      heights = c(15, 1),
+      guides = "collect"
     ),
-  ) +
-  ggsci::scale_fill_npg() +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_blank(),
-    axis.title = element_blank(),
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-    legend.position = "none"
-  ) ->
-p_tile
+    width = 14,
+    height = 7,
+    dpi = 300
+  )
+}
 
-
-for_hetero_af_tile |>
-  dplyr::mutate(
-    srrid = factor(
-      srrid,
-      levels = rank_srrid$srrid
-    ),
-    variant = factor(
-      variant,
-      levels = rank_variant$variant
-    )
-  ) |>
-  ggplot(aes(
-    x = srrid,
-    y = variant,
-    fill = disease
-  )) +
-  geom_tile(
-    show.legend = F
-  ) +
-  ggsci::scale_fill_npg() +
-  theme(
-    plot.margin = margin(t = 0, b = 0, unit = "cm"),
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.line.x = element_blank(),
-    axis.title.x = element_blank(),
-    legend.position = "right",
-    legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
-    axis.text.y = element_text(color = "black"),
-  ) +
-  labs(
-    y = "Variant",
-  ) ->
-p_variants_tile
-
-ggsave(
-  filename = file.path(outdir, "disease_varaint.pdf" |> glue::glue()),
-  plot = wrap_plots(
-    p_variants_tile,
-    p_tile,
-    ncol = 1,
-    heights = c(15, 1),
-    guides = "collect"
-  ),
-  width = 14,
-  height = 7,
-  dpi = 300
-)
 # for_hetero$somatic_variant[[1]] -> .somatic_variant
 for_hetero |>
   dplyr::mutate(
@@ -591,54 +581,6 @@ for_hetero_af |>
     by = c("srrid" = "srrid")
   ) ->
 for_hetero_af_forplot
-
-
-# for_hetero_af_forplot |>
-#   dplyr::filter(Age_group != "Unknown") |>
-#   dplyr::filter(!is.na(haplo_af)) |>
-#   ggplot(aes(
-#     x = Age_group,
-#     y = haplo_af,
-#   )) +
-#   geom_boxplot() +
-#   facet_wrap(
-#     ~chemistry,
-#     ncol = 3
-#   )
-
-
-# for_hetero_af_forplot |>
-#   dplyr::filter(Age_group != "Unknown") |>
-#   dplyr::filter(!is.na(somatic_af)) |>
-#   dplyr::filter(!is.na(Age_new)) |>
-#   # dplyr::filter(disease == "Healthy") |>
-#   ggplot(aes(
-#     x = Age_group,
-#     y = haplo_af,
-#   )) +
-#   geom_boxplot() +
-#   facet_wrap(
-#     ~chemistry,
-#     ncol = 3
-#   )
-
-# for_hetero_af_forplot |>
-#   dplyr::filter(Age_group != "Unknown") |>
-#   dplyr::mutate(
-#     somatic_af = ifelse(
-#       is.na(somatic_af),
-#       0,
-#       somatic_af
-#     )
-#   ) |>
-#   dplyr::filter(!is.na(somatic_af)) |>
-#   dplyr::filter(!is.na(Age_new)) |>
-#   # dplyr::filter(disease == "Healthy") |>
-#   ggplot(aes(
-#     x = Age_group,
-#     y = somatic_af,
-#   ))
-
 
 
 
