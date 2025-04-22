@@ -53,9 +53,7 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 
-gse_dataset_metadata_full <- readr::read_rds(
-  file.path(foundation_out, "gse_dataset_metadata_full.rds")
-)
+
 gseids <- c(
   "GSE155673",
   "GSE157344",
@@ -117,6 +115,13 @@ gseids_tobe_excluded <- c(
   gseids_not_pbmc
 )
 
+gse_dataset_metadata_full <- readr::read_rds(
+  file.path(foundation_out, "gse_dataset_metadata_full.rds")
+) |>
+  dplyr::filter(
+    !gseid %in% gseids_tobe_excluded
+  )
+
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
@@ -164,6 +169,10 @@ gse_data |>
     by = c("srrid" = "srrid")
   ) ->
 gse_data_haplo_variant
+
+
+
+# ! cell type ratio --------------------------------------------------------------------
 
 
 gse_data_haplo_variant |>
@@ -365,6 +374,9 @@ ggsave(
 gse_data_haplo_variant |>
   dplyr::select(haplo_variant) |>
   tidyr::unnest(cols = haplo_variant) |>
+  dplyr::select(
+    Position, Ref, Alt, Locus, Haplogroup, Verbose_haplogroup, Disease, variant, color
+  ) |>
   dplyr::distinct() ->
 all_variants
 
@@ -629,23 +641,23 @@ for_hetero_af_forplot_cluster |>
     ),
     scales = "free_y",
   ) +
-  geom_violin(
-    aes(
-      y = somatic_af_cluster,
-      fill = mean_somatic_af
-    ),
-    alpha = 0.5,
-    size = 1,
-    color = NA,
-    show.legend = FALSE
-  ) +
-  scale_fill_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
+  # geom_violin(
+  #   aes(
+  #     y = somatic_af_cluster,
+  #     fill = mean_somatic_af
+  #   ),
+  #   alpha = 0.5,
+  #   size = 1,
+  #   color = NA,
+  #   show.legend = FALSE
+  # ) +
+  # scale_fill_gradient2(
+  #   name = "AF",
+  #   low = "white",
+  #   mid = "red",
+  #   high = "#3B0049",
+  #   midpoint = 0.5,
+  # ) +
   ggnewscale::new_scale_fill() +
   ggbeeswarm::geom_quasirandom(
     aes(
@@ -754,24 +766,24 @@ for_hetero_af_forplot_cluster |>
     ),
     scales = "free_y",
   ) +
-  geom_violin(
-    aes(
-      y = haplo_af_cluster,
-      fill = mean_haplo_af
-    ),
-    alpha = 0.5,
-    size = 1,
-    color = NA,
-    show.legend = FALSE
-  ) +
-  scale_fill_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
-  ggnewscale::new_scale_fill() +
+  # geom_violin(
+  #   aes(
+  #     y = haplo_af_cluster,
+  #     fill = mean_haplo_af
+  #   ),
+  #   alpha = 0.5,
+  #   size = 1,
+  #   color = NA,
+  #   show.legend = FALSE
+  # ) +
+  # scale_fill_gradient2(
+  #   name = "AF",
+  #   low = "white",
+  #   mid = "red",
+  #   high = "#3B0049",
+  #   midpoint = 0.5,
+  # ) +
+  # ggnewscale::new_scale_fill() +
   ggbeeswarm::geom_quasirandom(
     aes(
       x = Age_group,
@@ -839,7 +851,7 @@ ggsave(
 
 
 
-# ! disease and mha --------------------------------------------------------------------
+# ! disease and mean heteroplasmy frequency --------------------------------------------------------------------
 
 for_hetero_af_forplot |>
   dplyr::mutate(
@@ -891,7 +903,8 @@ for_mhc_disease_boxplot |>
     legend.position = "none"
   ) +
   labs(
-    y = "Mean somatic variant AF"
+    y = "Mean somatic variant AF",
+    title = "All samples"
   ) ->
 p1
 for_mhc_disease_boxplot |>
@@ -915,11 +928,13 @@ for_mhc_disease_boxplot |>
     legend.position = "none"
   ) +
   labs(
-    y = "Mean somatic variant AF"
+    y = "Mean somatic variant AF",
+    title = "Samples with # of somatic variants > 0"
   ) ->
 p2
 
 wrap_plots(list(p1, p2), ncol = 2) -> p_combined
+p_combined
 
 ggsave(
   file.path(outdir, "mhc_disease_boxplot_combined.pdf"),
@@ -928,7 +943,10 @@ ggsave(
   height = 5
 )
 
+# ! disease and mean heteroplasmy frequency --------------------------------------------------------------------
+
 gse_dataset_metadata_full |>
+  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   # dplyr::filter(gseid != "GSE220189") |>
   dplyr::filter(
     disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19")
@@ -963,7 +981,8 @@ for_count_disease_boxplot |>
     legend.position = "none"
   ) +
   labs(
-    y = "# of somatic variants"
+    y = "# of somatic variants",
+    title = "All samples"
   ) ->
 p1_count
 
@@ -988,12 +1007,14 @@ for_count_disease_boxplot |>
     legend.position = "none"
   ) +
   labs(
-    y = "# of somatic variants"
+    y = "# of somatic variants",
+    title = "Samples with # of somatic variants > 0"
   ) ->
 p2_count
 
 
 wrap_plots(list(p1_count, p2_count), ncol = 2) -> p_combined_count
+p_combined_count
 
 ggsave(
   file.path(outdir, "somatic_variant_disease_boxplot_combined.pdf"),
@@ -1062,7 +1083,7 @@ for_age_plot |>
   geom_hline(
     yintercept = 0.3,
     linetype = 21,
-    color = "black",
+    color = "red",
   ) +
   # ggh4x::facet_wrap2(
   #   ~chemistry,
@@ -1080,24 +1101,24 @@ for_age_plot |>
   #   ),
   #   scales = "free_y",
   # ) +
-  geom_violin(
-    aes(
-      y = somatic_af,
-      fill = mean_somatic_af
-    ),
-    alpha = 0.5,
-    size = 1,
-    color = NA,
-    show.legend = FALSE
-  ) +
-  scale_fill_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
-  ggnewscale::new_scale_fill() +
+  # geom_violin(
+  #   aes(
+  #     y = somatic_af,
+  #     fill = mean_somatic_af
+  #   ),
+  #   alpha = 0.5,
+  #   size = 1,
+  #   color = NA,
+  #   show.legend = FALSE
+  # ) +
+  # scale_fill_gradient2(
+  #   name = "AF",
+  #   low = "white",
+  #   mid = "red",
+  #   high = "#3B0049",
+  #   midpoint = 0.5,
+  # ) +
+  # ggnewscale::new_scale_fill() +
   ggbeeswarm::geom_quasirandom(
     aes(
       x = Age_group,
@@ -1118,6 +1139,8 @@ for_age_plot |>
   ) +
   scale_y_continuous(
     expand = c(0.01, 0),
+    labels = c(0, 0.25, 0.3, 0.5, 0.75, 1),
+    breaks = c(0, 0.25, 0.3, 0.5, 0.75, 1),
     limits = c(0, 1),
   ) +
   theme(
@@ -1153,6 +1176,7 @@ for_age_plot |>
     y = "Mean heteroplasmy count"
   ) ->
 p_age_somatic_af
+p_age_somatic_af
 
 ggsave(
   file.path(outdir, "p_age_somatic_af.pdf"),
@@ -1162,9 +1186,14 @@ ggsave(
 )
 
 
+
+# ! Sankey plot for samples --------------------------------------------------------------------
+
+
 # meta --------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
+  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(gseid, srrid, Race, Ethnicity, Gender, Age_group, disease, Chemistry) ->
 gse_dataset_metadata_full_selected
@@ -1294,6 +1323,8 @@ for_sankey_plot |>
   guides(fill = guide_legend(title = "Sequencing", nrow = 1)) ->
 meta_plot_sankey
 
+meta_plot_sankey
+
 ggsave(
   file.path(outdir, "meta_plot_sankey.pdf"),
   meta_plot_sankey,
@@ -1302,9 +1333,10 @@ ggsave(
 )
 
 
-# ! age and somatic --------------------------------------------------------------------
+# ! age and somatic and disease--------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
+  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   dplyr::filter(!is.na(Age_new)) |>
   dplyr::mutate(
     disease = dplyr::case_when(
@@ -1371,6 +1403,7 @@ gse_dataset_metadata_full |>
     y = "# of somatic variants"
   ) ->
 p_age_somatic_af_disease
+p_age_somatic_af_disease
 
 ggsave(
   file.path(outdir, "p_age_somatic_af_disease.pdf"),
@@ -1380,33 +1413,6 @@ ggsave(
 )
 
 
-gse_dataset_metadata_full |>
-  dplyr::filter(!is.na(Age_new)) |>
-  dplyr::mutate(
-    disease = dplyr::case_when(
-      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
-      TRUE ~ "Other"
-    )
-  ) |>
-  dplyr::mutate(
-    disease = factor(
-      disease,
-      levels = c(
-        "Healthy",
-        "Alzheimer's Disease",
-        "COVID-19",
-        "Unknown",
-        "Other"
-      )
-    )
-  ) |>
-  ggplot(aes(
-    x = Age_new,
-    y = `# of somatic variants`,
-    color = Chemistry
-  )) +
-  geom_point() +
-  scale_color_brewer(palette = "Set1")
 
 
 
