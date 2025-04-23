@@ -159,20 +159,48 @@ gseids_not_pbmc <- c(
   "GSE168453", # Pool samples together, not individual samples
   "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
   "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
-  "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
-  "GSE163314", # Half of the samples are from Colon, not PBMC
+  # "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
+  # "GSE163314", # Half of the samples are from Colon, not PBMC
   "GSE164690", # Most of the samples are from tumors (Head and neck squamous cell carcinoma (HNSCC)), not from PBMC
   "GSE148215" # The samples are human embryonic cells, not PBMC cells
 )
+
+# cell line
+gseids_cellline <- c(
+  "GSE143353"
+)
+
 # enrich cells
 gseids_enrich_cells <- c(
   "GSE167825", # CD8T cell enriched
   "GSE175524", # B cell enriched
   "GSE261140" # CD8T cell enriched
 )
+# GSE163314 only keep the PBMC samples
+GSE143353_blood <- c(
+  "GSM4976993", # Patient 2 Blood
+  "GSM4976995", # Patient 3 Blood
+  "GSM4976997", # Patient 5 Blood
+  "GSM4976999", # Patient 7 Blood
+  "GSM4977001", # Patient 21 Blood
+  "GSM4977003", # Patient 23 Blood
+  "GSM4977005", # Patient 27 Blood
+  "GSM4977007" # Patient 33 Blood
+)
+GSE143353_colon <- c(
+  "GSM4976992", # Patient 2 Colon
+  "GSM4976994", # Patient 3 Colon
+  "GSM4976996", # Patient 5 Colon
+  "GSM4976998", # Patient 7 Colon
+  "GSM4977000", # Patient 21 Colon
+  "GSM4977002", # Patient 23 Colon
+  "GSM4977004", # Patient 27 Colon
+  "GSM4977006" # Patient 33 Colon
+)
 
 gseids_tobe_excluded <- c(
-  gseids_not_pbmc
+  gseids_not_pbmc,
+  gseids_cellline
 )
 
 gse_dataset_metadata_full <- readr::read_rds(
@@ -180,6 +208,11 @@ gse_dataset_metadata_full <- readr::read_rds(
 ) |>
   dplyr::filter(
     !gseid %in% gseids_tobe_excluded
+  ) |>
+  dplyr::filter(
+    !srrid %in% c(
+      GSE143353_colon
+    )
   )
 
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
@@ -212,8 +245,23 @@ tibble::tibble(
 gse_data_loaded
 
 gse_data_loaded |>
-  tidyr::unnest(cols = anno) ->
+  tidyr::unnest(cols = anno) |>
+  dplyr::filter(
+    !srrid %in% c(
+      GSE143353_colon
+    )
+  ) ->
 gse_data
+
+gse_data |>
+  dplyr::select(1, 2, 3) |>
+  data.table::fwrite(
+    file = file.path(
+      "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/used_samples",
+      "gse_srrid_srrdir.cj.csv"
+    ),
+    sep = ",",
+  )
 
 # body --------------------------------------------------------------------
 
