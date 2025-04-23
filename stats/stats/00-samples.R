@@ -37,7 +37,8 @@ setdiff(
 cj_only
 
 
-# clean data
+
+# ! # clean data --------------------------------------------------------------------
 
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
@@ -230,4 +231,15 @@ gse_data
     gse_data,
     file.path(outdir, "gse_data.rds")
   )
+  gse_data |>
+    dplyr::select(1, 2, 3) |>
+    data.table::fwrite(
+      file.path(outdir, "gse_srrid_srrdir.csv"),
+      sep = ",",
+    )
+  gse_data |>
+    dplyr::select(1, 2, 3) |>
+    readr::write_rds(
+      file.path(outdir, "gse_srrid_srrdir.rds")
+    )
 }
