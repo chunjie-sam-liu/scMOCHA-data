@@ -47,29 +47,33 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 fn_plot_mtdna <- function() {
-  mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+  # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+
+  LENGTH <- 16569
+  rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
+  gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
 
 
-  gtf_gene_df <-
-    readr::read_rds(
-      file = mt_exons_df
-    )
   library(gggenes)
   ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
     # geom_gene_arrow() +
     geom_gene_arrow(
       aes(
-        fill = gene_biotype
+        fill = TYPE
       ),
       arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
       name = "Gene type",
-      labels = c("MT rRNA", "MT tRNA", "Protein coding")
+      labels = c("D-Loop", "MT rRNA", "MT tRNA", "Protein coding")
     ) +
     ggrepel::geom_text_repel(
-      aes(x = (start + end) / 2, label = gene_name, color = gene_biotype),
+      aes(
+        x = (start + end) / 2,
+        label = gene_name,
+        color = TYPE
+      ),
       # fill = "white",
       # nudge_x =1,
       # nudge_y = -0.1,
@@ -79,9 +83,9 @@ fn_plot_mtdna <- function() {
     ) +
     scale_color_brewer(palette = "Set1") +
     scale_x_continuous(
-      limits = c(0, 17000),
-      breaks = seq(0, 17000, 1000),
-      labels = seq(0, 17000, 1000),
+      limits = c(0, LENGTH),
+      breaks = c(seq(0, LENGTH, 1000), LENGTH),
+      labels = c(seq(0, LENGTH, 1000), LENGTH),
       expand = expansion(mult = c(0, 0.01)),
     ) +
     scale_y_discrete(
@@ -97,14 +101,12 @@ fn_plot_mtdna <- function() {
       panel.background = element_blank(),
       panel.grid = element_blank(),
       axis.ticks.y = element_blank(),
+      axis.ticks.x = element_line(color = "black"),
       axis.line.x = element_line(color = "black"),
       axis.text.x = element_text(
         vjust = -1,
       ),
-    ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  pg
-  pg
+    )
 }
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
