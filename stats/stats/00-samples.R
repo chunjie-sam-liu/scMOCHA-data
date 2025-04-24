@@ -1,40 +1,40 @@
-ting <- readxl::read_excel("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/PT_samples/all_samples_PT_used.xlsx")
-cj <- data.table::fread(
-  file.path(
-    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/used_samples",
-    "gse_srrid_srrdir.cj.csv"
-  )
-)
+# ting <- readxl::read_excel("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/PT_samples/all_samples_PT_used.xlsx")
+# cj <- data.table::fread(
+#   file.path(
+#     "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/used_samples",
+#     "gse_srrid_srrdir.cj.csv"
+#   )
+# )
 
-colnames(ting)
-ggvenn::ggvenn(
-  data = list(
-    "PT" = unique(ting$Samples),
-    "CJ" = unique(cj$srrid)
-  ),
-  fill_color = c("#FF9999", "#66B3FF"),
-  stroke_color = "white"
-)
+# colnames(ting)
+# ggvenn::ggvenn(
+#   data = list(
+#     "PT" = unique(ting$Samples),
+#     "CJ" = unique(cj$srrid)
+#   ),
+#   fill_color = c("#FF9999", "#66B3FF"),
+#   stroke_color = "white"
+# )
 
-ggvenn::ggvenn(
-  data = list(
-    "PT" = unique(ting$Datasets),
-    "CJ" = unique(cj$gseid)
-  ),
-  fill_color = c("#FF9999", "#66B3FF"),
-  stroke_color = "white"
-)
+# ggvenn::ggvenn(
+#   data = list(
+#     "PT" = unique(ting$Datasets),
+#     "CJ" = unique(cj$gseid)
+#   ),
+#   fill_color = c("#FF9999", "#66B3FF"),
+#   stroke_color = "white"
+# )
 
-setdiff(
-  unique(ting$Datasets),
-  unique(cj$gseid)
-) ->
-ting_only
-setdiff(
-  unique(cj$gseid),
-  unique(ting$Datasets)
-) ->
-cj_only
+# setdiff(
+#   unique(ting$Datasets),
+#   unique(cj$gseid)
+# ) ->
+# ting_only
+# setdiff(
+#   unique(cj$gseid),
+#   unique(ting$Datasets)
+# ) ->
+# cj_only
 
 
 
