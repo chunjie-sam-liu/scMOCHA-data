@@ -45,11 +45,11 @@ def import_csv_to_duckdb():
 
             # Open a connection for each file to avoid contention
             with duckdb.connect(duckdb_path) as conn:
-                logging.info(f"Importing {filename} to table {table_name}")
                 conn.register("temp_df", df)
                 conn.execute(
                     f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM temp_df"
                 )
+                logging.info(f"Importing {filename} to table {table_name}")
 
             logging.info(f"Successfully imported {table_name}")
             return table_name
