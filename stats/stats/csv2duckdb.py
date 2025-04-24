@@ -12,6 +12,7 @@ import logging
 import os
 
 import duckdb
+import polars as pl
 
 # Set up logging
 logging.basicConfig(
@@ -24,54 +25,51 @@ def import_csv_to_duckdb():
     # Path to CSV files
     csv_dir = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/TABLES"
     # Output DuckDB file
-    duckdb_path = "/home/liuc9/github/scMOCHA-data/stats/stats/cell_cov.duckdb"
-
-    # Connect to DuckDB with optimized settings
-    logging.info(f"Connecting to DuckDB at {duckdb_path}")
-    conn = duckdb.connect(duckdb_path)
-
-    # Configure DuckDB for better performance
-    conn.execute("PRAGMA threads=4")  # Adjust based on your CPU cores
-    conn.execute("PRAGMA memory_limit='4GB'")  # Adjust based on available RAM
+    duckdb_path = (
+        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/cell_cov.duckdb"
+    )
 
     # Find all cell_cov CSV files
     csv_files = glob.glob(os.path.join(csv_dir, "cell_cov.*.csv"))
     logging.info(f"Found {len(csv_files)} CSV files to import")
 
-    # Create all tables in a single transaction
-    conn.execute("BEGIN TRANSACTION")
+    def process_csv_file(csv_file):
+        """Process a single CSV file and import it to DuckDB."""
+        # Extract the table name from the filename
+        filename = os.path.basename(csv_file)
+        table_name = filename.replace("cell_cov.", "").replace(".csv", "")
 
-    try:
-        # Batch process the files
-        for csv_file in csv_files:
-            # Extract the table name from the filename
-            filename = os.path.basename(csv_file)
-            table_name = filename.replace("cell_cov.", "").replace(".csv", "")
+        try:
+            logging.info(f"Loading {filename} into memory")
+            df = pl.read_csv(csv_file)
 
-            try:
+            # Open a connection for each file to avoid contention
+            with duckdb.connect(duckdb_path) as conn:
                 logging.info(f"Importing {filename} to table {table_name}")
-
-                # Use COPY statement for faster imports
+                conn.register("temp_df", df)
                 conn.execute(
-                    f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM read_csv_auto('{csv_file}', parallel=True)"
+                    f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM temp_df"
                 )
 
-                logging.info(f"Successfully imported {table_name}")
-            except Exception as e:
-                logging.error(f"Failed to import {filename}: {str(e)}")
+            logging.info(f"Successfully imported {table_name}")
+            return table_name
+        except Exception as e:
+            logging.error(f"Failed to import {filename}: {str(e)}")
+            return None
 
-        # Commit the transaction
-        conn.execute("COMMIT")
-        logging.info("All imports committed successfully")
+    # Use ThreadPoolExecutor to process files in parallel
+    max_workers = 10  # Limit to 8 or CPU count, whichever is smaller
+    logging.info(f"Starting parallel import with {max_workers} workers")
 
-    except Exception as e:
-        # Roll back in case of error
-        conn.execute("ROLLBACK")
-        logging.error(f"Transaction rolled back due to error: {str(e)}")
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=max_workers
+    ) as executor:
+        results = list(executor.map(process_csv_file, csv_files))
 
-    # Close connection
-    conn.close()
-    logging.info("Import process completed")
+    successful_imports = [r for r in results if r]
+    logging.info(
+        f"Import process completed. Successfully imported {len(successful_imports)} tables."
+    )
 
 
 if __name__ == "__main__":
