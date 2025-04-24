@@ -304,5 +304,5 @@ if __name__ == "__main__":
     # create_one_table(
     #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE155673/final/GSM4712885/cell.C.txt.gz"
     # )
-    # show_tables("cell_fw")
+    # show_tables("cell_cov")
     # show_table_info("cell_fw", "GSE155673_SRR11512399")
