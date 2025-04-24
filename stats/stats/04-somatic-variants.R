@@ -256,9 +256,13 @@ all_variants |>
   dplyr::arrange(
     desc(n)
   ) |>
-  dplyr::group_by(variant) |>
-  dplyr::filter(
-    dplyr::n() == 1
+  dplyr::group_by(Position) |>
+  dplyr::mutate(
+    issomatic = ifelse(
+      dplyr::n() > 1,
+      "multiple",
+      issomatic
+    )
   ) |>
   dplyr::ungroup() |>
   dplyr::left_join(
