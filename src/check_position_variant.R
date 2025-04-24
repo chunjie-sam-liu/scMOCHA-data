@@ -222,6 +222,11 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
     dplyr::mutate(posref = glue::glue("{pos}{ref}")) |>
     dplyr::mutate(pos = as.integer(pos)) ->
   fasta_df
+  # data.table::fwrite(
+  #   fasta_df,
+  #   file = "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.csv",
+  #   sep = ","
+  # )
 
   cluster_n |>
     dtplyr::lazy_dt() |>
@@ -410,6 +415,69 @@ fn_plot_mtdna <- function() {
     coord_cartesian(xlim = c(0, 17000)) ->
   pg
   pg
+}
+
+fn_plot_mtdna <- function() {
+  # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+
+  LENGTH <- 16569
+  rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
+  gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
+
+
+  library(gggenes)
+  ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
+    # geom_gene_arrow() +
+    geom_gene_arrow(
+      aes(
+        fill = TYPE
+      ),
+      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+    ) +
+    scale_fill_brewer(
+      palette = "Set1",
+      name = "Gene type",
+      labels = c("D-Loop", "MT rRNA", "MT tRNA", "Protein coding")
+    ) +
+    ggrepel::geom_text_repel(
+      aes(
+        x = (start + end) / 2,
+        label = gene_name,
+      ),
+      color = "black",
+      # fill = "white",
+      # nudge_x =1,
+      # nudge_y =0.001,
+      size = 3,
+      show.legend = F,
+      max.overlaps = Inf,
+    ) +
+    scale_color_brewer(palette = "Set1") +
+    scale_x_continuous(
+      limits = c(0, LENGTH),
+      breaks = c(seq(0, LENGTH, 1000), LENGTH),
+      labels = c(seq(0, LENGTH, 1000), LENGTH),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0), add = c(0, 0))
+    ) +
+    # theme_genes() +
+    theme(
+      legend.position = "bottom",
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      # axis.text.x = element_text(size = 14),
+      # legend.text = element_text(size = 14),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_line(color = "black"),
+      axis.line.x = element_line(color = "black"),
+      axis.text.x = element_text(
+        vjust = -1,
+      ),
+    )
 }
 
 fn_plot_coverage <- function(thepath, theposes = NULL) {
@@ -901,6 +969,99 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
   )
 
   # p_af_cell
+}
+
+fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
+  log_info("Start to plot ", thepath)
+  # ! parse --------------------------------------------------------------------
+  if (!file.exists(outdir)) {
+    dir.create(outdir, showWarnings = FALSE)
+  }
+
+  gsmid <- basename(thepath)
+  gseid <- basename(dirname(dirname(thepath)))
+
+  theposes <- thevariants |>
+    purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
+    purrr::map_int(as.integer)
+
+  # load data ---------------------------------------------------------------
+  # load sc
+  sc <- fn_load_by_path(thepath)
+  # load count
+  cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
+
+
+  # vaf cell umap -------------------------------------------------------------
+
+  fn_plot_vaf_featureplot_multi(
+    .thevariants = thevariants,
+    sc = sc
+  ) -> p_vaf_feature
+
+  # p_vaf_feature
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |> glue::glue(),
+    path = outdir,
+    plot = p_vaf_feature,
+    width = 9,
+    height = 4,
+  )
+
+  # read count -------------------------------------------------------------------
+  fn_plot_count_multi(
+    cluster_n_forplot,
+    theposes = theposes
+  ) -> p_count
+
+  # p_count
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-selected_variants_count.pdf" |> glue::glue(),
+    path = outdir,
+    plot = p_count,
+    width = 15,
+    height = 5,
+  )
+
+  # depth -------------------------------------------------------------------
+  p_mtdna <- fn_plot_mtdna()
+  p_depth <- fn_plot_coverage(thepath, theposes)
+
+  ggsave(
+    filename = "{gseid}-{gsmid}-depth-celltype.pdf" |> glue::glue(),
+    path = outdir,
+    plot = wrap_plots(
+      p_depth$p_mt_depth_celltype,
+      p_mtdna,
+      ncol = 1,
+      heights = c(0.7, 0.1)
+    ),
+    width = 17,
+    height = 9,
+  )
+
+
+  # # hotspots ----------------------------------------------------------------
+  # p_hotspots <- fn_plot_hotspots(thepath, thevariants)
+
+  # ggsave(
+  #   filename = "{gseid}-{gsmid}-hotspots_final_af_somatic.pdf" |> glue::glue(),
+  #   path = outdir,
+  #   plot = wrap_plots(
+  #     p_hotspots,
+  #     p_depth$p_mt_depth_allcell,
+  #     p_mtdna,
+  #     ncol = 1,
+  #     heights = c(1.6, 0.4, 0.1),
+  #     axes = "collect_x"
+  #   ),
+  #   device = "pdf",
+  #   width = 24,
+  #   height = 12
+  # )
+  log_success("Finish to plot ", thepath)
 }
 
 
