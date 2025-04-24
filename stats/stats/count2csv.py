@@ -18,6 +18,7 @@ import aiofiles
 import duckdb
 import pandas as pd
 import polars as pl  # Add polars import
+import typer
 from rich.logging import RichHandler
 
 FORMAT = "%(message)s"
@@ -188,6 +189,44 @@ def process_srr_entry(row):
     return f"Processed {gseid}_{srrid}"
 
 
+def gseid_srrid_srrdir_cluster():
+    row_dicts = [
+        {**row, "cluster": cluster}
+        for row in SRR.to_dicts()
+        for cluster in CLUSTERS
+    ]
+    return row_dicts
+
+
+def slurm_run_all():
+    outfile = (
+        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/slurm_run_all.sh"
+    )
+    row_dicts = gseid_srrid_srrdir_cluster()
+    cmds = []
+    for row in row_dicts:
+        gseid = row["gseid"]
+        srrid = row["srrid"]
+        srrdir = row["srrdir"]
+        cluster = row["cluster"]
+        cmd = [
+            "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
+            "/home/liuc9/github/scMOCHA-data/stats/stats/count2csv.py",
+            "run-one",
+            gseid,
+            srrid,
+            srrdir,
+            cluster,
+        ]
+        # print(" ".join(cmd))
+        cmds.append(" ".join(cmd))
+    # Write the commands to the output file
+    with open(outfile, "w") as f:
+        for cmd in cmds:
+            f.write(f"{cmd}\n")
+    log.info(f"Slurm commands written to {outfile}")
+
+
 def all_srrid2csv(max_workers=mp.cpu_count()):
     """Process all SRR entries in parallel using ProcessPoolExecutor."""
     start_time = time.time()
@@ -196,11 +235,7 @@ def all_srrid2csv(max_workers=mp.cpu_count()):
     )
 
     # Convert DataFrame rows to dictionaries for easier processing
-    row_dicts = [
-        {**row, "cluster": cluster}
-        for row in SRR.to_dicts()
-        for cluster in CLUSTERS
-    ]
+    row_dicts = gseid_srrid_srrdir_cluster()
 
     with concurrent.futures.ProcessPoolExecutor(
         max_workers=max_workers
@@ -215,7 +250,24 @@ def all_srrid2csv(max_workers=mp.cpu_count()):
     return results
 
 
+app = typer.Typer()
+
+
+@app.command()
+def run_all(max_workers: int = mp.cpu_count()):
+    """Run all SRR entries in parallel."""
+    all_srrid2csv(max_workers=max_workers)
+
+
+@app.command()
+def run_one(gseid: str, srrid: str, srrdir: str, cluster: str):
+    """Process a single SRR entry."""
+    srrid2csv(gseid, srrid, srrdir, cluster)
+
+
 if __name__ == "__main__":
+    app()
+
     # srrid2csv(
     #     "GSE155673",
     #     "SRR11512399",
@@ -230,4 +282,4 @@ if __name__ == "__main__":
     #     srrdir="/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE155673/final/GSM4712885",
     #     cluster="cell",
     # )
-    all_srrid2csv()
+    # all_srrid2csv()

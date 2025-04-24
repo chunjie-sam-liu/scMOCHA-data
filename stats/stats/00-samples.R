@@ -89,7 +89,7 @@ gseids <- c(
 # not PBMC
 gseids_not_pbmc <- c(
   "GSE168453", # Pool samples together, not individual samples
-  "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
+  # "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
   "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
   # "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
   # "GSE163314", # Half of the samples are from Colon, not PBMC
@@ -129,10 +129,57 @@ GSE143353_colon <- c(
   "GSM4977004", # Patient 27 Colon
   "GSM4977006" # Patient 33 Colon
 )
+GSE163668_blood <- c(
+  "GSM4995431",
+  "GSM4995432",
+  "GSM4995433",
+  "GSM4995434",
+  "GSM4995435",
+  "GSM4995436",
+  "GSM4995437",
+  "GSM4995438",
+  "GSM4995439",
+  "GSM4995440",
+  "GSM4995441",
+  "GSM4995442",
+  "GSM4995443",
+  "GSM4995444",
+  "GSM4995445",
+  "GSM4995446",
+  "GSM4995447",
+  "GSM4995448",
+  "GSM4995449",
+  "GSM4995450",
+  "GSM4995451",
+  "GSM4995452",
+  "GSM4995453",
+  "GSM4995454",
+  "GSM4995455",
+  "GSM4995456",
+  "GSM4995457",
+  "GSM4995458",
+  "GSM4995459",
+  "GSM4995460",
+  "GSM4995461",
+  "GSM4995462"
+)
+GSE163668_pooled <- c(
+  "GSM4995425", # Pooled 10X GEX libraries for Patients 1, 2, and 3
+  "GSM4995426", # Pooled 10X GEX libraries for Patients 5 and 6
+  "GSM4995427", # Pooled 10X GEX libraries for Patients 7, 8, and 9
+  "GSM4995428", # Pooled 10X GEX libraries for Patient 10
+  "GSM4995429", # Pooled 10X GEX libraries for Patients 17, 20, and 21
+  "GSM4995430" # Pooled 10X GEX libraries for Patients 50 and 51
+)
+
 
 gseids_tobe_excluded <- c(
   gseids_not_pbmc,
   gseids_cellline
+)
+gsmids_tobe_excluded <- c(
+  GSE143353_colon,
+  GSE163668_pooled
 )
 
 
@@ -143,9 +190,7 @@ gse_dataset_metadata_full <- readr::read_rds(
     !gseid %in% gseids_tobe_excluded
   ) |>
   dplyr::filter(
-    !srrid %in% c(
-      GSE143353_colon
-    )
+    !srrid %in% gsmids_tobe_excluded
   ) |>
   dplyr::mutate(
     disease = dplyr::case_when(
@@ -213,9 +258,7 @@ gse_data_loaded
 gse_data_loaded |>
   tidyr::unnest(cols = anno) |>
   dplyr::filter(
-    !srrid %in% c(
-      GSE143353_colon
-    )
+    !srrid %in% gsmids_tobe_excluded
   ) ->
 gse_data
 

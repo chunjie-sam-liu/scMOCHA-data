@@ -14,36 +14,39 @@ import time
 from pathlib import Path
 
 import duckdb
-import pandas as pd
+import polars as pl
 
 SRR_FILENAME = Path(
     "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
 )
-SRR = pd.read_csv(SRR_FILENAME)
+SRR = pl.read_csv(SRR_FILENAME)
 SRR
 
 dfs = []
-for _, row in SRR.iterrows():
+for row in SRR.iter_rows(named=True):
     gseid = row["gseid"]
     srrid = row["srrid"]
     srrdir = row["srrdir"]
-    df = pd.read_csv(
+    print(f"Processing {gseid} {srrid} {srrdir}")
+    df = pl.read_csv(
         f"{srrdir}/barcode_cluster.tsv",
-        sep="\t",
-        header=None,
-        names=["barcode", "cj", "celltype"],
-        dtype={"barcode": str, "celltype": str},
-        usecols=["barcode", "celltype"],
+        separator="\t",
+        has_header=False,
+        new_columns=["barcode", "cj", "celltype"],
     )
-    df["gseid"] = gseid
-    df["srrid"] = srrid
+    # Only keep barcode and celltype columns
+    df = df.select(["barcode", "celltype"])
+    df = df.with_columns(
+        [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
+    )
+    # Reorder columns to ensure gseid and srrid are first and second
+    df = df.select(["gseid", "srrid", "barcode", "celltype"])
     dfs.append(df)
 
 
-df = pd.concat(dfs, ignore_index=True)
+df = pl.concat(dfs)
 # Reorder columns
-df = df[["gseid", "srrid", "barcode", "celltype"]]
-df.to_csv(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.csv",
-    index=False,
+df = df.select(["gseid", "srrid", "barcode", "celltype"])
+df.write_csv(
+    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.csv"
 )
