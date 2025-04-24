@@ -213,7 +213,7 @@ gse_dataset_metadata_full <- readr::read_rds(
   dplyr::mutate(
     Chemistry = factor(
       Chemistry,
-      levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE")
+      levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
     )
   )
 
@@ -259,6 +259,12 @@ gse_data_loaded |>
   tidyr::unnest(cols = anno) |>
   dplyr::filter(
     !srrid %in% gsmids_tobe_excluded
+  ) |>
+  dplyr::mutate(
+    chemistry = factor(
+      chemistry,
+      levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
+    )
   ) ->
 gse_data
 
