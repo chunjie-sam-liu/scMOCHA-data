@@ -50,80 +50,9 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
-gseids <- c(
-  "GSE155673",
-  "GSE157344",
-  "GSE149689",
-  "GSE171555",
-  "GSE155223",
-  "GSE163668",
-  "GSE175524",
-  "GSE206283",
-  "GSE226598",
-  "GSE261140",
-  "GSE279945",
-  "GSE214865",
-  "GSE220189",
-  "GSE233844",
-  "GSE175499",
-  "GSE149313",
-  "GSE154386",
-  "GSE159117",
-  "GSE188632",
-  "GSE166992",
-  "GSE162117",
-  "GSE226602",
-  "GSE161354",
-  "GSE235050",
-  "GSE181279",
-  # scfoundation2
-  "GSE143353",
-  "GSE148215",
-  "GSE163314",
-  "GSE163633",
-  "GSE164690",
-  "GSE167825",
-  "GSE174125",
-  "GSE184703",
-  "GSE153421",
-  # "GSE168453",
-  "GSE147794"
-)
-
-# not PBMC
-gseids_not_pbmc <- c(
-  "GSE168453", # Pool samples together, not individual samples
-  "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
-  "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
-  "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
-  "GSE163314", # Half of the samples are from Colon, not PBMC
-  "GSE164690", # Most of the samples are from tumors (Head and neck squamous cell carcinoma (HNSCC)), not from PBMC
-  "GSE148215" # The samples are human embryonic cells, not PBMC cells
-)
-# enrich cells
-gseids_enrich_cells <- c(
-  "GSE167825", # CD8T cell enriched
-  "GSE175524", # B cell enriched
-  "GSE261140" # CD8T cell enriched
-)
-
-gseids_tobe_excluded <- c(
-  gseids_not_pbmc
-)
-
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-foundation_out <- file.path(basedir, "scfoundation/out")
 
-gse_dataset_scfoundation <- readxl::read_excel(file.path(foundation_out, "gses_cell_ratio_variant_meta.xlsx")) |>
-  dplyr::filter(gseid != "WT") |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
-gse_dataset_scfoundation2 <- readxl::read_excel(
-  "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out/gses_cell_ratio_variant_meta.xlsx"
-) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
-
-gse_dataset <- dplyr::bind_rows(gse_dataset_scfoundation, gse_dataset_scfoundation2)
 
 # body --------------------------------------------------------------------
 
@@ -133,17 +62,13 @@ chem_colors <- viridis::viridis_pal(option = "D")(4) |>
   prismatic::color()
 
 anno_meta_info_clean <- readr::read_rds(
-  file.path(foundation_out, "gse_dataset_metadata_full.rds")
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
 ) |>
-  # dplyr::filter(
-  #   gseid != "GSE168453"
-  # ) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   dplyr::mutate(
     Chemistry = factor(
       Chemistry,
       levels = chem_levels
-    )
+    ),
   )
 
 fn_eda_ggpubr <- function(anno_meta_info_clean) {
