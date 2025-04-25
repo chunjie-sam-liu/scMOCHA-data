@@ -122,11 +122,16 @@ def load_file(row):
     log.info(f"Loading {file_path}")
     try:
         df = pl.read_csv(file_path, has_header=True)
-        # Add a new column with the sum of all variant allele frequencies
+
         df = df.with_columns(
-            pl.sum_horizontal(pl.col(VARIANTS)).alias("total_variant")
+            [pl.col(variant).fill_nan(0) for variant in VARIANTS]
         )
-        log.info(f"Loaded {file_path} with shape {df.shape}")
+        # Create a binary mask where variant value > 0
+        mask = df[VARIANTS] > 0
+
+        # Calculate the row sum (number of variants > 0 per cell)
+        df = df.with_columns(pl.sum_horizontal(mask).alias("num_variants"))
+
         return df
     except Exception as e:
         log.error(f"Error loading {file_path}: {e}")
