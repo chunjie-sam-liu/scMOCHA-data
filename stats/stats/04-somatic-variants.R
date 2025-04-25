@@ -337,7 +337,10 @@ variant_count_homoplasmic |>
   theme(
     axis.title = element_text(size = 16),
   ) +
-  coord_fixed() ->
+  coord_fixed(
+    xlim = c(0, 0.15),
+    ylim = c(0, 0.15)
+  ) ->
 p_homoplasmic_variant_correlates_with_gnomad
 ggsave(
   filename = file.path(
