@@ -131,6 +131,9 @@ def load_file(row):
 
         # Calculate the row sum (number of variants > 0 per cell)
         df = df.with_columns(pl.sum_horizontal(mask).alias("num_variants"))
+        log.info(
+            f"Loaded {file_path} with {df.shape[0]} rows and {df.shape[1]} columns"
+        )
 
         return df
     except Exception as e:
