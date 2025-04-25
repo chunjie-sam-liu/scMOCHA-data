@@ -50,77 +50,12 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-foundation_out <- file.path(basedir, "scfoundation/out")
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 
-
-gseids <- c(
-  "GSE155673",
-  "GSE157344",
-  "GSE149689",
-  "GSE171555",
-  "GSE155223",
-  "GSE163668",
-  "GSE175524",
-  "GSE206283",
-  "GSE226598",
-  "GSE261140",
-  "GSE279945",
-  "GSE214865",
-  "GSE220189",
-  "GSE233844",
-  "GSE175499",
-  "GSE149313",
-  "GSE154386",
-  "GSE159117",
-  "GSE188632",
-  "GSE166992",
-  "GSE162117",
-  "GSE226602",
-  "GSE161354",
-  "GSE235050",
-  "GSE181279",
-  # scfoundation2
-  "GSE143353",
-  "GSE148215",
-  "GSE163314",
-  "GSE163633",
-  "GSE164690",
-  "GSE167825",
-  "GSE174125",
-  "GSE184703",
-  "GSE153421",
-  # "GSE168453",
-  "GSE147794"
-)
-
-# not PBMC
-gseids_not_pbmc <- c(
-  "GSE168453", # Pool samples together, not individual samples
-  "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
-  "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
-  "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
-  "GSE163314", # Half of the samples are from Colon, not PBMC
-  "GSE164690", # Most of the samples are from tumors (Head and neck squamous cell carcinoma (HNSCC)), not from PBMC
-  "GSE148215" # The samples are human embryonic cells, not PBMC cells
-)
-# enrich cells
-gseids_enrich_cells <- c(
-  "GSE167825", # CD8T cell enriched
-  "GSE175524", # B cell enriched
-  "GSE261140" # CD8T cell enriched
-)
-
-gseids_tobe_excluded <- c(
-  gseids_not_pbmc
-)
-
 gse_dataset_metadata_full <- readr::read_rds(
-  file.path(foundation_out, "gse_dataset_metadata_full.rds")
-) |>
-  dplyr::filter(
-    !gseid %in% gseids_tobe_excluded
-  )
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+)
+
 
 pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
@@ -128,32 +63,9 @@ pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu
 
 # thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
-
-tibble::tibble(
-  gseid = gseids
-) |>
-  dplyr::filter(
-    !gseid %in% gseids_tobe_excluded
-  ) |>
-  dplyr::mutate(
-    anno = parallel::mclapply(
-      X = gseid,
-      FUN = function(.gseid) {
-        log_info("Loading {.gseid}... ({which(gseids == .gseid)}/{length(gseids)})")
-        .anno <- readr::read_rds(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
-        )
-        log_success("Loaded {.gseid}! ({which(gseids == .gseid)}/{length(gseids)})")
-        return(.anno)
-      },
-      mc.cores = 10
-    )
-  ) ->
-gse_data_loaded
-
-gse_data_loaded |>
-  tidyr::unnest(cols = anno) ->
-gse_data
+gse_data <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+)
 
 # body --------------------------------------------------------------------
 
@@ -293,7 +205,7 @@ for_celltype_ratio_plot |>
   ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = pcc$color
+    values = RColorBrewer::brewer.pal(8, "Set2")
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0.005)),
@@ -334,7 +246,7 @@ for_celltype_ratio_plot |>
   ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = pcc$color
+    values = RColorBrewer::brewer.pal(8, "Set2")
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0.005)),
@@ -367,7 +279,7 @@ ggsave(
     guides = "collect"
   ),
   width = 24,
-  height = 13,
+  height = 12,
   dpi = 300
 )
 
@@ -600,255 +512,253 @@ for_hetero_af_forplot
 
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
+\(){
+  for_hetero_af_forplot |>
+    dplyr::filter(Age_group != "Unknown") |>
+    dplyr::filter(!is.na(somatic_af)) |>
+    dplyr::filter(!is.na(Age_new)) |>
+    tidyr::unnest(cols = somatic_af_cluster) |>
+    dplyr::mutate(
+      cluster = factor(cluster, levels = celltypes)
+    ) ->
+  for_hetero_af_forplot_cluster
 
+  for_hetero_af_forplot_cluster |>
+    dplyr::group_by(Age_group) |>
+    dplyr::summarise(
+      mean_somatic_af = mean(somatic_af_cluster, na.rm = TRUE)
+    ) ->
+  cluster_mean
 
-for_hetero_af_forplot |>
-  dplyr::filter(Age_group != "Unknown") |>
-  dplyr::filter(!is.na(somatic_af)) |>
-  dplyr::filter(!is.na(Age_new)) |>
-  tidyr::unnest(cols = somatic_af_cluster) |>
-  dplyr::mutate(
-    cluster = factor(cluster, levels = celltypes)
-  ) ->
-for_hetero_af_forplot_cluster
-
-for_hetero_af_forplot_cluster |>
-  dplyr::group_by(Age_group) |>
-  dplyr::summarise(
-    mean_somatic_af = mean(somatic_af_cluster, na.rm = TRUE)
-  ) ->
-cluster_mean
-
-for_hetero_af_forplot_cluster |>
-  dplyr::left_join(
-    cluster_mean,
-    by = c("Age_group" = "Age_group")
-  ) |>
-  ggplot(aes(x = Age_group)) +
-  ggh4x::facet_wrap2(
-    ~cluster,
-    ncol = 1,
-    strip.position = "right",
-    strip = ggh4x::strip_themed(
-      background_y = ggh4x::elem_list_rect(
-        fill = pcc$color
+  for_hetero_af_forplot_cluster |>
+    dplyr::left_join(
+      cluster_mean,
+      by = c("Age_group" = "Age_group")
+    ) |>
+    ggplot(aes(x = Age_group)) +
+    ggh4x::facet_wrap2(
+      ~cluster,
+      ncol = 1,
+      strip.position = "right",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = RColorBrewer::brewer.pal(8, "Set2")
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
       ),
-      text_y = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
+      scales = "free_y",
+    ) +
+    # geom_violin(
+    #   aes(
+    #     y = somatic_af_cluster,
+    #     fill = mean_somatic_af
+    #   ),
+    #   alpha = 0.5,
+    #   size = 1,
+    #   color = NA,
+    #   show.legend = FALSE
+    # ) +
+    # scale_fill_gradient2(
+    #   name = "AF",
+    #   low = "white",
+    #   mid = "red",
+    #   high = "#3B0049",
+    #   midpoint = 0.5,
+    # ) +
+    ggnewscale::new_scale_fill() +
+    ggbeeswarm::geom_quasirandom(
+      aes(
+        x = Age_group,
+        y = somatic_af_cluster,
+        color = somatic_af_cluster
       ),
-      by_layer_y = FALSE,
-    ),
-    scales = "free_y",
-  ) +
-  # geom_violin(
-  #   aes(
-  #     y = somatic_af_cluster,
-  #     fill = mean_somatic_af
-  #   ),
-  #   alpha = 0.5,
-  #   size = 1,
-  #   color = NA,
-  #   show.legend = FALSE
-  # ) +
-  # scale_fill_gradient2(
-  #   name = "AF",
-  #   low = "white",
-  #   mid = "red",
-  #   high = "#3B0049",
-  #   midpoint = 0.5,
-  # ) +
-  ggnewscale::new_scale_fill() +
-  ggbeeswarm::geom_quasirandom(
-    aes(
-      x = Age_group,
-      y = somatic_af_cluster,
-      color = somatic_af_cluster
-    ),
-    size = 1,
-    dodge.width = .75,
-    alpha = .5,
-    varwidth = TRUE
-  ) +
-  scale_color_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
-  scale_y_continuous(
-    expand = c(0.01, 0),
-    limits = c(0, 1),
-  ) +
-  theme(
-    plot.margin = margin(t = 0.5, b = 0.5, l = 0.5, r = 0.5, unit = "cm"),
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
-    axis.line.x.bottom = element_line(color = "black"),
-    # axis.ticks.x = element_blank(),
-    # axis.text.x = element_blank(),
-    axis.line.x = element_blank(),
-    axis.title.x = element_blank(),
-    # legend.position = c(0.8, 0.5),
-    legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
-    axis.text.y = element_text(color = "black"),
-    legend.text = element_text(
-      size = 14,
-      color = "black"
-    ),
-    legend.title = element_text(
-      size = 16,
-      colour = "black"
-    ),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      size = 8,
-      color = "black",
-      face = "bold"
-    )
-  ) +
-  labs(
-    y = "Mean heteroplasmy count"
-  ) ->
-p_age_somatic_af_cluster
-
-
-ggsave(
-  file.path(outdir, "p_age_somatic_af_cluster.pdf"),
-  p_age_somatic_af_cluster,
-  width = 12,
-  height = 7
-)
-
-
-
-# ! haplo --------------------------------------------------------------------
-
-for_hetero_af_forplot |>
-  dplyr::filter(Age_group != "Unknown") |>
-  dplyr::filter(!is.na(somatic_af)) |>
-  dplyr::filter(!is.na(Age_new)) |>
-  tidyr::unnest(cols = haplo_af_cluster) |>
-  dplyr::mutate(
-    cluster = factor(cluster, levels = celltypes)
-  ) ->
-for_hetero_af_forplot_cluster
-
-for_hetero_af_forplot_cluster |>
-  dplyr::group_by(Age_group) |>
-  dplyr::summarise(
-    mean_haplo_af = mean(haplo_af_cluster, na.rm = TRUE)
-  ) ->
-cluster_mean
-
-for_hetero_af_forplot_cluster |>
-  dplyr::left_join(
-    cluster_mean,
-    by = c("Age_group" = "Age_group")
-  ) |>
-  ggplot(aes(x = Age_group)) +
-  ggh4x::facet_wrap2(
-    ~cluster,
-    ncol = 1,
-    strip.position = "right",
-    strip = ggh4x::strip_themed(
-      background_y = ggh4x::elem_list_rect(
-        fill = pcc$color
+      size = 1,
+      dodge.width = .75,
+      alpha = .5,
+      varwidth = TRUE
+    ) +
+    scale_color_gradient2(
+      name = "AF",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5,
+    ) +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      limits = c(0, 1),
+    ) +
+    theme(
+      plot.margin = margin(t = 0.5, b = 0.5, l = 0.5, r = 0.5, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      axis.line.x.bottom = element_line(color = "black"),
+      # axis.ticks.x = element_blank(),
+      # axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      # legend.position = c(0.8, 0.5),
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+      legend.text = element_text(
+        size = 14,
+        color = "black"
       ),
-      text_y = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
+      legend.title = element_text(
+        size = 16,
+        colour = "black"
       ),
-      by_layer_y = FALSE,
-    ),
-    scales = "free_y",
-  ) +
-  # geom_violin(
-  #   aes(
-  #     y = haplo_af_cluster,
-  #     fill = mean_haplo_af
-  #   ),
-  #   alpha = 0.5,
-  #   size = 1,
-  #   color = NA,
-  #   show.legend = FALSE
-  # ) +
-  # scale_fill_gradient2(
-  #   name = "AF",
-  #   low = "white",
-  #   mid = "red",
-  #   high = "#3B0049",
-  #   midpoint = 0.5,
-  # ) +
-  # ggnewscale::new_scale_fill() +
-  ggbeeswarm::geom_quasirandom(
-    aes(
-      x = Age_group,
-      y = haplo_af_cluster,
-      color = haplo_af_cluster
-    ),
-    size = 1,
-    dodge.width = .75,
-    alpha = .3,
-    varwidth = TRUE
-  ) +
-  scale_color_gradient2(
-    name = "AF",
-    low = "white",
-    mid = "red",
-    high = "#3B0049",
-    midpoint = 0.5,
-  ) +
-  scale_y_continuous(
-    expand = c(0.01, 0),
-    limits = c(0, 1),
-  ) +
-  theme(
-    plot.margin = margin(t = 0.5, b = 0.5, l = 0.5, r = 0.5, unit = "cm"),
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
-    axis.line.x.bottom = element_line(color = "black"),
-    # axis.ticks.x = element_blank(),
-    # axis.text.x = element_blank(),
-    axis.line.x = element_blank(),
-    axis.title.x = element_blank(),
-    # legend.position = c(0.8, 0.5),
-    legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
-    axis.text.y = element_text(color = "black"),
-    legend.text = element_text(
-      size = 14,
-      color = "black"
-    ),
-    legend.title = element_text(
-      size = 16,
-      colour = "black"
-    ),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      size = 8,
-      color = "black",
-      face = "bold"
-    )
-  ) +
-  labs(
-    y = "Mean heteroplasmy count"
-  ) ->
-p_age_haplot_af_cluster
+      strip.background = element_blank(),
+      strip.text = element_text(
+        size = 8,
+        color = "black",
+        face = "bold"
+      )
+    ) +
+    labs(
+      y = "Mean heteroplasmy count"
+    ) ->
+  p_age_somatic_af_cluster
 
 
-ggsave(
-  file.path(outdir, "p_age_haplot_af_cluster.pdf"),
-  p_age_haplot_af_cluster,
-  width = 13,
-  height = 7
-)
+  ggsave(
+    file.path(outdir, "p_age_somatic_af_cluster.pdf"),
+    p_age_somatic_af_cluster,
+    width = 12,
+    height = 7
+  )
 
 
+
+  # ! haplo --------------------------------------------------------------------
+
+  for_hetero_af_forplot |>
+    dplyr::filter(Age_group != "Unknown") |>
+    dplyr::filter(!is.na(somatic_af)) |>
+    dplyr::filter(!is.na(Age_new)) |>
+    tidyr::unnest(cols = haplo_af_cluster) |>
+    dplyr::mutate(
+      cluster = factor(cluster, levels = celltypes)
+    ) ->
+  for_hetero_af_forplot_cluster
+
+  for_hetero_af_forplot_cluster |>
+    dplyr::group_by(Age_group) |>
+    dplyr::summarise(
+      mean_haplo_af = mean(haplo_af_cluster, na.rm = TRUE)
+    ) ->
+  cluster_mean
+
+  for_hetero_af_forplot_cluster |>
+    dplyr::left_join(
+      cluster_mean,
+      by = c("Age_group" = "Age_group")
+    ) |>
+    ggplot(aes(x = Age_group)) +
+    ggh4x::facet_wrap2(
+      ~cluster,
+      ncol = 1,
+      strip.position = "right",
+      strip = ggh4x::strip_themed(
+        background_y = ggh4x::elem_list_rect(
+          fill = RColorBrewer::brewer.pal(8, "Set2")
+        ),
+        text_y = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = FALSE,
+      ),
+      scales = "free_y",
+    ) +
+    # geom_violin(
+    #   aes(
+    #     y = haplo_af_cluster,
+    #     fill = mean_haplo_af
+    #   ),
+    #   alpha = 0.5,
+    #   size = 1,
+    #   color = NA,
+    #   show.legend = FALSE
+    # ) +
+    # scale_fill_gradient2(
+    #   name = "AF",
+    #   low = "white",
+    #   mid = "red",
+    #   high = "#3B0049",
+    #   midpoint = 0.5,
+    # ) +
+    # ggnewscale::new_scale_fill() +
+    ggbeeswarm::geom_quasirandom(
+      aes(
+        x = Age_group,
+        y = haplo_af_cluster,
+        color = haplo_af_cluster
+      ),
+      size = 1,
+      dodge.width = .75,
+      alpha = .3,
+      varwidth = TRUE
+    ) +
+    scale_color_gradient2(
+      name = "AF",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5,
+    ) +
+    scale_y_continuous(
+      expand = c(0.01, 0),
+      limits = c(0, 1),
+    ) +
+    theme(
+      plot.margin = margin(t = 0.5, b = 0.5, l = 0.5, r = 0.5, unit = "cm"),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line.y.left = element_line(color = "black"),
+      axis.line.x.bottom = element_line(color = "black"),
+      # axis.ticks.x = element_blank(),
+      # axis.text.x = element_blank(),
+      axis.line.x = element_blank(),
+      axis.title.x = element_blank(),
+      # legend.position = c(0.8, 0.5),
+      legend.key = element_blank(),
+      axis.title.y = element_text(color = "black"),
+      axis.text.y = element_text(color = "black"),
+      legend.text = element_text(
+        size = 14,
+        color = "black"
+      ),
+      legend.title = element_text(
+        size = 16,
+        colour = "black"
+      ),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        size = 8,
+        color = "black",
+        face = "bold"
+      )
+    ) +
+    labs(
+      y = "Mean heteroplasmy count"
+    ) ->
+  p_age_haplot_af_cluster
+
+
+  ggsave(
+    file.path(outdir, "p_age_haplot_af_cluster.pdf"),
+    p_age_haplot_af_cluster,
+    width = 13,
+    height = 7
+  )
+}
 
 
 # ! disease and mean heteroplasmy frequency --------------------------------------------------------------------
@@ -946,7 +856,7 @@ ggsave(
 # ! disease and mean heteroplasmy frequency --------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
+  # dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   # dplyr::filter(gseid != "GSE220189") |>
   dplyr::filter(
     disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19")
@@ -1091,7 +1001,7 @@ for_age_plot |>
   #   strip.position = "right",
   #   strip = ggh4x::strip_themed(
   #     background_y = ggh4x::elem_list_rect(
-  #       fill = pcc$color
+  #       fill = RColorBrewer::brewer.pal(8, "Set2")
   #     ),
   #     text_y = ggh4x::elem_list_text(
   #       colour = "white",
@@ -1193,7 +1103,7 @@ ggsave(
 # meta --------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
+  # dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   # dplyr::filter(gseid != "GSE220189") |>
   dplyr::select(gseid, srrid, Race, Ethnicity, Gender, Age_group, disease, Chemistry) ->
 gse_dataset_metadata_full_selected
@@ -1336,7 +1246,7 @@ ggsave(
 # ! age and somatic and disease--------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
+  # dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
   dplyr::filter(!is.na(Age_new)) |>
   dplyr::mutate(
     disease = dplyr::case_when(

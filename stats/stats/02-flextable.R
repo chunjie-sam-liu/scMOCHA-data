@@ -51,66 +51,8 @@ log_layout(layout_glue_colors)
 
 # ! gseid --------------------------------------------------------------------
 
-
-gseids <- c(
-  "GSE155673",
-  "GSE157344",
-  "GSE149689",
-  "GSE171555",
-  "GSE155223",
-  "GSE163668",
-  "GSE175524",
-  "GSE206283",
-  "GSE226598",
-  "GSE261140",
-  "GSE279945",
-  "GSE214865",
-  "GSE220189",
-  "GSE233844",
-  "GSE175499",
-  "GSE149313",
-  "GSE154386",
-  "GSE159117",
-  "GSE188632",
-  "GSE166992",
-  "GSE162117",
-  "GSE226602",
-  "GSE161354",
-  "GSE235050",
-  "GSE181279",
-  # scfoundation2
-  "GSE143353",
-  "GSE148215",
-  "GSE163314",
-  "GSE163633",
-  "GSE164690",
-  "GSE167825",
-  "GSE174125",
-  "GSE184703",
-  "GSE153421",
-  # "GSE168453",
-  "GSE147794"
-)
-
-# not PBMC
-gseids_not_pbmc <- c(
-  "GSE168453", # Pool samples together, not individual samples
-  "GSE163668", # Some are pooled samples, not individual samples. Whole blood, not PBMC, including others like Red blood cells, Platelets and Plasma
-  "GSE163633", # Not all PBMC, some are Mucosa-derived T cells / Myloid cells, Squamous Cell Carcinoma(SCC) -derived T cells / Myloid Cells
-  "GSE157344", # It’s not PBMC, but the blood or bronchoalveloar lavage samples
-  "GSE163314", # Half of the samples are from Colon, not PBMC
-  "GSE164690", # Most of the samples are from tumors (Head and neck squamous cell carcinoma (HNSCC)), not from PBMC
-  "GSE148215" # The samples are human embryonic cells, not PBMC cells
-)
-# enrich cells
-gseids_enrich_cells <- c(
-  "GSE167825", # CD8T cell enriched
-  "GSE175524", # B cell enriched
-  "GSE261140" # CD8T cell enriched
-)
-
-gseids_tobe_excluded <- c(
-  gseids_not_pbmc
+gse_dataset_metadata_full <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
 )
 
 
@@ -122,54 +64,52 @@ gses_meta_read <- readxl::read_xlsx(
     filename_
   )
 ) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
+  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
 gses_meta_read_ <- readxl::read_xlsx(
   file.path(
     "/home/liuc9/github/scMOCHA-data/data/out_new_ting",
     filename_
   )
 ) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
+  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
 gses_meta_read__ <- readxl::read_xlsx(
   file.path(
     "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out",
     filename_
   )
 ) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
+  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
 
-gse_dataset_metadata_full <- readr::read_rds("/home/liuc9/github/scMOCHA-data/data/scfoundation/out/gse_dataset_metadata_full.rds") |>
-  dplyr::select(gseid, disease) |>
-  dplyr::distinct() |>
-  dplyr::group_by(gseid) |>
-  dplyr::summarize(disease = paste(disease, collapse = ",")) |>
-  dplyr::filter(!gseid %in% gseids_tobe_excluded)
+
 
 
 # body --------------------------------------------------------------------
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 gses_meta_read |>
   dplyr::bind_rows(gses_meta_read_) |>
-  dplyr::bind_rows(gses_meta_read__) ->
+  dplyr::bind_rows(gses_meta_read__) |>
+  dplyr::distinct() ->
 gses_meta_read_all
 
-gses_meta_read_all$gseid |>
-  sort() |>
-  unique() -> gseids
+gse_dataset_metadata_full |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(
+    sample = dplyr::n(),
+  )
 
 gses_meta_read_all |>
-  dplyr::filter(gseid %in% gseids) |>
+  dplyr::select(-samples) |>
   dplyr::left_join(
-    gse_dataset_metadata_full,
+    gse_dataset_metadata_full |>
+      dplyr::group_by(gseid) |>
+      dplyr::summarise(
+        samples = dplyr::n(),
+      ),
     by = "gseid"
-  ) |>
-  dplyr::mutate(
-    Disease = disease
   ) |>
   dplyr::mutate(
     Disease = ifelse(is.na(Disease), "-", Disease)
   ) |>
-  dplyr::select(-disease) |>
   dplyr::distinct() |>
   dplyr::select(
     `GSE ID` = gseid,
@@ -198,7 +138,6 @@ df |>
     n_samples = sum(samples),
   )
 
-library(flextable)
 
 ggsci::pal_aaas()(3) |> prismatic::color()
 chem_colors <- viridis::viridis_pal(option = "D")(4) |>
@@ -251,6 +190,9 @@ last_indices <- sapply(chem_uniq, function(x) {
 })
 # RColorBrewer::brewer.pal(5, "Set2") |> prismatic::color()
 df$samples |> sum()
+
+library(flextable)
+
 flextable::flextable(df) |>
   flextable::set_header_df(
     the_header,
