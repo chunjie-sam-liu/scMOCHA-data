@@ -47,9 +47,9 @@ POSALTS = [f"{pos}_{alt}" for pos, alt in zip(POSISTIONS, ALTS)]
 TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/TABLES")
 
 
-def load_table_pl(gseid, srrid):
+def load_table_pl(gseid, srrid, cluster):
     # gseid, srrid = "GSE147794", "GSM4446059"
-    tablename = f"cell_cov.{gseid}_{srrid}"
+    tablename = f"{cluster}_cov.{gseid}_{srrid}"
     log.info(f"Loading {tablename}")
     table_path = TABLEDIR / f"{tablename}.csv"
     df = pl.read_csv(
@@ -95,26 +95,26 @@ def load_table_pl(gseid, srrid):
     return df_out
 
 
-def save_table_pl(gseid, srrid):
-    tablename = f"cell_cov.{gseid}_{srrid}"
+def save_table_pl(gseid, srrid, cluster):
+    tablename = f"{cluster}_cov.{gseid}_{srrid}"
     log.info(f"Loading {tablename}")
     table_path = (
         Path("/home/liuc9/github/scMOCHA-data/data/zzz/db/HETEROPLASMIC")
         / f"{tablename}.hetero.csv"
     )
-    df = load_table_pl(gseid, srrid)
+    df = load_table_pl(gseid, srrid, cluster)
     df.write_csv(table_path, include_header=True)
     log.info(f"Saved {tablename} to {table_path}")
 
 
-def load_file(row):
+def load_file(row, cluster="cell"):
     """Load a single heteroplasmic file.
 
     This function must be outside of merge_pl to be picklable for multiprocessing.
     """
     gseid = row["gseid"]
     srrid = row["srrid"]
-    filename = f"cell_cov.{gseid}_{srrid}.hetero.csv"
+    filename = f"{cluster}_cov.{gseid}_{srrid}.hetero.csv"
     file_path = (
         Path("/home/liuc9/github/scMOCHA-data/data/zzz/db/HETEROPLASMIC")
         / filename
@@ -141,7 +141,7 @@ def load_file(row):
         return None
 
 
-def merge_pl():
+def merge_pl(cluster="cell"):
     # Create a pool with multiple workers
 
     # Convert the dataframe to a list of dictionaries for multiprocessing
@@ -150,7 +150,7 @@ def merge_pl():
     # Process the rows in parallel
     dfs = []
     for row in row_list:
-        df = load_file(row)
+        df = load_file(row, cluster)
         if df is not None:
             dfs.append(df)
 
@@ -162,30 +162,10 @@ def merge_pl():
 
     # Save the merged result
     output_path = Path(
-        "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_heteroplasmic_af.csv"
+        f"/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_heteroplasmic_af.{cluster}.csv"
     )
     all_df.write_csv(output_path, include_header=True)
     log.info(f"Saved merged heteroplasmic data to {output_path}")
-
-
-def create_sh():
-    cmds = []
-    for row in SRR.iter_rows(named=True):
-        gseid = row["gseid"]
-        srrid = row["srrid"]
-        cmd = [
-            "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
-            "/home/liuc9/github/scMOCHA-data/stats/stats/all_variant_cells.py",
-            gseid,
-            srrid,
-        ]
-        cmds.append(" ".join(cmd))
-    with open(
-        "/home/liuc9/github/scMOCHA-data/data/zzz/db/all_variant_cells.run_all.sh",
-        "w",
-    ) as f:
-        for cmd in cmds:
-            f.write(f"{cmd}\n")
 
 
 def process_row(row):
@@ -222,23 +202,51 @@ app = typer.Typer()
 
 
 @app.command()
-def heteroplasmic_af(gseid: str, srrid: str):
+def heteroplasmic_af(gseid: str, srrid: str, cluster: str):
     """
     Generate heteroplasmic allele frequency table for all cells.
     """
     log.info("Generating heteroplasmic allele frequency table for all cells.")
-    save_table_pl(gseid, srrid)
+    log.info(f"Processing {gseid} {srrid} {cluster}")
+    save_table_pl(gseid, srrid, cluster)
     log.info("Finished generating heteroplasmic allele frequency table.")
 
 
 @app.command()
-def merge():
+def merge(cluster: str):
     """python /home/liuc9/github/scMOCHA-data/stats/stats/all_variant_cells.py
     Merge all heteroplasmic allele frequency tables.
     """
     log.info("Merging all heteroplasmic allele frequency tables.")
-    merge_pl()
+    merge_pl(cluster)
     log.info("Finished merging all heteroplasmic allele frequency tables.")
+
+
+@app.command()
+def create_sh(cluster: str):
+    cmds = []
+    for row in SRR.iter_rows(named=True):
+        gseid = row["gseid"]
+        srrid = row["srrid"]
+        cmd = [
+            "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
+            "/home/liuc9/github/scMOCHA-data/stats/stats/all_variant_cells.py",
+            "heteroplasmic-af",
+            gseid,
+            srrid,
+            cluster,
+        ]
+        cmds.append(" ".join(cmd))
+        output_path = Path(
+            f"/home/liuc9/github/scMOCHA-data/data/zzz/db/all_variant_cells.{cluster}.run_all.sh"
+        )
+    with open(
+        output_path,
+        "w",
+    ) as f:
+        log.info(f"Writing commands to {output_path}")
+        for cmd in cmds:
+            f.write(f"{cmd}\n")
 
 
 if __name__ == "__main__":
