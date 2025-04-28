@@ -36,7 +36,7 @@ def create_sh():
         outdir = HQVDIR / gseid / "final"
         outdir.mkdir(parents=True, exist_ok=True)
 
-        cmd = f"rsync -av  --partial --progress --exclude='cromwell-executions' --exclude='cromwell-workflow-logs' --exclude='*.bam' --exclude='*.bai' {srrdir} {outdir}/"
+        cmd = f"rsync -av  --partial --progress --exclude='cromwell-executions' --exclude='cromwell-workflow-logs' --exclude='*.bam' --exclude='*.bai' --exclude='trees' --exclude='azimuth.rda' --exclude='*.svg'  --exclude='*signac.rds' --exclude='*.h5' --exclude='matrix.mtx.gz' --exclude='scMOCHA.rda' {srrdir} {outdir}/"
         # print(cmd)
         with open(sh_filename, "a") as f:
             f.write(cmd + "\n")
