@@ -279,7 +279,8 @@ hma_left <- ComplexHeatmap::rowAnnotation(
   )
 )
 
-sort(unique(as.numeric(.af_mtx))) |> quantile(seq(0, 1, by = 0.001)) -> .seq_af
+sort(unique(as.numeric(.af_mtx))) |> quantile(seq(0, 1, by = 0.01)) -> .seq_af
+# seq(0, 1, 0.01) -> .seq_af
 col_option <- "turbo"
 col_pick = c(
   "white",
@@ -359,7 +360,7 @@ ComplexHeatmap::Heatmap(
     title_gp = gpar(fontsize = 10)
   )
 ) ->
-ch_af
+ch_af;ch_af
 
 
 {

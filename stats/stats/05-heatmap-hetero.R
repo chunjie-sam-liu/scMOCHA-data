@@ -76,42 +76,42 @@ heteroplasmic
 heteroplasmic |> dplyr::filter(Disease != "") ->
 heteroplasmic_disease
 #
-all_heteroplasmic_af |>
-  dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
-  dplyr::mutate(
-    colname = glue::glue("{gseid}_{srrid}_{barcode}"),
-  ) |>
-  dplyr::select(-c(gseid, srrid)) |>
-  tidyr::pivot_longer(
-    cols = -c(colname, barcode),
-    names_to = "variant",
-    values_to = "af"
-  ) ->
-forplot
-forplot |>
-  dplyr::filter(variant == "4175G>A") |>
-  ggplot(aes(
-    x = barcode,
-    y = af,
-  )) +
-  geom_point() +
-  theme(
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-  )
-forplot |>
-  ggstatsplot::ggbetweenstats(
-    x = barcode,
-    y = af,
-    xlab = "Cluster",
-    ylab = "Allele Frequency",
-    # title = glue::glue("{the_srrid} - {one_variant}"),
-    pairwise.display = "significant",
-    p.adjust.method = "BH"
-  ) +
-  scale_y_continuous(
-    limits = c(0, 1)
-  )
+# all_heteroplasmic_af |>
+#   dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
+#   dplyr::mutate(
+#     colname = glue::glue("{gseid}_{srrid}_{barcode}"),
+#   ) |>
+#   dplyr::select(-c(gseid, srrid)) |>
+#   tidyr::pivot_longer(
+#     cols = -c(colname, barcode),
+#     names_to = "variant",
+#     values_to = "af"
+#   ) ->
+# forplot
+# forplot |>
+#   dplyr::filter(variant == "4175G>A") |>
+#   ggplot(aes(
+#     x = barcode,
+#     y = af,
+#   )) +
+#   geom_point() +
+#   theme(
+#     axis.text = element_blank(),
+#     axis.ticks = element_blank(),
+#   )
+# forplot |>
+#   ggstatsplot::ggbetweenstats(
+#     x = barcode,
+#     y = af,
+#     xlab = "Cluster",
+#     ylab = "Allele Frequency",
+#     # title = glue::glue("{the_srrid} - {one_variant}"),
+#     pairwise.display = "significant",
+#     p.adjust.method = "BH"
+#   ) +
+#   scale_y_continuous(
+#     limits = c(0, 1)
+#   )
 
 VARIANTS <- heteroplasmic$variant
 length(VARIANTS)
