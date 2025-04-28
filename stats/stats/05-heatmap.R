@@ -49,16 +49,19 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
 all_heteroplasmic_af <- data.table::fread(
-  file.path(cleandatadir, "all_heteroplasmic_af.cluster.csv"),
+  file.path(cleandatadir, "all_hetero_af.cluster.csv"),
   header = TRUE,
   sep = ",",
 )
 
+all_homo_af <- data.table::fread(
+  file.path(cleandatadir, "all_homo_af.cluster.csv"),
+  header = TRUE,
+  sep = ","
+)
 
 
 all_variant <- readr::read_rds(
@@ -71,22 +74,22 @@ all_variant |>
 heteroplasmic
 
 heteroplasmic |> dplyr::filter(Disease != "") ->
-  heteroplasmic_disease
+heteroplasmic_disease
 #
 all_heteroplasmic_af |>
-  dplyr::select(1,2,3, `4175G>A`, `13271T>C`) |>
+  dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
   dplyr::mutate(
     colname = glue::glue("{gseid}_{srrid}_{barcode}"),
   ) |>
   dplyr::select(-c(gseid, srrid)) |>
   tidyr::pivot_longer(
-    cols =-c(colname, barcode),
+    cols = -c(colname, barcode),
     names_to = "variant",
     values_to = "af"
   ) ->
-  forplot
+forplot
 forplot |>
-  dplyr::filter(variant == '4175G>A') |>
+  dplyr::filter(variant == "4175G>A") |>
   ggplot(aes(
     x = barcode,
     y = af,
@@ -95,7 +98,7 @@ forplot |>
   theme(
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-)
+  )
 forplot |>
   ggstatsplot::ggbetweenstats(
     x = barcode,
@@ -134,7 +137,7 @@ METADATA |>
   # dplyr::count(Chemistry)
   dplyr::filter(Chemistry == "SC5P-PE") |>
   dplyr::pull(srrid) ->
-  srrids
+srrids
 
 # body --------------------------------------------------------------------
 
@@ -173,7 +176,7 @@ all_heteroplasmic_af_1 |>
     Disease = disease,
     Haplogroup = Haplogroup_s
   ) ->
-  .af_cluster_before
+.af_cluster_before
 
 .af_cluster_before |>
   tibble::column_to_rownames(var = "colname") ->
@@ -189,7 +192,7 @@ colSums(all_heteroplasmic_af_1_mat) |>
   tibble::rownames_to_column(var = "variant") |>
   dplyr::select(variant, freq = `colSums(all_heteroplasmic_af_1_mat)`) |>
   dplyr::arrange(desc(freq)) ->
-  sort_variants
+sort_variants
 
 dplyr::bind_rows(
   dplyr::slice_head(sort_variants, n = 10),
@@ -199,12 +202,13 @@ dplyr::bind_rows(
   dplyr::distinct() |>
   dplyr::filter(variant != "8545G>A") |>
   dplyr::left_join(
-    heteroplasmic, by = "variant"
+    heteroplasmic,
+    by = "variant"
   ) |>
   dplyr::mutate(
     label = glue::glue("{variant};{aachange}\n{Disease}")
   ) ->
-  top_variants
+top_variants
 
 
 
@@ -240,7 +244,7 @@ chm_top <- ComplexHeatmap::HeatmapAnnotation(
     Disease = DISEASE_,
     Haplogroup = HAPLOGROUP_,
     `Age` = circlize::colorRamp2(
-      breaks = c(2,92),
+      breaks = c(2, 92),
       colors = c("white", "red"),
       space = "RGB"
     )
@@ -366,4 +370,3 @@ ch_af
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
-
