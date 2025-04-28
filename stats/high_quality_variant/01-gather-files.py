@@ -27,13 +27,16 @@ app = typer.Typer()
 @app.command()
 def create_sh():
     sh_filename = HQVDIR / "all_srrid.sh"
+    sh_filename.unlink(missing_ok=True)
     for row in SRR.iter_rows(named=True):
+        # row = next(SRR.iter_rows(named=True))
         gseid = row["gseid"]
-        srrdir = Path(row["srrdir"])
+        srrdir = Path(row["srrdir"]).resolve()
+        # srrdir.resolve()
         outdir = HQVDIR / gseid / "final"
         outdir.mkdir(parents=True, exist_ok=True)
 
-        cmd = f"rsync -av  --partial --progress {srrdir} {outdir}/"
+        cmd = f"rsync -av  --partial --progress --exclude='cromwell-executions' --exclude='cromwell-workflow-logs' --exclude='*.bam' --exclude='*.bai' {srrdir} {outdir}/"
         # print(cmd)
         with open(sh_filename, "a") as f:
             f.write(cmd + "\n")
