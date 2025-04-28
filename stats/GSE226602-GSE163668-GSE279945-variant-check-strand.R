@@ -108,7 +108,7 @@ stats <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226
 all_variants <- readxl::read_excel("/home/liuc9/github/scMOCHA-data/data/GSE226602/final/GSM7080044/cell_variant_annotation.xlsx")
 
 stats |>
-  dplyr::filter(variant %in% all_variants$variant) |>
+  # dplyr::filter(variant %in% all_variants$variant) |>
   dplyr::mutate(
     vmr_log = log10(vmr)
   ) |>
