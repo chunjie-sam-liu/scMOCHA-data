@@ -10,9 +10,11 @@ import logging
 import multiprocessing as mp
 from functools import partial
 from pathlib import Path
+from typing import Annotated, Literal
 
 import polars as pl
 import typer
+from rich import print
 from rich.logging import RichHandler
 
 FORMAT = "%(message)s"
@@ -38,46 +40,112 @@ HETEROPLASMIC_DF = (
     .select(["variant", "Position"])
     .sort("Position")
 )
+
+HOMOPLASMIC_DF = (
+    ALL_VARIANT_DF.filter(pl.col("issomatic") == "homoplasmic")
+    .select(["variant", "Position"])
+    .sort("Position")
+)
+
+CONFIG = {
+    "HETEROPLASMIC": {
+        "POSISTIONS": HETEROPLASMIC_DF["Position"].to_list(),
+        "VARIANTS": HETEROPLASMIC_DF["variant"].to_list(),
+        "ALTS": [
+            variant.split(">")[1]
+            for variant in HETEROPLASMIC_DF["variant"].to_list()
+        ],
+        "POSALTS": [
+            f"{pos}_{alt}"
+            for pos, alt in zip(
+                HETEROPLASMIC_DF["Position"].to_list(),
+                [
+                    variant.split(">")[1]
+                    for variant in HETEROPLASMIC_DF["variant"].to_list()
+                ],
+            )
+        ],
+        "table_path": Path(
+            "/home/liuc9/github/scMOCHA-data/data/zzz/db/HETEROPLASMIC"
+        ),
+        "suffix": "hetero",
+    },
+    "HOMOPLASMIC": {
+        "POSISTIONS": HOMOPLASMIC_DF["Position"].to_list(),
+        "VARIANTS": HOMOPLASMIC_DF["variant"].to_list(),
+        "ALTS": [
+            variant.split(">")[1]
+            for variant in HOMOPLASMIC_DF["variant"].to_list()
+        ],
+        "POSALTS": [
+            f"{pos}_{alt}"
+            for pos, alt in zip(
+                HOMOPLASMIC_DF["Position"].to_list(),
+                [
+                    variant.split(">")[1]
+                    for variant in HOMOPLASMIC_DF["variant"].to_list()
+                ],
+            )
+        ],
+        "table_path": Path(
+            "/home/liuc9/github/scMOCHA-data/data/zzz/db/HOMOPLASMIC"
+        ),
+        "suffix": "homo",
+    },
+}
+
 # Extract positions from HETEROPLASMIC_DF
-POSISTIONS = HETEROPLASMIC_DF["Position"].to_list()
-VARIANTS = HETEROPLASMIC_DF["variant"].to_list()
-ALTS = [variant.split(">")[1] for variant in VARIANTS]
-POSALTS = [f"{pos}_{alt}" for pos, alt in zip(POSISTIONS, ALTS)]
+# POSISTIONS = HETEROPLASMIC_DF["Position"].to_list()
+# VARIANTS = HETEROPLASMIC_DF["variant"].to_list()
+# ALTS = [variant.split(">")[1] for variant in VARIANTS]
+# POSALTS = [f"{pos}_{alt}" for pos, alt in zip(POSISTIONS, ALTS)]
 
 TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/TABLES")
 
 
-def load_table_pl(gseid, srrid, cluster):
-    # gseid, srrid = "GSE147794", "GSM4446059"
+def load_table_pl(gseid, srrid, cluster, hh):
+    # gseid, srrid, cluster, hh = "GSE147794", "GSM4446059", "cluster", "HETEROPLASMIC"
     tablename = f"{cluster}_cov.{gseid}_{srrid}"
     log.info(f"Loading {tablename}")
     table_path = TABLEDIR / f"{tablename}.csv"
     df = pl.read_csv(
         table_path,
         has_header=True,
-    ).select(["base", "barcode", *[str(pos) for pos in POSISTIONS]])
+    ).select(
+        ["base", "barcode", *[str(pos) for pos in CONFIG[hh]["POSISTIONS"]]]
+    )
 
     df_alt_cov = (
         df.pivot(
             index="barcode",
             on="base",
-            values=[str(pos) for pos in POSISTIONS],
+            values=[str(pos) for pos in CONFIG[hh]["POSISTIONS"]],
             aggregate_function="sum",
         )
-        .select(["barcode", *POSALTS])
+        .select(["barcode", *CONFIG[hh]["POSALTS"]])
         .sort("barcode")
     )
 
     df_sum_cov = (
         df.group_by("barcode")
-        .agg([pl.sum(str(pos)).alias(str(pos)) for pos in POSISTIONS])
+        .agg(
+            [
+                pl.sum(str(pos)).alias(str(pos))
+                for pos in CONFIG[hh]["POSISTIONS"]
+            ]
+        )
         .sort("barcode")
     )
 
-    df_sum_cov.columns = ["barcode", *[str(pos) for pos in POSALTS]]
+    df_sum_cov.columns = [
+        "barcode",
+        *[str(pos) for pos in CONFIG[hh]["POSALTS"]],
+    ]
 
-    df_alt_af = df_alt_cov.select(POSALTS) / df_sum_cov.select(POSALTS)
-    df_alt_af.columns = VARIANTS
+    df_alt_af = df_alt_cov.select(CONFIG[hh]["POSALTS"]) / df_sum_cov.select(
+        CONFIG[hh]["POSALTS"]
+    )
+    df_alt_af.columns = CONFIG[hh]["VARIANTS"]
 
     # Column bind barcode from df_sum_cov with df_alt_af
     result_df = pl.concat(
@@ -88,46 +156,42 @@ def load_table_pl(gseid, srrid, cluster):
         result_df.with_columns(
             [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
         )
-        .select(["gseid", "srrid", "barcode", *VARIANTS])
+        .select(["gseid", "srrid", "barcode", *CONFIG[hh]["VARIANTS"]])
         .sort("barcode")
     )
 
     return df_out
 
 
-def save_table_pl(gseid, srrid, cluster):
+def save_table_pl(gseid, srrid, cluster, hh):
     tablename = f"{cluster}_cov.{gseid}_{srrid}"
     log.info(f"Loading {tablename}")
     table_path = (
-        Path("/home/liuc9/github/scMOCHA-data/data/zzz/db/HETEROPLASMIC")
-        / f"{tablename}.hetero.csv"
+        CONFIG[hh]["table_path"] / f"{tablename}.{CONFIG[hh]['suffix']}.csv"
     )
-    df = load_table_pl(gseid, srrid, cluster)
+    df = load_table_pl(gseid, srrid, cluster, hh)
     df.write_csv(table_path, include_header=True)
     log.info(f"Saved {tablename} to {table_path}")
 
 
-def load_file(row, cluster="cell"):
+def load_file(row, cluster, hh):
     """Load a single heteroplasmic file.
 
     This function must be outside of merge_pl to be picklable for multiprocessing.
     """
     gseid = row["gseid"]
     srrid = row["srrid"]
-    filename = f"{cluster}_cov.{gseid}_{srrid}.hetero.csv"
-    file_path = (
-        Path("/home/liuc9/github/scMOCHA-data/data/zzz/db/HETEROPLASMIC")
-        / filename
-    )
+    filename = f"{cluster}_cov.{gseid}_{srrid}.{CONFIG[hh]['suffix']}.csv"
+    file_path = CONFIG[hh]["table_path"] / filename
     log.info(f"Loading {file_path}")
     try:
         df = pl.read_csv(file_path, has_header=True)
 
         df = df.with_columns(
-            [pl.col(variant).fill_nan(0) for variant in VARIANTS]
+            [pl.col(variant).fill_nan(0) for variant in CONFIG[hh]["VARIANTS"]]
         )
         # Create a binary mask where variant value > 0
-        mask = df[VARIANTS] > 0
+        mask = df[CONFIG[hh]["VARIANTS"]] > 0
 
         # Calculate the row sum (number of variants > 0 per cell)
         df = df.with_columns(pl.sum_horizontal(mask).alias("num_variants"))
@@ -141,7 +205,7 @@ def load_file(row, cluster="cell"):
         return None
 
 
-def merge_pl(cluster="cell"):
+def merge_pl(cluster, hh):
     # Create a pool with multiple workers
 
     # Convert the dataframe to a list of dictionaries for multiprocessing
@@ -150,7 +214,7 @@ def merge_pl(cluster="cell"):
     # Process the rows in parallel
     dfs = []
     for row in row_list:
-        df = load_file(row, cluster)
+        df = load_file(row, cluster, hh)
         if df is not None:
             dfs.append(df)
 
@@ -162,68 +226,39 @@ def merge_pl(cluster="cell"):
 
     # Save the merged result
     output_path = Path(
-        f"/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_heteroplasmic_af.{cluster}.csv"
+        f"/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_{CONFIG[hh]['suffix']}_af.{cluster}.csv"
     )
     all_df.write_csv(output_path, include_header=True)
-    log.info(f"Saved merged heteroplasmic data to {output_path}")
-
-
-def process_row(row):
-    gseid = row["gseid"]
-    srrid = row["srrid"]
-    log.info(f"Processing {gseid} {srrid}")
-    return load_table_pl(gseid, srrid)
-
-
-def parallel_run():
-    # Create a pool with 80 CPU workers
-    pool = mp.Pool(processes=20)
-
-    # Convert the dataframe to a list of dictionaries for multiprocessing
-    row_list = SRR.to_dicts()
-
-    # Process the rows in parallel
-    dfs = pool.map(process_row, row_list)
-
-    # Clean up the pool
-    pool.close()
-    pool.join()
-
-    all_df = pl.concat(dfs, how="vertical")
-    all_df.write_csv(
-        Path(
-            "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/all_heteroplasmic_af.csv"
-        ),
-        has_header=True,
-    )
+    log.info(f"Saved merged {CONFIG[hh]['suffix']} data to {output_path}")
 
 
 app = typer.Typer()
 
-
-@app.command()
-def heteroplasmic_af(gseid: str, srrid: str, cluster: str):
-    """
-    Generate heteroplasmic allele frequency table for all cells.
-    """
-    log.info("Generating heteroplasmic allele frequency table for all cells.")
-    log.info(f"Processing {gseid} {srrid} {cluster}")
-    save_table_pl(gseid, srrid, cluster)
-    log.info("Finished generating heteroplasmic allele frequency table.")
+ClusterType = Annotated[
+    str, typer.Argument(help="Type of cluster: cell or cluster")
+]
+HHType = Annotated[
+    str, typer.Argument(help="Type of variant: HETEROPLASMIC or HOMOPLASMIC")
+]
 
 
 @app.command()
-def merge(cluster: str):
-    """python /home/liuc9/github/scMOCHA-data/stats/stats/all_variant_cells.py
-    Merge all heteroplasmic allele frequency tables.
-    """
-    log.info("Merging all heteroplasmic allele frequency tables.")
-    merge_pl(cluster)
-    log.info("Finished merging all heteroplasmic allele frequency tables.")
+def create_sh(
+    cluster: ClusterType,
+    hh: HHType,
+):
+    """Create shell script for processing."""
+    if cluster not in ["cell", "cluster"]:
+        typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
+        raise typer.Abort()
 
+    if hh not in ["HETEROPLASMIC", "HOMOPLASMIC"]:
+        typer.echo(
+            f"Error: hh must be 'HETEROPLASMIC' or 'HOMOPLASMIC', got {hh}"
+        )
+        raise typer.Abort()
 
-@app.command()
-def create_sh(cluster: str):
+    typer.echo(f"Creating shell script for {cluster} {hh}")
     cmds = []
     for row in SRR.iter_rows(named=True):
         gseid = row["gseid"]
@@ -235,10 +270,11 @@ def create_sh(cluster: str):
             gseid,
             srrid,
             cluster,
+            hh,
         ]
         cmds.append(" ".join(cmd))
         output_path = Path(
-            f"/home/liuc9/github/scMOCHA-data/data/zzz/db/all_variant_cells.{cluster}.run_all.sh"
+            f"/home/liuc9/github/scMOCHA-data/data/zzz/db/all_variant_cells.{cluster}.{CONFIG[hh]['suffix']}.run_all.sh"
         )
     with open(
         output_path,
@@ -247,6 +283,61 @@ def create_sh(cluster: str):
         log.info(f"Writing commands to {output_path}")
         for cmd in cmds:
             f.write(f"{cmd}\n")
+
+
+@app.command()
+def heteroplasmic_af(
+    gseid: str,
+    srrid: str,
+    cluster: ClusterType,
+    hh: HHType,
+):
+    """
+    Generate heteroplasmic allele frequency table for all cells.
+    """
+    if cluster not in ["cell", "cluster"]:
+        typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
+        raise typer.Abort()
+
+    if hh not in ["HETEROPLASMIC", "HOMOPLASMIC"]:
+        typer.echo(
+            f"Error: hh must be 'HETEROPLASMIC' or 'HOMOPLASMIC', got {hh}"
+        )
+        raise typer.Abort()
+
+    typer.echo(
+        f"Generating heteroplasmic allele frequency table for {gseid} {srrid} {cluster} {hh}"
+    )
+    log.info("Generating heteroplasmic allele frequency table for all cells.")
+    log.info(f"Processing {gseid} {srrid} {cluster} {hh}")
+    save_table_pl(gseid, srrid, cluster, hh)
+    log.info("Finished generating heteroplasmic allele frequency table.")
+
+
+@app.command()
+def merge(
+    cluster: ClusterType,
+    hh: HHType,
+):
+    """
+    Merge all heteroplasmic allele frequency tables.
+    """
+    if cluster not in ["cell", "cluster"]:
+        typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
+        raise typer.Abort()
+
+    if hh not in ["HETEROPLASMIC", "HOMOPLASMIC"]:
+        typer.echo(
+            f"Error: hh must be 'HETEROPLASMIC' or 'HOMOPLASMIC', got {hh}"
+        )
+        raise typer.Abort()
+
+    typer.echo(
+        f"Merging all heteroplasmic allele frequency tables for {cluster} {hh}"
+    )
+    log.info("Merging all heteroplasmic allele frequency tables.")
+    merge_pl(cluster, hh)
+    log.info("Finished merging all heteroplasmic allele frequency tables.")
 
 
 if __name__ == "__main__":
