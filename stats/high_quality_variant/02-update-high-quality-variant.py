@@ -194,23 +194,35 @@ def generate_hqv(
 
 
 @app.command()
-def create_sh():
+def create_sh(
+    cluster: Cluster = Cluster.cell,
+    cutoff_vmr: float = 0.01,
+    cutoff_strand_correlation: float = 0.3,
+):
     """
-    Creates a shell script that generates high-quality variant commands for each SRR in the dataset.
-    The function:
-    1. Defines the output shell script path at HQVDIR / "update-high_quality_variant.sh"
-    2. Removes any existing script file if present
-    3. For each row in the SRR table:
-        - Extracts GEO series ID and SRR ID
-        - Constructs the SRR directory path
-        - Creates a command to run the high-quality variant generation script with parameters:
-         * Using cell clustering
-         * VMR cutoff of 0.01
-         * Strand correlation cutoff of 0.3
-    4. Writes each command to the shell script
-    The generated script can be executed to process all SRR datasets in batch.
+    Creates a shell script to update high-quality variants for multiple SRR datasets.
+    This function generates a shell script file that contains commands to execute the
+    high-quality variant generation script for each SRR dataset. The commands include
+    specified parameters for clustering level, VMR cutoff, and strand correlation cutoff.
+    Parameters
+    ----------
+    cluster : Cluster, default=Cluster.cell
+        The clustering level to use (from Cluster enum).
+    cutoff_vmr : float, default=0.01
+        The cutoff threshold for variant-to-reference molecule ratio.
+    cutoff_strand_correlation : float, default=0.3
+        The cutoff threshold for strand correlation.
+    Returns
+    -------
+    None
+        The function writes to a shell script file and does not return a value.
+    Notes
+    -----
+    The function creates a shell script at path defined by HQVDIR and will overwrite
+    any existing file with the same name.
     """
 
+    cl = cluster.value
     sh_filename = HQVDIR / "update-high_quality_variant.sh"
     sh_filename.unlink(missing_ok=True)
     with open(sh_filename, "a") as f:
@@ -227,11 +239,11 @@ def create_sh():
                 "generate-hqv",
                 str(srrdir),
                 "--cluster",
-                "cell",
+                cl,
                 "--cutoff-vmr",
-                "0.01",
+                str(cutoff_vmr),
                 "--cutoff-strand-correlation",
-                "0.3",
+                str(cutoff_strand_correlation),
             ]
             cmd = " ".join(cmds)
             f.write(cmd + "\n")
