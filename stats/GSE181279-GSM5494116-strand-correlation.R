@@ -57,6 +57,12 @@ gsm <- "GSM5494116"
 stats <- data.table::fread(
   file.path(datadir, "final", gsm, "cell.variant_stats.tsv.gz")
 )
+
+# stats |>
+#   dplyr::filter(
+#     n_cells_conf_detected > 3
+#   )
+
 variant_annotation <- data.table::fread(
   file.path(datadir, "final", gsm, "variant_annotation.tsv")
 ) |> dplyr::mutate(
@@ -64,13 +70,25 @@ variant_annotation <- data.table::fread(
 )
 
 
+
+
 stats |>
   dplyr::mutate(
     vmr_log = log10(vmr)
   ) |>
   dplyr::filter(
-    strand_correlation > 0.65 & vmr_log > log10(0.01) & variant %in% variant_annotation$variant
-  )
+    strand_correlation > 0.3 & vmr_log > log10(0.01)
+  ) ->
+stats_filtered
+
+
+ggvenn::ggvenn(
+  data = list(
+    "variant_annotation" = variant_annotation$variant,
+    "stats" = stats$variant,
+    "stats_filtered" = stats_filtered$variant
+  ),
+)
 
 stats |>
   dplyr::mutate(
