@@ -28,17 +28,37 @@ app = typer.Typer()
 def create_sh():
     sh_filename = HQVDIR / "all_srrid.sh"
     sh_filename.unlink(missing_ok=True)
-    for row in SRR.iter_rows(named=True):
-        # row = next(SRR.iter_rows(named=True))
-        gseid = row["gseid"]
-        srrdir = Path(row["srrdir"]).resolve()
-        # srrdir.resolve()
-        outdir = HQVDIR / gseid / "final"
-        outdir.mkdir(parents=True, exist_ok=True)
+    with open(sh_filename, "a") as f:
+        for row in SRR.iter_rows(named=True):
+            # row = next(SRR.iter_rows(named=True))
+            gseid = row["gseid"]
+            srrdir = Path(row["srrdir"]).resolve()
+            # srrdir.resolve()
+            outdir = HQVDIR / gseid / "final"
+            outdir.mkdir(parents=True, exist_ok=True)
 
-        cmd = f"rsync -av  --partial --progress --exclude='cromwell-executions' --exclude='cromwell-workflow-logs' --exclude='*.bam' --exclude='*.bai' --exclude='trees' --exclude='azimuth.rda' --exclude='*.svg'  --exclude='*signac.rds' --exclude='*.h5' --exclude='matrix.mtx.gz' --exclude='scMOCHA.rda' {srrdir} {outdir}/"
-        # print(cmd)
-        with open(sh_filename, "a") as f:
+            cmds = [
+                "rsync",
+                "-av",
+                "--partial",
+                "--progress",
+                "--exclude='cromwell-executions'",
+                "--exclude='cromwell-workflow-logs'",
+                "--exclude='*.bam'",
+                "--exclude='*.bai'",
+                "--exclude='trees'",
+                "--exclude='azimuth.rda'",
+                "--exclude='*.svg'",
+                "--exclude='*signac.rds'",
+                "--exclude='*.h5'",
+                "--exclude='matrix.mtx.gz'",
+                "--exclude='scMOCHA.rda'",
+                srrdir,
+                outdir,
+            ]
+            cmd = " ".join(cmds)
+
+            # print(cmd)
             f.write(cmd + "\n")
     print(f"sh file created: {sh_filename}")
 
