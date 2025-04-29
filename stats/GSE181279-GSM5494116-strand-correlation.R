@@ -49,28 +49,28 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-datadir <- "/home/liuc9/github/scMOCHA-data/data/GSE181279"
+
+datadir <- "/home/liuc9/github/scMOCHA-data/data"
 gseid <- "GSE181279"
 gsm <- "GSM5494116"
+
 # body --------------------------------------------------------------------
 
 stats <- data.table::fread(
-  file.path(datadir, "final", gsm, "cell.variant_stats.tsv.gz")
+  file.path(datadir, gseid, "final", gsm, "cell.variant_stats.tsv.gz")
 )
 
-# stats |>
-#   dplyr::filter(
-#     n_cells_conf_detected > 3
-#   )
+
+stats |>
+  dplyr::filter(
+    n_cells_conf_detected > 3
+  )
 
 variant_annotation <- data.table::fread(
-  file.path(datadir, "final", gsm, "variant_annotation.tsv")
+  file.path(datadir, gseid, "final", gsm, "variant_annotation.tsv")
 ) |> dplyr::mutate(
   variant = glue::glue("{Position}{Ref}>{Alt}")
 )
-
-
-
 
 stats |>
   dplyr::mutate(
@@ -89,6 +89,10 @@ ggvenn::ggvenn(
     "stats_filtered" = stats_filtered$variant
   ),
 )
+
+#
+#
+#
 
 stats |>
   dplyr::mutate(
