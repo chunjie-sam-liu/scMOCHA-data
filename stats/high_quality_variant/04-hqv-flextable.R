@@ -50,7 +50,15 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/hqv"
+
+hqv_variant <- readr::read_rds(
+  file.path(
+    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data",
+    "gse_srrid_srrdir_hqv_load.rds"
+  )
+) |>
+  dplyr::select(srrid, load_hqv)
 
 gse_dataset_metadata_full <- readr::read_rds(
   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
@@ -77,13 +85,20 @@ gse_dataset_metadata_full |>
 gse_dataset_metadata_full_sel
 
 gse_data |>
+  # hqv variant
+  dplyr::left_join(
+    hqv_variant,
+    by = "srrid"
+  ) |>
   dplyr::select(
     gseid,
     srrid,
     metrics,
     depth_read,
     depth,
-    somatic_variant
+    somatic_variant,
+    # hqv variant
+    load_hqv
   ) |>
   dplyr::mutate(
     total_reads = purrr::map_dbl(
@@ -113,9 +128,20 @@ gse_data |>
         mean(.x$depth, na.rm = T)
       }
     ),
-    nmut_variant = purrr::map(
+    # hqv variant
+    nmut_variant = purrr::map2(
       .x = somatic_variant,
-      .f = \(.x) {
+      .y = load_hqv,
+      .f = \(.x, .y) {
+        # .x <- .m$somatic_variant[[1]]
+        # .y <- .m$load_hqv[[1]]
+        .x |>
+          purrr::map(
+            .f = \(.a) {
+              intersect(.a, .y$variant)
+            }
+          ) ->
+        .x
         .x |>
           purrr::reduce(union) |>
           unique() |>
@@ -138,7 +164,6 @@ gse_data |>
   ) |>
   tidyr::unnest(cols = nmut_variant) ->
 gse_data_read
-
 # body --------------------------------------------------------------------
 
 
@@ -266,7 +291,7 @@ flextable::flextable(df) |>
   ) |>
   flextable::merge_v(part = "header", j = the_header_idx$rowid) |>
   flextable::merge_h(part = "header", i = c(1, 2)) |>
-  flextable::theme_booktabs(bold_header = TRUE) |>
+  theme_booktabs(bold_header = TRUE) |>
   flextable::bg(
     i = ~ Chemistry == chem_levels[1],
     j = c("Chemistry"),
@@ -323,20 +348,20 @@ flextable::flextable(df) |>
   ) |>
   flextable::vline(
     j = c("Samples", "Chemistry", "Avg. mutation", "Avg. total reads", "Avg. median UMI/cell"),
-    border = flextable::fp_border_default()
+    border = fp_border_default()
   ) |>
   flextable::hline(
     i = last_indices,
-    border = flextable::fp_border_default()
+    border = fp_border_default()
   ) |>
-  flextable::colformat_double(
+  colformat_double(
     j = c("Avg. somatic mutation", "Avg. mutation", "Avg. Age")
   ) |>
-  flextable::colformat_num(
+  colformat_num(
     j = c("Avg. total reads", "Avg. mapped reads", "Avg. # of cells", "Avg. median genes/cell", "Avg. median UMI/cell"),
   ) |>
-  flextable::align(align = "center", part = "all") |>
-  flextable::valign(valign = "center", part = "header") |>
+  align(align = "center", part = "all") |>
+  valign(valign = "center", part = "header") |>
   flextable::width(
     j = c(6, 7, 12),
     width = 1.2
@@ -349,14 +374,14 @@ ft
 
 flextable::save_as_image(
   ft,
-  path = file.path(outdir, "gses_meta_read.svg"),
+  path = file.path(outdir, "gses_meta_read_hqv.svg"),
   width = 20,
   height = 7
 )
 
 flextable::save_as_pptx(
   ft,
-  path = file.path(outdir, "gses_meta_read.pptx")
+  path = file.path(outdir, "gses_meta_read_hqv.pptx")
 )
 
 
