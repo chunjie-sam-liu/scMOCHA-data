@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2025-04-08 11:53:45
+# @DATE: 2025-05-02 10:55:16
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
@@ -48,81 +48,135 @@ log_layout(layout_glue_colors)
 # function ----------------------------------------------------------------
 
 
-
-# ! gseid --------------------------------------------------------------------
+# load data ---------------------------------------------------------------
+basedir <- "/home/liuc9/github/scMOCHA-data/data"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/hqv"
 
 gse_dataset_metadata_full <- readr::read_rds(
   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
 )
 
 
-# load data ---------------------------------------------------------------
-filename_ <- "gses_meta_read.xlsx"
-gses_meta_read <- readxl::read_xlsx(
-  file.path(
-    "/home/liuc9/github/scMOCHA-data/data/scfoundation/out",
-    filename_
-  )
-) |>
-  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
-gses_meta_read_ <- readxl::read_xlsx(
-  file.path(
-    "/home/liuc9/github/scMOCHA-data/data/out_new_ting",
-    filename_
-  )
-) |>
-  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
-gses_meta_read__ <- readxl::read_xlsx(
-  file.path(
-    "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out",
-    filename_
-  )
-) |>
-  dplyr::filter(gseid %in% gse_dataset_metadata_full$gseid)
-
-
-
-
-# body --------------------------------------------------------------------
-chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
-gses_meta_read |>
-  dplyr::bind_rows(gses_meta_read_) |>
-  dplyr::bind_rows(gses_meta_read__) |>
-  dplyr::distinct() ->
-gses_meta_read_all
+gse_data <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+)
 
 gse_dataset_metadata_full |>
   dplyr::group_by(gseid) |>
   dplyr::summarise(
-    sample = dplyr::n(),
-  )
+    samples = dplyr::n(),
+    `Avg. Age` = mean(Age_new, na.rm = T),
+    `Avg. # of cells` = mean(`# cells after filter`, na.rm = T),
+    `Avg. median genes/cell` = mean(`Median genes/cell`, na.rm = T),
+    `Avg. median UMI/cell` = mean(`Median UMI/cell`, na.rm = T),
+    Chemistry = paste0(unique(Chemistry), collapse = ", "),
+    Disease = paste0(unique(Disease), collapse = ", "),
+    Source = paste0(unique(Source), collapse = ", "),
+    Publication = paste0(unique(Publication), collapse = ", "),
+  ) ->
+gse_dataset_metadata_full_sel
 
-gses_meta_read_all |>
-  dplyr::select(-samples) |>
-  dplyr::left_join(
-    gse_dataset_metadata_full |>
-      dplyr::group_by(gseid) |>
-      dplyr::summarise(
-        samples = dplyr::n(),
-      ),
-    by = "gseid"
+gse_data |>
+  dplyr::select(
+    gseid,
+    srrid,
+    metrics,
+    depth_read,
+    depth,
+    somatic_variant
   ) |>
   dplyr::mutate(
-    Disease = ifelse(is.na(Disease), "-", Disease)
+    total_reads = purrr::map_dbl(
+      .x = metrics,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        .x$`Number of Reads`
+      }
+    ),
+    depth_read_mean = purrr::map_dbl(
+      .x = depth_read,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    ),
+    depth_mean = purrr::map_dbl(
+      .x = depth,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    ),
+    nmut_variant = purrr::map(
+      .x = somatic_variant,
+      .f = \(.x) {
+        .x |>
+          purrr::reduce(union) |>
+          unique() |>
+          length() ->
+        .nmut
+
+        .x |>
+          purrr::map_int(length) |>
+          tibble::enframe() |>
+          tidyr::spread(key = name, value = value) ->
+        .xx
+        names(.xx) <- glue::glue("nmut_{names(.xx)}")
+        .xx |>
+          tibble::add_column(
+            nmut = .nmut,
+            .before = 1
+          )
+      }
+    )
   ) |>
-  dplyr::distinct() |>
+  tidyr::unnest(cols = nmut_variant) ->
+gse_data_read
+# body --------------------------------------------------------------------
+
+
+chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
+
+gse_data_read |>
   dplyr::select(
-    `GSE ID` = gseid,
+    gseid,
+    nmut,
+    nmut_somatic,
+    total_reads,
+    depth_read_mean,
+    depth_mean
+  ) |>
+  dplyr::group_by(gseid) |>
+  dplyr::summarise(
+    `Avg. somatic mutation` = mean(nmut_somatic, na.rm = T),
+    `Avg. mutation` = mean(nmut, na.rm = T),
+    `Avg. mapped reads` = mean(depth_read_mean, na.rm = T),
+    `Avg. total reads` = mean(total_reads, na.rm = T),
+    # `Avg. call depth` = mean(depth_mean, na.rm = T),
+  ) |>
+  dplyr::left_join(
+    gse_dataset_metadata_full_sel,
+    by = "gseid"
+  ) |>
+  dplyr::relocate(
+    gseid,
     samples,
     Chemistry,
-    `Avg. somatic mutation`,
-    `Avg. mutation`,
-    `Avg. mapped reads`,
-    `Avg. total reads`,
-    Disease,
-    Source,
-    Publication
+    .before = 1
   ) |>
+  dplyr::rename(
+    `GSE ID` = gseid,
+    Samples = samples,
+  ) ->
+gses_meta_read_all
+
+gses_meta_read_all |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = chem_levels)
   ) |>
@@ -131,27 +185,25 @@ gses_meta_read_all |>
   ) ->
 df
 
-df |>
-  dplyr::filter(`GSE ID` != "WT") |>
-  dplyr::summarise(
-    n_gse = dplyr::n_distinct(`GSE ID`),
-    n_samples = sum(samples),
-  )
-
-
-ggsci::pal_aaas()(3) |> prismatic::color()
 chem_colors <- viridis::viridis_pal(option = "D")(4) |>
   prismatic::color()
+
+df |> dplyr::glimpse()
+
 
 the_header <- data.frame(
   col_keys = c(
     "GSE ID",
-    "samples",
+    "Samples",
     "Chemistry",
     "Avg. somatic mutation",
     "Avg. mutation",
     "Avg. mapped reads",
     "Avg. total reads",
+    "Avg. Age",
+    "Avg. # of cells",
+    "Avg. median genes/cell",
+    "Avg. median UMI/cell",
     "Disease",
     "Source",
     "Publication"
@@ -164,6 +216,10 @@ the_header <- data.frame(
     "# of mutations",
     "# of reads",
     "# of reads",
+    "Avg. Age",
+    "Avg. # of cells",
+    "Avg. median genes/cell",
+    "Avg. median UMI/cell",
     "Disease",
     "Source",
     "Publication"
@@ -176,6 +232,10 @@ the_header <- data.frame(
     "Total",
     "mtDNA",
     "Total",
+    "Avg. Age",
+    "Avg. # of cells",
+    "Avg. median genes/cell",
+    "Avg. median UMI/cell",
     "Disease",
     "Source",
     "Publication"
@@ -190,15 +250,22 @@ last_indices <- sapply(chem_uniq, function(x) {
 })
 # RColorBrewer::brewer.pal(5, "Set2") |> prismatic::color()
 df$samples |> sum()
+df
 
 library(flextable)
+
+the_header |>
+  tibble::rowid_to_column() |>
+  dplyr::group_by(line2) |>
+  dplyr::filter(!dplyr::n() > 1) ->
+the_header_idx
 
 flextable::flextable(df) |>
   flextable::set_header_df(
     the_header,
     key = "col_keys"
   ) |>
-  flextable::merge_v(part = "header", j = c(1, 2, 3, 8, 9, 10)) |>
+  flextable::merge_v(part = "header", j = the_header_idx$rowid) |>
   flextable::merge_h(part = "header", i = c(1, 2)) |>
   theme_booktabs(bold_header = TRUE) |>
   flextable::bg(
@@ -256,7 +323,7 @@ flextable::flextable(df) |>
     j = c("Publication")
   ) |>
   flextable::vline(
-    j = c("Chemistry", "Avg. mutation", "Avg. total reads"),
+    j = c("Samples", "Chemistry", "Avg. mutation", "Avg. total reads", "Avg. median UMI/cell"),
     border = fp_border_default()
   ) |>
   flextable::hline(
@@ -264,35 +331,33 @@ flextable::flextable(df) |>
     border = fp_border_default()
   ) |>
   colformat_double(
-    j = c("Avg. somatic mutation", "Avg. mutation")
+    j = c("Avg. somatic mutation", "Avg. mutation", "Avg. Age")
   ) |>
   colformat_num(
-    j = c("Avg. total reads", "Avg. mapped reads")
+    j = c("Avg. total reads", "Avg. mapped reads", "Avg. # of cells", "Avg. median genes/cell", "Avg. median UMI/cell"),
   ) |>
   align(align = "center", part = "all") |>
   valign(valign = "center", part = "header") |>
   flextable::width(
-    j = c(7, 8),
+    j = c(6, 7, 12),
     width = 1.2
   ) |>
   flextable::width(
-    j = c(10),
+    j = c(14),
     width = 2
   ) ->
 ft
-ft
 
-datadir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 flextable::save_as_image(
   ft,
-  path = file.path(datadir, "gses_meta_read.svg"),
+  path = file.path(outdir, "gses_meta_read.svg"),
   width = 20,
   height = 7
 )
 
 flextable::save_as_pptx(
   ft,
-  path = file.path(datadir, "gses_meta_read.pptx")
+  path = file.path(outdir, "gses_meta_read.pptx")
 )
 
 
