@@ -50,28 +50,44 @@ fn_plot_mtdna <- function() {
   # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
   LENGTH <- 16569
-  rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
+  # rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
   gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
 
 
   library(gggenes)
-  ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
+  ggplot(
+    gtf_gene_df,
+    aes(
+      xmin = start,
+      xmax = end,
+      y = seqnames,
+    )
+  ) +
     # geom_gene_arrow() +
     geom_gene_arrow(
       aes(
-        fill = TYPE
+        fill = COLOR
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm"),
     ) +
-    scale_fill_brewer(
-      palette = "Set1",
+    scale_fill_identity(
       name = "Gene type",
-      labels = c("D-Loop", "MT rRNA", "MT tRNA", "Protein coding")
+      guide = "legend",
+      labels = c("MT rRNA", "Protein coding", "MT tRNA", "MT OLR", "D-Loop")
     ) +
+    # scale_fill_brewer(
+    #   palette = "Set1",
+    #   name = "Gene type",
+    #   labels = c("D-Loop", "MT rRNA", "MT tRNA", "Protein coding")
+    # ) +
     ggrepel::geom_text_repel(
       aes(
         x = (start + end) / 2,
-        label = gene_name,
+        label = gsub(
+          pattern = "MT-",
+          replacement = "",
+          x = gene_name
+        ),
       ),
       color = "black",
       # fill = "white",
@@ -81,7 +97,7 @@ fn_plot_mtdna <- function() {
       show.legend = F,
       max.overlaps = Inf,
     ) +
-    scale_color_brewer(palette = "Set1") +
+    # scale_color_brewer(palette = "Set1") +
     scale_x_continuous(
       limits = c(0, LENGTH),
       breaks = c(seq(0, LENGTH, 1000), LENGTH),
