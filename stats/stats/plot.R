@@ -121,20 +121,76 @@ fn_plot_mtdna_circle <- function() {
     ) |>
     dplyr::filter(af > 0.01)
 
+  # all variants
+  all_variatns <- readr::read_rds(
+    file.path(
+      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+    )
+  ) |>
+    dplyr::mutate(
+      paf = n / 577
+    ) |>
+    dplyr::arrange(Position)
+
+  all_variatns |>
+    dplyr::filter(issomatic == "homoplasmic") |>
+    dplyr::select(Position, paf) |>
+    dplyr::mutate(
+      seqnames = "MT",
+      start = Position,
+      end = Position
+    ) |>
+    dplyr::select(
+      seqnames,
+      start,
+      end,
+      paf
+    ) ->
+  homoplasmic_variant_af
+
+  all_variatns |>
+    dplyr::filter(issomatic == "heteroplasmic") |>
+    dplyr::select(Position, paf) |>
+    dplyr::mutate(
+      seqnames = "MT",
+      start = Position,
+      end = Position
+    ) |>
+    dplyr::select(
+      seqnames,
+      start,
+      end,
+      paf
+    ) ->
+  heteroplasmic_variant_af
+
   # conserve_rate
 
 
   library(circlize)
 
+
+  # ! init --------------------------------------------------------------------
+
+
   circos.clear()
   circos.par(
     start.degree = 90
   )
+
+
+  # ! axis --------------------------------------------------------------------
+
   circos.genomicInitialize(
     data = phastCons100way,
     plotType = "axis",
     axis.labels.cex = 0.8 * par("cex"),
   )
+
+
+  # ! gnomad --------------------------------------------------------------------
+
+
   circos.genomicTrack(
     gnomad,
     ylim = c(0, 1),
@@ -149,44 +205,45 @@ fn_plot_mtdna_circle <- function() {
       circos.barplot(
         value = val,
         pos = pos,
-        col = "red",
-        border = "red"
+        col = "blue",
+        border = "blue"
       )
     }
   )
+
+
+  # ! homoplasmic --------------------------------------------------------------------
+
+
   circos.genomicTrack(
-    phastCons100way,
+    homoplasmic_variant_af,
     ylim = c(0, 1),
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    track.height = 0.1,
+    track.height = 0.15,
     bg.border = NA,
     bg.col = NA,
     panel.fun = function(region, value, ...) {
-      circos.genomicLines(
-        region = region,
-        value = value,
-        col = "#ADA32E",
-        lwd = 1
+      pos = region$start
+      val = value$paf
+      circos.barplot(
+        value = val,
+        pos = pos,
+        col = "#03DC62",
+        border = "#03DC62"
       )
-      # pos = region$start
-      # val = value$phastCons100wayScore
-      # circos.barplot(
-      #   value = val,
-      #   pos = pos,
-      #   col = "#ADA32E",
-      #   border = "#ADA32E"
-      # )
     }
   )
+
+  # ! gene name--------------------------------------------------------------------
   circos.genomicTrack(
     gtf_gene_df,
     ylim = c(0, 1),
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    track.height = 0.15,
-    bg.border = "#E1F0DD",
-    bg.col = "#E1F0DD",
+    track.height = 0.12,
+    bg.border = "#E9F6FE",
+    bg.col = "#E9F6FE",
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
       for (genotype in genetypes) {
@@ -211,6 +268,11 @@ fn_plot_mtdna_circle <- function() {
       }
     }
   )
+
+
+  # ! gene sector --------------------------------------------------------------------
+
+
   circos.genomicTrack(
     gtf_gene_df,
     ylim = c(0, 1),
@@ -234,5 +296,53 @@ fn_plot_mtdna_circle <- function() {
       }
     },
   )
+  # ! heteroplasmic --------------------------------------------------------------------
+  circos.genomicTrack(
+    heteroplasmic_variant_af,
+    ylim = c(0, 1),
+    track.margin = c(0, 0.01),
+    cell.padding = c(0, 0, 0, 0),
+    track.height = 0.07,
+    bg.border = NA,
+    bg.col = NA,
+    panel.fun = function(region, value, ...) {
+      pos = region$start
+      val = value$paf
+      circos.barplot(
+        value = val,
+        pos = pos,
+        col = "red",
+        border = "red"
+      )
+    }
+  )
+  # ! phastCons100way --------------------------------------------------------------------
+  circos.genomicTrack(
+    phastCons100way,
+    ylim = c(0, 1),
+    track.margin = c(0, 0.01),
+    cell.padding = c(0, 0, 0, 0),
+    track.height = 0.1,
+    bg.border = NA,
+    bg.col = NA,
+    panel.fun = function(region, value, ...) {
+      circos.genomicLines(
+        region = region,
+        value = value,
+        col = "#fef377",
+        lwd = 1
+      )
+    }
+  )
   circos.clear()
+}
+
+{
+  pdf(
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-homo-hetero.pdf",
+    width = 15,
+    height = 12
+  )
+  fn_plot_mtdna_circle()
+  dev.off()
 }
