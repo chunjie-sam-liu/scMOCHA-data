@@ -241,7 +241,7 @@ fn_plot_mtdna_circle <- function() {
     ylim = c(0, 1),
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    track.height = 0.12,
+    track.height = 0.1,
     bg.border = "#E9F6FE",
     bg.col = "#E9F6FE",
     panel.fun = function(region, value, ...) {
@@ -250,7 +250,7 @@ fn_plot_mtdna_circle <- function() {
         r <- region[value$TYPE == genotype, ]
         v <- value[value$TYPE == genotype, ]
         v_gene_name <- gsub(
-          pattern = "MT-",
+          pattern = "MT-|-",
           replacement = "",
           x = v$gene_name
         )
@@ -329,7 +329,7 @@ fn_plot_mtdna_circle <- function() {
       circos.genomicLines(
         region = region,
         value = value,
-        col = "#fef377",
+        col = "#f3eebf",
         lwd = 1
       )
     }
