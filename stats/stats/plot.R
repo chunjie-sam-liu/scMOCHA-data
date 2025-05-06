@@ -351,6 +351,37 @@ fn_plot_mtdna_circle <- function() {
     },
   )
 
+  # ! homoplasmic af--------------------------------------------------------------------
+
+
+  circos.genomicTrack(
+    homoplasmic_variant_af,
+    track.height = 0.1,
+    ylim = c(0, 1),
+    track.margin = c(0, 0.01),
+    cell.padding = c(0, 0, 0, 0),
+    bg.border = NA,
+    bg.col = NA,
+    panel.fun = function(region, value, ...) {
+      pos = region$start
+      val = value$af
+      # circos.barplot(
+      #   value = val,
+      #   pos = pos,
+      #   col = "#a6fccb",
+      #   border = "#a6fccb"
+      # )
+      circos.genomicPoints(
+        region = region,
+        value = value,
+        pch = 2,
+        cex = 0.5,
+        col = "#a6fccb",
+        bg.border = "#a6fccb"
+      )
+    }
+  )
+
 
   # ! heteroplasmic af--------------------------------------------------------------------
 
@@ -366,11 +397,19 @@ fn_plot_mtdna_circle <- function() {
     panel.fun = function(region, value, ...) {
       pos = region$start
       val = value$af
-      circos.barplot(
-        value = val,
-        pos = pos,
+      # circos.barplot(
+      #   value = val,
+      #   pos = pos,
+      #   col = "red",
+      #   border = "red"
+      # )
+      circos.genomicPoints(
+        region = region,
+        value = value,
+        pch = 3,
+        cex = 0.5,
         col = "red",
-        border = "red"
+        bg.border = "red"
       )
     }
   )
@@ -382,7 +421,7 @@ fn_plot_mtdna_circle <- function() {
     x = top_variants$start,
     labels = top_variants$variant,
     side = "inside",
-    cex = 0.8,
+    cex = 0.5,
     track.margin = c(0, 0.01),
   )
 
