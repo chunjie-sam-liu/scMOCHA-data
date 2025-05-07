@@ -147,6 +147,17 @@ for_celltype_ratio_plot |>
   dplyr::arrange(disease, -b_ratio) ->
 rank_srrid
 
+ggsci::pal_nejm()(5) |> color()
+
+
+disease_colors <- c(
+  "Alzheimer's Disease" = "#BC3C29FF",
+  "COVID-19" = "#0072B5FF",
+  "Healthy" = "#E18727FF",
+  "Unknown" = "grey50",
+  "Other" = "grey"
+)
+
 rank_srrid |>
   dplyr::mutate(
     srrid = factor(srrid, levels = rank_srrid$srrid),
@@ -172,7 +183,55 @@ rank_srrid |>
       label = ifelse(srrid == mid_srrid, as.character(disease), "")
     ),
   ) +
-  ggsci::scale_fill_jco() +
+  scale_fill_manual(
+    name = "Disease",
+    values = disease_colors
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0)),
+  ) +
+  theme(
+    panel.background = element_blank(),
+    # panel.background = element_rect(fill = "red", color = "black"),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    plot.margin = margin(t = 0, b = 0, unit = "cm")
+  ) ->
+p_tile_disease
+
+chemistry_colors <- c(
+  "SC5P-PE" = "#440154FF",
+  "SC5P-R2" = "#31688EFF",
+  "SC3Pv3" = "#35B779FF",
+  "SC3Pv2" = "#FDE725FF"
+)
+
+rank_srrid |>
+  dplyr::left_join(
+    gse_dataset_metadata_full |>
+      dplyr::select(srrid, Gender, Age_new, Chemistry),
+    by = "srrid"
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = 1
+  )) +
+  geom_tile(
+    aes(
+      fill = Chemistry
+    )
+  ) +
+  scale_fill_manual(
+    name = "Chemistry",
+    values = chemistry_colors
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0)),
+  ) +
   theme(
     panel.background = element_blank(),
     panel.grid = element_blank(),
@@ -180,10 +239,97 @@ rank_srrid |>
     axis.title = element_blank(),
     axis.text = element_blank(),
     axis.ticks = element_blank(),
-    legend.position = "none"
+    legend.position = "right",
+    plot.margin = margin(t = 0, b = 0, unit = "cm")
   ) ->
-p_tile
+p_tile_chemistry
 
+RColorBrewer::brewer.pal(8, "Set2") |> color()
+gender_colors <- c(
+  "Female" = "#FC8D62FF",
+  "Male" = "#66C2A5FF",
+  "Unknown" = "grey50"
+)
+
+rank_srrid |>
+  dplyr::left_join(
+    gse_dataset_metadata_full |>
+      dplyr::select(srrid, Gender, Age_new, Chemistry),
+    by = "srrid"
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = 1
+  )) +
+  geom_tile(
+    aes(
+      fill = Gender
+    )
+  ) +
+  scale_fill_manual(
+    name = "Gender",
+    values = gender_colors
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0)),
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    plot.margin = margin(t = 0, b = 0, unit = "cm")
+  ) ->
+p_tile_gender
+
+rank_srrid |>
+  dplyr::left_join(
+    gse_dataset_metadata_full |>
+      dplyr::select(srrid, Gender, Age_new, Chemistry),
+    by = "srrid"
+  ) |>
+  ggplot(aes(
+    x = srrid,
+    y = 1
+  )) +
+  geom_tile(
+    aes(
+      fill = Age_new
+    )
+  ) +
+  scale_fill_gradient(
+    name = "Age",
+    low = "white",
+    high = "red"
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(0.005, 0)),
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line = element_blank(),
+    axis.title = element_blank(),
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    plot.margin = margin(t = 0, b = 0, unit = "cm")
+  ) ->
+p_tile_age
+
+celltype_colors <- c(
+  "B" = "#66C2A5FF",
+  "CD4 T" = "#FC8D62FF",
+  "CD8 T" = "#8DA0CBFF",
+  "DC" = "#E78AC3FF",
+  "Mono" = "#A6D854FF",
+  "NK" = "#FFD92FFF",
+  "other" = "#B3B3B3FF",
+  "other T" = "#E5C494FF"
+)
 
 for_celltype_ratio_plot |>
   dplyr::mutate(
@@ -202,12 +348,16 @@ for_celltype_ratio_plot |>
     ),
     position = "stack"
   ) +
+  # scale_fill_manual(
+  #   name = "Cell Type",
+  #   values = RColorBrewer::brewer.pal(8, "Set2")
+  # ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = RColorBrewer::brewer.pal(8, "Set2")
+    values = celltype_colors
   ) +
   scale_y_continuous(
-    expand = expansion(add = c(0.005, 0.005)),
+    expand = expansion(add = c(0.005, 0)),
   ) +
   theme(
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
@@ -226,6 +376,7 @@ for_celltype_ratio_plot |>
   labs(y = "cell ratio") ->
 p_celltype_ratio
 
+
 for_celltype_ratio_plot |>
   dplyr::mutate(
     srrid = factor(
@@ -243,12 +394,16 @@ for_celltype_ratio_plot |>
     ),
     position = "stack"
   ) +
+  # scale_fill_manual(
+  #   name = "Cell Type",
+  #   values = RColorBrewer::brewer.pal(8, "Set2")
+  # ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = RColorBrewer::brewer.pal(8, "Set2")
+    values = celltype_colors
   ) +
   scale_y_continuous(
-    expand = expansion(add = c(0.005, 0.005)),
+    expand = expansion(add = c(0.005, 0)),
   ) +
   theme(
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
@@ -267,14 +422,29 @@ for_celltype_ratio_plot |>
   labs(y = "# of cells") ->
 p_celltype_count
 
+wrap_plots(
+  p_celltype_ratio,
+  p_celltype_count,
+  p_tile_disease,
+  p_tile_chemistry,
+  p_tile_gender,
+  p_tile_age,
+  ncol = 1,
+  heights = c(15, 15, 1, 1, 1, -1),
+  guides = "collect"
+)
+
 ggsave(
   filename = file.path(outdir, "celltype_ratio.pdf" |> glue::glue()),
   plot = wrap_plots(
     p_celltype_ratio,
     p_celltype_count,
-    p_tile,
+    p_tile_disease,
+    p_tile_chemistry,
+    p_tile_gender,
+    p_tile_age,
     ncol = 1,
-    heights = c(15, 15, 1),
+    heights = c(15, 15, 1, 1, 1, -1),
     guides = "collect"
   ),
   width = 24,
