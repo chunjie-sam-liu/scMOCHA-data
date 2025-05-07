@@ -198,6 +198,23 @@ fn_plot_mtdna_circle <- function() {
     axis.labels.cex = 0.8 * par("cex"),
   )
 
+  # ! highlights --------------------------------------------------------------------
+  gtf_gene_df |> dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) -> highlight_df
+
+  for (i in seq_len(nrow(highlight_df))) {
+    pos = circlize(c(highlight_df$start[i], highlight_df$end[i]), c(0, 1), sector.index = "MT")
+    draw.sector(
+      pos[1, "theta"],
+      pos[2, "theta"],
+      rou1 = 0.95,
+      rou2 = 0.2,
+      clock.wise = TRUE,
+      col = prismatic::clr_alpha(highlight_df$COLOR[i], alpha = 0.3),
+      border = NA
+    )
+  }
+
+
   # ! phastCons100way --------------------------------------------------------------------
 
   circos.genomicTrack(
@@ -212,8 +229,8 @@ fn_plot_mtdna_circle <- function() {
       circos.genomicLines(
         region = region,
         value = value,
-        col = "#f3eebf",
-        lwd = 1
+        col = "gold",
+        lwd = 0.5
       )
     }
   )
@@ -296,8 +313,8 @@ fn_plot_mtdna_circle <- function() {
     track.height = 0.1,
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    bg.border = "#E9F6FE",
-    bg.col = "#E9F6FE",
+    bg.border = "#EAF7FFFF",
+    bg.col = "#EAF7FFFF",
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
       for (genotype in genetypes) {
@@ -324,7 +341,7 @@ fn_plot_mtdna_circle <- function() {
   )
 
 
-  # ! gene sector --------------------------------------------------------------------
+  # ! gene region --------------------------------------------------------------------
 
 
   circos.genomicTrack(
@@ -424,7 +441,6 @@ fn_plot_mtdna_circle <- function() {
     cex = 0.5,
     track.margin = c(0, 0.01),
   )
-
 
   circos.clear()
 }
