@@ -1,0 +1,6 @@
+{
+  "disease_colors": ["#BC3C29FF", "#0072B5FF", "#E18727FF", "grey50", "grey"],
+  "chemistry_colors": ["#440154FF", "#31688EFF", "#35B779FF", "#FDE725FF"],
+  "gender_colors": ["#FC8D62FF", "#66C2A5FF", "grey50"],
+  "celltype_colors": ["#66C2A5FF", "#FC8D62FF", "#8DA0CBFF", "#E78AC3FF", "#A6D854FF", "#FFD92FFF", "#B3B3B3FF", "#E5C494FF"]
+}
