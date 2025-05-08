@@ -1,6 +1,7 @@
-fn_plot_mtdna_circle <- function(
+fn_plot_mtdna_circos <- function(
     canvas.xlim = c(-1, 1),
-    canvas.ylim = c(-1, 1)) {
+    canvas.ylim = c(-1, 1),
+    gap.degree = 1) {
   LENGTH <- 16569
   gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
 
@@ -139,7 +140,8 @@ fn_plot_mtdna_circle <- function(
   circos.par(
     start.degree = 90,
     canvas.xlim = canvas.xlim,
-    canvas.ylim = canvas.ylim
+    canvas.ylim = canvas.ylim,
+    gap.degree = gap.degree
   )
 
 
@@ -436,7 +438,7 @@ fn_plot_mtdna_circle <- function(
     width = 13,
     height = 10
   )
-  fn_plot_mtdna_circle()
+  fn_plot_mtdna_circos()
   dev.off()
 }
 
@@ -447,9 +449,10 @@ fn_plot_mtdna_circle <- function(
     width = 10,
     height = 7
   )
-  fn_plot_mtdna_circle(
-    canvas.xlim = c(0, 1),
-    canvas.ylim = c(0, 1)
+  fn_plot_mtdna_circos(
+    canvas.xlim = c(0.5, 1),
+    canvas.ylim = c(0.5, 1),
+    gap.degree = 270
   )
   dev.off()
 }
