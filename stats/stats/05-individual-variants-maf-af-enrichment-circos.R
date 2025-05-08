@@ -122,7 +122,7 @@ fn_plot_mtdna_circle <- function() {
     "homoplasmic_af" = "#A6FCCB",
     "heteroplasmic_af" = "#FF0000",
     "gene_name_bg" = "#EAF7FF",
-    "coverage" = "#23ABFF"
+    "coverage" = "#3FB5FF"
   )
 
   # conserve_rate
@@ -264,28 +264,6 @@ fn_plot_mtdna_circle <- function() {
     }
   )
 
-  # ! coverage --------------------------------------------------------------------
-  circos.genomicTrack(
-    coverage,
-    track.height = 0.1,
-    ylim = c(0, max(coverage$depth)),
-    track.margin = c(0, 0.01),
-    cell.padding = c(0, 0, 0, 0),
-    bg.border = NA,
-    bg.col = NA,
-    panel.fun = function(region, value, ...) {
-      circos.genomicLines(
-        region = region,
-        value = value,
-        col = circos_track_colors["coverage"],
-        border = circos_track_colors["coverage"],
-        area = TRUE
-      )
-    }
-  )
-
-
-
   # ! gene name--------------------------------------------------------------------
 
   circos.genomicTrack(
@@ -349,6 +327,8 @@ fn_plot_mtdna_circle <- function() {
     },
   )
 
+
+
   # ! homoplasmic af--------------------------------------------------------------------
 
 
@@ -411,6 +391,27 @@ fn_plot_mtdna_circle <- function() {
       )
     }
   )
+
+  # ! coverage --------------------------------------------------------------------
+  circos.genomicTrack(
+    coverage,
+    track.height = 0.1,
+    ylim = c(0, max(coverage$depth)),
+    track.margin = c(0, 0.01),
+    cell.padding = c(0, 0, 0, 0),
+    bg.border = NA,
+    bg.col = NA,
+    panel.fun = function(region, value, ...) {
+      circos.genomicLines(
+        region = region,
+        value = value,
+        col = circos_track_colors["coverage"],
+        border = circos_track_colors["coverage"],
+        area = TRUE
+      )
+    }
+  )
+
 
 
   # ! labels --------------------------------------------------------------------
