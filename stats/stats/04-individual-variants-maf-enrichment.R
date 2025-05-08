@@ -253,9 +253,9 @@ all_variants |>
 all_variants |>
   dplyr::filter(Position %in% c(1555, 1494, 961, 2336, 3090))
 
-all_variants |>
-  dplyr::filter(Disease != "") |>
-  View()
+# all_variants |>
+#   dplyr::filter(Disease != "") |>
+#   View()
 
 
 all_variants |>
