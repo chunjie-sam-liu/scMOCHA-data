@@ -163,7 +163,7 @@ fn_plot_mtdna_circle <- function() {
       pos[1, "theta"],
       pos[2, "theta"],
       rou1 = 0.95,
-      rou2 = 0.07,
+      rou2 = 0.09,
       clock.wise = TRUE,
       col = prismatic::clr_alpha(
         highlight_df$COLOR[i],
