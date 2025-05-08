@@ -450,8 +450,8 @@ fn_plot_mtdna_circos <- function(
     height = 7
   )
   fn_plot_mtdna_circos(
-    canvas.xlim = c(0.5, 1),
-    canvas.ylim = c(0.5, 1),
+    canvas.xlim = c(0, 1),
+    canvas.ylim = c(0, 1),
     gap.degree = 270
   )
   dev.off()
