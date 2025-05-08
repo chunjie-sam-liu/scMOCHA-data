@@ -248,6 +248,17 @@ gse_data_haplo_variant |>
 all_variants
 
 all_variants |>
+  dplyr::filter(Position %in% c(3243, 8344, 8993, 13513, 14709, 10191, 14459, 3460))
+
+all_variants |>
+  dplyr::filter(Position %in% c(1555, 1494, 961, 2336, 3090))
+
+all_variants |>
+  dplyr::filter(Disease != "") |>
+  View()
+
+
+all_variants |>
   dplyr::select(Position, variant, aachange, Disease, `Gnomad Frequency`) |>
   dplyr::mutate(
     Disease = ifelse(is.na(Disease), "", Disease),
