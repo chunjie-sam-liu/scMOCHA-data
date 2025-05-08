@@ -1,6 +1,5 @@
 fn_plot_mtdna_circle <- function() {
   LENGTH <- 16569
-  # rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
   gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
 
   phastCons100way <- data.table::fread(
@@ -42,6 +41,24 @@ fn_plot_mtdna_circle <- function() {
       ac
     ) |>
     dplyr::filter(af > 0.01)
+
+  # coverage
+  coverage <- data.table::fread(
+    file.path(
+      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "gse_data_coverage.csv"
+    )
+  ) |>
+    dplyr::mutate(
+      seqnames = "MT",
+      start = pos,
+      end = pos
+    ) |>
+    dplyr::select(
+      seqnames,
+      start,
+      end,
+      depth
+    )
 
   # all variants
   all_variant <- readr::read_rds(
@@ -97,6 +114,17 @@ fn_plot_mtdna_circle <- function() {
     head(5) ->
   top_variants
 
+  circos_track_colors <- c(
+    "phastCons100way" = "#FFD700",
+    "gnomad" = "#0000FF",
+    "homoplasmic_paf" = "#03DC62",
+    "heteroplasmic_paf" = "#7A0202",
+    "homoplasmic_af" = "#A6FCCB",
+    "heteroplasmic_af" = "#FF0000",
+    "gene_name_bg" = "#EAF7FF",
+    "coverage" = "#23ABFF"
+  )
+
   # conserve_rate
 
 
@@ -115,23 +143,32 @@ fn_plot_mtdna_circle <- function() {
   # ! axis --------------------------------------------------------------------
 
   circos.genomicInitialize(
-    data = phastCons100way,
+    data = coverage,
     plotType = "axis",
     axis.labels.cex = 0.8 * par("cex"),
   )
 
   # ! highlights --------------------------------------------------------------------
-  gtf_gene_df |> dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) -> highlight_df
+  gtf_gene_df |>
+    dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) ->
+  highlight_df
 
   for (i in seq_len(nrow(highlight_df))) {
-    pos = circlize(c(highlight_df$start[i], highlight_df$end[i]), c(0, 1), sector.index = "MT")
+    pos = circlize(
+      c(highlight_df$start[i], highlight_df$end[i]),
+      c(0, 1),
+      sector.index = "MT"
+    )
     draw.sector(
       pos[1, "theta"],
       pos[2, "theta"],
       rou1 = 0.95,
-      rou2 = 0.2,
+      rou2 = 0.07,
       clock.wise = TRUE,
-      col = prismatic::clr_alpha(highlight_df$COLOR[i], alpha = 0.3),
+      col = prismatic::clr_alpha(
+        highlight_df$COLOR[i],
+        alpha = 0.3
+      ),
       border = NA
     )
   }
@@ -151,7 +188,7 @@ fn_plot_mtdna_circle <- function() {
       circos.genomicLines(
         region = region,
         value = value,
-        col = "gold",
+        col = circos_track_colors["phastCons100way"],
         lwd = 0.5
       )
     }
@@ -174,8 +211,8 @@ fn_plot_mtdna_circle <- function() {
       circos.barplot(
         value = val,
         pos = pos,
-        col = "blue",
-        border = "blue"
+        col = circos_track_colors["gnomad"],
+        border = circos_track_colors["gnomad"]
       )
     }
   )
@@ -198,8 +235,8 @@ fn_plot_mtdna_circle <- function() {
       circos.barplot(
         value = val,
         pos = pos,
-        col = "#03DC62",
-        border = "#03DC62"
+        col = circos_track_colors["homoplasmic_paf"],
+        border = circos_track_colors["homoplasmic_paf"]
       )
     }
   )
@@ -221,11 +258,33 @@ fn_plot_mtdna_circle <- function() {
       circos.barplot(
         value = val,
         pos = pos,
-        col = "#7a0202",
-        border = "#7a0202"
+        col = circos_track_colors["heteroplasmic_paf"],
+        border = circos_track_colors["heteroplasmic_paf"]
       )
     }
   )
+
+  # ! coverage --------------------------------------------------------------------
+  circos.genomicTrack(
+    coverage,
+    track.height = 0.1,
+    ylim = c(0, max(coverage$depth)),
+    track.margin = c(0, 0.01),
+    cell.padding = c(0, 0, 0, 0),
+    bg.border = NA,
+    bg.col = NA,
+    panel.fun = function(region, value, ...) {
+      circos.genomicLines(
+        region = region,
+        value = value,
+        col = circos_track_colors["coverage"],
+        border = circos_track_colors["coverage"],
+        area = TRUE
+      )
+    }
+  )
+
+
 
   # ! gene name--------------------------------------------------------------------
 
@@ -235,8 +294,8 @@ fn_plot_mtdna_circle <- function() {
     track.height = 0.1,
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    bg.border = "#EAF7FFFF",
-    bg.col = "#EAF7FFFF",
+    bg.border = circos_track_colors["gene_name_bg"],
+    bg.col = circos_track_colors["gene_name_bg"],
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
       for (genotype in genetypes) {
@@ -315,8 +374,8 @@ fn_plot_mtdna_circle <- function() {
         value = value,
         pch = 2,
         cex = 0.5,
-        col = "#a6fccb",
-        bg.border = "#a6fccb"
+        col = circos_track_colors["homoplasmic_af"],
+        bg.border = circos_track_colors["homoplasmic_af"]
       )
     }
   )
@@ -347,22 +406,22 @@ fn_plot_mtdna_circle <- function() {
         value = value,
         pch = 3,
         cex = 0.5,
-        col = "red",
-        bg.border = "red"
+        col = circos_track_colors["heteroplasmic_af"],
+        bg.border = circos_track_colors["heteroplasmic_af"]
       )
     }
   )
 
 
   # ! labels --------------------------------------------------------------------
-  circos.labels(
-    rep("MT", 5),
-    x = top_variants$start,
-    labels = top_variants$variant,
-    side = "inside",
-    cex = 0.5,
-    track.margin = c(0, 0.01),
-  )
+  # circos.labels(
+  #   rep("MT", 5),
+  #   x = top_variants$start,
+  #   labels = top_variants$variant,
+  #   side = "inside",
+  #   cex = 0.5,
+  #   track.margin = c(0, 0.01),
+  # )
 
   circos.clear()
 }
