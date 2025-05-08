@@ -1,4 +1,5 @@
 fn_plot_mtdna_circos <- function(
+    start.degree = 90,
     canvas.xlim = c(-1, 1),
     canvas.ylim = c(-1, 1),
     gap.degree = 1) {
@@ -138,7 +139,7 @@ fn_plot_mtdna_circos <- function(
 
   circos.clear()
   circos.par(
-    start.degree = 90,
+    start.degree = start.degree,
     canvas.xlim = canvas.xlim,
     canvas.ylim = canvas.ylim,
     gap.degree = gap.degree
@@ -446,13 +447,14 @@ fn_plot_mtdna_circos <- function(
 {
   pdf(
     file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-homo-hetero-90.pdf",
-    width = 10,
-    height = 7
+    width = 13,
+    height = 10
   )
   fn_plot_mtdna_circos(
-    canvas.xlim = c(0, 1),
-    canvas.ylim = c(0, 1),
-    gap.degree = 270
+    start.degree = 90,
+    canvas.xlim = c(-1, 1),
+    canvas.ylim = c(-1, 1),
+    gap.degree = 30
   )
   dev.off()
 }
