@@ -38,7 +38,7 @@ circos_track_colors <- c(
   "homoplasmic_af" = "#A6FCCB",
   "heteroplasmic_af" = "#FF0000",
   "gene_name_bg" = "#EAF7FF",
-  "coverage" = "#23ABFF"
+  "coverage" = "#3FB5FF"
 )
 
 mtdna_gene_type_colors <- c(
