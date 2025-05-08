@@ -454,7 +454,7 @@ fn_plot_mtdna_circos <- function(
     start.degree = 90,
     canvas.xlim = c(-1, 1),
     canvas.ylim = c(-1, 1),
-    gap.degree = 30
+    gap.degree = 90
   )
   dev.off()
 }
