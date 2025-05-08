@@ -34,10 +34,11 @@ circos_track_colors <- c(
   "phastCons100way" = "#FFD700",
   "gnomad" = "#0000FF",
   "homoplasmic_paf" = "#03DC62",
-  "homoplasmic_paf" = "#7a0202",
-  "homoplasmic_af" = "#a6fccb",
-  "homoplasmic_af" = "#FF0000",
-  "gene_name_bg" = "#EAF7FFFF"
+  "heteroplasmic_paf" = "#7A0202",
+  "homoplasmic_af" = "#A6FCCB",
+  "heteroplasmic_af" = "#FF0000",
+  "gene_name_bg" = "#EAF7FF",
+  "coverage" = "#23ABFF"
 )
 
 mtdna_gene_type_colors <- c(
