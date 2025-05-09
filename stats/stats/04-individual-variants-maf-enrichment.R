@@ -317,6 +317,11 @@ variant_count
 }
 
 variant_count |> dplyr::filter(Position == 3933)
+variant_count <- readr::read_rds(
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+  )
+)
 
 # ! homoplasmic variant --------------------------------------------------------------------
 
@@ -564,6 +569,7 @@ variant_count |>
 variant_count_heteroplasmic
 
 variant_count_heteroplasmic |>
+  # dplyr::filter(aachange == "rRNA") |>
   ggpubr::ggscatter(
     x = "freq",
     y = "Gnomad Frequency",
