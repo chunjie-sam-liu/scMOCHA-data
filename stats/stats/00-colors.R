@@ -1,4 +1,4 @@
-disease_colors <- c(
+color_disease <- c(
   "Alzheimer's Disease" = "#BC3C29FF",
   "COVID-19" = "#0072B5FF",
   "Healthy" = "#E18727FF",
@@ -6,20 +6,20 @@ disease_colors <- c(
   "Other" = "grey"
 )
 
-chemistry_colors <- c(
+color_chemistry <- c(
   "SC5P-PE" = "#440154FF",
   "SC5P-R2" = "#31688EFF",
   "SC3Pv3" = "#35B779FF",
   "SC3Pv2" = "#FDE725FF"
 )
 
-gender_colors <- c(
+color_gender <- c(
   "Female" = "#FC8D62FF",
   "Male" = "#66C2A5FF",
   "Unknown" = "grey50"
 )
 
-celltype_colors <- c(
+color_celltype <- c(
   "B" = "#66C2A5FF",
   "CD4 T" = "#FC8D62FF",
   "CD8 T" = "#8DA0CBFF",
@@ -30,7 +30,7 @@ celltype_colors <- c(
   "other T" = "#E5C494FF"
 )
 
-circos_track_colors <- c(
+color_circos_track <- c(
   "phastCons100way" = "#FFD700",
   "gnomad" = "#0000FF",
   "homoplasmic_paf" = "#03DC62",
@@ -41,7 +41,7 @@ circos_track_colors <- c(
   "coverage" = "#3FB5FF"
 )
 
-mtdna_gene_type_colors <- c(
+color_mtdna_gene_type <- c(
   "D-Loop" = "#FFFFB3",
   "MT tRNA" = "#FB8072",
   "MT rRNA" = "#8DD3C7",
