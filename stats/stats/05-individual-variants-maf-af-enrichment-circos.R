@@ -118,16 +118,17 @@ fn_plot_mtdna_circos <- function(
     head(5) ->
   top_variants
 
-  circos_track_colors <- c(
-    "phastCons100way" = "#FFD700",
-    "gnomad" = "#0000FF",
-    "homoplasmic_paf" = "#03DC62",
-    "heteroplasmic_paf" = "#7A0202",
-    "homoplasmic_af" = "#A6FCCB",
-    "heteroplasmic_af" = "#FF0000",
-    "gene_name_bg" = "#EAF7FF",
-    "coverage" = "#3FB5FF"
-  )
+  # color_circos_track <- c(
+  #   "phastCons100way" = "#FFD700",
+  #   "gnomad" = "#0000FF",
+  #   "homoplasmic_paf" = "#03DC62",
+  #   "heteroplasmic_paf" = "#7A0202",
+  #   "homoplasmic_af" = "#A6FCCB",
+  #   "heteroplasmic_af" = "#FF0000",
+  #   "gene_name_bg" = "#EAF7FF",
+  #   "coverage" = "#3FB5FF"
+  # )
+  source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
   # conserve_rate
 
@@ -194,7 +195,7 @@ fn_plot_mtdna_circos <- function(
       circos.genomicLines(
         region = region,
         value = value,
-        col = circos_track_colors["phastCons100way"],
+        col = color_circos_track["phastCons100way"],
         lwd = 0.5
       )
     }
@@ -217,8 +218,8 @@ fn_plot_mtdna_circos <- function(
       circos.barplot(
         value = val,
         pos = pos,
-        col = circos_track_colors["gnomad"],
-        border = circos_track_colors["gnomad"]
+        col = color_circos_track["gnomad"],
+        border = color_circos_track["gnomad"]
       )
     }
   )
@@ -241,8 +242,8 @@ fn_plot_mtdna_circos <- function(
       circos.barplot(
         value = val,
         pos = pos,
-        col = circos_track_colors["homoplasmic_paf"],
-        border = circos_track_colors["homoplasmic_paf"]
+        col = color_circos_track["homoplasmic_paf"],
+        border = color_circos_track["homoplasmic_paf"]
       )
     }
   )
@@ -264,8 +265,8 @@ fn_plot_mtdna_circos <- function(
       circos.barplot(
         value = val,
         pos = pos,
-        col = circos_track_colors["heteroplasmic_paf"],
-        border = circos_track_colors["heteroplasmic_paf"]
+        col = color_circos_track["heteroplasmic_paf"],
+        border = color_circos_track["heteroplasmic_paf"]
       )
     }
   )
@@ -278,8 +279,8 @@ fn_plot_mtdna_circos <- function(
     track.height = 0.1,
     track.margin = c(0, 0.01),
     cell.padding = c(0, 0, 0, 0),
-    bg.border = circos_track_colors["gene_name_bg"],
-    bg.col = circos_track_colors["gene_name_bg"],
+    bg.border = color_circos_track["gene_name_bg"],
+    bg.col = color_circos_track["gene_name_bg"],
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
       for (genotype in genetypes) {
@@ -360,8 +361,8 @@ fn_plot_mtdna_circos <- function(
         value = value,
         pch = 2,
         cex = 0.5,
-        col = circos_track_colors["homoplasmic_af"],
-        bg.border = circos_track_colors["homoplasmic_af"]
+        col = color_circos_track["homoplasmic_af"],
+        bg.border = color_circos_track["homoplasmic_af"]
       )
     }
   )
@@ -392,8 +393,8 @@ fn_plot_mtdna_circos <- function(
         value = value,
         pch = 3,
         cex = 0.5,
-        col = circos_track_colors["heteroplasmic_af"],
-        bg.border = circos_track_colors["heteroplasmic_af"]
+        col = color_circos_track["heteroplasmic_af"],
+        bg.border = color_circos_track["heteroplasmic_af"]
       )
     }
   )
@@ -411,8 +412,8 @@ fn_plot_mtdna_circos <- function(
       circos.genomicLines(
         region = region,
         value = value,
-        col = circos_track_colors["coverage"],
-        border = circos_track_colors["coverage"],
+        col = color_circos_track["coverage"],
+        border = color_circos_track["coverage"],
         area = TRUE
       )
     }
