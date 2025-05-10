@@ -105,7 +105,11 @@ TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/TABLES")
 
 def load_table_pl(gseid, srrid, cluster, hh):
     # gseid, srrid, cluster, hh = "GSE147794", "GSM4446059", "cluster", "HETEROPLASMIC"
-    tablename = f"{cluster}_cov.{gseid}_{srrid}"
+    tablename = (
+        f"{cluster}_cov.{gseid}_{srrid}"
+        if cluster != "bulk"
+        else f"cluster_cov.{gseid}_{srrid}"
+    )
     log.info(f"Loading {tablename}")
     table_path = TABLEDIR / f"{tablename}.csv"
     df = pl.read_csv(
@@ -126,6 +130,22 @@ def load_table_pl(gseid, srrid, cluster, hh):
         .sort("barcode")
     )
 
+    if cluster == "bulk":
+        # For bulk, we need to sum the values across all barcodes
+        # For bulk, we need to aggregate across all barcodes
+        df_alt_cov = (
+            df_alt_cov.select(
+                [
+                    pl.sum(str(pos_alt)).alias(pos_alt)
+                    for pos, pos_alt in zip(
+                        CONFIG[hh]["POSISTIONS"], CONFIG[hh]["POSALTS"]
+                    )
+                ]
+            )
+            .with_columns(pl.lit("bulk").alias("barcode"))
+            .select(["barcode", *CONFIG[hh]["POSALTS"]])
+        )
+
     df_sum_cov = (
         df.group_by("barcode")
         .agg(
@@ -141,6 +161,22 @@ def load_table_pl(gseid, srrid, cluster, hh):
         "barcode",
         *[str(pos) for pos in CONFIG[hh]["POSALTS"]],
     ]
+
+    if cluster == "bulk":
+        # For bulk, we need to sum the values across all barcodes
+        # For bulk, we need to aggregate across all barcodes
+        df_sum_cov = (
+            df_sum_cov.select(
+                [
+                    pl.sum(str(pos_alt)).alias(pos_alt)
+                    for pos, pos_alt in zip(
+                        CONFIG[hh]["POSISTIONS"], CONFIG[hh]["POSALTS"]
+                    )
+                ]
+            )
+            .with_columns(pl.lit("bulk").alias("barcode"))
+            .select(["barcode", *CONFIG[hh]["POSALTS"]])
+        )
 
     df_alt_af = df_alt_cov.select(CONFIG[hh]["POSALTS"]) / df_sum_cov.select(
         CONFIG[hh]["POSALTS"]
@@ -165,6 +201,11 @@ def load_table_pl(gseid, srrid, cluster, hh):
 
 def save_table_pl(gseid, srrid, cluster, hh):
     tablename = f"{cluster}_cov.{gseid}_{srrid}"
+    # tablename = (
+    #     f"{cluster}_cov.{gseid}_{srrid}"
+    #     if cluster != "bulk"
+    #     else f"cluster_cov.{gseid}_{srrid}"
+    # )
     log.info(f"Loading {tablename}")
     table_path = (
         CONFIG[hh]["table_path"] / f"{tablename}.{CONFIG[hh]['suffix']}.csv"
@@ -235,7 +276,7 @@ def merge_pl(cluster, hh):
 app = typer.Typer()
 
 ClusterType = Annotated[
-    str, typer.Argument(help="Type of cluster: cell or cluster")
+    str, typer.Argument(help="Type of cluster: cell or cluster or bulk")
 ]
 HHType = Annotated[
     str, typer.Argument(help="Type of variant: HETEROPLASMIC or HOMOPLASMIC")
@@ -248,7 +289,7 @@ def create_sh(
     hh: HHType,
 ):
     """Create shell script for processing."""
-    if cluster not in ["cell", "cluster"]:
+    if cluster not in ["cell", "cluster", "bulk"]:
         typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
         raise typer.Abort()
 
@@ -286,6 +327,15 @@ def create_sh(
 
 
 @app.command()
+def create_all_sh():
+    CLUSTER = ["cell", "cluster", "bulk"]
+    HH = ["HETEROPLASMIC", "HOMOPLASMIC"]
+    for cluster in CLUSTER:
+        for hh in HH:
+            create_sh(cluster, hh)
+
+
+@app.command()
 def heteroplasmic_af(
     gseid: str,
     srrid: str,
@@ -295,7 +345,7 @@ def heteroplasmic_af(
     """
     Generate heteroplasmic allele frequency table for all cells.
     """
-    if cluster not in ["cell", "cluster"]:
+    if cluster not in ["cell", "cluster", "bulk"]:
         typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
         raise typer.Abort()
 
@@ -315,14 +365,14 @@ def heteroplasmic_af(
 
 
 @app.command()
-def merge(
+def merge_csv(
     cluster: ClusterType,
     hh: HHType,
 ):
     """
     Merge all heteroplasmic allele frequency tables.
     """
-    if cluster not in ["cell", "cluster"]:
+    if cluster not in ["cell", "cluster", "bulk"]:
         typer.echo(f"Error: cluster must be 'cell' or 'cluster', got {cluster}")
         raise typer.Abort()
 
