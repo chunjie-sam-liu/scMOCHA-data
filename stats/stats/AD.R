@@ -277,6 +277,9 @@ admeta_sc5p_variant_type_af_ttest_rank
 
 topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
+admeta_sc5p_variant_type_af_ttest_rank |>
+  dplyr::filter(variant %in% topvariants)
+
 admeta_sc5p_variant_type_af |>
   dplyr::filter(
     variant == admeta_sc5p_variant_type_af_ttest_rank$variant[5]
