@@ -25,6 +25,9 @@ fn_plot_mtdna_cov_circos <- function(
       end,
       depth,
       chemistry
+    ) |>
+    dplyr::mutate(
+      depth = log2(depth + 1),
     )
 
   source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
@@ -72,7 +75,7 @@ fn_plot_mtdna_cov_circos <- function(
       clock.wise = TRUE,
       col = prismatic::clr_alpha(
         highlight_df$COLOR[i],
-        alpha = 0.3
+        alpha = 0.5
       ),
       border = NA
     )
