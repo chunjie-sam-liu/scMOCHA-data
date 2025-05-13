@@ -62,6 +62,9 @@ fn_plot_mtdna_circos <- function(
       start,
       end,
       depth
+    ) |>
+    dplyr::mutate(
+      depth = log10(depth + 1)
     )
 
   # all variants
@@ -174,7 +177,7 @@ fn_plot_mtdna_circos <- function(
       clock.wise = TRUE,
       col = prismatic::clr_alpha(
         highlight_df$COLOR[i],
-        alpha = 0.3
+        alpha = 0.5
       ),
       border = NA
     )
