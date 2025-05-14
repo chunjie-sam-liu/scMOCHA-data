@@ -202,3 +202,15 @@ fn_plot_mtdna_cov_circos <- function(
   fn_plot_mtdna_cov_circos(scaley = TRUE)
   dev.off()
 }
+{
+  pdf(
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-coverage-90.pdf",
+    width = 13,
+    height = 10
+  )
+  fn_plot_mtdna_cov_circos(
+    start.degree = 90,
+    gap.degree = 90
+  )
+  dev.off()
+}
