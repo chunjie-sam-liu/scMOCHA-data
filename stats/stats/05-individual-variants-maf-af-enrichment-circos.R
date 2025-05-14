@@ -177,7 +177,7 @@ fn_plot_mtdna_circos <- function(
       clock.wise = TRUE,
       col = prismatic::clr_alpha(
         highlight_df$COLOR[i],
-        alpha = 0.5
+        alpha = 0.3
       ),
       border = NA
     )
