@@ -462,3 +462,9 @@ fn_plot_mtdna_circos <- function(
   )
   dev.off()
 }
+fn_plot_mtdna_circos(
+  start.degree = 90,
+  canvas.xlim = c(-1, 1),
+  canvas.ylim = c(-1, 1),
+  gap.degree = 270
+)
