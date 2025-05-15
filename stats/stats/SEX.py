@@ -16,6 +16,7 @@ import pandas as pd
 import polars as pl
 import scanpy as sc
 import typer
+from rich import print
 from tqdm import tqdm
 
 YGENES = ["RPS4Y1", "KDM5D", "DDX3Y"]
@@ -126,6 +127,14 @@ class SCESEX:
             estimated_sex = "Male"
         elif y_score < x_score:
             estimated_sex = "Female"
+
+        print(
+            {
+                "sex": estimated_sex,
+                "x_score": x_score,
+                "y_score": y_score,
+            }
+        )
 
         return pl.DataFrame(
             {
