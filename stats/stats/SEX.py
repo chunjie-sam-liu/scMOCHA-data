@@ -186,17 +186,17 @@ def estimate_sex_all_srr(max_workers: int = 20):
         else pl.DataFrame(
             {
                 "sex": "Unknown",
-                "x_score": 0,
-                "y_score": 0,
+                "x_score": np.array([0], dtype=np.float32),
+                "y_score": np.array([0], dtype=np.float32),
             }
         )
         for s in sexests
     ]
 
     if valid_sexests:
-        sexests = pl.concat(valid_sexests)
+        sexests_out = pl.concat(valid_sexests)
         SRR.with_columns(
-            sexests,
+            sexests_out,
         ).write_csv(
             "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.csv",
             include_header=True,
