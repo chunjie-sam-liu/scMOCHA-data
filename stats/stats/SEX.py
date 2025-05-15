@@ -7,6 +7,7 @@
 # @VERSION: v0.0.1
 
 
+import concurrent.futures
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -15,6 +16,7 @@ import pandas as pd
 import polars as pl
 import scanpy as sc
 import typer
+from tqdm import tqdm
 
 YGENES = ["RPS4Y1", "KDM5D", "DDX3Y"]
 XGENES = ["XIST"]
@@ -94,7 +96,7 @@ class SCESEX:
         # outdir = self.h5_file.parent
         # outplotfile = outdir / "sex_estimate_violin.pdf"
         srrid = self.h5_file.parent.name
-        gseid = self.h5_file.parent.parent.parent.name
+        # gseid = self.h5_file.parent.parent.parent.name
         srrdir = self.h5_file.parent
         sc.settings.figdir = srrdir
         sc.pl.violin(
@@ -115,9 +117,14 @@ class SCESEX:
         y_score = self.mean_expr[ygenes].mean() if len(ygenes) > 0 else 0
         x_score = self.mean_expr[xgenes].mean() if len(xgenes) > 0 else 0
         estimated_sex = "Unknown"
-        if y_score > 0.5 and x_score < 0.5:
+        # if y_score > 0.5 and x_score < 0.5:
+        #     estimated_sex = "Male"
+        # elif y_score < 0.2 and x_score > 0.5:
+        #     estimated_sex = "Female"
+
+        if y_score > x_score:
             estimated_sex = "Male"
-        elif y_score < 0.2 and x_score > 0.5:
+        elif y_score < x_score:
             estimated_sex = "Female"
 
         return pl.DataFrame(
@@ -146,31 +153,51 @@ def estimate_sex(gseid: str, srrid: str, srrdir: Path):
     return sexest
 
 
-def estimate_sex_all_srr():
-    sexests = []
-    for row in SRR.iter_rows(named=True):
+def estimate_sex_all_srr(max_workers: int = 20):
+    all_rows = list(SRR.iter_rows(named=True))
+
+    # Function to process a single row
+    def process_row(row):
         gseid = row["gseid"]
         srrid = row["srrid"]
         srrdir = Path(row["srrdir"])
         print(f"Processing {gseid} {srrid} {srrdir}")
-        sexest = estimate_sex(gseid, srrid, srrdir)
-        sexests.append(sexest)
-    sexests = pl.concat(sexests)
-    SRR.with_columns(
-        sexests,
-    ).write_csv(
-        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.csv",
-        include_header=True,
-    )
+        try:
+            return estimate_sex(gseid, srrid, srrdir)
+        except Exception as e:
+            print(f"Error processing {gseid} {srrid}: {e}")
+            return None
+
+    # Use ThreadPoolExecutor with 20 workers and map to maintain order
+    sexests = []
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=max_workers
+    ) as executor:
+        # Process results in the original order
+        for sexest in tqdm(
+            executor.map(process_row, all_rows), total=len(all_rows)
+        ):
+            sexests.append(sexest)
+
+    if sexests:
+        sexests = pl.concat(sexests)
+        SRR.with_columns(
+            sexests,
+        ).write_csv(
+            "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.csv",
+            include_header=True,
+        )
+    else:
+        print("No valid sex estimations found.")
 
 
 app = typer.Typer()
 
 
 @app.command()
-def SEX():
-    estimate_sex_all_srr()
+def SEX(max_workers: int = 20):
+    estimate_sex_all_srr(max_workers=max_workers)
 
 
 if __name__ == "__main__":
-    SEX()
+    app()
