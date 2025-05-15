@@ -179,8 +179,22 @@ def estimate_sex_all_srr(max_workers: int = 20):
         ):
             sexests.append(sexest)
 
-    if sexests:
-        sexests = pl.concat(sexests)
+    # Filter out None values before concatenation
+    valid_sexests = [
+        s
+        if s is not None
+        else pl.DataFrame(
+            {
+                "sex": "Unknown",
+                "x_score": 0,
+                "y_score": 0,
+            }
+        )
+        for s in sexests
+    ]
+
+    if valid_sexests:
+        sexests = pl.concat(valid_sexests)
         SRR.with_columns(
             sexests,
         ).write_csv(
@@ -195,8 +209,22 @@ app = typer.Typer()
 
 
 @app.command()
-def SEX(max_workers: int = 20):
+def SEXALL(max_workers: int = 20):
     estimate_sex_all_srr(max_workers=max_workers)
+
+
+@app.command()
+def SEXONE(gseid: str, srrid: str, srrdir: Path):
+    estimate_sex(
+        # gseid="GSE214865",
+        # srrid="SRR1616991",
+        # srrdir=Path(
+        #     "/home/liuc9/github/scMOCHA-data/data/GSE214865/final/GSM6616991"
+        # ),
+        gseid=gseid,
+        srrid=srrid,
+        srrdir=srrdir,
+    )
 
 
 if __name__ == "__main__":
