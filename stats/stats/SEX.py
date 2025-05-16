@@ -241,7 +241,11 @@ def SEXALL(max_workers: int = 20):
 
 
 @app.command()
-def SEXONE(gseid_srrid_srrdir_csv: str):
+def SEXONE(
+    gseid_srrid_srrdir_csv: str = typer.Argument(
+        ..., help="GSEID,SRRID,SRRDIR"
+    ),
+):
     """
     Process a given sample to estimate the sex.
 
