@@ -219,20 +219,57 @@ app = typer.Typer()
 
 @app.command()
 def SEXALL(max_workers: int = 20):
+    """
+    Run sex estimation for all SRR samples in parallel.
+    This function calls the estimate_sex_all_srr function to estimate the sex of all SRR samples
+    using multiple workers for parallel processing.
+    Parameters
+    ----------
+    max_workers : int, optional
+        Maximum number of concurrent workers to use for parallel processing.
+        Default is 20.
+    Returns
+    -------
+    None
+        Function does not return any value but triggers the sex estimation process.
+    Notes
+    -----
+    This is a wrapper function that simplifies the process of estimating sex for all samples.
+    """
+
     estimate_sex_all_srr(max_workers=max_workers)
 
 
 @app.command()
-def SEXONE(gseid: str, srrid: str, srrdir: Path):
+def SEXONE(gseid_srrid_srrdir_csv: str):
+    """
+    Process a given sample to estimate the sex.
+
+    This function takes a comma-separated string containing GSE ID, SRR ID, and SRR directory,
+    splits it into individual components, and calls the estimate_sex function to determine the sex.
+
+    Parameters
+
+    ----------
+
+    gseid_srrid_srrdir_csv : str
+
+        A comma-separated string containing GSE ID, SRR ID, and SRR directory.
+
+        When used from CLI, this should be passed as "GSEID,SRRID,SRRDIR".
+
+    Example
+
+    -----------
+
+    SEXONE("GSE163668,GSM4995441,/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995441")
+    """
+    gseid, srrid, srrdir = gseid_srrid_srrdir_csv.strip().split(",")
+    print(f"Processing {gseid} {srrid} {srrdir}")
     estimate_sex(
-        # gseid="GSE214865",
-        # srrid="SRR1616991",
-        # srrdir=Path(
-        #     "/home/liuc9/github/scMOCHA-data/data/GSE214865/final/GSM6616991"
-        # ),
         gseid=gseid,
         srrid=srrid,
-        srrdir=srrdir,
+        srrdir=Path(srrdir),
     )
 
 
