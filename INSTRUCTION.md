@@ -9,6 +9,7 @@
 - `yaml` use yaml::read_yaml
 - `feather` use arrow::read_feather
 
+
 ## write
 - `rds` use qs::qsave
 - `csv`, `tsv` use data.table::fwrite
@@ -17,3 +18,4 @@
 - `json` use jsonlite::toJSON
 - `yaml` use yaml::write_yaml
 - `feather` use arrow::write_feather
+- both epxort csv and fst with data.table::fwrite and fst::write_fst
