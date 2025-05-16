@@ -259,18 +259,8 @@ admeta_sc5p_variant_type_af |>
   ) ->
 forplot_
 
-forplot_ |>
-  dplyr::group_by(disease, barcode, variant) |>
-  dplyr::summarise(
-    mean_cluster_variant_af = mean(af, na.rm = T),
-  ) ->
-disease_barcode_variatn_af
 
 forplot_ |>
-  dplyr::left_join(
-    disease_barcode_variatn_af,
-    by = c("disease", "barcode", "variant")
-  ) |>
   ggplot(aes(x = disease)) +
   ggh4x::facet_grid2(
     variant ~ barcode,
@@ -373,6 +363,62 @@ ggsave(
   device = cairo_pdf
 )
 
+
+
+# ! save forplot_ for correlation --------------------------------------------------------------------
+OUTDIR <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad"
+dir.create(OUTDIR, recursive = TRUE)
+outfilename <- file.path(
+  OUTDIR,
+  "ad-celltype-variant-af.csv"
+)
+
+forplot_ |>
+  dplyr::select(-num_variants) |>
+  dplyr::mutate(barcode = gsub(barcode, pattern = " ", replacement = "_")) |>
+  tidyr::pivot_wider(
+    names_from = barcode,
+    values_from = af
+  ) |>
+  dplyr::relocate(
+    gseid, srrid, disease,
+    .before = 1
+  ) -> df
+
+df |>
+  dplyr::select(gseid, srrid, disease) |>
+  dplyr::distinct() |>
+  export(
+    file = file.path(
+      OUTDIR,
+      "ad-celltype-variant-af-gse-srrid.csv"
+    )
+  )
+
+
+
+df |>
+  # dplyr::nest_by(variant) |>
+  dplyr::group_by(variant) |>
+  tidyr::nest() |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = variant,
+      .y = data,
+      .f = \(.x, .y) {
+        outfilename <- file.path(
+          OUTDIR,
+          "ad-celltype-variant-af-{.x}.csv" |> glue::glue()
+        )
+        export(
+          x = .y,
+          file = outfilename,
+          format = "both"
+        )
+      }
+    )
+  )
 
 
 
