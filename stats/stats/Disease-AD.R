@@ -145,50 +145,6 @@ admeta_sc5p_variant_type
 
 
 
-# ! variant venn --------------------------------------------------------------------
-
-\(){
-  admeta_sc5p_variant_type |>
-    tidyr::unnest(cols = variant_type) |>
-    dplyr::filter(
-      issomatic == "heteroplasmic"
-    ) |>
-    dplyr::select(
-      srrid, disease, variant
-    ) |>
-    dplyr::group_by(
-      variant
-    ) |>
-    tidyr::nest() |>
-    dplyr::ungroup() |>
-    dplyr::mutate(
-      m = purrr::map(
-        .x = data,
-        .f = function(.x) {
-          .x |>
-            dplyr::group_by(disease) |>
-            dplyr::count() |>
-            dplyr::ungroup() |>
-            tidyr::pivot_wider(
-              names_from = disease,
-              values_from = n
-            )
-        }
-      )
-    ) |>
-    tidyr::unnest(cols = m) ->
-  admeta_sc5p_variant_type_count
-
-  admeta_sc5p_variant_type_count |>
-    dplyr::select(-data) |>
-    dplyr::arrange(
-      Healthy
-    ) |>
-    dplyr::filter(
-      variant == "3173G>A"
-    )
-}
-
 
 # ! compare variant between AD and healthy --------------------------------------------------------------------
 
