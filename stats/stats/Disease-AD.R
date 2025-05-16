@@ -50,31 +50,44 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+gse_dataset_metadata_full <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- readr::read_rds("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.rds") |>
+all_variant <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.qs") |>
   dplyr::select(variant, issomatic)
 
-all_heteroplasmic_af <- data.table::fread(
-  file.path(cleandatadir, "all_hetero_af.bulk.csv"),
-  header = TRUE,
-  sep = ",",
+all_hetero_af_cluster <- import(
+  file.path(cleandatadir, "all_hetero_af.cluster.csv"),
 ) |>
   tidyr::pivot_longer(
     cols = -c(gseid, srrid, barcode, num_variants),
     names_to = "variant",
     values_to = "af"
   )
+
+all_hetero_af_bulk <- import(
+  file.path(cleandatadir, "all_hetero_af.bulk.csv"),
+) |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, barcode, num_variants),
+    names_to = "variant",
+    values_to = "af"
+  )
+
+all_hetero_af_cluster |>
+  dplyr::bind_rows(
+    all_hetero_af_bulk
+  ) ->
+all_hetero_af_cluster_bulk
 
 # body --------------------------------------------------------------------
 
@@ -95,6 +108,7 @@ admeta |>
 
 admeta |>
   dplyr::filter(
+    # Chemistry %in% c("SC5P-PE", "SC5P-R2")
     Chemistry == "SC5P-PE"
   ) ->
 admeta_sc5p
@@ -133,48 +147,47 @@ admeta_sc5p_variant_type
 
 # ! variant venn --------------------------------------------------------------------
 
+\(){
+  admeta_sc5p_variant_type |>
+    tidyr::unnest(cols = variant_type) |>
+    dplyr::filter(
+      issomatic == "heteroplasmic"
+    ) |>
+    dplyr::select(
+      srrid, disease, variant
+    ) |>
+    dplyr::group_by(
+      variant
+    ) |>
+    tidyr::nest() |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      m = purrr::map(
+        .x = data,
+        .f = function(.x) {
+          .x |>
+            dplyr::group_by(disease) |>
+            dplyr::count() |>
+            dplyr::ungroup() |>
+            tidyr::pivot_wider(
+              names_from = disease,
+              values_from = n
+            )
+        }
+      )
+    ) |>
+    tidyr::unnest(cols = m) ->
+  admeta_sc5p_variant_type_count
 
-
-admeta_sc5p_variant_type |>
-  tidyr::unnest(cols = variant_type) |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  ) |>
-  dplyr::select(
-    srrid, disease, variant
-  ) |>
-  dplyr::group_by(
-    variant
-  ) |>
-  tidyr::nest() |>
-  dplyr::ungroup() |>
-  dplyr::mutate(
-    m = purrr::map(
-      .x = data,
-      .f = function(.x) {
-        .x |>
-          dplyr::group_by(disease) |>
-          dplyr::count() |>
-          dplyr::ungroup() |>
-          tidyr::pivot_wider(
-            names_from = disease,
-            values_from = n
-          )
-      }
+  admeta_sc5p_variant_type_count |>
+    dplyr::select(-data) |>
+    dplyr::arrange(
+      Healthy
+    ) |>
+    dplyr::filter(
+      variant == "3173G>A"
     )
-  ) |>
-  tidyr::unnest(cols = m) ->
-admeta_sc5p_variant_type_count
-
-admeta_sc5p_variant_type_count |>
-  dplyr::select(-data) |>
-  dplyr::arrange(
-    Healthy
-  ) |>
-  dplyr::filter(
-    variant == "3173G>A"
-  )
-
+}
 
 
 # ! compare variant between AD and healthy --------------------------------------------------------------------
@@ -188,14 +201,14 @@ admeta_sc5p_variant_type |>
     srrid, disease, variant
   ) |>
   dplyr::left_join(
-    all_heteroplasmic_af,
+    all_hetero_af_cluster_bulk,
     by = c("srrid", "variant")
   ) ->
 admeta_sc5p_variant_type_af
 
 admeta_sc5p_variant_type_af |>
   dplyr::group_by(
-    variant
+    variant, barcode
   ) |>
   tidyr::nest() |>
   dplyr::ungroup() |>
@@ -232,29 +245,6 @@ admeta_sc5p_variant_type_af |>
           }
         )
       }
-    ),
-    w = purrr::map(
-      .x = data,
-      .f = \(.x) {
-        # .x <- a$data[[1]]
-        tryCatch(
-          expr = {
-            wilcox.test(
-              af ~ disease,
-              data = .x,
-              var.equal = TRUE
-            ) |>
-              broom::tidy() |>
-              dplyr::select(
-                statistic, p.value, conf.int, conf.low, conf.high
-              )
-          },
-          error = function(e) {
-            message("Error: ", conditionMessage(e))
-            return(NULL)
-          }
-        )
-      }
     )
   ) ->
 admeta_sc5p_variant_type_af_ttest
@@ -272,37 +262,165 @@ admeta_sc5p_variant_type_af_ttest |>
   ) |>
   dplyr::arrange(
     desc(rank)
+  ) |>
+  dplyr::rename(
+    ad = "Alzheimer's Disease",
+  ) |>
+  dplyr::filter(
+    ad >= 10,
+    Healthy >= 10
   ) ->
 admeta_sc5p_variant_type_af_ttest_rank
 
+admeta_sc5p_variant_type_af_ttest_rank |>
+  dplyr::filter(estimate > 0.03) |>
+  dplyr::arrange(variant) ->
+top5_variant
+
 topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
-admeta_sc5p_variant_type_af_ttest_rank |>
-  dplyr::filter(variant %in% topvariants)
+
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+
+library(ggh4x)
+library(ggbeeswarm)
+library(ggnewscale)
+
+color_celltype_bulk <- c(
+  "Pseudo-bulk" = "red",
+  color_celltype
+)
+
 
 admeta_sc5p_variant_type_af |>
-  dplyr::filter(
-    variant == admeta_sc5p_variant_type_af_ttest_rank$variant[5]
+  dplyr::filter(variant %in% topvariants) |>
+  dplyr::mutate(
+    barcode = gsub(barcode, pattern = "_", replacement = " "),
+    barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
   ) |>
-  ggstatsplot::ggbetweenstats(
-    data = _,
-    x = disease,
-    y = af,
-    pairwise.display = "p-value",
-    pairwise.comparisons = TRUE,
-    p.adjust.method = "fdr",
-    p.adjust.display = TRUE,
-    p.value.label = "p.adj",
-    p.value.label.size = 3.5,
-    p.value.label.color = "black",
-    p.value.label.position = c(0.5, 0.95),
-    p.value.label.nudge_y = 0.05,
-    ggplot.component = list(
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1)
+  dplyr::mutate(
+    barcode = factor(barcode, levels = names(color_celltype_bulk)),
+  ) ->
+forplot_
+
+forplot_ |>
+  dplyr::group_by(disease, barcode, variant) |>
+  dplyr::summarise(
+    mean_cluster_variant_af = mean(af, na.rm = T),
+  ) ->
+disease_barcode_variatn_af
+
+forplot_ |>
+  dplyr::left_join(
+    disease_barcode_variatn_af,
+    by = c("disease", "barcode", "variant")
+  ) |>
+  ggplot(aes(x = disease)) +
+  ggh4x::facet_grid2(
+    variant ~ barcode,
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype_bulk,
+        color = NA
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      background_y = ggh4x::elem_list_rect(
+        fill = "black",
+        color = NA
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
       )
     )
-  )
+  ) +
+  geom_violin(
+    aes(
+      y = af,
+      fill = disease
+    ),
+    alpha = 0.7,
+    size = 1,
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      y = af,
+      color = disease
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = 1,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = af,
+    ),
+    comparisons = list(
+      c("Alzheimer's Disease", "Healthy")
+    ),
+    y_position = 0.8
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    # axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "top",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black", size = 16),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  labs(
+    y = "Allele Frequency",
+  ) ->
+p_variant_boxplot_af
+
+ggsave(
+  filename = file.path(outdir, "ad-variant_boxplot.pdf"),
+  plot = p_variant_boxplot_af,
+  width = 15,
+  height = 8,
+  device = cairo_pdf
+)
+
+
+
+
+
 
 # footer ------------------------------------------------------------------
 
