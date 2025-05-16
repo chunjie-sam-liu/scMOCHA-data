@@ -71,3 +71,18 @@ purrr::map(
     file.path(clean_data_dir, gsub(".rds$", ".qs", .x))
   )
 )
+
+clean_data_dir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data"
+csvs <- list.files(
+  clean_data_dir,
+  pattern = ".csv$",
+)
+
+
+purrr::map(
+  csvs,
+  ~ convert(
+    file.path(clean_data_dir, .x),
+    file.path(clean_data_dir, gsub(".csv$", ".fst", .x))
+  )
+)

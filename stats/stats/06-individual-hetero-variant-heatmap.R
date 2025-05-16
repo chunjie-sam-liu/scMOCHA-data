@@ -51,21 +51,17 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-all_heteroplasmic_af <- data.table::fread(
-  file.path(cleandatadir, "all_hetero_af.cluster.csv"),
-  header = TRUE,
-  sep = ",",
+all_heteroplasmic_af <- import(
+  file.path(cleandatadir, "all_hetero_af.cluster.fst"),
 )
 
-all_homo_af <- data.table::fread(
-  file.path(cleandatadir, "all_homo_af.cluster.csv"),
-  header = TRUE,
-  sep = ","
+all_homo_af <- import(
+  file.path(cleandatadir, "all_homo_af.cluster.fst"),
 )
 
 
-all_variant <- readr::read_rds(
-  file.path(cleandatadir, "all_variant.rds")
+all_variant <- import(
+  file.path(cleandatadir, "all_variant.qs")
 )
 
 all_variant |>
@@ -73,54 +69,22 @@ all_variant |>
   dplyr::arrange(Position) ->
 heteroplasmic
 
-heteroplasmic |> dplyr::filter(Disease != "") ->
+heteroplasmic |>
+  dplyr::filter(Disease != "") ->
 heteroplasmic_disease
 #
-# all_heteroplasmic_af |>
-#   dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
-#   dplyr::mutate(
-#     colname = glue::glue("{gseid}_{srrid}_{barcode}"),
-#   ) |>
-#   dplyr::select(-c(gseid, srrid)) |>
-#   tidyr::pivot_longer(
-#     cols = -c(colname, barcode),
-#     names_to = "variant",
-#     values_to = "af"
-#   ) ->
-# forplot
-# forplot |>
-#   dplyr::filter(variant == "4175G>A") |>
-#   ggplot(aes(
-#     x = barcode,
-#     y = af,
-#   )) +
-#   geom_point() +
-#   theme(
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#   )
-# forplot |>
-#   ggstatsplot::ggbetweenstats(
-#     x = barcode,
-#     y = af,
-#     xlab = "Cluster",
-#     ylab = "Allele Frequency",
-#     # title = glue::glue("{the_srrid} - {one_variant}"),
-#     pairwise.display = "significant",
-#     p.adjust.method = "BH"
-#   ) +
-#   scale_y_continuous(
-#     limits = c(0, 1)
-#   )
 
 VARIANTS <- heteroplasmic$variant
 length(VARIANTS)
 
-CELLBARCODE <- data.table::fread(
-  file.path(cleandatadir, "barcode_celltype.csv")
+CELLBARCODE <- import(
+  file.path(cleandatadir, "barcode_celltype.fst")
 )
-METADATA <- readr::read_rds(
-  file.path(cleandatadir, "gse_dataset_metadata_full.rds")
+
+
+
+METADATA <- import(
+  file.path(cleandatadir, "gse_dataset_metadata_full.qs")
 ) |>
   dplyr::mutate(
     Haplogroup_s = purrr::map_chr(
@@ -133,6 +97,7 @@ METADATA <- readr::read_rds(
       }
     )
   )
+
 METADATA |>
   # dplyr::count(Chemistry)
   dplyr::filter(Chemistry == "SC5P-PE") |>

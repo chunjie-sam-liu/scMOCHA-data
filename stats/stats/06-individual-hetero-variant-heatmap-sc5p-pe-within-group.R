@@ -49,17 +49,16 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-all_heteroplasmic_af <- data.table::fread(
-  file.path(cleandatadir, "all_heteroplasmic_af.cluster.csv"),
-  header = TRUE,
-  sep = ",",
+pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
+
+all_heteroplasmic_af <- import(
+  file.path(cleandatadir, "all_hetero_af.cluster.csv")
 )
 
-all_variant <- readr::read_rds(
+all_variant <- import(
   file.path(cleandatadir, "all_variant.rds")
 )
 
@@ -68,46 +67,47 @@ all_variant |>
   dplyr::arrange(Position) ->
 heteroplasmic
 
-heteroplasmic |> dplyr::filter(Disease != "") ->
+heteroplasmic |>
+  dplyr::filter(Disease != "") ->
 heteroplasmic_disease
 
-all_heteroplasmic_af |>
-  dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
-  dplyr::mutate(
-    colname = glue::glue("{gseid}_{srrid}_{barcode}"),
-  ) |>
-  dplyr::select(-c(gseid, srrid)) |>
-  tidyr::pivot_longer(
-    cols = -c(colname, barcode),
-    names_to = "variant",
-    values_to = "af"
-  ) ->
-forplot
-forplot |>
-  dplyr::filter(variant == "4175G>A") |>
-  ggplot(aes(
-    x = barcode,
-    y = af,
-  )) +
-  geom_point() +
-  theme(
-    axis.text = element_blank(),
-    axis.ticks = element_blank(),
-  )
-forplot |>
-  dplyr::filter(variant == "4175G>A") |>
-  ggstatsplot::ggbetweenstats(
-    x = barcode,
-    y = af,
-    xlab = "Cluster",
-    ylab = "Allele Frequency",
-    # title = glue::glue("{the_srrid} - {one_variant}"),
-    pairwise.display = "significant",
-    p.adjust.method = "BH"
-  ) +
-  scale_y_continuous(
-    limits = c(0, 1)
-  )
+# all_heteroplasmic_af |>
+#   dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
+#   dplyr::mutate(
+#     colname = glue::glue("{gseid}_{srrid}_{barcode}"),
+#   ) |>
+#   dplyr::select(-c(gseid, srrid)) |>
+#   tidyr::pivot_longer(
+#     cols = -c(colname, barcode),
+#     names_to = "variant",
+#     values_to = "af"
+#   ) ->
+# forplot
+# forplot |>
+#   dplyr::filter(variant == "4175G>A") |>
+#   ggplot(aes(
+#     x = barcode,
+#     y = af,
+#   )) +
+#   geom_point() +
+#   theme(
+#     axis.text = element_blank(),
+#     axis.ticks = element_blank(),
+#   )
+# forplot |>
+#   dplyr::filter(variant == "4175G>A") |>
+#   ggstatsplot::ggbetweenstats(
+#     x = barcode,
+#     y = af,
+#     xlab = "Cluster",
+#     ylab = "Allele Frequency",
+#     # title = glue::glue("{the_srrid} - {one_variant}"),
+#     pairwise.display = "significant",
+#     p.adjust.method = "BH"
+#   ) +
+#   scale_y_continuous(
+#     limits = c(0, 1)
+#   )
 
 
 
@@ -117,7 +117,7 @@ length(VARIANTS)
 CELLBARCODE <- data.table::fread(
   file.path(cleandatadir, "barcode_celltype.csv")
 )
-METADATA <- readr::read_rds(
+METADATA <- import(
   file.path(cleandatadir, "gse_dataset_metadata_full.rds")
 ) |>
   dplyr::mutate(
@@ -295,6 +295,84 @@ col_fun = circlize::colorRamp2(
 )
 
 
+
+# ! cluster --------------------------------------------------------------------
+
+
+ComplexHeatmap::Heatmap(
+  matrix = .af_mtx,
+  # col = circlize::colorRamp2(
+  #   breaks = c(-0.1, 0, 1),
+  #   colors = c("lightgrey", "gold", "blue"),
+  #   space = "RGB"
+  # ),
+  col = col_fun,
+  name = "Allele Freq",
+  na_col = "white",
+  color_space = "LAB",
+  rect_gp = gpar(col = NA),
+  border = NA,
+  cell_fun = NULL,
+  layer_fun = NULL,
+  jitter = FALSE,
+  # row
+  cluster_rows = TRUE,
+  cluster_row_slices = T,
+  show_row_names = FALSE,
+  show_row_dend = FALSE,
+  clustering_distance_rows = "pearson",
+  clustering_method_rows = "ward.D",
+  # row_names_gp = gpar(
+  #   # fontsize = 20,
+  #   col = .gcol$cell_variants
+  # ),
+  # column
+  # column_title = paste0("palette = '", col_option, "'"),
+  # column_title = .column_title,
+  column_title_gp = gpar(fontsize = 40),
+  cluster_columns = TRUE,
+  # cluster_columns = cluster_within_group(
+  #   mat = .af_mtx,
+  #   factor = .af_cluster_before |>
+  #     dplyr::select(colname, Cluster) |>
+  #     tibble::deframe()
+  # ),
+  cluster_column_slices = T,
+  show_column_dend = FALSE,
+  clustering_distance_columns = "pearson",
+  clustering_method_columns = "ward.D",
+  show_column_names = FALSE,
+  row_names_side = "left",
+  top_annotation = chm_top,
+  left_annotation = hma_left,
+  # right_annotation = hma_right,
+  heatmap_legend_param = list(
+    title = "Allele Freq",
+    at = c(0, 0.5, 1),
+    labels = c("0", "0.5", "1"),
+    legend_direction = "vertical",
+    title_gp = gpar(fontsize = 10)
+  )
+) ->
+ch_af
+
+
+{
+  pdf(
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE.pdf",
+    width = 20,
+    height = 9
+  )
+  ComplexHeatmap::draw(object = ch_af)
+  dev.off()
+}
+
+
+
+
+
+# ! cluster within group --------------------------------------------------------------------
+
 ComplexHeatmap::Heatmap(
   matrix = .af_mtx,
   # col = circlize::colorRamp2(
@@ -350,7 +428,7 @@ ComplexHeatmap::Heatmap(
     title_gp = gpar(fontsize = 10)
   )
 ) ->
-ch_af
+ch_af_within_group
 
 
 {
@@ -359,9 +437,11 @@ ch_af
     width = 20,
     height = 9
   )
-  ComplexHeatmap::draw(object = ch_af)
+  ComplexHeatmap::draw(object = ch_af_within_group)
   dev.off()
 }
+
+
 
 # footer ------------------------------------------------------------------
 
