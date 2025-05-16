@@ -132,7 +132,7 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
 gse_data <- import(
@@ -140,7 +140,7 @@ gse_data <- import(
 )
 
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
 
@@ -301,28 +301,26 @@ all_variants |>
   ) ->
 variant_count
 
-{
-  data.table::fwrite(
+\(){
+  export(
     variant_count,
     file = file.path(
       "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.csv"
     ),
-    sep = ",",
-    row.names = FALSE,
-    col.names = TRUE,
+    format = "both"
   )
-  readr::write_rds(
-    variant_count,
-    file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
-    )
-  )
+  # readr::write_rds(
+  #   variant_count,
+  #   file = file.path(
+  #     "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+  #   )
+  # )
 }
 
-variant_count |> dplyr::filter(Position == 3933)
-variant_count <- readr::read_rds(
+# variant_count |> dplyr::filter(Position == 3933)
+variant_count <- import(
   file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.qs"
   )
 )
 
@@ -365,16 +363,12 @@ variant_count_homoplasmic |>
   scale_x_continuous(limits = c(0, 1), expand = expansion(add = c(0.01, 0))) +
   scale_y_continuous(limits = c(0, 1), expand = expansion(add = c(0.01, 0))) +
   labs(
-    x = "Homoplasmic variant popultation frequency",
+    x = "Germline variant popultation frequency",
     y = "Gnomad Frequency"
   ) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "darkgray") +
   theme(
     axis.title = element_text(size = 16),
-  ) +
-  coord_fixed(
-    xlim = c(0, 0.15),
-    ylim = c(0, 0.15)
   ) ->
 p_homoplasmic_variant_correlates_with_gnomad
 ggsave(
@@ -555,6 +549,7 @@ ggsave(
   height = 10,
   dpi = 300
 )
+
 # ! heteroplasmic --------------------------------------------------------------------
 
 
@@ -595,7 +590,7 @@ variant_count_heteroplasmic |>
   scale_x_continuous(limits = c(0, 1), expand = expansion(add = c(0.01, 0))) +
   scale_y_continuous(limits = c(0, 1), expand = expansion(add = c(0.01, 0))) +
   labs(
-    x = "Heteroplasmic variant popultation frequency",
+    x = "Somatic variant popultation frequency",
     y = "Gnomad Frequency"
   ) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "darkgray") +
@@ -788,7 +783,7 @@ wrap_plots(
 
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "hemeplasmic_variant_distribution_af_samples.pdf"
+    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "heteroplasmic_variant_distribution_af_samples.pdf"
   ),
   plot = wrap_plots(
     p_variant_af_heteroplasmic,
@@ -800,6 +795,8 @@ ggsave(
   height = 10,
   dpi = 300
 )
+
+
 # body --------------------------------------------------------------------
 
 
