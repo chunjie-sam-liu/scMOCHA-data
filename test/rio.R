@@ -50,3 +50,24 @@ tictoc::toc()
 
 export(a, "/scr1/users/liuc9/tmp/gse_data.rds")
 import("/home/liuc9/github/dotfiles/Renv/renv.yaml")
+
+
+convert(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.rds",
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.qs"
+)
+
+clean_data_dir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data"
+rdss <- list.files(
+  clean_data_dir,
+  pattern = ".rds$",
+)
+
+
+purrr::map(
+  rdss,
+  ~ convert(
+    file.path(clean_data_dir, .x),
+    file.path(clean_data_dir, gsub(".rds$", ".qs", .x))
+  )
+)

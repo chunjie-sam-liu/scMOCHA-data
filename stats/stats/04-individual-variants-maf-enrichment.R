@@ -46,6 +46,7 @@ log_layout(layout_glue_colors)
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
+
 fn_plot_mtdna <- function() {
   # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
@@ -124,16 +125,18 @@ fn_plot_mtdna <- function() {
       ),
     )
 }
+
 # load data ---------------------------------------------------------------
+
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 
-gse_dataset_metadata_full <- readr::read_rds(
+gse_dataset_metadata_full <- import(
   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
 )
 
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
 )
 
 
