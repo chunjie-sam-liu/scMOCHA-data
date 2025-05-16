@@ -51,14 +51,18 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
   dplyr::arrange(cancer_types)
 
-all_heteroplasmic_af <- data.table::fread(
-  file.path(cleandatadir, "all_homo_af.cluster.csv"),
-  header = TRUE,
-  sep = ",",
-)
+all_homo_af <- import(file.path(cleandatadir, "all_hetero_af.cluster.fst"))
+all_heteroplasmic_af <- import(
+  file.path(cleandatadir, "all_homo_af.cluster.fst"),
+) |>
+  dplyr::left_join(all_homo_af, by = c("gseid", "srrid", "barcode")) |>
+  dplyr::mutate(
+    num_variants = num_variants.x + num_variants.y
+  ) |>
+  dplyr::select(-c(num_variants.x, num_variants.y))
 
 # all_homo_af <- data.table::fread(
 #   file.path(cleandatadir, "all_homo_af.cluster.csv"),
@@ -67,12 +71,14 @@ all_heteroplasmic_af <- data.table::fread(
 # )
 
 
-all_variant <- readr::read_rds(
-  file.path(cleandatadir, "all_variant.rds")
+all_variant <- import(
+  file.path(cleandatadir, "all_variant.qs")
 )
 
+all_variant |> dplyr::count(issomatic)
+
 all_variant |>
-  dplyr::filter(issomatic == "homoplasmic") |>
+  dplyr::filter(issomatic %in% c("homoplasmic", "heteroplasmic")) |>
   dplyr::arrange(Position) ->
 heteroplasmic
 
@@ -121,11 +127,11 @@ heteroplasmic_disease
 VARIANTS <- heteroplasmic$variant
 length(VARIANTS)
 
-CELLBARCODE <- data.table::fread(
-  file.path(cleandatadir, "barcode_celltype.csv")
+CELLBARCODE <- import(
+  file.path(cleandatadir, "barcode_celltype.fst")
 )
-METADATA <- readr::read_rds(
-  file.path(cleandatadir, "gse_dataset_metadata_full.rds")
+METADATA <- import(
+  file.path(cleandatadir, "gse_dataset_metadata_full.qs")
 ) |>
   dplyr::mutate(
     Haplogroup_s = purrr::map_chr(
@@ -360,12 +366,13 @@ ComplexHeatmap::Heatmap(
     title_gp = gpar(fontsize = 10)
   )
 ) ->
-ch_af;ch_af
+ch_af
+# ch_af
 
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af.homo.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af.homo+hetero.pdf",
     width = 22,
     height = 9
   )
