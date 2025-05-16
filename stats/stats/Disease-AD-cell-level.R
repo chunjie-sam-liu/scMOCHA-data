@@ -50,7 +50,7 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
@@ -282,8 +282,12 @@ topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
+library(ggh4x)
+library(ggbeeswarm)
+library(ggnewscale)
+
 color_celltype_bulk <- c(
-  "bulk" = "red",
+  "Pseudo-bulk" = "red",
   color_celltype
 )
 
@@ -291,50 +295,85 @@ color_celltype_bulk <- c(
 admeta_sc5p_variant_type_af |>
   dplyr::filter(variant %in% topvariants) |>
   dplyr::mutate(
-    barcode = gsub(barcode, pattern = "_", replacement = " ")
+    barcode = gsub(barcode, pattern = "_", replacement = " "),
+    barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
   ) |>
   dplyr::mutate(
     barcode = factor(barcode, levels = names(color_celltype_bulk)),
+  ) ->
+forplot_
+
+forplot_ |>
+  dplyr::group_by(disease, barcode, variant) |>
+  dplyr::summarise(
+    mean_cluster_variant_af = mean(af, na.rm = T),
+  ) ->
+disease_barcode_variatn_af
+
+forplot_ |>
+  dplyr::left_join(
+    disease_barcode_variatn_af,
+    by = c("disease", "barcode", "variant")
   ) |>
-  ggplot(aes(
-    x = disease, y = af, fill = disease
-  )) +
-  geom_boxplot(outlier.color = NA, width = 0.5) +
-  geom_jitter(
-    size = 0.5,
-    alpha = 0.5,
-    width = 0.2
-  ) +
-  scale_fill_manual(
-    values = color_disease[c("Alzheimer's Disease", "Healthy")],
-    name = "Disease",
-    labels = c("AD", "Healthy")
-  ) +
-  ggsignif::geom_signif(
-    comparisons = list(
-      c("Alzheimer's Disease", "Healthy")
-    ),
-    y_position = 0.8
-  ) +
+  ggplot(aes(x = disease)) +
   ggh4x::facet_grid2(
     variant ~ barcode,
-    # switch = "x",
     strip = ggh4x::strip_themed(
       background_x = ggh4x::elem_list_rect(
-        fill = color_celltype_bulk
+        fill = color_celltype_bulk,
+        color = NA
       ),
       text_x = ggh4x::elem_list_text(
         colour = "white",
         face = c("bold")
       ),
       background_y = ggh4x::elem_list_rect(
-        fill = "#AAAAAA"
+        fill = "black",
+        color = NA
       ),
       text_y = ggh4x::elem_list_text(
         colour = "white",
         face = c("bold")
       )
     )
+  ) +
+  geom_violin(
+    aes(
+      y = af,
+      fill = disease
+    ),
+    alpha = 0.7,
+    size = 1,
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      y = af,
+      color = disease
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = 1,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = af,
+    ),
+    comparisons = list(
+      c("Alzheimer's Disease", "Healthy")
+    ),
+    y_position = 0.8
   ) +
   theme(
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
@@ -346,7 +385,7 @@ admeta_sc5p_variant_type_af |>
     axis.text.x = element_blank(),
     # axis.line.x = element_blank(),
     axis.title.x = element_blank(),
-    legend.position = "right",
+    legend.position = "top",
     legend.key = element_blank(),
     axis.title.y = element_text(color = "black", size = 16),
     axis.text.y = element_text(color = "black"),
@@ -367,11 +406,11 @@ admeta_sc5p_variant_type_af |>
   ) +
   labs(
     y = "Allele Frequency",
-  )
+  ) ->
 p_variant_boxplot_af
 
 ggsave(
-  filename = file.path(outdir, "variant_boxplot_af.pdf"),
+  filename = file.path(outdir, "ad-variant_boxplot.pdf"),
   plot = p_variant_boxplot_af,
   width = 15,
   height = 8,
