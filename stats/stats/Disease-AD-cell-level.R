@@ -54,27 +54,40 @@ outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic"
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+gse_dataset_metadata_full <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- readr::read_rds("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.rds") |>
+all_variant <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.qs") |>
   dplyr::select(variant, issomatic)
 
-all_heteroplasmic_af <- data.table::fread(
+all_hetero_af_cluster <- import(
   file.path(cleandatadir, "all_hetero_af.cluster.csv"),
-  header = TRUE,
-  sep = ",",
 ) |>
   tidyr::pivot_longer(
     cols = -c(gseid, srrid, barcode, num_variants),
     names_to = "variant",
     values_to = "af"
   )
+
+all_hetero_af_bulk <- import(
+  file.path(cleandatadir, "all_hetero_af.bulk.csv"),
+) |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, barcode, num_variants),
+    names_to = "variant",
+    values_to = "af"
+  )
+
+all_hetero_af_cluster |>
+  dplyr::bind_rows(
+    all_hetero_af_bulk
+  ) ->
+all_hetero_af_cluster_bulk
 
 # body --------------------------------------------------------------------
 
@@ -188,7 +201,7 @@ admeta_sc5p_variant_type |>
     srrid, disease, variant
   ) |>
   dplyr::left_join(
-    all_heteroplasmic_af,
+    all_hetero_af_cluster_bulk,
     by = c("srrid", "variant")
   ) ->
 admeta_sc5p_variant_type_af
@@ -250,11 +263,13 @@ admeta_sc5p_variant_type_af_ttest |>
   dplyr::arrange(
     desc(rank)
   ) |>
-  dplyr::filter(
-    `Alzheimer's Disease` > 10,
-    Healthy > 10
+  dplyr::rename(
+    ad = "Alzheimer's Disease",
   ) |>
-  dplyr::filter(barcode == "Mono") ->
+  dplyr::filter(
+    ad >= 10,
+    Healthy >= 10
+  ) ->
 admeta_sc5p_variant_type_af_ttest_rank
 
 admeta_sc5p_variant_type_af_ttest_rank |>
@@ -266,10 +281,21 @@ topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
 
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
-color_chemistry
+
+color_celltype_bulk <- c(
+  "bulk" = "red",
+  color_celltype
+)
+
 
 admeta_sc5p_variant_type_af |>
   dplyr::filter(variant %in% topvariants) |>
+  dplyr::mutate(
+    barcode = gsub(barcode, pattern = "_", replacement = " ")
+  ) |>
+  dplyr::mutate(
+    barcode = factor(barcode, levels = names(color_celltype_bulk)),
+  ) |>
   ggplot(aes(
     x = disease, y = af, fill = disease
   )) +
@@ -295,7 +321,7 @@ admeta_sc5p_variant_type_af |>
     # switch = "x",
     strip = ggh4x::strip_themed(
       background_x = ggh4x::elem_list_rect(
-        fill = color_celltype
+        fill = color_celltype_bulk
       ),
       text_x = ggh4x::elem_list_text(
         colour = "white",
@@ -341,7 +367,7 @@ admeta_sc5p_variant_type_af |>
   ) +
   labs(
     y = "Allele Frequency",
-  ) ->
+  )
 p_variant_boxplot_af
 
 ggsave(
@@ -355,56 +381,6 @@ ggsave(
 
 
 
-admeta_sc5p_variant_type_af |>
-  dplyr::filter(
-    variant == admeta_sc5p_variant_type_af_ttest_rank$variant[3],
-    barcode == admeta_sc5p_variant_type_af_ttest_rank$barcode[3]
-  ) |>
-  ggstatsplot::ggbetweenstats(
-    data = _,
-    x = disease,
-    y = af,
-    pairwise.display = "p-value",
-    pairwise.comparisons = TRUE,
-    p.adjust.method = "fdr",
-    p.adjust.display = TRUE,
-    p.value.label = "p.adj",
-    p.value.label.size = 3.5,
-    p.value.label.color = "black",
-    p.value.label.position = c(0.5, 0.95),
-    p.value.label.nudge_y = 0.05,
-    ggplot.component = list(
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-    )
-  )
-
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
-admeta_sc5p_variant_type_af |>
-  dplyr::filter(
-    variant == "1670A>G"
-  ) |>
-  dplyr::filter(
-    variant %in% top5_variant$variant
-  ) |>
-  ggpubr::ggboxplot(
-    data = _,
-    x = "disease",
-    y = "af",
-    add = "jitter",
-    color = "disease",
-    palette = "jco",
-    facet.by = "barcode",
-    nrow = 1,
-    ggplot.component = list(
-      theme(
-        axis.text.x = element_text(angle = 45, hjust = 1)
-      )
-    )
-  ) +
-  ggpubr::stat_compare_means()
 
 
 # footer ------------------------------------------------------------------

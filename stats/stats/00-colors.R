@@ -1,7 +1,7 @@
 color_disease <- c(
   "Alzheimer's Disease" = "#BC3C29FF",
-  "COVID-19" = "#0072B5FF",
-  "Healthy" = "#E18727FF",
+  "COVID-19" = "#E18727FF",
+  "Healthy" = "#0072B5FF",
   "Unknown" = "grey50",
   "Other" = "grey"
 )
