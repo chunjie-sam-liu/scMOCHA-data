@@ -27,6 +27,7 @@ SRR_FILENAME = Path(
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
+OUTDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/SEX")
 
 
 class SCESEX:
@@ -47,6 +48,9 @@ class SCESEX:
         #     "/home/liuc9/github/scMOCHA-data/data/GSE214865/final/GSM6616991/filtered_feature_bc_matrix.h5"
         # )
         self.h5_file = Path(h5_file)
+        self.gseid = self.h5_file.parent.parent.parent.name
+        self.srrid = self.h5_file.parent.name
+        self.srrdir = self.h5_file.parent
         self.adata = sc.read_10x_h5(h5_file)
         self.adata.var_names_make_unique()
         self.mean_expr = None
@@ -94,12 +98,7 @@ class SCESEX:
         keys : list
             List of gene names to plot.
         """
-        # outdir = self.h5_file.parent
-        # outplotfile = outdir / "sex_estimate_violin.pdf"
-        srrid = self.h5_file.parent.name
-        # gseid = self.h5_file.parent.parent.parent.name
-        srrdir = self.h5_file.parent
-        sc.settings.figdir = srrdir
+        sc.settings.figdir = OUTDIR
         sc.pl.violin(
             self.adata,
             keys=keys,
@@ -108,7 +107,7 @@ class SCESEX:
             rotation=45,
             use_raw=False,
             show=False,
-            save=f"_{srrid}_sex_markers.pdf",
+            save=f"_{self.gseid}_{self.srrid}_sex_markers.pdf",
         )
 
     def sex_score(self):
@@ -136,13 +135,16 @@ class SCESEX:
             }
         )
 
-        return pl.DataFrame(
+        df = pl.DataFrame(
             {
                 "sex": estimated_sex,
                 "x_score": x_score,
                 "y_score": y_score,
             }
         )
+        outfile = OUTDIR / f"SEX_score_{self.gseid}_{self.srrid}.csv"
+        df.write_csv(outfile)
+        return df
 
 
 # scesex = SCESEX(

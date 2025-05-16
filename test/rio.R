@@ -86,3 +86,9 @@ purrr::map(
     file.path(clean_data_dir, gsub(".csv$", ".fst", .x))
   )
 )
+
+
+convert(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.fst",
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.feather"
+)
