@@ -433,7 +433,7 @@ ch_af_within_group
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_within_group.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_within_group-celltype.pdf",
     width = 20,
     height = 9
   )

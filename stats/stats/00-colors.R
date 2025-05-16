@@ -14,8 +14,8 @@ color_chemistry <- c(
 )
 
 color_gender <- c(
-  "Female" = "#FC8D62FF",
-  "Male" = "#66C2A5FF",
+  "Female" = "#EE0000FF",
+  "Male" = "#3B4992FF",
   "Unknown" = "grey50"
 )
 
@@ -26,7 +26,7 @@ color_celltype <- c(
   "DC" = "#E78AC3FF",
   "Mono" = "#A6D854FF",
   "NK" = "#FFD92FFF",
-  "other" = "#B3B3B3FF",
+  "other" = "grey",
   "other T" = "#E5C494FF"
 )
 
