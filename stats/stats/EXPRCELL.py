@@ -215,6 +215,37 @@ def sceexpr_all(max_works: int = 20):
     #     return None
 
 
+def collect_expr(max_workers: int = 20):
+    csvs = OUTDIR.glob("*.csv")
+    dfs = []
+
+    def process_csv(csv):
+        df = pl.read_csv(csv)
+        gseid, srrid = csv.stem.split("_")[:2]
+        df = df.with_columns(
+            pl.lit(gseid).alias("gseid"),
+            pl.lit(srrid).alias("srrid"),
+        )
+        # print(f"Processing {csv} with shape {df.shape} {gseid} {srrid}")
+        return df
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=max_workers
+    ) as executor:
+        for df in tqdm(executor.map(process_csv, csvs), total=len(list(csvs))):
+            if df is not None:
+                dfs.append(df)
+
+    # Combine all dataframes
+    if dfs:
+        dfs = pl.concat(dfs)
+    else:
+        dfs = pl.DataFrame()
+    dfs.write_csv(
+        OUTDIR / "gse_srrid_celltype_gene_expr.csv",
+    )
+
+
 app = typer.Typer()
 
 
@@ -238,6 +269,11 @@ def EXPRONE(
     gseid, srrid, srrdir = gseid_srrid_srrdir_csv.strip().split(",")
     srrdir = Path(srrdir)
     scexpr(gseid, srrid, srrdir)
+
+
+@app.command()
+def COLLECT(max_worksers: int = 20):
+    collect_expr(max_workers=max_worksers)
 
 
 if __name__ == "__main__":

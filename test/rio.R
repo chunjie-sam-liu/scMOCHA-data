@@ -92,3 +92,9 @@ convert(
   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.fst",
   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.feather"
 )
+
+
+convert(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.csv",
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst"
+)
