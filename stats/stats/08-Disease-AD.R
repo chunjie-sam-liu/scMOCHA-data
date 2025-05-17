@@ -513,7 +513,17 @@ ggsave(
   plot = p_variant_boxplot_af_sc,
   width = 15,
   height = 8,
-  device = cairo_pdf
+  device = "pdf"
+)
+
+
+ggsave(
+  filename = file.path(outdir, "ad-variant_boxplot-single-cell.png"),
+  plot = p_variant_boxplot_af_sc,
+  device = ragg::agg_png,
+  width = 15,
+  height = 8,
+  dpi = 150
 )
 
 # ! save forplot_ for correlation --------------------------------------------------------------------
