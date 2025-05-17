@@ -289,12 +289,15 @@ expr |>
   dplyr::left_join(
     v_3178T_A,
     by = c("celltype")
-  ) ->
+  ) |>
+  # Filter rows where af is not NULL to ensure proper size matching
+  dplyr::filter(!purrr::map_lgl(af, is.null)) ->
 expr_v_3178T_A
 
 expr_v_3178T_A |>
   dplyr::mutate(
-    corr_results = parallel::mcmapply(
+    corr_results = purrr::map2(
+      expr, af,
       function(.expr, .af) {
         .expr |>
           dplyr::left_join(
@@ -302,6 +305,12 @@ expr_v_3178T_A |>
             by = c("gseid", "srrid")
           ) ->
         .expr_af
+
+        # Only proceed if we have sufficient data after joining
+        if (nrow(.expr_af) < 3 || all(is.na(.expr_af$af)) || all(is.na(.expr_af$expr))) {
+          return(tibble::tibble(corr = NA_real_, pval = NA_real_))
+        }
+
         tryCatch(
           {
             cor.test(~ af + expr, data = .expr_af, method = "pearson") |>
@@ -312,14 +321,10 @@ expr_v_3178T_A |>
               )
           },
           error = function(e) {
-            return(NULL)
+            return(tibble::tibble(corr = NA_real_, pval = NA_real_))
           }
         )
-      },
-      expr,
-      af,
-      mc.cores = 10,
-      SIMPLIFY = FALSE
+      }
     )
   ) |>
   dplyr::select(-expr, -af) |>
