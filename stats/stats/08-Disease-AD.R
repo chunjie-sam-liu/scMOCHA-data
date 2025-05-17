@@ -169,9 +169,8 @@ admeta_sc5p_variant_type_af |>
   tidyr::nest() |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    t = purrr::map(
-      .x = data,
-      .f = \(.x) {
+    t = parallel::mcmapply(
+      FUN = \(.x) {
         # .x <- a$data[[1]]
         .x |>
           dplyr::count(disease) |>
@@ -200,7 +199,10 @@ admeta_sc5p_variant_type_af |>
             return(NULL)
           }
         )
-      }
+      },
+      data,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
     )
   ) ->
 admeta_sc5p_variant_type_af_ttest
@@ -365,6 +367,155 @@ ggsave(
 
 
 
+# ! single cell level --------------------------------------------------------------------
+variant_sc_af <- import(
+  file.path(
+    cleandatadir,
+    "all_hetero_af.cell.fst"
+  )
+)
+
+variant_sc_af |>
+  dplyr::select(gseid, srrid, barcode, dplyr::all_of(topvariants)) |>
+  dplyr::filter(srrid %in% forplot_$srrid) |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, barcode),
+    names_to = "variant",
+    values_to = "af"
+  ) |>
+  dplyr::left_join(
+    admeta_sc5p,
+    by = c("gseid", "srrid")
+  ) ->
+topvariant_sc_af_meta
+
+BARCODES <- import(
+  file.path(
+    cleandatadir,
+    "barcode_celltype.fst"
+  )
+) |>
+  dplyr::filter(
+    barcode %in% unique(topvariant_sc_af_meta$barcode)
+  )
+
+
+topvariant_sc_af_meta |>
+  dplyr::left_join(
+    BARCODES,
+    by = c("gseid", "srrid", "barcode")
+  ) |>
+  dplyr::mutate(
+    celltype = gsub(celltype, pattern = "_", replacement = " "),
+  ) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype)),
+  ) ->
+forplot_sc
+
+forplot_sc |>
+  ggplot(aes(x = disease)) +
+  ggh4x::facet_grid2(
+    variant ~ celltype,
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype_bulk,
+        color = NA
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      background_y = ggh4x::elem_list_rect(
+        fill = "black",
+        color = NA
+      ),
+      text_y = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      )
+    )
+  ) +
+  geom_violin(
+    aes(
+      y = af,
+      fill = disease
+    ),
+    alpha = 0.7,
+    size = 1,
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggbeeswarm::geom_quasirandom(
+    aes(
+      y = af,
+      color = disease
+    ),
+    size = 1,
+    dodge.width = .75,
+    alpha = 1,
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    values = color_disease[c("Alzheimer's Disease", "Healthy")],
+    name = "Disease",
+    labels = c("AD", "Healthy")
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = af,
+    ),
+    comparisons = list(
+      c("Alzheimer's Disease", "Healthy")
+    ),
+    y_position = 0.8
+  ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    # axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    legend.position = "top",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black", size = 16),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  labs(
+    y = "Allele Frequency",
+  ) ->
+p_variant_boxplot_af_sc
+
+ggsave(
+  filename = file.path(outdir, "ad-variant_boxplot-single-cell.pdf"),
+  plot = p_variant_boxplot_af_sc,
+  width = 15,
+  height = 8,
+  device = cairo_pdf
+)
+
 # ! save forplot_ for correlation --------------------------------------------------------------------
 OUTDIR <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad"
 dir.create(OUTDIR, recursive = TRUE)
@@ -385,15 +536,15 @@ forplot_ |>
     .before = 1
   ) -> df
 
-df |>
-  dplyr::select(gseid, srrid, disease) |>
-  dplyr::distinct() |>
-  export(
-    file = file.path(
-      OUTDIR,
-      "ad-celltype-variant-af-gse-srrid.csv"
-    )
-  )
+# df |>
+#   dplyr::select(gseid, srrid, disease) |>
+#   dplyr::distinct() |>
+#   export(
+#     file = file.path(
+#       OUTDIR,
+#       "ad-celltype-variant-af-gse-srrid.csv"
+#     )
+#   )
 
 
 
