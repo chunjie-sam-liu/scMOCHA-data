@@ -420,6 +420,42 @@ df |>
     )
   )
 
+df |>
+  # dplyr::nest_by(variant) |>
+  dplyr::group_by(variant) |>
+  tidyr::nest() |>
+  dplyr::ungroup() |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = variant,
+      .y = data,
+      .f = \(.x, .y) {
+        outfilename <- file.path(
+          OUTDIR,
+          "ad-celltype-variant-af-{.x}.qs" |> glue::glue()
+        )
+        .y |>
+          tidyr::pivot_longer(
+            cols = -c(gseid, srrid, disease),
+            names_to = "celltype",
+            values_to = "af"
+          ) |>
+          dplyr::select(-disease) |>
+          dplyr::group_by(
+            celltype
+          ) |>
+          tidyr::nest(.key = "af") |>
+          dplyr::ungroup() ->
+        .yy
+        export(
+          x = .yy,
+          file = outfilename
+        )
+      }
+    )
+  )
+
+
 
 
 

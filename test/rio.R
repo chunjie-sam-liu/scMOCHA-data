@@ -98,3 +98,25 @@ convert(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.csv",
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst"
 )
+
+
+d <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst")
+
+d |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, genename),
+    names_to = "celltype",
+    values_to = "expr"
+  ) ->
+dd
+
+dd |>
+  dplyr::group_by(genename, celltype) |>
+  tidyr::nest(.key = "expr") |>
+  dplyr::ungroup() ->
+ddd
+
+export(
+  ddd,
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
+)
