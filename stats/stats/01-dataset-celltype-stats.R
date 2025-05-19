@@ -51,20 +51,30 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+  dplyr::select(
+    srrid,
+    sex_pred = sex
+  )
 
-gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
-)
+gse_dataset_metadata_full <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+) |>
+  dplyr::left_join(
+    sex_pred,
+    by = "srrid"
+  ) |>
+  dplyr::mutate(
+    Gender = sex_pred
+  )
 
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
 
 
 # thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
 )
 
 
@@ -84,7 +94,7 @@ gse_data |>
 gse_data_haplo_variant
 
 # ! cell type ratio --------------------------------------------------------------------
-
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
 gse_data_haplo_variant |>
   dplyr::mutate(
@@ -96,19 +106,21 @@ gse_data_haplo_variant |>
   dplyr::mutate(
     disease = factor(
       disease,
-      levels = c(
-        "Alzheimer's Disease",
-        "COVID-19",
-        "Healthy",
-        "Unknown",
-        "Other"
-      )
+      # levels = c(
+      #   "Alzheimer's Disease",
+      #   "COVID-19",
+      #   "Healthy",
+      #   "Unknown",
+      #   "Other"
+      # )
+      levels = names(color_disease)
     )
   ) |>
   dplyr::mutate(
     Chemistry = factor(
       Chemistry,
-      levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE")
+      # levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE")
+      levels = names(color_chemistry)
     )
   ) |>
   dplyr::arrange(disease, Chemistry) |>
@@ -116,9 +128,10 @@ gse_data_haplo_variant |>
   dplyr::mutate(
     celltype = factor(
       celltype,
-      levels = c(
-        "B", "CD4 T", "CD8 T", "DC", "Mono", "NK", "other", "other T"
-      )
+      # levels = c(
+      #   "B", "CD4 T", "CD8 T", "DC", "Mono", "NK", "other", "other T"
+      # )
+      levels = names(color_celltype)
     )
   ) ->
 for_celltype_ratio_plot
@@ -147,16 +160,16 @@ for_celltype_ratio_plot |>
   dplyr::arrange(disease, -b_ratio) ->
 rank_srrid
 
-ggsci::pal_nejm()(5) |> color()
+# ggsci::pal_nejm()(5) |> color()
 
 
-disease_colors <- c(
-  "Alzheimer's Disease" = "#BC3C29FF",
-  "COVID-19" = "#0072B5FF",
-  "Healthy" = "#E18727FF",
-  "Unknown" = "grey50",
-  "Other" = "grey"
-)
+# disease_colors <- c(
+#   "Alzheimer's Disease" = "#BC3C29FF",
+#   "COVID-19" = "#0072B5FF",
+#   "Healthy" = "#E18727FF",
+#   "Unknown" = "grey50",
+#   "Other" = "grey"
+# )
 
 rank_srrid |>
   dplyr::mutate(
@@ -185,7 +198,7 @@ rank_srrid |>
   ) +
   scale_fill_manual(
     name = "Disease",
-    values = disease_colors
+    values = color_disease
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
@@ -203,12 +216,12 @@ rank_srrid |>
   ) ->
 p_tile_disease
 
-chemistry_colors <- c(
-  "SC5P-PE" = "#440154FF",
-  "SC5P-R2" = "#31688EFF",
-  "SC3Pv3" = "#35B779FF",
-  "SC3Pv2" = "#FDE725FF"
-)
+# chemistry_colors <- c(
+#   "SC5P-PE" = "#440154FF",
+#   "SC5P-R2" = "#31688EFF",
+#   "SC3Pv3" = "#35B779FF",
+#   "SC3Pv2" = "#FDE725FF"
+# )
 
 rank_srrid |>
   dplyr::left_join(
@@ -227,7 +240,7 @@ rank_srrid |>
   ) +
   scale_fill_manual(
     name = "Chemistry",
-    values = chemistry_colors
+    values = color_chemistry
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
@@ -244,12 +257,12 @@ rank_srrid |>
   ) ->
 p_tile_chemistry
 
-RColorBrewer::brewer.pal(8, "Set2") |> color()
-gender_colors <- c(
-  "Female" = "#FC8D62FF",
-  "Male" = "#66C2A5FF",
-  "Unknown" = "grey50"
-)
+# RColorBrewer::brewer.pal(8, "Set2") |> color()
+# gender_colors <- c(
+#   "Female" = "#FC8D62FF",
+#   "Male" = "#66C2A5FF",
+#   "Unknown" = "grey50"
+# )
 
 rank_srrid |>
   dplyr::left_join(
@@ -268,7 +281,7 @@ rank_srrid |>
   ) +
   scale_fill_manual(
     name = "Gender",
-    values = gender_colors
+    values = color_gender
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
@@ -320,16 +333,16 @@ rank_srrid |>
   ) ->
 p_tile_age
 
-celltype_colors <- c(
-  "B" = "#66C2A5FF",
-  "CD4 T" = "#FC8D62FF",
-  "CD8 T" = "#8DA0CBFF",
-  "DC" = "#E78AC3FF",
-  "Mono" = "#A6D854FF",
-  "NK" = "#FFD92FFF",
-  "other" = "#B3B3B3FF",
-  "other T" = "#E5C494FF"
-)
+# celltype_colors <- c(
+#   "B" = "#66C2A5FF",
+#   "CD4 T" = "#FC8D62FF",
+#   "CD8 T" = "#8DA0CBFF",
+#   "DC" = "#E78AC3FF",
+#   "Mono" = "#A6D854FF",
+#   "NK" = "#FFD92FFF",
+#   "other" = "#B3B3B3FF",
+#   "other T" = "#E5C494FF"
+# )
 
 for_celltype_ratio_plot |>
   dplyr::mutate(
@@ -354,7 +367,7 @@ for_celltype_ratio_plot |>
   # ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = celltype_colors
+    values = color_celltype
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
@@ -400,7 +413,7 @@ for_celltype_ratio_plot |>
   # ) +
   scale_fill_manual(
     name = "Cell Type",
-    values = celltype_colors
+    values = color_celltype
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),

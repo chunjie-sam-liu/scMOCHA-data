@@ -1,11 +1,24 @@
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
 
-gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
-)
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+  dplyr::select(
+    srrid,
+    sex_pred = sex
+  )
 
+gse_dataset_metadata_full <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+) |>
+  dplyr::left_join(
+    sex_pred,
+    by = "srrid"
+  ) |>
+  dplyr::mutate(
+    Gender = sex_pred
+  )
 
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 # ! Sankey plot for samples --------------------------------------------------------------------
 
 # meta --------------------------------------------------------------------
@@ -126,7 +139,7 @@ for_sankey_plot |>
     # aes(fill = Chemistry),
     width = 0.3
   ) +
-  scale_fill_manual(values = chem_colors) +
+  scale_fill_manual(values = color_chemistry) +
   geom_text(
     stat = "stratum",
     aes(label = after_stat(stratum))
@@ -154,7 +167,7 @@ meta_plot_sankey
 meta_plot_sankey
 
 ggsave(
-  file.path(outdir, "meta_plot_alluvial.pdf"),
+  file.path(outdir, "meta_plot_alluvial_sex_pred.pdf"),
   meta_plot_sankey,
   width = 15,
   height = 8
