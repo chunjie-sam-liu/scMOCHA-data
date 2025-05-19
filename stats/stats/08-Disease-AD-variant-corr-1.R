@@ -189,10 +189,10 @@ variant_go |>
 variant_go_all
 
 
-export(
-  variant_go_all,
-  file = file.path(outdir, "variant_go_all.qs")
-)
+# export(
+#   variant_go_all,
+#   file = file.path(outdir, "variant_go_all.qs")
+# )
 
 variant_go_all |>
   dplyr::mutate(
@@ -208,55 +208,469 @@ variant_go_all |>
       }
     )
   ) |>
-  dplyr::pull(a) |>
+  dplyr::pull(a) ->
+pos_bp_plot_all
+
+names(pos_bp_plot_all) <- variant_go_all$variant
+
+pos_bp_plot_all |>
   wrap_plots() +
   plot_annotation(
     title = "Positive correlation with expression",
     theme = theme(plot.title = element_text(size = 20))
   ) ->
-pos_bp_plot_all
+pos_bp_plot_all_patch
 
 ggsave(
   path = outdir,
   filename = file.path("pos_bp_plot_all.pdf"),
-  plot = pos_bp_plot_all,
+  plot = pos_bp_plot_all_patch,
   width = 20,
-  height = 13,
+  height = 10,
   dpi = 300
+)
+
+variants |>
+  purrr::map(
+    ~ {
+      ggsave(
+        path = outdir,
+        filename = file.path("pos_bp_{.x}.pdf" |> glue::glue()),
+        plot = pos_bp_plot_all[[.x]],
+        width = 10,
+        height = 7,
+        dpi = 300
+      )
+    }
+  )
+
+
+
+# ! 3173G>A --------------------------------------------------------------------
+theme_cor <- function() {
+  theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+    plot.title = element_text(size = rel(1.3), vjust = 2, hjust = 0.5, lineheight = 0.8),
+
+    # axis
+    axis.title.x = element_text(face = "bold", size = 16),
+    axis.title.y = element_text(face = "bold", size = 16, angle = 90),
+    axis.text = element_text(size = rel(1.1)),
+    axis.text.x = element_text(hjust = 0.5, vjust = 0, size = 14),
+    axis.text.y = element_text(vjust = 0.5, hjust = 0, size = 14),
+    axis.line = element_line(colour = "black"),
+
+    # ticks
+    axis.ticks = element_line(colour = "black"),
+
+    # legend
+    legend.title = element_text(size = rel(1.1), face = "bold"),
+    legend.text = element_text(size = rel(1.1), face = "bold"),
+    # legend.position = "bottom",
+    # legend.position = "none",
+    # legend.direction = "horizontal",
+    legend.background = element_blank(),
+    legend.key = element_rect(fill = NA, colour = NA),
+
+    # strip
+    strip.text = element_text(size = rel(1.3)),
+
+    # panel
+    panel.background = element_blank(),
+    # aspect.ratio = 1,
+    complete = T
+  )
+}
+
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
+variants <- c(
+  "1670A>G",
+  "1397T>A",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A"
+)
+library(clusterProfiler)
+variant_go_all <- import(
+  file = file.path(outdir, "variant_go_all.qs")
+)
+
+mt_dna_repair_genes <- c(
+  "OGG1",
+  "MUTYH",
+  "NEIL1", "NEIL2", "NTHL1",
+  "APEX1",
+  "POLG",
+  "LIG3",
+  "TWINKLE",
+  "TFAM",
+  "SIRT3", "SIRT4", "SIRT5",
+  "PRDX3", "PRDX5", "GPX1",
+  "MPV17",
+  "TWNK",
+  "TYMP"
 )
 
 
 variant_go_all |>
+  dplyr::filter(variant == "3173G>A") |>
+  dplyr::pull(pos_bp) |>
+  as.data.frame() |>
+  dplyr::filter(grepl("dna repair", Description, ignore.case = TRUE)) |>
+  dplyr::pull(geneID) |>
+  stringr::str_split("/") |>
+  unlist() |>
+  sort() |>
+  unique() ->
+dna_repair_genes_pathway
+dna_repair_genes <- c(dna_repair_genes_pathway, mt_dna_repair_genes)
+
+
+expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs") |>
+  dplyr::filter(celltype == "Mono")
+
+v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
+  dplyr::filter(celltype == "Mono")
+
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+
+color_disease
+
+import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+) |>
+  dplyr::select(srrid, disease, Chemistry) |>
+  dplyr::filter(
+    Chemistry == "SC5P-PE"
+  ) |>
+  dplyr::filter(
+    disease %in% c(
+      "Alzheimer's Disease",
+      "Healthy"
+    )
+  ) ->
+metadata
+
+
+corr_3173G_A <- fn_load_corr("3173G>A") |>
+  dplyr::filter(genename %in% c(dna_repair_genes)) |>
+  dplyr::arrange(desc(corr))
+
+corr_3173G_A |>
+  dplyr::filter(genename %in% mt_dna_repair_genes)
+
+expr |>
+  dplyr::left_join(
+    v_3173G_A,
+    by = c("celltype")
+  ) |>
+  dplyr::left_join(
+    corr_3173G_A,
+    by = c("genename", "celltype")
+  ) |>
+  dplyr::arrange(desc(corr)) |>
+  dplyr::filter(genename %in% dna_repair_genes) ->
+expr_v_3173G_A
+
+expr_v_3173G_A |>
   dplyr::mutate(
-    a = purrr::map2(
-      .x = variant,
-      .y = neg_bp,
-      .f = ~ {
-        fn_plot_go(.y, 20, "BP") +
-          labs(title = .x) +
-          theme(
-            plot.title = element_text(size = 20)
-          )
+    corr_plot = purrr::pmap(
+      list(
+        .expr = expr,
+        .af = af,
+        .genename = genename
+      ),
+      .f = \(.expr, .af, .genename) {
+        # .expr <- expr_v_3173G_A$expr[[1]]
+        # .af <- expr_v_3173G_A$af[[1]]
+        # .genename <- expr_v_3173G_A$genename[[1]]
+        # cor_test <- cor(.expr, .af, method = "pearson")
+
+        .expr |>
+          dplyr::left_join(
+            .af,
+            by = c("gseid", "srrid")
+          ) |>
+          dplyr::inner_join(
+            metadata,
+            by = c("srrid")
+          ) ->
+        .expr_af
+        cor_test <- cor.test(~ expr + af, data = .expr_af, method = "pearson")
+
+        tryCatch(
+          {
+            .expr_af |>
+              ggplot(aes(
+                x = af,
+                y = expr
+              )) +
+              geom_point(
+                aes(
+                  color = disease,
+                ),
+                position = position_jitter(width = 0.1, height = 0.1),
+              ) +
+              scale_color_manual(
+                values = color_disease,
+                name = "Disease",
+              ) +
+              geom_smooth(
+                color = "red",
+                method = "lm"
+              ) +
+              scale_x_continuous(
+                # limits = c(0, 96),
+                # breaks = seq(0, 96, by = 10),
+                # labels = seq(0, 96, by = 10),
+                expand = expansion(mult = c(0.01, 0.01))
+              ) +
+              scale_y_continuous(
+                # limits = c(0, 90),
+                # breaks = seq(0, 90, by = 10),
+                # labels = seq(0, 90, by = 10),
+                expand = expansion(mult = c(0.01, 0))
+              ) +
+              theme_cor() +
+              theme(
+                # plot.title = element_blank(),
+                legend.position = "bottom"
+              ) +
+              labs(
+                title = human_read_latex_pval(
+                  .x = human_read(cor_test$p.value),
+                  .s = glue::glue("R={round(cor_test$estimate,3)}")
+                ),
+                x = "3173G>A Allele frequency",
+                y = "{.genename} normalized gene expression" |> glue::glue(),
+              )
+          },
+          error = function(e) {
+            # message("Error in cor.test: ", e)
+            return(NULL)
+          }
+        )
       }
     )
-  ) |>
-  dplyr::pull(a) |>
-  wrap_plots() +
-  plot_annotation(
-    title = "Negative correlation with expression",
-    theme = theme(plot.title = element_text(size = 20))
   ) ->
-neg_bp_plot_all
+expr_v_3173G_A_plot
+
+expr_v_3173G_A_plot |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = genename,
+      .y = corr_plot,
+      .f = ~ {
+        .filename <- glue::glue("{.x}.pdf")
+        ggsave(
+          filename = .filename,
+          path = .path,
+          plot = .y,
+          width = 7,
+          height = 6,
+          dpi = 300
+        )
+      }
+    )
+  )
+
+expr_v_3173G_A |>
+  dplyr::select(genename, corr, pval) |>
+  export(
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/3173G_A/3173G_A_corr.csv"
+  )
+
+
+expr_v_3173G_A |>
+  dplyr::select(genename, corr, pval) |>
+  dplyr::slice(1:10) |>
+  dplyr::mutate(
+    variant = "3173G>A",
+  ) ->
+expr_v_3173G_A_top10
+
+variants |>
+  purrr::map(
+    ~ {
+      import(
+        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+      ) |>
+        dplyr::filter(genename %in% expr_v_3173G_A_top10$genename) |>
+        dplyr::mutate(variant = .x)
+    }
+  ) |>
+  dplyr::bind_rows() ->
+variant_corr_top10
+
+variant_corr_top10 |>
+  dplyr::filter(variant == "3173G>A") |>
+  dplyr::mutate(
+    celltype = gsub("_", " ", celltype),
+  ) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype) |> rev())
+  ) |>
+  dplyr::mutate(
+    genename = factor(genename, levels = unique(expr_v_3173G_A_top10$genename))
+  ) |>
+  dplyr::mutate(
+    mark = dplyr::case_when(
+      pval < 0.001 ~ "***",
+      pval < 0.01 ~ "**",
+      pval < 0.05 ~ "*",
+      TRUE ~ ""
+    )
+  ) ->
+variant_corr_top10_3173G_A_forplot
+variant_corr_top10_3173G_A_forplot |>
+  ggplot(aes(
+    x = genename,
+    y = celltype
+  )) +
+  geom_tile(aes(fill = corr)) +
+  geom_text(
+    aes(label = mark),
+    size = 5,
+    color = "black"
+  ) +
+  scale_fill_gradient2(
+    breaks = round(seq(-0.35, 0.4, length.out = 5), digits = 2),
+    labels = format(seq(-0.4, 0.4, length.out = 5), digits = 2),
+    low = "#00fefe",
+    mid = "white",
+    high = "#fe0000"
+  ) +
+  theme_cor() +
+  theme(
+    axis.text.y = element_text(hjust = 1, size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    axis.title = element_blank()
+  ) +
+  guides(
+    fill = guide_legend(
+      # legend title
+      title = "Pearsons' correlation (r)",
+      title.position = "right",
+      title.theme = element_text(angle = -90, size = 14, family = "Times"),
+      title.vjust = -0.5,
+      title.hjust = 0.5,
+
+      # legend label
+      label = TRUE,
+      label.position = "left",
+      label.theme = element_text(size = 14, family = "Times"),
+      label.hjust = 0.5,
+      label.vjust = 0.5,
+
+      # legend key
+      keywidth = 1,
+      keyheight = 1.8,
+      reverse = TRUE
+    )
+  ) +
+  coord_fixed(ratio = 1) +
+  labs(
+    x = "Gene",
+    y = "Cell type"
+  ) ->
+variant_corr_top10_3173G_A_plot
 
 ggsave(
   path = outdir,
-  filename = file.path("neg_bp_plot_all.pdf"),
-  plot = neg_bp_plot_all,
-  width = 20,
-  height = 13,
+  filename = file.path("variant_corr_top10_3173G_A_celltype.pdf"),
+  plot = variant_corr_top10_3173G_A_plot,
+  width = 8,
+  height = 5,
   dpi = 300
 )
 
+
+
+variant_corr_top10 |>
+  # dplyr::filter(variant == "3173G>A") |>
+  dplyr::filter(celltype == "Mono") |>
+  dplyr::mutate(
+    celltype = gsub("_", " ", celltype),
+  ) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype) |> rev())
+  ) |>
+  dplyr::mutate(
+    genename = factor(genename, levels = unique(expr_v_3173G_A_top10$genename))
+  ) |>
+  dplyr::mutate(
+    mark = dplyr::case_when(
+      pval < 0.001 ~ "***",
+      pval < 0.01 ~ "**",
+      pval < 0.05 ~ "*",
+      TRUE ~ ""
+    )
+  ) |>
+  ggplot(aes(
+    x = genename,
+    y = variant
+  )) +
+  geom_tile(aes(fill = corr)) +
+  geom_text(
+    aes(label = mark),
+    size = 5,
+    color = "black"
+  ) +
+  scale_fill_gradient2(
+    breaks = round(seq(-0.35, 0.4, length.out = 5), digits = 2),
+    labels = format(seq(-0.4, 0.4, length.out = 5), digits = 2),
+    low = "#00fefe",
+    mid = "white",
+    high = "#fe0000"
+  ) +
+  theme_cor() +
+  theme(
+    axis.text.y = element_text(hjust = 1, size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    axis.title = element_blank()
+  ) +
+  guides(
+    fill = guide_legend(
+      # legend title
+      title = "Pearsons' correlation (r)",
+      title.position = "right",
+      title.theme = element_text(angle = -90, size = 14, family = "Times"),
+      title.vjust = -0.5,
+      title.hjust = 0.5,
+
+      # legend label
+      label = TRUE,
+      label.position = "left",
+      label.theme = element_text(size = 14, family = "Times"),
+      label.hjust = 0.5,
+      label.vjust = 0.5,
+
+      # legend key
+      keywidth = 1,
+      keyheight = 1.8,
+      reverse = TRUE
+    )
+  ) +
+  coord_fixed(ratio = 1) +
+  labs(
+    x = "Gene",
+    y = "Cell type"
+  ) ->
+variant_corr_top10_5_variant_plot
+
+ggsave(
+  path = outdir,
+  filename = file.path("variant_corr_top10_5_variant.pdf"),
+  plot = variant_corr_top10_5_variant_plot,
+  width = 8,
+  height = 5,
+  dpi = 300
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
