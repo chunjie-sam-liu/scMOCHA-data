@@ -100,9 +100,9 @@ fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
   .go_bp_for_plot |>
     ggplot(aes(x = Description, y = adjp)) +
     geom_col(fill = .ont_fill, color = NA, width = 0.7) +
-    geom_text(aes(label = Count), hjust = 4, color = "white", size = 5) +
+    geom_text(aes(label = Count), hjust = 1, color = "white", size = 5) +
     labs(y = "-log10(Adj. P value)", x = x_label) +
-    scale_y_continuous(expand = c(0, 0.02)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
     coord_flip() +
     theme(
       panel.background = element_rect(fill = NA),
@@ -188,6 +188,12 @@ variant_go |>
   ) ->
 variant_go_all
 
+
+export(
+  variant_go_all,
+  file = file.path(outdir, "variant_go_all.qs")
+)
+
 variant_go_all |>
   dplyr::mutate(
     a = purrr::map2(
@@ -215,9 +221,42 @@ ggsave(
   filename = file.path("pos_bp_plot_all.pdf"),
   plot = pos_bp_plot_all,
   width = 20,
-  height = 10,
+  height = 13,
   dpi = 300
 )
+
+
+variant_go_all |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = variant,
+      .y = neg_bp,
+      .f = ~ {
+        fn_plot_go(.y, 20, "BP") +
+          labs(title = .x) +
+          theme(
+            plot.title = element_text(size = 20)
+          )
+      }
+    )
+  ) |>
+  dplyr::pull(a) |>
+  wrap_plots() +
+  plot_annotation(
+    title = "Negative correlation with expression",
+    theme = theme(plot.title = element_text(size = 20))
+  ) ->
+neg_bp_plot_all
+
+ggsave(
+  path = outdir,
+  filename = file.path("neg_bp_plot_all.pdf"),
+  plot = neg_bp_plot_all,
+  width = 20,
+  height = 13,
+  dpi = 300
+)
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
