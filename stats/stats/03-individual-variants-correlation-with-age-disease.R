@@ -58,20 +58,30 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
 # chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 # ggsci::pal_aaas()(3) |> prismatic::color()
-# chemistry_colors <- viridis::viridis_pal(option = "D")(4) |>
+# color_chemistry <- viridis::viridis_pal(option = "D")(4) |>
 #   prismatic::color()
 
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
-anno_meta_info_clean <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+  dplyr::select(
+    srrid,
+    sex_pred = sex
+  ) |>
+  dplyr::mutate(
+    sex_pred = factor(sex_pred, names(color_gender))
+  )
+
+anno_meta_info_clean <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.fst"
 ) |>
   dplyr::mutate(
     Chemistry = factor(
       Chemistry,
-      levels = chem_levels
+      levels = names(color_chemistry)
     ),
-  )
+  ) |>
+  dplyr::left_join(sex_pred, by = "srrid")
 
 fn_eda_ggpubr <- function(anno_meta_info_clean) {
   p_ncells <- tryCatch(
@@ -85,7 +95,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
           ylab = "Number of Somatic Variants",
           color = "Chemistry",
           add = "reg.line",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
@@ -118,7 +128,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
           ylab = "Number of Somatic Variants",
           color = "Chemistry",
           add = "reg.line",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
@@ -148,7 +158,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
           ylab = "Number of Somatic Variants",
           color = "Chemistry",
           add = "reg.line",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
@@ -177,7 +187,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
           xlab = "",
           ylab = "Number of Somatic Variants",
           color = "Chemistry",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           add = "reg.line",
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
@@ -201,13 +211,13 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
     expr = {
       anno_meta_info_clean |>
         ggpubr::ggboxplot(
-          x = "Gender",
+          x = "sex_pred",
           y = "# of somatic variants",
           xlab = "",
           ylab = "Number of Somatic Variants",
           title = "Gender",
           color = "Chemistry",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           add = "jitter",
         ) +
         theme(
@@ -247,7 +257,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
           ylab = "Number of Somatic Variants",
           title = "Disease",
           color = "Chemistry",
-          palette = chemistry_colors,
+          palette = color_chemistry,
           add = "jitter"
         ) +
         theme(
@@ -299,49 +309,6 @@ ggsave(
 
 # ! age --------------------------------------------------------------------
 
-human_read <- function(.x) {
-  .sign = ifelse(.x < 0, TRUE, FALSE)
-  .x <- abs(.x)
-
-  if (.x >= 0.1) {
-    .x %>%
-      signif(digits = 2) %>%
-      toString() -> .xx
-  } else if (.x < 0.1 && .x >= 0.001) {
-    .x %>%
-      signif(digits = 2) %>%
-      toString() -> .xx
-  } else if (.x < 0.001 && .x > 0) {
-    .x %>% format(digits = 3, scientific = TRUE) -> .xx
-  } else {
-    .xx <- "0"
-  }
-
-  ifelse(.sign, paste0("-", .xx), .xx)
-}
-
-human_read_latex_pval <- function(.x, .s = NA, .tex = TRUE) {
-  if (is.na(.s)) {
-    if (grepl(pattern = "e", x = .x)) {
-      sub("-0", "-", strsplit(split = "e", x = .x, fixed = TRUE)[[1]]) -> .xx
-      thestr <- glue::glue("$\\textit{P}=<<.xx[1]>> \\times 10^{<<.xx[2]>>}$", .open = "<<", .close = ">>")
-    } else {
-      thestr <- glue::glue("$\\textit{P}=<<.x>>$", .open = "<<", .close = ">>")
-    }
-  } else {
-    if (grepl(pattern = "e", x = .x)) {
-      sub("-0", "-", strsplit(split = "e", x = .x, fixed = TRUE)[[1]]) -> .xx
-      thestr <- glue::glue("<<.s>>, $\\textit{P}=<<.xx[1]>> \\times 10^{<<.xx[2]>>}$", .open = "<<", .close = ">>")
-    } else {
-      thestr <- glue::glue("<<.s>>, $\\textit{P}=<<.x>>$", .open = "<<", .close = ">>")
-    }
-  }
-  if (isTRUE(.tex)) {
-    latex2exp::TeX(thestr)
-  } else {
-    thestr
-  }
-}
 
 theme_cor <- function() {
   theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
@@ -362,8 +329,8 @@ theme_cor <- function() {
     legend.title = element_text(size = rel(1.1), face = "bold"),
     legend.text = element_text(size = rel(1.1), face = "bold"),
     # legend.position = "bottom",
-    legend.position = "none",
-    legend.direction = "horizontal",
+    # legend.position = "none",
+    # legend.direction = "horizontal",
     legend.background = element_blank(),
     legend.key = element_rect(fill = NA, colour = NA),
 
@@ -382,13 +349,22 @@ cor_test <- cor.test(
   y = anno_meta_info_clean$`# of somatic variants`,
   method = "pearson"
 )
+
 anno_meta_info_clean |>
   ggplot(aes(
     x = `Age_new`,
     y = `# of somatic variants`
   )) +
   geom_point(
+    aes(
+      color = Chemistry,
+    ),
     position = position_jitter(width = 0.1, height = 0.1),
+  ) +
+  scale_color_manual(
+    values = color_chemistry,
+    name = "Chemistry",
+    labels = names(color_chemistry)
   ) +
   geom_smooth(
     color = "red",
@@ -418,7 +394,8 @@ anno_meta_info_clean |>
   ) +
   theme_cor() +
   theme(
-    plot.title = element_blank()
+    plot.title = element_blank(),
+    legend.position = "top"
   ) +
   labs(
     title = "Number of Somatic Variants correlates with Age",
@@ -500,6 +477,120 @@ ggsave(
   width = 12,
   height = 8
 )
+
+
+# ! sex --------------------------------------------------------------------
+library(ggnewscale)
+anno_meta_info_clean |>
+  ggplot(aes(
+    x = sex_pred,
+    y = `# of somatic variants`
+  )) +
+  geom_boxplot(
+    aes(color = sex_pred),
+    width = 0.5,
+    show.legend = FALSE,
+    outlier.shape = NA,
+  ) +
+  scale_color_manual(
+    values = color_gender
+  ) +
+  new_scale_color() +
+  geom_point(
+    aes(color = Chemistry),
+    position = position_jitter(width = 0.1, height = 0.1),
+  ) +
+  scale_color_manual(
+    values = color_chemistry,
+    name = "Chemistry",
+    labels = names(color_chemistry)
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = `# of somatic variants`,
+    ),
+    comparisons = list(
+      c("Female", "Male")
+    ),
+    y_position = 80
+  ) +
+  theme_cor() +
+  theme(legend.position = "top", ) +
+  labs(
+    x = "",
+    y = "# of somatic variants",
+  ) ->
+p1
+
+anno_meta_info_clean |>
+  dplyr::filter(
+    Chemistry == "SC5P-PE",
+    `# of somatic variants` >= 1
+  ) |>
+  ggplot(aes(
+    x = sex_pred,
+    y = `# of somatic variants`
+  )) +
+  geom_boxplot(
+    width = 0.5,
+    aes(color = sex_pred),
+    show.legend = FALSE,
+    outlier.shape = NA,
+  ) +
+  scale_color_manual(
+    values = color_gender
+  ) +
+  new_scale_color() +
+  geom_point(
+    aes(color = Chemistry),
+    position = position_jitter(width = 0.1, height = 0.1),
+    show.legend = FALSE
+  ) +
+  scale_color_manual(
+    values = color_chemistry,
+    name = "Chemistry",
+    labels = names(color_chemistry)
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = `# of somatic variants`,
+    ),
+    comparisons = list(
+      c("Female", "Male")
+    ),
+    y_position = 80
+  ) +
+  theme_cor() +
+  labs(
+    x = "",
+    y = "# of somatic variants",
+  ) ->
+p2
+
+wrap_plots(
+  p1,
+  p2,
+  ncol = 2
+) +
+  # guide_area() +
+  plot_layout(guides = "collect") &
+  theme(
+    legend.direction = "horizontal",
+    legend.box = "horizontal",
+    legend.position = "top",
+    # plot.background = element_rect(color = "black"),
+  ) ->
+p_collect
+
+# Save the plot
+ggsave(
+  path = zzz_out,
+  filename = "ggpubr_ggstatsplot_correlation_sex_somatic_variants.pdf",
+  plot = p_collect,
+  width = 8,
+  height = 5
+)
+
 
 # footer ------------------------------------------------------------------
 
