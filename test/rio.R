@@ -120,3 +120,10 @@ export(
   ddd,
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
 )
+
+
+
+convert(
+  "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.csv.gz",
+  "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.fst"
+)
