@@ -117,44 +117,107 @@ fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
     )
 }
 
+fn_load_corr <- function(.variant) {
+  import(
+    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
+  ) |>
+    dplyr::filter(celltype == "Mono") |>
+    dplyr::filter(pval < 0.05) |>
+    dplyr::arrange(desc(corr)) |>
+    dplyr::filter(abs(corr) > 0.3)
+}
 
+fn_variant_go <- function(.variant) {
+  # .variant <- variants[[1]]
+  .corr <- fn_load_corr(.variant)
+  .corr_pos <- .corr |> dplyr::filter(corr > 0.3)
+  .corr_neg <- .corr |> dplyr::filter(corr < -0.3)
+
+  .pos_bp <- fn_go_enrich(cancer_sgene = unique(.corr_pos$genename), "BP")
+  .pos_cc <- fn_go_enrich(cancer_sgene = unique(.corr_pos$genename), "CC")
+  .pos_mf <- fn_go_enrich(cancer_sgene = unique(.corr_pos$genename), "MF")
+
+  .neg_bp <- fn_go_enrich(cancer_sgene = unique(.corr_neg$genename), "BP")
+  .neg_cc <- fn_go_enrich(cancer_sgene = unique(.corr_neg$genename), "CC")
+  .neg_mf <- fn_go_enrich(cancer_sgene = unique(.corr_neg$genename), "MF")
+
+  tibble::tibble(
+    variant = .variant,
+    pos_bp = list(.pos_bp),
+    pos_cc = list(.pos_cc),
+    pos_mf = list(.pos_mf),
+    neg_bp = list(.neg_bp),
+    neg_cc = list(.neg_cc),
+    neg_mf = list(.neg_mf),
+    pos_bp_plot = list(fn_plot_go(.pos_bp, 20, "BP")),
+    pos_cc_plot = list(fn_plot_go(.pos_cc, 20, "CC")),
+    pos_mf_plot = list(fn_plot_go(.pos_mf, 20, "MF")),
+    neg_bp_plot = list(fn_plot_go(.neg_bp, 20, "BP")),
+    neg_cc_plot = list(fn_plot_go(.neg_cc, 20, "CC")),
+    neg_mf_plot = list(fn_plot_go(.neg_mf, 20, "MF"))
+  )
+}
 
 # load data ---------------------------------------------------------------
-expr_v_3173G_A_corr <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A-corr.fst")
-expr_v_1670A_G_corr <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-1670A>G-corr.fst"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
+
+variants <- c(
+  "1670A>G",
+  "1397T>A",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A"
 )
 
-# body --------------------------------------------------------------------
-
-
-expr_v_1670A_G_corr |>
-  dplyr::filter(celltype == "Mono") |>
-  dplyr::filter(pval < 0.05) ->
-mono_corr
-
-mono_corr |>
-  dplyr::filter(corr > 0.3) ->
-mono_corr_03_pos
 
 
 
-mono_corr_03_pos_bp <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_pos$genename), "BP")
-mono_corr_03_pos_cc <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_pos$genename), "CC")
-mono_corr_03_pos_mf <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_pos$genename), "MF")
+# ! body --------------------------------------------------------------------
+# fn_variant_go("3173G>A") -> a
+variants |>
+  purrr::map_dfr(
+    fn_variant_go,
+    .id = "variant"
+  ) ->
+variant_go
 
-mono_corr |>
-  dplyr::filter(corr < -0.3) ->
-mono_corr_03_neg
+variant_go |>
+  dplyr::bind_rows() |>
+  dplyr::mutate(
+    variant = variants
+  ) ->
+variant_go_all
 
-mono_corr_03_neg_bp <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_neg$genename), "BP")
-mono_corr_03_neg_cc <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_neg$genename), "CC")
-mono_corr_03_neg_mf <- fn_go_enrich(cancer_sgene = unique(mono_corr_03_neg$genename), "MF")
+variant_go_all |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = variant,
+      .y = pos_bp,
+      .f = ~ {
+        fn_plot_go(.y, 20, "BP") +
+          labs(title = .x) +
+          theme(
+            plot.title = element_text(size = 20)
+          )
+      }
+    )
+  ) |>
+  dplyr::pull(a) |>
+  wrap_plots() +
+  plot_annotation(
+    title = "Positive correlation with expression",
+    theme = theme(plot.title = element_text(size = 20))
+  ) ->
+pos_bp_plot_all
 
-fn_plot_go(mono_corr_03_neg_bp, 10, "BP")
-fn_plot_go(mono_corr_03_neg_cc, 10, "CC")
-fn_plot_go(mono_corr_03_neg_mf, 10, "MF")
-
+ggsave(
+  path = outdir,
+  filename = file.path("pos_bp_plot_all.pdf"),
+  plot = pos_bp_plot_all,
+  width = 20,
+  height = 10,
+  dpi = 300
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
