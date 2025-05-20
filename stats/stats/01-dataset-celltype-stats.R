@@ -97,12 +97,12 @@ gse_data_haplo_variant
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
 gse_data_haplo_variant |>
-  dplyr::mutate(
-    disease = dplyr::case_when(
-      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
-      TRUE ~ "Other"
-    )
-  ) |>
+  # dplyr::mutate(
+  #   disease = dplyr::case_when(
+  #     disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+  #     TRUE ~ "Other"
+  #   )
+  # ) |>
   dplyr::mutate(
     disease = factor(
       disease,
@@ -157,7 +157,8 @@ for_celltype_ratio_plot |>
     )
   ) |>
   dplyr::ungroup() |>
-  dplyr::arrange(disease, -b_ratio) ->
+  dplyr::arrange(disease, -b_ratio) |>
+  dplyr::select(-data) ->
 rank_srrid
 
 # ggsci::pal_nejm()(5) |> color()
@@ -181,6 +182,7 @@ rank_srrid |>
   dplyr::mutate(
     mid_srrid = srrid[ceiling(dplyr::n() / 2)]
   ) |>
+  dplyr::ungroup() |>
   ggplot(aes(
     x = srrid,
     y = 1
@@ -202,6 +204,9 @@ rank_srrid |>
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
+  ) +
+  scale_x_discrete(
+    limits = rank_srrid$srrid,
   ) +
   theme(
     panel.background = element_blank(),
@@ -229,6 +234,9 @@ rank_srrid |>
       dplyr::select(srrid, Gender, Age_new, Chemistry),
     by = "srrid"
   ) |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = rank_srrid$srrid),
+  ) |>
   ggplot(aes(
     x = srrid,
     y = 1
@@ -241,6 +249,9 @@ rank_srrid |>
   scale_fill_manual(
     name = "Chemistry",
     values = color_chemistry
+  ) +
+  scale_x_discrete(
+    limits = rank_srrid$srrid,
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
@@ -265,6 +276,9 @@ p_tile_chemistry
 # )
 
 rank_srrid |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = rank_srrid$srrid),
+  ) |>
   dplyr::left_join(
     gse_dataset_metadata_full |>
       dplyr::select(srrid, Gender, Age_new, Chemistry),
@@ -286,6 +300,9 @@ rank_srrid |>
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
   ) +
+  scale_x_discrete(
+    limits = rank_srrid$srrid,
+  ) +
   theme(
     panel.background = element_blank(),
     panel.grid = element_blank(),
@@ -299,6 +316,9 @@ rank_srrid |>
 p_tile_gender
 
 rank_srrid |>
+  dplyr::mutate(
+    srrid = factor(srrid, levels = rank_srrid$srrid),
+  ) |>
   dplyr::left_join(
     gse_dataset_metadata_full |>
       dplyr::select(srrid, Gender, Age_new, Chemistry),
@@ -320,6 +340,9 @@ rank_srrid |>
   ) +
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
+  ) +
+  scale_x_discrete(
+    limits = rank_srrid$srrid,
   ) +
   theme(
     panel.background = element_blank(),
@@ -372,21 +395,28 @@ for_celltype_ratio_plot |>
   scale_y_continuous(
     expand = expansion(add = c(0.005, 0)),
   ) +
+  scale_x_discrete(
+    limits = rank_srrid$srrid,
+  ) +
   theme(
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
     panel.background = element_blank(),
     panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
+    axis.line.y.left = element_line(color = "black", ),
     axis.ticks.x = element_blank(),
     axis.text.x = element_blank(),
     axis.line.x = element_blank(),
     axis.title.x = element_blank(),
     legend.position = "right",
     legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
+    axis.title.y = element_text(
+      color = "black",
+      size = 18,
+      face = "bold"
+    ),
     axis.text.y = element_text(color = "black"),
   ) +
-  labs(y = "cell ratio") ->
+  labs(y = "Cell type ratio") ->
 p_celltype_ratio
 
 
@@ -429,27 +459,18 @@ for_celltype_ratio_plot |>
     axis.title.x = element_blank(),
     legend.position = "right",
     legend.key = element_blank(),
-    axis.title.y = element_text(color = "black"),
+    axis.title.y = element_text(
+      color = "black",
+      size = 18,
+      face = "bold"
+    ),
     axis.text.y = element_text(color = "black"),
   ) +
-  labs(y = "# of cells") ->
+  labs(y = "# of cell") ->
 p_celltype_count
 
-wrap_plots(
-  p_celltype_ratio,
-  p_celltype_count,
-  p_tile_disease,
-  p_tile_chemistry,
-  p_tile_gender,
-  p_tile_age,
-  ncol = 1,
-  heights = c(15, 15, 1, 1, 1, -1),
-  guides = "collect"
-)
-
-ggsave(
-  filename = file.path(outdir, "celltype_ratio.pdf" |> glue::glue()),
-  plot = wrap_plots(
+{
+  wrap_plots(
     p_celltype_ratio,
     p_celltype_count,
     p_tile_disease,
@@ -459,7 +480,15 @@ ggsave(
     ncol = 1,
     heights = c(15, 15, 1, 1, 1, -1),
     guides = "collect"
-  ),
+  ) ->
+  p_collect
+  p_collect
+}
+
+
+ggsave(
+  filename = file.path(outdir, "celltype_ratio.pdf" |> glue::glue()),
+  plot = p_collect,
   width = 24,
   height = 12,
   dpi = 300
