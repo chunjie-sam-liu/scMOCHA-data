@@ -65,7 +65,12 @@ class SCEXPR:
     def __repr__(self):
         return f"SCE(adata={self.adata})"
 
-    def celltype_expr(self, normalize=True, norm_method="log1p", scale=False):
+    def celltype_expr(
+        self,
+        normalize: bool = True,
+        norm_method: str = "both",
+        scale: bool = False,
+    ):
         """
         For this sample, compute normalized mean expression per gene for each cell type.
 
@@ -144,6 +149,101 @@ class SCEXPR:
         # Build polars DataFrame
         df = pl.DataFrame(result)
         return df
+
+    def celltype_expr_high_confident_genes(
+        self,
+        normalize: bool = True,
+        norm_method: str = "both",
+        scale: bool = False,
+        min_cells_expr: int = 10,
+    ):
+        """
+        For this sample, compute normalized mean expression per gene for each cell type.
+
+        Parameters:
+            normalize (bool): Whether to normalize data before computing means.
+            norm_method (str): Method for normalization ('log1p', 'cp10k', or 'both').
+                - 'log1p': log(1+x) transformation
+                - 'cp10k': counts per 10k normalization
+                - 'both': both cp10k and log1p (default)
+            scale (bool): Whether to z-score scale genes after normalization.
+            min_cells_expr (int): Minimum number of cells a gene must be expressed in
+                                (count > 0) within any cell type to be retained.
+                                If 0, no filtering is applied.
+
+        Returns:
+            A polars DataFrame: columns = genename, *celltypes
+        """
+        # Only keep barcodes present in adata
+        adata_barcodes = set(self.adata.obs_names)
+        barcode_df = self.barcode.filter(
+            pl.col("barcode").is_in(list(adata_barcodes))
+        )
+
+        # Map barcode to celltype
+        barcode2celltype = dict(
+            zip(
+                barcode_df["barcode"].to_list(),
+                barcode_df["celltype"].to_list(),
+            )
+        )
+
+        # Assign celltype labels to adata.obs
+        celltype_list = [
+            barcode2celltype.get(bc, "unknown") for bc in self.adata.obs_names
+        ]
+        self.adata.obs["celltype"] = celltype_list
+        celltypes = sorted(set(celltype_list))
+
+        # Keep raw matrix for gene filtering
+        raw_X = self.adata.X
+
+        # Normalize if requested
+        if normalize:
+            adata_norm = self.adata.copy()
+
+            if norm_method in ["cp10k", "both"]:
+                sc.pp.normalize_total(adata_norm, target_sum=1e4)
+
+            if norm_method in ["log1p", "both"]:
+                sc.pp.log1p(adata_norm)
+
+            if scale:
+                sc.pp.scale(adata_norm, max_value=10)
+
+            data_matrix = adata_norm.X
+        else:
+            data_matrix = raw_X
+
+        # Filter genes by number of expressing cells per cell type
+        if min_cells_expr > 0:
+            gene_mask = np.zeros(self.adata.shape[1], dtype=bool)
+
+            for ct in celltypes:
+                ct_mask = np.array(self.adata.obs["celltype"] == ct)
+                if ct_mask.sum() == 0:
+                    continue
+                # Use raw counts to determine expression presence
+                expr_sub = raw_X[ct_mask] > 0
+                expr_counts = np.asarray(expr_sub.sum(axis=0)).ravel()
+                gene_mask |= expr_counts >= min_cells_expr
+
+            data_matrix = data_matrix[:, gene_mask]
+            gene_names = self.adata.var_names[gene_mask]
+        else:
+            gene_names = self.adata.var_names
+
+        # Compute mean expression per cell type
+        result = {"genename": gene_names}
+        for ct in celltypes:
+            mask = np.array(self.adata.obs["celltype"] == ct)
+            if mask.sum() == 0:
+                mean_expr = np.full(data_matrix.shape[1], np.nan)
+            else:
+                mean_expr = np.asarray(data_matrix[mask].mean(axis=0)).ravel()
+            result[ct] = mean_expr
+
+        return pl.DataFrame(result)
 
 
 def scexpr(gseid, srrid, srrdir):
