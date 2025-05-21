@@ -207,6 +207,16 @@ admeta_sc5p_variant_type_af |>
   ) ->
 admeta_sc5p_variant_type_af_ttest
 
+# export(
+#   admeta_sc5p_variant_type_af_ttest,
+#   file = file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"),
+#   format = "qs"
+# )
+# admeta_sc5p_variant_type_af_ttest <- import(file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"))
+
+
+
+
 admeta_sc5p_variant_type_af_ttest |>
   dplyr::select(-data) |>
   tidyr::unnest(cols = t) |>
@@ -230,6 +240,8 @@ admeta_sc5p_variant_type_af_ttest |>
   ) ->
 admeta_sc5p_variant_type_af_ttest_rank
 
+
+
 admeta_sc5p_variant_type_af_ttest_rank |>
   dplyr::filter(estimate > 0.03) |>
   dplyr::arrange(variant) ->
@@ -249,7 +261,139 @@ color_celltype_bulk <- c(
   color_celltype
 )
 
+admeta_sc5p_variant_type_af_ttest |>
+  dplyr::select(-data) |>
+  tidyr::unnest(cols = t) |>
+  dplyr::rename(
+    ad = "Alzheimer's Disease",
+  ) |>
+  dplyr::filter(
+    ad >= 10,
+    Healthy >= 10
+  ) |>
+  dplyr::mutate(
+    log10p = -log10(p.value),
+  ) |>
+  dplyr::mutate(
+    barcode = gsub(barcode, pattern = "_", replacement = " "),
+    barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
+  ) |>
+  dplyr::mutate(
+    barcode = factor(barcode, levels = names(color_celltype_bulk)),
+  ) |>
+  dplyr::mutate(
+    point_color = ifelse(
+      p.value < 0.05 & abs(estimate) > 0.03,
+      "red",
+      "black"
+    ),
+  ) |>
+  dplyr::mutate(
+    label = ifelse(
+      p.value < 0.05 & abs(estimate) > 0.03,
+      variant,
+      NA
+    ),
+  ) ->
+forplot_test
 
+forplot_test |>
+  ggplot(aes(
+    x = estimate,
+    y = log10p,
+  )) +
+  geom_point(
+    aes(
+      color = point_color,
+    ),
+  ) +
+  scale_color_identity() +
+  ggrepel::geom_text_repel(
+    aes(
+      label = label,
+    ),
+    size = 3,
+    show.legend = FALSE,
+    # nudge_x = 0.1,
+    # nudge_y = 0.1,
+    # segment.size = 0.5,
+    segment.color = "black",
+    max.overlaps = Inf
+  ) +
+  geom_hline(
+    yintercept = -log10(0.05),
+    linetype = 20,
+    color = "red"
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = 20,
+    color = "red"
+  ) +
+  ggh4x::facet_grid2(
+    ~barcode,
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype_bulk,
+        color = NA
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      )
+    )
+  ) +
+  theme(
+    plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
+    # panel.background = element_blank(),
+    panel.background = element_rect(
+      fill = NA,
+      color = "black",
+      linewidth = 0.5
+    ),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    # axis.text.x = element_blank(),
+    # axis.line.x = element_blank(),
+    # axis.title.x = element_blank(),
+    legend.position = "top",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black", size = 16),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  labs(
+    y = "-log10(p-value)",
+    x = "Effect Size (AD - Healthy)",
+  ) ->
+p_variant_boxplot_af_sc_ttest
+ggsave(
+  filename = file.path(outdir, "ad-variant_boxplot-ttest-all.pdf"),
+  plot = p_variant_boxplot_af_sc_ttest,
+  width = 13,
+  height = 3.5,
+  device = cairo_pdf
+)
+
+
+
+
+#
 admeta_sc5p_variant_type_af |>
   dplyr::filter(variant %in% topvariants) |>
   dplyr::mutate(
@@ -324,8 +468,13 @@ forplot_ |>
     y_position = 0.8
   ) +
   theme(
-    plot.margin = margin(t = 0, b = 0, unit = "cm"),
-    panel.background = element_blank(),
+    plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
+    # panel.background = element_blank(),
+    panel.background = element_rect(
+      fill = NA,
+      color = "black",
+      linewidth = 0.5
+    ),
     panel.grid = element_blank(),
     axis.line.y.left = element_line(color = "black"),
     axis.line.x.bottom = element_line(color = "black"),
@@ -360,7 +509,7 @@ p_variant_boxplot_af
 ggsave(
   filename = file.path(outdir, "ad-variant_boxplot.pdf"),
   plot = p_variant_boxplot_af,
-  width = 15,
+  width = 16,
   height = 8,
   device = cairo_pdf
 )
