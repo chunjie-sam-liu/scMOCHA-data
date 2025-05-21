@@ -294,7 +294,7 @@ rank_srrid |>
     )
   ) +
   scale_fill_manual(
-    name = "Gender",
+    name = "Sex",
     values = color_gender
   ) +
   scale_y_continuous(
