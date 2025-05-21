@@ -32,5 +32,6 @@
   "files.exclude": {
     // "**/data": true
   },
-  "python.terminal.activateEnvironment": true
+  "python.terminal.activateEnvironment": true,
+  "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python"
 }
