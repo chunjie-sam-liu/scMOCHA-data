@@ -211,14 +211,7 @@ admeta_sc5p_variant_type_af_ttest
 admeta_sc5p_variant_type_af_ttest |>
   dplyr::select(-data) |>
   tidyr::unnest(cols = t) |>
-  dplyr::rename(
-    ad = "COVID-19",
-  ) |>
-  dplyr::filter(
-    ad >= 10,
-    Healthy >= 10
-  ) |>
-  dplyr::filter(p.value < 0.1) |>
+  dplyr::filter(p.value < 0.2) |>
   dplyr::mutate(
     plog10p = -log10(p.value),
     est = abs(estimate),
@@ -228,31 +221,163 @@ admeta_sc5p_variant_type_af_ttest |>
   ) |>
   dplyr::arrange(
     desc(rank)
+  ) |>
+  dplyr::rename(
+    ad = "COVID-19",
+  ) |>
+  dplyr::filter(
+    ad >= 10,
+    Healthy >= 10
   ) ->
 admeta_sc5p_variant_type_af_ttest_rank
 
+admeta_sc5p_variant_type_af_ttest_rank |>
+  dplyr::filter(estimate > 0.03) |>
+  dplyr::arrange(variant) ->
+top5_variant
+
+
+topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
+
+
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+
+library(ggh4x)
+library(ggbeeswarm)
+library(ggnewscale)
+
+color_celltype_bulk <- c(
+  "Pseudo-bulk" = "red",
+  color_celltype
+)
+
+admeta_sc5p_variant_type_af_ttest |>
+  dplyr::select(-data) |>
+  tidyr::unnest(cols = t) |>
+  dplyr::rename(
+    ad = "COVID-19",
+  ) |>
+  # dplyr::filter(
+  #   ad >= 5,
+  #   Healthy >= 5
+  # ) |>
+  dplyr::mutate(
+    log10p = -log10(p.value),
+  ) |>
+  dplyr::mutate(
+    barcode = gsub(barcode, pattern = "_", replacement = " "),
+    barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
+  ) |>
+  dplyr::mutate(
+    barcode = factor(barcode, levels = names(color_celltype_bulk)),
+  ) |>
+  dplyr::mutate(
+    point_color = ifelse(
+      p.value < 0.05 & abs(estimate) > 0.03,
+      "red",
+      "black"
+    ),
+  ) |>
+  dplyr::mutate(
+    label = ifelse(
+      p.value < 0.05 & abs(estimate) > 0.03,
+      variant,
+      NA
+    ),
+  ) ->
+forplot_test
+
+# forplot_test |>
+#   dplyr::filter(variant == "1670A>G")
+
+forplot_test |>
+  ggplot(aes(
+    x = estimate,
+    y = log10p,
+  )) +
+  geom_point(
+    aes(
+      color = point_color,
+    ),
+  ) +
+  scale_color_identity() +
+  ggrepel::geom_text_repel(
+    aes(
+      label = label,
+    ),
+    size = 3,
+    show.legend = FALSE,
+    # nudge_x = 0.1,
+    # nudge_y = 0.1,
+    # segment.size = 0.5,
+    segment.color = "black",
+    max.overlaps = Inf
+  ) +
+  geom_hline(
+    yintercept = -log10(0.05),
+    linetype = 20,
+    color = "red"
+  ) +
+  geom_vline(
+    xintercept = 0,
+    linetype = 20,
+    color = "red"
+  ) +
+  ggh4x::facet_grid2(
+    ~barcode,
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype_bulk,
+        color = NA
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      )
+    )
+  ) +
+  theme(
+    plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
+    # panel.background = element_blank(),
+    panel.background = element_rect(
+      fill = NA,
+      color = "black",
+      linewidth = 0.5
+    ),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    # axis.text.x = element_blank(),
+    # axis.line.x = element_blank(),
+    # axis.title.x = element_blank(),
+    legend.position = "top",
+    legend.key = element_blank(),
+    axis.title.y = element_text(color = "black", size = 16),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  labs(
+    y = "-log10(p-value)",
+    x = "Effect Size (COVID-19 - Healthy)",
+  ) ->
+p_variant_boxplot_af_sc_ttest
+
+
 \(){
-  admeta_sc5p_variant_type_af_ttest_rank |>
-    dplyr::filter(estimate > 0.03) |>
-    dplyr::arrange(variant) ->
-  top5_variant
-
-
-  topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
-
-
-  source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
-
-  library(ggh4x)
-  library(ggbeeswarm)
-  library(ggnewscale)
-
-  color_celltype_bulk <- c(
-    "Pseudo-bulk" = "red",
-    color_celltype
-  )
-
-
   admeta_sc5p_variant_type_af |>
     dplyr::filter(variant %in% topvariants) |>
     dplyr::mutate(
@@ -378,6 +503,8 @@ admeta_sc5p_variant_type_af_ttest_rank
     device = cairo_pdf
   )
 }
+
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
