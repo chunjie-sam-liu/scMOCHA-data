@@ -50,6 +50,8 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
 
 all_heteroplasmic_af <- import(
   file.path(cleandatadir, "all_hetero_af.cluster.fst"),
@@ -81,6 +83,11 @@ CELLBARCODE <- import(
   file.path(cleandatadir, "barcode_celltype.fst")
 )
 
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+  dplyr::select(
+    srrid,
+    Sex = sex
+  )
 
 
 METADATA <- import(
@@ -96,17 +103,21 @@ METADATA <- import(
         gsub("\\d+.*", "", .x)
       }
     )
+  ) |>
+  dplyr::left_join(
+    sex_pred,
+    by = "srrid"
   )
 
-METADATA |>
-  # dplyr::count(Chemistry)
-  dplyr::filter(Chemistry == "SC5P-PE") |>
-  dplyr::pull(srrid) ->
-srrids
+# METADATA |>
+#   # dplyr::count(Chemistry)
+#   dplyr::filter(Chemistry == "SC5P-PE") |>
+#   dplyr::pull(srrid) ->
+# srrids
 
 # body --------------------------------------------------------------------
 
-
+source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 all_heteroplasmic_af |>
   # dtplyr::lazy_dt() |>
   dplyr::filter(
@@ -127,15 +138,19 @@ all_heteroplasmic_af_1 |>
     colname = paste0(gseid, "_", srrid, "_", barcode)
   ) |>
   dplyr::mutate(
-    Cluster = factor(barcode, levels = c(
-      "B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T"
-    ))
+    barcode = gsub("_", " ", barcode)
+  ) |>
+  dplyr::mutate(
+    Cluster = factor(barcode, levels = names(color_celltype))
   ) |>
   dplyr::left_join(
-    METADATA |> dplyr::select(gseid, srrid, Chemistry, Gender, Age_new, disease, Haplogroup_s),
+    METADATA |> dplyr::select(gseid, srrid, Chemistry, Sex, Age_new, disease, Haplogroup_s),
     by = c("gseid", "srrid")
   ) |>
   dplyr::select(-c(gseid, srrid, barcode)) |>
+  dplyr::mutate(
+    Sex = factor(Sex, levels = names(color_gender))
+  ) |>
   dplyr::rename(
     Age = Age_new,
     Disease = disease,
@@ -183,21 +198,21 @@ dim(.af_mtx)
 
 # chm top color setting
 Cluster_ <- levels(.af_cluster$Cluster)
-CLUSTER_ <- RColorBrewer::brewer.pal(8, "Set2")
+CLUSTER_ <- color_celltype
 names(CLUSTER_) <- Cluster_
 Chemistry_ <- levels(.af_cluster$Chemistry)
-CHEMISTRY_ <- viridis::viridis_pal(option = "D")(4) |>
-  prismatic::color()
+CHEMISTRY_ <- color_chemistry
 names(CHEMISTRY_) <- Chemistry_
-Gender_ <- levels(.af_cluster$Gender)
-GENDER_ <- c(ggsci::pal_aaas()(2), "grey")
-names(GENDER_) <- Gender_
+Sex_ <- levels(.af_cluster$Sex)[c(1, 2)]
+SEX_ <- color_gender[c(1, 2)]
+names(SEX_) <- Sex_
 Disease_ <- levels(.af_cluster$Disease)
-DISEASE_ <- c(ggsci::pal_jama()(4), "grey")
+DISEASE_ <- color_disease
 names(DISEASE_) <- Disease_
 Haplogroup_ <- sort(unique(.af_cluster$Haplogroup))
-HAPLOGROUP_ <- rand_color(n = length(Haplogroup_), luminosity = "bright")
+HAPLOGROUP_ <- pcc$color[1:length(Haplogroup_)]
 names(HAPLOGROUP_) <- Haplogroup_
+
 
 chm_top <- ComplexHeatmap::HeatmapAnnotation(
   df = .af_cluster,
@@ -205,7 +220,7 @@ chm_top <- ComplexHeatmap::HeatmapAnnotation(
   col = list(
     Cluster = CLUSTER_,
     Chemistry = CHEMISTRY_,
-    Gender = GENDER_,
+    Sex = SEX_,
     Disease = DISEASE_,
     Haplogroup = HAPLOGROUP_,
     `Age` = circlize::colorRamp2(
@@ -307,7 +322,7 @@ ComplexHeatmap::Heatmap(
   show_column_names = FALSE,
   row_names_side = "left",
   top_annotation = chm_top,
-  left_annotation = hma_left,
+  # left_annotation = hma_left,
   # right_annotation = hma_right,
   heatmap_legend_param = list(
     title = "Allele Freq",
