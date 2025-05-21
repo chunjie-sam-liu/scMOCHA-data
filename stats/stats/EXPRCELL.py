@@ -32,20 +32,7 @@ BARCODE_FILENAME = Path(
 # Fix: Use BARCODE_FILENAME instead of SRR_FILENAME with read_ipc
 BARCODE = pl.read_ipc(BARCODE_FILENAME)
 celltypes = ["B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T"]
-
-
-"""
-Prompt for Copilot to complete the function.
-- filtered_feature_bc_matrix.h5 is cellranger output,
-- BARCODE column are gseid, srrid, barcode, celltype
-
-self.barcode = BARCODE.filter(pl.col("srrid") == self.srrid)
-self.barcode matched with self.adata gene name
-
-update the function celltype_expr to process adata, result in each gene mean expression for each cell type, the columns are: genename, *celltypes;
-
-return polars dataframe
-"""
+CELLTYPES = celltypes
 
 
 class SCEXPR:
@@ -59,11 +46,80 @@ class SCEXPR:
         self.srrdir = srrdir
         self.barcode = BARCODE.filter(pl.col("srrid") == self.srrid)
         self.h5_file = Path(self.srrdir) / "filtered_feature_bc_matrix.h5"
-        self.adata = sc.read_10x_h5(self.h5_file)
-        self.adata.var_names_make_unique()
+        self.adata = self.normalize()
+        self.annotate_celltype()
 
     def __repr__(self):
         return f"SCE(adata={self.adata})"
+
+    def normalize(self):
+        adata = self.qc()
+        # Saving count data
+        adata.layers["counts"] = adata.X.copy()
+        # Normalizing to median total counts
+        sc.pp.normalize_total(adata)
+        # Logarithmize the data
+        sc.pp.log1p(adata)
+        return adata
+
+    def qc(self):
+        adata = self.load_h5()
+        sc.pp.calculate_qc_metrics(
+            adata, qc_vars=["mt", "ribo", "hb"], inplace=True, log1p=True
+        )
+
+        # filter cells and genes
+        sc.pp.filter_cells(adata, min_genes=200)
+        sc.pp.filter_genes(adata, min_cells=10)
+
+        return adata
+
+    def load_h5(self):
+        adata = sc.read_10x_h5(self.h5_file)
+        adata.var_names_make_unique()
+
+        # mitochondrial genes, "MT-" for human, "Mt-" for mouse
+        adata.var["mt"] = adata.var_names.str.startswith("MT-")
+        # ribosomal genes
+        adata.var["ribo"] = adata.var_names.str.startswith(("RPS", "RPL"))
+        # hemoglobin genes
+        adata.var["hb"] = adata.var_names.str.contains("^HB[^(P)]")
+
+        return adata
+
+    def annotate_celltype(self):
+        adata_barcodes = set(self.adata.obs_names)
+        barcode_df = self.barcode.filter(
+            pl.col("barcode").is_in(list(adata_barcodes))
+        )
+        barcode2celltype = dict(
+            zip(
+                barcode_df["barcode"].to_list(),
+                barcode_df["celltype"].to_list(),
+            )
+        )
+        celltype_list = [
+            barcode2celltype.get(bc, "unknown") for bc in self.adata.obs_names
+        ]
+        self.adata.obs["celltype"] = celltype_list
+
+    def celltype_mean_expr(self):
+        result = {"genename": self.adata.var_names}
+        data_matrix = self.adata.X
+        for ct in CELLTYPES:
+            # Get mask for cells of this celltype
+            mask = np.array(self.adata.obs["celltype"] == ct)
+            if mask.sum() == 0:
+                # No cells of this type, fill with nan
+                mean_expr = np.full(self.adata.shape[1], np.nan)
+            else:
+                # data_matrix: cells x genes
+                mean_expr = np.asarray(data_matrix[mask].mean(axis=0)).ravel()
+            result[ct] = mean_expr
+
+        df = pl.DataFrame(result)
+        # print(df.head())
+        return df
 
     def celltype_expr(
         self,
@@ -150,101 +206,6 @@ class SCEXPR:
         df = pl.DataFrame(result)
         return df
 
-    def celltype_expr_high_confident_genes(
-        self,
-        normalize: bool = True,
-        norm_method: str = "both",
-        scale: bool = False,
-        min_cells_expr: int = 10,
-    ):
-        """
-        For this sample, compute normalized mean expression per gene for each cell type.
-
-        Parameters:
-            normalize (bool): Whether to normalize data before computing means.
-            norm_method (str): Method for normalization ('log1p', 'cp10k', or 'both').
-                - 'log1p': log(1+x) transformation
-                - 'cp10k': counts per 10k normalization
-                - 'both': both cp10k and log1p (default)
-            scale (bool): Whether to z-score scale genes after normalization.
-            min_cells_expr (int): Minimum number of cells a gene must be expressed in
-                                (count > 0) within any cell type to be retained.
-                                If 0, no filtering is applied.
-
-        Returns:
-            A polars DataFrame: columns = genename, *celltypes
-        """
-        # Only keep barcodes present in adata
-        adata_barcodes = set(self.adata.obs_names)
-        barcode_df = self.barcode.filter(
-            pl.col("barcode").is_in(list(adata_barcodes))
-        )
-
-        # Map barcode to celltype
-        barcode2celltype = dict(
-            zip(
-                barcode_df["barcode"].to_list(),
-                barcode_df["celltype"].to_list(),
-            )
-        )
-
-        # Assign celltype labels to adata.obs
-        celltype_list = [
-            barcode2celltype.get(bc, "unknown") for bc in self.adata.obs_names
-        ]
-        self.adata.obs["celltype"] = celltype_list
-        celltypes = sorted(set(celltype_list))
-
-        # Keep raw matrix for gene filtering
-        raw_X = self.adata.X
-
-        # Normalize if requested
-        if normalize:
-            adata_norm = self.adata.copy()
-
-            if norm_method in ["cp10k", "both"]:
-                sc.pp.normalize_total(adata_norm, target_sum=1e4)
-
-            if norm_method in ["log1p", "both"]:
-                sc.pp.log1p(adata_norm)
-
-            if scale:
-                sc.pp.scale(adata_norm, max_value=10)
-
-            data_matrix = adata_norm.X
-        else:
-            data_matrix = raw_X
-
-        # Filter genes by number of expressing cells per cell type
-        if min_cells_expr > 0:
-            gene_mask = np.zeros(self.adata.shape[1], dtype=bool)
-
-            for ct in celltypes:
-                ct_mask = np.array(self.adata.obs["celltype"] == ct)
-                if ct_mask.sum() == 0:
-                    continue
-                # Use raw counts to determine expression presence
-                expr_sub = raw_X[ct_mask] > 0
-                expr_counts = np.asarray(expr_sub.sum(axis=0)).ravel()
-                gene_mask |= expr_counts >= min_cells_expr
-
-            data_matrix = data_matrix[:, gene_mask]
-            gene_names = self.adata.var_names[gene_mask]
-        else:
-            gene_names = self.adata.var_names
-
-        # Compute mean expression per cell type
-        result = {"genename": gene_names}
-        for ct in celltypes:
-            mask = np.array(self.adata.obs["celltype"] == ct)
-            if mask.sum() == 0:
-                mean_expr = np.full(data_matrix.shape[1], np.nan)
-            else:
-                mean_expr = np.asarray(data_matrix[mask].mean(axis=0)).ravel()
-            result[ct] = mean_expr
-
-        return pl.DataFrame(result)
-
 
 def scexpr(gseid, srrid, srrdir):
     """
@@ -261,7 +222,7 @@ def scexpr(gseid, srrid, srrdir):
     # gseid, srrid, srrdir = SRR[0, "gseid"], SRR[0, "srrid"], SRR[0, "srrdir"]
     # srrdir = Path(srrdir)
     sce = SCEXPR(gseid, srrid, srrdir)
-    df = sce.celltype_expr()
+    df = sce.celltype_mean_expr()
     outfile = OUTDIR / f"{gseid}_{srrid}_celltype_gene_expr.csv"
     df.write_csv(outfile)
     print(f"Saved expression data to {outfile}")
@@ -269,7 +230,7 @@ def scexpr(gseid, srrid, srrdir):
     return df
 
 
-def sceexpr_all(max_works: int = 20):
+def sceexpr_all(max_workers: int = 20):
     all_rows = list(SRR.iter_rows(named=True))
 
     def process_row(row):
@@ -285,34 +246,12 @@ def sceexpr_all(max_works: int = 20):
 
     exprs = []
     with concurrent.futures.ThreadPoolExecutor(
-        max_workers=max_works
+        max_workers=max_workers
     ) as executor:
         for expr in tqdm(
             executor.map(process_row, all_rows), total=len(all_rows)
         ):
             exprs.append(expr)
-
-    # valid_exprs = [
-    #     e
-    #     if e is not None
-    #     else pl.DataFrame(
-    #         {
-    #             "gseid": ["Unknown"],
-    #             "srrid": ["Unknown"],
-    #             "genename": ["Unknown"],
-    #             **{ct: [np.nan] for ct in celltypes},
-    #         }
-    #     )
-    #     for e in exprs
-    # ]
-    # if valid_exprs:
-    #     exprs_out = pl.concat(valid_exprs)
-    #     exprs_out.write_csv(
-    #         OUTDIR / "gse_srrid_gene_expr.csv",
-    #     )
-    # else:
-    #     print("No valid expression data found.")
-    #     return None
 
 
 def collect_expr(max_workers: int = 20):
@@ -350,14 +289,14 @@ app = typer.Typer()
 
 
 @app.command()
-def EXPRALL(max_works: int = 20):
+def EXPRALL(max_workers: int = 20):
     """
     Process all SCE data and save the expression data to a CSV file.
 
     Parameters:
-        max_works (int): Maximum number of worker threads to use
+        max_workers (int): Maximum number of worker threads to use
     """
-    sceexpr_all(max_works)
+    sceexpr_all(max_workers)
 
 
 @app.command()
@@ -366,14 +305,76 @@ def EXPRONE(
         ..., help="GSEID,SRRID,SRRDIR"
     ),
 ):
+    """
+    Generate expression data for a single-cell RNA-seq dataset.
+    This function processes a single-cell RNA-seq dataset identified by a GEO Series ID,
+    a Sample ID, and the directory containing the raw data files. It calls the `scexpr`
+    function to process the data.
+    Parameters
+    ----------
+    gseid_srrid_srrdir_csv : str
+        A comma-separated string containing:
+        - GSEID: GEO Series ID (e.g., "GSE155673")
+        - SRRID: GEO Sample ID (e.g., "GSM4712885")
+        - SRRDIR: Path to the directory containing the raw data files
+        Example: "GSE155673,GSM4712885,/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE155673/final/GSM4712885"
+    Returns
+    -------
+    None
+        The function calls `scexpr` to process the data but doesn't return anything directly.
+    """
+    # gseid_srrid_srrdir_csv = "GSE155673,GSM4712885,/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE155673/final/GSM4712885"
     gseid, srrid, srrdir = gseid_srrid_srrdir_csv.strip().split(",")
     srrdir = Path(srrdir)
     scexpr(gseid, srrid, srrdir)
 
 
 @app.command()
-def COLLECT(max_worksers: int = 20):
-    collect_expr(max_workers=max_worksers)
+def COLLECT(max_workers: int = 20):
+    """
+    Collects expression data using the collect_expr function with parallelization.
+
+    This function serves as a wrapper around the collect_expr function, providing
+    a simplified interface for collecting expression data with configurable
+    parallelization.
+
+    Parameters
+    ----------
+    max_workers : int, default=20
+        The maximum number of worker processes to use for parallel execution.
+        Controls the level of parallelization when collecting expression data.
+
+    Returns
+    -------
+    None
+        This function does not return any value. The results of the data
+        collection are typically saved to disk by the underlying collect_expr
+        function.
+
+    See Also
+    --------
+    collect_expr : The underlying function that performs the actual data collection.
+
+    Examples
+    --------
+    >>> COLLECT()  # Use default 20 workers
+    >>> COLLECT(max_workers=8)  # Use 8 workers for less resource usage
+    """
+    collect_expr(max_workers=max_workers)
+
+
+@app.command()
+def workflow(
+    max_workers: int = 20,
+):
+    """
+    Run the entire workflow: process all SCE data, collect expression data, and save to CSV.
+
+    Parameters:
+        max_workers (int): Maximum number of worker threads to use
+    """
+    EXPRALL(max_workers)
+    COLLECT(max_workers)
 
 
 if __name__ == "__main__":
