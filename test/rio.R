@@ -129,3 +129,8 @@ convert(
   "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.csv.gz",
   "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.fst"
 )
+
+# feather --------------------------------------------------------------------
+a <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.feather")
+
+a <- arrow::read_feather("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.feather")
