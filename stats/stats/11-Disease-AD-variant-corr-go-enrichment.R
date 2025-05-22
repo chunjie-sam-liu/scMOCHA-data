@@ -149,17 +149,56 @@ fn_variant_go <- function(.variant) {
     neg_bp = list(.neg_bp),
     neg_cc = list(.neg_cc),
     neg_mf = list(.neg_mf),
-    pos_bp_plot = list(fn_plot_go(.pos_bp, 20, "BP")),
-    pos_cc_plot = list(fn_plot_go(.pos_cc, 20, "CC")),
-    pos_mf_plot = list(fn_plot_go(.pos_mf, 20, "MF")),
-    neg_bp_plot = list(fn_plot_go(.neg_bp, 20, "BP")),
-    neg_cc_plot = list(fn_plot_go(.neg_cc, 20, "CC")),
-    neg_mf_plot = list(fn_plot_go(.neg_mf, 20, "MF"))
+    pos_bp_plot = list(
+      fn_plot_go(.pos_bp, 20, "BP") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    ),
+    pos_cc_plot = list(
+      fn_plot_go(.pos_cc, 20, "CC") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    ),
+    pos_mf_plot = list(
+      fn_plot_go(.pos_mf, 20, "MF") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    ),
+    neg_bp_plot = list(
+      fn_plot_go(.neg_bp, 20, "BP") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    ),
+    neg_cc_plot = list(
+      fn_plot_go(.neg_cc, 20, "CC") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    ),
+    neg_mf_plot = list(
+      fn_plot_go(.neg_mf, 20, "MF") +
+        labs(title = .variant) +
+        theme(
+          plot.title = element_text(size = 20)
+        )
+    )
   )
 }
 
 # load data ---------------------------------------------------------------
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
+
+
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/go"
+dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 variants <- c(
   "1670A>G",
@@ -170,18 +209,14 @@ variants <- c(
 )
 
 
-
-
 # ! body --------------------------------------------------------------------
-# fn_variant_go("3173G>A") -> a
+
+
 variants |>
   purrr::map_dfr(
     fn_variant_go,
     .id = "variant"
-  ) ->
-variant_go
-
-variant_go |>
+  ) |>
   dplyr::bind_rows() |>
   dplyr::mutate(
     variant = variants
@@ -189,10 +224,24 @@ variant_go |>
 variant_go_all
 
 
-# export(
-#   variant_go_all,
-#   file = file.path(outdir, "variant_go_all.qs")
-# )
+# ! export to qs --------------------------------------------------------------------
+
+
+export(
+  variant_go_all,
+  file = file.path(outdir, "variant_go_all.qs")
+)
+
+
+#
+#
+#
+#
+#
+
+# ! save to bp to plot --------------------------------------------------------------------
+
+
 
 variant_go_all |>
   dplyr::mutate(
@@ -281,7 +330,7 @@ theme_cor <- function() {
   )
 }
 
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
+outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/pos"
 variants <- c(
   "1670A>G",
   "1397T>A",

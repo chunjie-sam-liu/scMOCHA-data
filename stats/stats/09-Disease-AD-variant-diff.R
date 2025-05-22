@@ -383,7 +383,7 @@ forplot_test |>
   ) ->
 p_variant_boxplot_af_sc_ttest
 ggsave(
-  filename = file.path(outdir, "ad-variant_boxplot-ttest-all.pdf"),
+  filename = file.path(outdir, "ad-variant_pointplot-ttest-all.pdf"),
   plot = p_variant_boxplot_af_sc_ttest,
   width = 13,
   height = 3.5,
