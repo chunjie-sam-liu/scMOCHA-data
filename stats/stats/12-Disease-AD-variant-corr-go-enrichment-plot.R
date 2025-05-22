@@ -163,7 +163,12 @@ forsaveplots |>
     )
   )
 
-# ! save go for each plot --------------------------------------------------------------------
+
+#
+#
+#
+#
+# ! 3173G>A--------------------------------------------------------------------
 
 variant_go_all |>
   dplyr::filter(
@@ -214,6 +219,14 @@ fn_load_corr <- function(.variant) {
     dplyr::filter(abs(corr) > 0.3)
 }
 
+import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A-corr.fst" |> glue::glue()
+) |>
+  dplyr::arrange(corr) |>
+  dplyr::filter(pval < 0.05) |>
+  dplyr::filter(abs(corr) > 0.3) |>
+  dplyr::filter(!celltype %in% c("other_T", "other", "DC")) |>
+  dplyr::filter(!grepl("ENSG", genename))
 
 corr_3173G_A <- fn_load_corr("3173G>A") |>
   dplyr::filter(genename %in% c(genes_pathway)) |>
@@ -378,7 +391,8 @@ expr_v_3173G_A |>
 expr_v_3173G_A |>
   dplyr::arrange(corr) |>
   dplyr::select(genename, corr, pval) |>
-  dplyr::slice(1:10) |>
+  dplyr::slice(1:25) |>
+  # dplyr::filter(corr < -0.35) |>
   dplyr::mutate(
     variant = "3173G>A",
   ) ->
@@ -478,7 +492,7 @@ ggsave(
   path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
   filename = file.path("variant_corr_top10_3173G_A_celltype.pdf"),
   plot = variant_corr_top10_3173G_A_plot,
-  width = 8,
+  width = 12,
   height = 5,
   dpi = 300
 )
@@ -563,7 +577,7 @@ ggsave(
   path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
   filename = file.path("variant_corr_top10_5_variant.pdf"),
   plot = variant_corr_top10_5variant_plot,
-  width = 8,
+  width = 12,
   height = 5,
   dpi = 300
 )
