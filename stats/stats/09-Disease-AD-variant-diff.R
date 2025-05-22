@@ -207,12 +207,12 @@ admeta_sc5p_variant_type_af |>
   ) ->
 admeta_sc5p_variant_type_af_ttest
 
-# export(
-#   admeta_sc5p_variant_type_af_ttest,
-#   file = file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"),
-#   format = "qs"
-# )
-# admeta_sc5p_variant_type_af_ttest <- import(file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"))
+export(
+  admeta_sc5p_variant_type_af_ttest,
+  file = file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"),
+  format = "qs"
+)
+admeta_sc5p_variant_type_af_ttest <- import(file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"))
 
 
 
@@ -657,13 +657,13 @@ forplot_sc |>
   ) ->
 p_variant_boxplot_af_sc
 
-ggsave(
-  filename = file.path(outdir, "ad-variant_boxplot-single-cell.pdf"),
-  plot = p_variant_boxplot_af_sc,
-  width = 15,
-  height = 8,
-  device = "pdf"
-)
+# ggsave(
+#   filename = file.path(outdir, "ad-variant_boxplot-single-cell.pdf"),
+#   plot = p_variant_boxplot_af_sc,
+#   width = 15,
+#   height = 8,
+#   device = "pdf"
+# )
 
 
 ggsave(
