@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2025-04-24 22:03:34
+# @DATE: 2025-05-22 12:39:40
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
@@ -40,8 +40,7 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # src ---------------------------------------------------------------------
 
 # header ------------------------------------------------------------------
-log_threshold(TRACE)
-log_layout(layout_glue_colors)
+
 
 # future: :plan(future: :multisession, workers = 10)
 
@@ -49,75 +48,13 @@ log_layout(layout_glue_colors)
 
 
 # load data ---------------------------------------------------------------
+
+# load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
-  dplyr::arrange(cancer_types)
-
-all_heteroplasmic_af <- import(
-  file.path(cleandatadir, "all_hetero_af.cluster.csv")
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
 )
-
-all_variant <- import(
-  file.path(cleandatadir, "all_variant.rds")
-)
-
-all_variant |>
-  dplyr::filter(issomatic == "heteroplasmic") |>
-  dplyr::arrange(Position) ->
-heteroplasmic
-
-heteroplasmic |>
-  dplyr::filter(Disease != "") ->
-heteroplasmic_disease
-
-# all_heteroplasmic_af |>
-#   dplyr::select(1, 2, 3, `4175G>A`, `13271T>C`) |>
-#   dplyr::mutate(
-#     colname = glue::glue("{gseid}_{srrid}_{barcode}"),
-#   ) |>
-#   dplyr::select(-c(gseid, srrid)) |>
-#   tidyr::pivot_longer(
-#     cols = -c(colname, barcode),
-#     names_to = "variant",
-#     values_to = "af"
-#   ) ->
-# forplot
-# forplot |>
-#   dplyr::filter(variant == "4175G>A") |>
-#   ggplot(aes(
-#     x = barcode,
-#     y = af,
-#   )) +
-#   geom_point() +
-#   theme(
-#     axis.text = element_blank(),
-#     axis.ticks = element_blank(),
-#   )
-# forplot |>
-#   dplyr::filter(variant == "4175G>A") |>
-#   ggstatsplot::ggbetweenstats(
-#     x = barcode,
-#     y = af,
-#     xlab = "Cluster",
-#     ylab = "Allele Frequency",
-#     # title = glue::glue("{the_srrid} - {one_variant}"),
-#     pairwise.display = "significant",
-#     p.adjust.method = "BH"
-#   ) +
-#   scale_y_continuous(
-#     limits = c(0, 1)
-#   )
-
-
-
-VARIANTS <- heteroplasmic$variant
-length(VARIANTS)
-
-CELLBARCODE <- data.table::fread(
-  file.path(cleandatadir, "barcode_celltype.csv")
-)
-
 
 sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
@@ -125,9 +62,14 @@ sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/g
     Sex = sex
   )
 
+
 METADATA <- import(
-  file.path(cleandatadir, "gse_dataset_metadata_full.rds")
+  file.path(cleandatadir, "gse_dataset_metadata_full.qs")
 ) |>
+  dplyr::filter(
+    disease %in% c("Alzheimer's Disease", "Healthy"),
+    Chemistry == "SC5P-PE"
+  ) |>
   dplyr::mutate(
     Haplogroup_s = purrr::map_chr(
       .x = Haplogroup,
@@ -143,13 +85,37 @@ METADATA <- import(
     sex_pred,
     by = "srrid"
   )
+
 METADATA |>
-  # dplyr::count(Chemistry)
-  dplyr::filter(Chemistry == "SC5P-PE") |>
   dplyr::pull(srrid) ->
 srrids
 
-# body --------------------------------------------------------------------
+all_variant <- import(
+  file.path(cleandatadir, "all_variant.fst")
+)
+
+all_heteroplasmic_af <- import(
+  file.path(cleandatadir, "all_hetero_af.cluster.fst")
+)
+
+all_variant |>
+  dplyr::filter(issomatic == "heteroplasmic") |>
+  dplyr::arrange(Position) ->
+heteroplasmic
+
+gse_data |>
+  dplyr::filter(srrid %in% srrids) |>
+  dplyr::select(srrid, haplo_variant) |>
+  tidyr::unnest(cols = haplo_variant) |>
+  dplyr::filter(variant %in% heteroplasmic$variant) ->
+gse_variant_het
+
+VARIANTS <- gse_variant_het$variant |>
+  sort() |>
+  unique()
+length(VARIANTS)
+
+# ! body --------------------------------------------------------------------
 
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
 
@@ -160,12 +126,13 @@ all_heteroplasmic_af |>
     srrid %in% srrids
   ) ->
 all_heteroplasmic_af_1
-nrow(all_heteroplasmic_af_1)
+dim(all_heteroplasmic_af_1)
 
 all_heteroplasmic_af_1 |>
   dplyr::select(dplyr::any_of(VARIANTS)) |>
   as.matrix() ->
 all_heteroplasmic_af_1_mat
+
 
 all_heteroplasmic_af_1 |>
   dplyr::select(gseid, srrid, barcode) |>
@@ -193,14 +160,16 @@ all_heteroplasmic_af_1 |>
   ) ->
 .af_cluster_before
 
+
 .af_cluster_before |>
   tibble::column_to_rownames(var = "colname") ->
 .af_cluster
 
-
-
 suppressPackageStartupMessages(library(ComplexHeatmap))
 library(circlize)
+pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::arrange(cancer_types)
+
 
 colSums(all_heteroplasmic_af_1_mat) |>
   as.data.frame() |>
@@ -210,8 +179,7 @@ colSums(all_heteroplasmic_af_1_mat) |>
 sort_variants
 
 dplyr::bind_rows(
-  dplyr::slice_head(sort_variants, n = 10),
-  sort_variants |> dplyr::filter(variant %in% heteroplasmic_disease$variant)
+  dplyr::slice_head(sort_variants, n = 10)
 ) |>
   dplyr::distinct() |>
   dplyr::filter(variant != "8545G>A") |>
@@ -225,28 +193,27 @@ dplyr::bind_rows(
 top_variants
 
 
-
 .af_mtx <- all_heteroplasmic_af_1_mat |> t()
 colnames(.af_mtx) <- .af_cluster$colname
 dim(.af_mtx)
+
 
 # chm top color setting
 Cluster_ <- levels(.af_cluster$Cluster)
 CLUSTER_ <- color_celltype
 names(CLUSTER_) <- Cluster_
-Chemistry_ <- levels(.af_cluster$Chemistry)
-CHEMISTRY_ <- color_chemistry
+Chemistry_ <- levels(.af_cluster$Chemistry)[c(1)]
+CHEMISTRY_ <- color_chemistry[c(1)]
 names(CHEMISTRY_) <- Chemistry_
 Sex_ <- levels(.af_cluster$Sex)[c(1, 2)]
 SEX_ <- color_gender[c(1, 2)]
 names(SEX_) <- Sex_
-Disease_ <- levels(.af_cluster$Disease)
-DISEASE_ <- color_disease
+Disease_ <- levels(.af_cluster$Disease)[c(1, 3)]
+DISEASE_ <- color_disease[c(1, 3)]
 names(DISEASE_) <- Disease_
 Haplogroup_ <- sort(unique(.af_cluster$Haplogroup))
 HAPLOGROUP_ <- pcc$color[1:length(Haplogroup_)]
 names(HAPLOGROUP_) <- Haplogroup_
-
 
 chm_top <- ComplexHeatmap::HeatmapAnnotation(
   df = .af_cluster,
@@ -266,10 +233,10 @@ chm_top <- ComplexHeatmap::HeatmapAnnotation(
   which = "column"
 )
 
-hma_index_right <- match(top_variants$variant, rownames(.af_mtx))
+hma_index_left <- match(top_variants$variant, rownames(.af_mtx))
 hma_left <- ComplexHeatmap::rowAnnotation(
   link = anno_mark(
-    at = hma_index_right,
+    at = hma_index_left,
     labels = top_variants$label,
     which = "row",
     side = "left",
@@ -302,66 +269,51 @@ col_pick = c(
   )
 )
 col_fun = circlize::colorRamp2(
-  # seq(col_start,
-  #   col_end,
-  #   length.out = n_break
-  # ),
   .seq_af,
   col_pick
 )
-
-
 
 # ! cluster --------------------------------------------------------------------
 
 
 ComplexHeatmap::Heatmap(
   matrix = .af_mtx,
-  # col = circlize::colorRamp2(
-  #   breaks = c(-0.1, 0, 1),
-  #   colors = c("lightgrey", "gold", "blue"),
-  #   space = "RGB"
-  # ),
   col = col_fun,
   name = "Allele Freq",
   na_col = "white",
   color_space = "LAB",
   rect_gp = gpar(col = NA),
   border = NA,
+  border_gp = gpar(col = NA),
   cell_fun = NULL,
   layer_fun = NULL,
   jitter = FALSE,
   # row
   cluster_rows = TRUE,
-  cluster_row_slices = T,
-  show_row_names = FALSE,
-  show_row_dend = FALSE,
+  cluster_row_slices = TRUE,
   clustering_distance_rows = "pearson",
   clustering_method_rows = "ward.D",
-  # row_names_gp = gpar(
-  #   # fontsize = 20,
-  #   col = .gcol$cell_variants
-  # ),
+  show_row_dend = FALSE,
+  show_row_names = FALSE,
+  row_dend_reorder = TRUE,
+  row_dend_gp = gpar(),
+  row_split = 2,
+  row_title = NULL,
   # column
-  # column_title = paste0("palette = '", col_option, "'"),
-  # column_title = .column_title,
-  column_title_gp = gpar(fontsize = 40),
   cluster_columns = TRUE,
-  # cluster_columns = cluster_within_group(
-  #   mat = .af_mtx,
-  #   factor = .af_cluster_before |>
-  #     dplyr::select(colname, Cluster) |>
-  #     tibble::deframe()
-  # ),
-  cluster_column_slices = T,
-  show_column_dend = FALSE,
+  cluster_column_slices = TRUE,
   clustering_distance_columns = "pearson",
   clustering_method_columns = "ward.D",
+  # column_title_gp = gpar(fontsize = 40),
+  show_column_dend = FALSE,
   show_column_names = FALSE,
   row_names_side = "left",
+  column_split = 3,
+  column_title = NULL,
+
+  # annotation
   top_annotation = chm_top,
   left_annotation = hma_left,
-  # right_annotation = hma_right,
   heatmap_legend_param = list(
     title = "Allele Freq",
     at = c(0, 0.5, 1),
@@ -372,92 +324,15 @@ ComplexHeatmap::Heatmap(
 ) ->
 ch_af
 
-
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_AD.pdf",
     width = 20,
     height = 9
   )
   ComplexHeatmap::draw(object = ch_af)
   dev.off()
 }
-
-
-
-
-
-# ! cluster within group --------------------------------------------------------------------
-
-ComplexHeatmap::Heatmap(
-  matrix = .af_mtx,
-  # col = circlize::colorRamp2(
-  #   breaks = c(-0.1, 0, 1),
-  #   colors = c("lightgrey", "gold", "blue"),
-  #   space = "RGB"
-  # ),
-  col = col_fun,
-  name = "Allele Freq",
-  na_col = "white",
-  color_space = "LAB",
-  rect_gp = gpar(col = NA),
-  border = NA,
-  cell_fun = NULL,
-  layer_fun = NULL,
-  jitter = FALSE,
-  # row
-  cluster_rows = TRUE,
-  cluster_row_slices = T,
-  show_row_names = FALSE,
-  show_row_dend = FALSE,
-  clustering_distance_rows = "pearson",
-  clustering_method_rows = "ward.D",
-  # row_names_gp = gpar(
-  #   # fontsize = 20,
-  #   col = .gcol$cell_variants
-  # ),
-  # column
-  # column_title = paste0("palette = '", col_option, "'"),
-  # column_title = .column_title,
-  column_title_gp = gpar(fontsize = 40),
-  # cluster_columns = TRUE,
-  cluster_columns = cluster_within_group(
-    mat = .af_mtx,
-    factor = .af_cluster_before |>
-      dplyr::select(colname, Cluster) |>
-      tibble::deframe()
-  ),
-  cluster_column_slices = T,
-  show_column_dend = FALSE,
-  clustering_distance_columns = "pearson",
-  clustering_method_columns = "ward.D",
-  show_column_names = FALSE,
-  row_names_side = "left",
-  top_annotation = chm_top,
-  # left_annotation = hma_left,
-  # right_annotation = hma_right,
-  heatmap_legend_param = list(
-    title = "Allele Freq",
-    at = c(0, 0.5, 1),
-    labels = c("0", "0.5", "1"),
-    legend_direction = "vertical",
-    title_gp = gpar(fontsize = 10)
-  )
-) ->
-ch_af_within_group
-
-
-{
-  pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_within_group-celltype.pdf",
-    width = 20,
-    height = 9
-  )
-  ComplexHeatmap::draw(object = ch_af_within_group)
-  dev.off()
-}
-
-
 
 # footer ------------------------------------------------------------------
 
