@@ -65,7 +65,7 @@ class SCEXPR:
     def qc(self):
         adata = self.load_h5()
         sc.pp.calculate_qc_metrics(
-            adata, qc_vars=["mt", "ribo", "hb"], inplace=True, log1p=True
+            adata, qc_vars=["mt", "ribo", "hb"], inplace=True, log1p=False
         )
 
         # filter cells and genes
@@ -282,6 +282,12 @@ def collect_expr(max_workers: int = 20):
         dfs = pl.DataFrame()
     dfs.write_csv(
         OUTDIR / "gse_srrid_celltype_gene_expr.csv",
+    )
+    dfs.write_ipc(
+        OUTDIR / "gse_srrid_celltype_gene_expr.feather",
+    )
+    print(
+        f"Saved combined expression data to {OUTDIR / 'gse_srrid_celltype_gene_expr.feather|csv'}"
     )
 
 

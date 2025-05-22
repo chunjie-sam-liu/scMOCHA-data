@@ -131,6 +131,25 @@ convert(
 )
 
 # feather --------------------------------------------------------------------
-a <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.feather")
+a <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.fst")
+a$barcode |>
+  unique() |>
+  length()
+nrow(a)
 
-a <- arrow::read_feather("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.feather")
+
+
+
+# ! test --------------------------------------------------------------------
+
+old <- import("/scr1/users/liuc9/tmp/scanpy/GSE155673_GSM4712885_celltype_gene_expr.csv")
+
+new <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/EXPR/GSE155673_GSM4712885_celltype_gene_expr.csv")
+
+old |>
+  dplyr::select(genename, bold = B) |>
+  dplyr::left_join(
+    new |>
+      dplyr::select(genename, newb = B),
+    by = "genename"
+  )
