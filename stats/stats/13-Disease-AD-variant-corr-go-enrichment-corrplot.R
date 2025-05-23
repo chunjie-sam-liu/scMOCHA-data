@@ -84,6 +84,7 @@ theme_cor <- function() {
 
 outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
+
 library(clusterProfiler)
 variant_go_all <- import(file.path(outdir, "variant_go_all.qs"))
 
@@ -124,6 +125,10 @@ corr_3173G_A <- fn_load_corr("3173G>A") |>
   dplyr::arrange(desc(corr))
 
 
+
+
+
+
 expr |>
   dplyr::left_join(
     v_3173G_A,
@@ -138,18 +143,15 @@ expr |>
 expr_v_3173G_A
 
 
+
+# ? plot scatter and correlation --------------------------------------------------------------------
+
 source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+
 expr_v_3173G_A |>
   dplyr::mutate(
-    corr_plot = purrr::pmap(
-      list(
-        .expr = expr,
-        .af = af,
-        .genename = genename,
-        .corr = corr,
-        .pval = pval
-      ),
-      .f = \(.expr, .af, .genename, .corr, .pval) {
+    corr_plot = parallel::mcmapply(
+      FUN = \(.expr, .af, .genename, .corr, .pval) {
         # .expr <- expr_v_3173G_A$expr[[1]]
         # .af <- expr_v_3173G_A$af[[1]]
         # .genename <- expr_v_3173G_A$genename[[1]]
@@ -220,10 +222,247 @@ expr_v_3173G_A |>
             return(NULL)
           }
         )
-      }
+      },
+      .expr = expr,
+      .af = af,
+      .genename = genename,
+      .corr = corr,
+      .pval = pval,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
     )
   ) ->
 expr_v_3173G_A_plot
+
+
+
+# ? save plots --------------------------------------------------------------------
+
+expr_v_3173G_A_plot |>
+  dplyr::mutate(
+    a = parallel::mcmapply(
+      FUN = \(.x, .y) {
+        .filename <- glue::glue("{.x}.pdf")
+        ggsave(
+          filename = .filename,
+          path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/3173G_A",
+          plot = .y,
+          width = 7,
+          height = 6,
+          dpi = 300
+        )
+      },
+      .x = genename,
+      .y = corr_plot,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
+    )
+  )
+
+expr_v_3173G_A_plot |>
+  export(
+    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/3173G_A/3173G_A_corr.qs"
+  )
+
+
+
+
+# ? all correlation with 3173G>A --------------------------------------------------------------------
+
+
+genebiotype <- import("/home/liuc9/github/scMOCHA-data/config/Homo_sapiens.GRCh38.107.gtf.id_name_length_genetype.fst")
+
+expr_v_3173G_A_plot |>
+  dplyr::filter(AD >= 20, Healthy >= 20) |>
+  dplyr::left_join(
+    genebiotype,
+    by = c("genename" = "gene_name")
+  ) ->
+expr_v_3173G_A_plot_filtered
+
+
+expr_v_3173G_A_plot_filtered |>
+  tibble::rowid_to_column() |>
+  dplyr::select(-c(expr, af)) |>
+  dplyr::mutate(
+    label = ifelse(
+      abs(corr) > 0.53 & Gene_type == "protein_coding",
+      genename,
+      NA_character_
+    )
+  ) |>
+  ggplot(aes(
+    x = rowid,
+    y = corr
+  )) +
+  geom_col() +
+  ggrepel::geom_text_repel(
+    aes(label = label)
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1400),
+    breaks = seq(0, 1400, 200),
+    expand = expansion(mult = c(0.01, 0.02))
+  ) +
+  scale_y_continuous(
+    limits = c(-0.7, 0.7),
+    breaks = seq(-0.7, 0.7, 0.2),
+    expand = expansion(mult = c(0.02, 0.01))
+  ) +
+  theme_cor() +
+  theme(
+    # axis.title.x = element_blank()
+  ) +
+  labs(
+    x = "Gene rank",
+    y = "Corr. between gene expr and 3173G>A AF in Mono"
+  ) ->
+plot_corr_3173G_A
+
+ggsave(
+  filename = "corr_gene_3173G_A_in_mono.pdf",
+  path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
+  plot = plot_corr_3173G_A,
+  width = 10,
+  height = 6,
+  dpi = 300
+)
+
+
+
+
+# ? all variant and celltype --------------------------------------------------------------------
+
+variants <- c(
+  "1670A>G",
+  "1397T>A",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A"
+)
+
+variants |>
+  purrr::map(
+    ~ {
+      import(
+        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+      ) |>
+        dplyr::mutate(variant = .x)
+    }
+  ) |>
+  dplyr::bind_rows() ->
+variant_corr_celltype
+
+expr_v_3173G_A_plot_filtered |>
+  tibble::rowid_to_column() |>
+  dplyr::select(-c(expr, af)) |>
+  dplyr::mutate(
+    label = ifelse(
+      abs(corr) > 0.5 & Gene_type == "protein_coding",
+      genename,
+      NA_character_
+    )
+  ) |>
+  dplyr::filter(!is.na(label)) ->
+topcorrgenes
+
+variant_corr_celltype |>
+  dplyr::filter(genename %in% topcorrgenes$genename) |>
+  dplyr::filter(variant == "3173G>A") |>
+  dplyr::mutate(
+    celltype = gsub("_", " ", celltype),
+  ) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype) |> rev())
+  ) |>
+  dplyr::mutate(
+    genename = factor(genename, levels = topcorrgenes$genename)
+  ) |>
+  dplyr::mutate(
+    mark = dplyr::case_when(
+      pval < 0.001 ~ "***",
+      pval < 0.01 ~ "**",
+      pval < 0.05 ~ "*",
+      TRUE ~ ""
+    )
+  ) ->
+variant_topcorrgenes_3173G_A_forplot
+
+variant_topcorrgenes_3173G_A_forplot |>
+  ggplot(aes(
+    x = genename,
+    y = celltype
+  )) +
+  geom_tile(aes(fill = corr)) +
+  geom_text(
+    aes(label = mark),
+    size = 5,
+    color = "black"
+  ) +
+  scale_fill_gradient2(
+    breaks = round(seq(-0.6, 0.55, length.out = 5), digits = 2),
+    labels = format(seq(-0.6, 0.6, length.out = 5), digits = 2),
+    low = "#00fefe",
+    mid = "white",
+    high = "#fe0000"
+  ) +
+  theme_cor() +
+  theme(
+    axis.text.y = element_text(hjust = 1, size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.position = "right",
+    axis.title = element_blank()
+  ) +
+  guides(
+    fill = guide_legend(
+      # legend title
+      title = "Pearsons' correlation (r)",
+      title.position = "right",
+      title.theme = element_text(angle = -90, size = 14, family = "Times"),
+      title.vjust = -0.5,
+      title.hjust = 0.5,
+
+      # legend label
+      label = TRUE,
+      label.position = "left",
+      label.theme = element_text(size = 14, family = "Times"),
+      label.hjust = 0.5,
+      label.vjust = 0.5,
+
+      # legend key
+      keywidth = 1,
+      keyheight = 1.8,
+      reverse = TRUE
+    )
+  ) +
+  coord_fixed(ratio = 1) +
+  labs(
+    x = "Gene",
+    y = "Cell type"
+  ) ->
+variant_topcorrgenes_3173G_A_tileplot
+
+ggsave(
+  path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
+  filename = file.path("variant_topcorrgenes_3173G_A_tileplot.pdf"),
+  plot = variant_topcorrgenes_3173G_A_tileplot,
+  width = 12,
+  height = 5,
+  dpi = 300
+)
+
+
+# ? mito genes --------------------------------------------------------------------
+
+
+# variant_go_all |>
+#   dplyr::filter(
+#     variant == "3173G>A"
+#   ) |>
+#   dplyr::pull(neg_cc)
+
 
 # footer ------------------------------------------------------------------
 

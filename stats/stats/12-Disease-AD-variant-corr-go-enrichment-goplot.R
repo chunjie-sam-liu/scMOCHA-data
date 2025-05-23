@@ -88,23 +88,24 @@ forsaveplots
 
 forsaveplots |>
   dplyr::mutate(
-    a = purrr::pmap(
-      .l = list(
-        variant = variant,
-        goname = goname,
-        p = p
-      ),
-      .f = \(variant, goname, p) {
+    a = parallel::mcmapply(
+      FUN = \(variant, goname, p) {
         .filename <- "{variant}_{goname}.pdf" |> glue::glue()
         ggsave(
           path = outdir,
           filename = .filename,
           plot = p,
           width = 10,
-          height = ,
+          height = 6,
           dpi = 300
         )
-      }
+        1
+      },
+      variant = variant,
+      goname = goname,
+      p = p,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
     )
   )
 
@@ -164,6 +165,15 @@ forsaveplots |>
   )
 
 
+
+# ! don't run below --------------------------------------------------------------------
+
+
+#
+#
+#
+#
+#
 #
 #
 #

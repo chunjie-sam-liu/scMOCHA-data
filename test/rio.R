@@ -153,3 +153,10 @@ old |>
       dplyr::select(genename, newb = B),
     by = "genename"
   )
+
+
+
+convert(
+  "/mnt/isilon/xing_lab/liuc9/refdata/ensembl/Homo_sapiens.GRCh38.107.gtf.id_name_length_genetype.rds",
+  "/mnt/isilon/xing_lab/liuc9/refdata/ensembl/Homo_sapiens.GRCh38.107.gtf.id_name_length_genetype.fst"
+)
