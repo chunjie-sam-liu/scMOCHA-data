@@ -366,6 +366,8 @@ expr_v_3173G_A_plot_filtered |>
   dplyr::filter(!is.na(label)) ->
 topcorrgenes
 
+topcorrgenes |> dplyr::pull(genename)
+
 variant_corr_celltype |>
   dplyr::filter(genename %in% topcorrgenes$genename) |>
   dplyr::filter(variant == "3173G>A") |>
