@@ -210,3 +210,11 @@ export(
   gnomad,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
 )
+convert(
+  "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.csv",
+  "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.fst"
+)
+convert(
+  "/home/liuc9/github/scMOCHA-data/config/Mito-Genome-Loci-MitoMAP-Foswiki.csv",
+  "/home/liuc9/github/scMOCHA-data/config/Mito-Genome-Loci-MitoMAP-Foswiki.fst"
+)
