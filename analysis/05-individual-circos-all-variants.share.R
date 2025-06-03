@@ -2,18 +2,17 @@ fn_plot_mtdna_circos <- function(
     start.degree = 90,
     canvas.xlim = c(-1, 1),
     canvas.ylim = c(-1, 1),
-    gap.degree = 1) {
-  LENGTH <- 16569
-  gtf_gene_df <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
+    gap.degree = 1
+    LENGTH <- 16569,
+    gtf_gene_df = import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"),
+    phastCons100way = import("/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"),
+    gnomad = import("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"),
+    coverage = import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_coverage.fst"),
+    all_variant = import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs")
+    ) {
 
-  phastCons100way <- import(
-    "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"
-  )
 
-  # af_hom is gnomad AF
-  gnomad <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
-  ) |>
+  gnomad <- gnomad |>
     dplyr::filter(filters == "PASS") |>
     dplyr::select(position, af = af_hom, ac = ac_hom) |>
     dplyr::arrange(position) |>
@@ -31,10 +30,7 @@ fn_plot_mtdna_circos <- function(
     ) |>
     dplyr::filter(af > 0.01)
 
-  # coverage
-  coverage <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_coverage.fst"
-  ) |>
+  coverage <- coverage |>
     dplyr::mutate(
       seqnames = "MT",
       start = pos,
@@ -50,10 +46,7 @@ fn_plot_mtdna_circos <- function(
       depth = log10(depth + 1)
     )
 
-  # all variants
-  all_variant <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
-  ) |>
+  all_variant <- all_variant |>
     dplyr::mutate(
       paf = n / 577
     ) |>
@@ -61,7 +54,6 @@ fn_plot_mtdna_circos <- function(
 
   all_variant |>
     dplyr::filter(issomatic == "homoplasmic") |>
-    # dplyr::select(Position, paf) |>
     dplyr::mutate(
       seqnames = "MT",
       start = Position,
@@ -80,7 +72,6 @@ fn_plot_mtdna_circos <- function(
 
   all_variant |>
     dplyr::filter(issomatic == "heteroplasmic") |>
-    # dplyr::select(Position, paf) |>
     dplyr::mutate(
       seqnames = "MT",
       start = Position,
@@ -104,13 +95,7 @@ fn_plot_mtdna_circos <- function(
 
   source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
-  # conserve_rate
-
   library(circlize)
-
-
-  # ! init --------------------------------------------------------------------
-
 
   circos.clear()
   circos.par(
@@ -120,16 +105,12 @@ fn_plot_mtdna_circos <- function(
     gap.degree = gap.degree
   )
 
-
-  # ! axis --------------------------------------------------------------------
-
   circos.genomicInitialize(
     data = coverage,
     plotType = "axis",
     axis.labels.cex = 0.8 * par("cex"),
   )
 
-  # ! highlights --------------------------------------------------------------------
   gtf_gene_df |>
     dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) ->
   highlight_df
@@ -154,9 +135,6 @@ fn_plot_mtdna_circos <- function(
     )
   }
 
-
-  # ! phastCons100way --------------------------------------------------------------------
-
   circos.genomicTrack(
     phastCons100way,
     track.height = 0.03,
@@ -174,9 +152,6 @@ fn_plot_mtdna_circos <- function(
       )
     }
   )
-
-  # ! gnomad --------------------------------------------------------------------
-
 
   circos.genomicTrack(
     gnomad,
@@ -198,10 +173,6 @@ fn_plot_mtdna_circos <- function(
     }
   )
 
-
-  # ! homoplasmic paf--------------------------------------------------------------------
-
-
   circos.genomicTrack(
     homoplasmic_variant_af,
     track.height = 0.1,
@@ -221,9 +192,6 @@ fn_plot_mtdna_circos <- function(
       )
     }
   )
-
-  # ! heteroplasmic paf--------------------------------------------------------------------
-
 
   circos.genomicTrack(
     heteroplasmic_variant_af,
@@ -245,8 +213,6 @@ fn_plot_mtdna_circos <- function(
     }
   )
 
-  # ! gene name--------------------------------------------------------------------
-
   circos.genomicTrack(
     gtf_gene_df,
     ylim = c(0, 1),
@@ -257,9 +223,9 @@ fn_plot_mtdna_circos <- function(
     bg.col = color_circos_track["gene_name_bg"],
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
-      for (genotype in genetypes) {
-        r <- region[value$TYPE == genotype, ]
-        v <- value[value$TYPE == genotype, ]
+      for (genetype in genetypes) {
+        r <- region[value$TYPE == genetype, ]
+        v <- value[value$TYPE == genetype, ]
         v_gene_name <- gsub(
           pattern = "MT-|-",
           replacement = "",
@@ -280,10 +246,6 @@ fn_plot_mtdna_circos <- function(
     }
   )
 
-
-  # ! gene region --------------------------------------------------------------------
-
-
   circos.genomicTrack(
     gtf_gene_df,
     track.height = 0.05,
@@ -293,10 +255,10 @@ fn_plot_mtdna_circos <- function(
     cell.padding = c(0, 0, 0, 0),
     panel.fun = function(region, value, ...) {
       genetypes <- sort(unique(value$TYPE))
-      for (genotype in genetypes) {
-        r <- region[value$TYPE == genotype, ]
-        v <- value[value$TYPE == genotype, ]
-        vcol <- value[value$TYPE == genotype, ]$COLOR
+      for (genetype in genetypes) {
+        r <- region[value$TYPE == genetype, ]
+        v <- value[value$TYPE == genetype, ]
+        vcol <- value[value$TYPE == genetype, ]$COLOR
         circos.genomicRect(
           region = r,
           value = v,
@@ -307,11 +269,6 @@ fn_plot_mtdna_circos <- function(
       }
     },
   )
-
-
-
-  # ! homoplasmic af--------------------------------------------------------------------
-
 
   circos.genomicTrack(
     homoplasmic_variant_af,
@@ -324,12 +281,6 @@ fn_plot_mtdna_circos <- function(
     panel.fun = function(region, value, ...) {
       pos = region$start
       val = value$af
-      # circos.barplot(
-      #   value = val,
-      #   pos = pos,
-      #   col = "#a6fccb",
-      #   border = "#a6fccb"
-      # )
       circos.genomicPoints(
         region = region,
         value = value,
@@ -340,10 +291,6 @@ fn_plot_mtdna_circos <- function(
       )
     }
   )
-
-
-  # ! heteroplasmic af--------------------------------------------------------------------
-
 
   circos.genomicTrack(
     heteroplasmic_variant_af,
@@ -356,12 +303,6 @@ fn_plot_mtdna_circos <- function(
     panel.fun = function(region, value, ...) {
       pos = region$start
       val = value$af
-      # circos.barplot(
-      #   value = val,
-      #   pos = pos,
-      #   col = "red",
-      #   border = "red"
-      # )
       circos.genomicPoints(
         region = region,
         value = value,
@@ -373,7 +314,6 @@ fn_plot_mtdna_circos <- function(
     }
   )
 
-  # ! coverage --------------------------------------------------------------------
   circos.genomicTrack(
     coverage,
     track.height = 0.1,
@@ -393,49 +333,5 @@ fn_plot_mtdna_circos <- function(
     }
   )
 
-
-
-  # ! labels --------------------------------------------------------------------
-  # circos.labels(
-  #   rep("MT", 5),
-  #   x = top_variants$start,
-  #   labels = top_variants$variant,
-  #   side = "inside",
-  #   cex = 0.5,
-  #   track.margin = c(0, 0.01),
-  # )
-
   circos.clear()
 }
-
-{
-  pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-homo-hetero.pdf",
-    width = 13,
-    height = 10
-  )
-  fn_plot_mtdna_circos()
-  dev.off()
-}
-
-
-{
-  pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-homo-hetero-90.pdf",
-    width = 13,
-    height = 10
-  )
-  fn_plot_mtdna_circos(
-    start.degree = 90,
-    canvas.xlim = c(-1, 1),
-    canvas.ylim = c(-1, 1),
-    gap.degree = 90
-  )
-  dev.off()
-}
-fn_plot_mtdna_circos(
-  start.degree = 90,
-  canvas.xlim = c(-1, 1),
-  canvas.ylim = c(-1, 1),
-  gap.degree = 270
-)
