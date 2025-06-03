@@ -6,7 +6,7 @@ variants_tobe_excluded <- c(
 )
 
 gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
 )
 
 
@@ -144,7 +144,7 @@ variant_count
   data.table::fwrite(
     variant_count,
     file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.csv"
     ),
     sep = ",",
     row.names = FALSE,
@@ -153,7 +153,7 @@ variant_count
   readr::write_rds(
     variant_count,
     file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.rds"
     )
   )
 }

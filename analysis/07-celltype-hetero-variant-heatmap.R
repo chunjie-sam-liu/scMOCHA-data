@@ -83,7 +83,7 @@ CELLBARCODE <- import(
   file.path(cleandatadir, "barcode_celltype.fst")
 )
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
     Sex = sex
@@ -117,7 +117,7 @@ METADATA <- import(
 
 # body --------------------------------------------------------------------
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 all_heteroplasmic_af |>
   # dtplyr::lazy_dt() |>
   dplyr::filter(
@@ -337,7 +337,7 @@ ch_af
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af.hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/heatmap_cluster_af.hetero.pdf",
     width = 22,
     height = 9
   )

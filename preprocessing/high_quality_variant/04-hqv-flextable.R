@@ -50,7 +50,7 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/hqv"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/hqv"
 
 hqv_variant <- readr::read_rds(
   file.path(
@@ -61,12 +61,12 @@ hqv_variant <- readr::read_rds(
   dplyr::select(srrid, load_hqv)
 
 gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.rds"
 )
 
 
 gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
 )
 
 gse_dataset_metadata_full |>

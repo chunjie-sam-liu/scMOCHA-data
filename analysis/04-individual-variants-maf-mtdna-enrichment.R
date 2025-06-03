@@ -129,14 +129,14 @@ fn_plot_mtdna <- function() {
 # load data ---------------------------------------------------------------
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
 
@@ -305,14 +305,14 @@ variant_count
   export(
     variant_count,
     file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.csv"
     ),
     format = "both"
   )
   # readr::write_rds(
   #   variant_count,
   #   file = file.path(
-  #     "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+  #     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.rds"
   #   )
   # )
 }
@@ -320,7 +320,7 @@ variant_count
 # variant_count |> dplyr::filter(Position == 3933)
 variant_count <- import(
   file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.qs"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
   )
 )
 
@@ -373,7 +373,7 @@ variant_count_homoplasmic |>
 p_homoplasmic_variant_correlates_with_gnomad
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "homoplasmic_variant_correlates_with_gnomad.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "homoplasmic_variant_correlates_with_gnomad.pdf"
   ),
   plot = p_homoplasmic_variant_correlates_with_gnomad,
   width = 6,
@@ -459,7 +459,7 @@ wrap_plots(
 
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "homoplasmic_variant_distribution__samples.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "homoplasmic_variant_distribution__samples.pdf"
   ),
   plot = wrap_plots(
     p_variant_count_homoplasmic,
@@ -537,7 +537,7 @@ wrap_plots(
 
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "homoplasmic_variant_distribution_af_samples.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "homoplasmic_variant_distribution_af_samples.pdf"
   ),
   plot = wrap_plots(
     p_variant_af_homoplasmic,
@@ -604,7 +604,7 @@ variant_count_heteroplasmic |>
 p_heteroplasmic_variant_correlates_with_gnomad
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "heteroplasmic_variant_correlates_with_gnomad.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "heteroplasmic_variant_correlates_with_gnomad.pdf"
   ),
   plot = p_heteroplasmic_variant_correlates_with_gnomad,
   width = 6,
@@ -690,7 +690,7 @@ wrap_plots(
 
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "heteroplasmic_variant_distribution__samples.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "heteroplasmic_variant_distribution__samples.pdf"
   ),
   plot = wrap_plots(
     p_variant_count_heteroplasmic,
@@ -783,7 +783,7 @@ wrap_plots(
 
 ggsave(
   filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic", "heteroplasmic_variant_distribution_af_samples.pdf"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic", "heteroplasmic_variant_distribution_af_samples.pdf"
   ),
   plot = wrap_plots(
     p_variant_af_heteroplasmic,

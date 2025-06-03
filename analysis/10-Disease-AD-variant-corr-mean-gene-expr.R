@@ -49,7 +49,7 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # load data ---------------------------------------------------------------
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.fst"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.fst"
 ) |>
   dplyr::filter(
     disease %in% c("Healthy", "Alzheimer's Disease"),
@@ -92,7 +92,7 @@ variants <- c(
 
 
 fn_cor_test_variant <- function(.variant) {
-  .v <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.variant}.qs" |> glue::glue())
+  .v <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}.qs" |> glue::glue())
 
   expr |>
     dplyr::left_join(
@@ -163,7 +163,7 @@ fn_cor_test_variant <- function(.variant) {
 
   export(
     .expr_v_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue(),
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue(),
     format = "both"
   )
 }
@@ -187,7 +187,7 @@ variants |>
 
 
 
-  v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A.qs")
+  v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs")
 
   expr |>
     dplyr::left_join(
@@ -238,7 +238,7 @@ variants |>
 
   export(
     expr_v_3173G_A_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A-corr.csv",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A-corr.csv",
     format = "both"
   )
 
@@ -252,7 +252,7 @@ variants |>
 
   # ! v_1397T_A --------------------------------------------------------------------
 
-  v_1397T_A <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-1397T>A.qs")
+  v_1397T_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1397T>A.qs")
   expr |>
     dplyr::left_join(
       v_1397T_A,
@@ -303,14 +303,14 @@ variants |>
 
   export(
     expr_v_1397T_A_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-1397T>A-corr.csv",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1397T>A-corr.csv",
     format = "both"
   )
 
 
   # ! v_1670A_G --------------------------------------------------------------------
 
-  v_1670A_G <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-1670A>G.qs")
+  v_1670A_G <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1670A>G.qs")
   expr |>
     dplyr::left_join(
       v_1670A_G,
@@ -354,14 +354,14 @@ variants |>
 
   export(
     expr_v_1670A_G_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-1670A>G-corr.csv",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1670A>G-corr.csv",
     format = "both"
   )
 
 
   # ! v_3176A_T --------------------------------------------------------------------
 
-  v_3176A_T <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3176A>T.qs")
+  v_3176A_T <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3176A>T.qs")
   expr |>
     dplyr::left_join(
       v_3176A_T,
@@ -405,14 +405,14 @@ variants |>
 
   export(
     expr_v_3176A_T_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3176A>T-corr.csv",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3176A>T-corr.csv",
     format = "both"
   )
 
 
   # ! v_3178T_A --------------------------------------------------------------------
 
-  v_3178T_A <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3178T>A.qs")
+  v_3178T_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3178T>A.qs")
   expr |>
     dplyr::left_join(
       v_3178T_A,
@@ -461,7 +461,7 @@ variants |>
 
   export(
     expr_v_3178T_A_corr,
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3178T>A-corr.csv",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3178T>A-corr.csv",
     format = "both"
   )
 }

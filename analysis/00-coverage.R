@@ -1,5 +1,5 @@
 gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
 )
 
 
@@ -19,7 +19,7 @@ gse_data_coverage
 gse_data_coverage |>
   data.table::fwrite(
     file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "gse_data_coverage.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "gse_data_coverage.csv"
     ),
     row.names = F
   )
@@ -36,7 +36,7 @@ gse_data_coverage_chemistry
 gse_data_coverage_chemistry |>
   data.table::fwrite(
     file = file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "gse_data_coverage_chemistry.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "gse_data_coverage_chemistry.csv"
     ),
     row.names = F
   )

@@ -1,14 +1,14 @@
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
     sex_pred = sex
   )
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 ) |>
   dplyr::left_join(
     sex_pred,
@@ -18,7 +18,7 @@ gse_dataset_metadata_full <- import(
     Gender = sex_pred
   )
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 # ! Sankey plot for samples --------------------------------------------------------------------
 
 # meta --------------------------------------------------------------------

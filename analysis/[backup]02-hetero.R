@@ -50,10 +50,10 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 
 gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.rds"
 )
 
 
@@ -64,7 +64,7 @@ pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu
 # thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
 gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.rds"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
 )
 
 # body --------------------------------------------------------------------
@@ -231,7 +231,7 @@ gse_data_haplo_variant
 # ! mean heteroplasmic variant count --------------------------------------------------------------------
 
 
-all_variant <- readr::read_rds("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.rds")
+all_variant <- readr::read_rds("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.rds")
 
 # for_hetero$somatic_variant[[1]] -> .somatic_variant
 for_hetero |>
@@ -331,7 +331,7 @@ for_hetero_af_forplot
 
 # ! somatic --------------------------------------------------------------------
 
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
 \(){
   for_hetero_af_forplot |>

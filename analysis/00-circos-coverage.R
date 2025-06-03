@@ -11,7 +11,7 @@ fn_plot_mtdna_cov_circos <- function(
   # coverage
   coverage <- data.table::fread(
     file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "gse_data_coverage_chemistry.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "gse_data_coverage_chemistry.csv"
     )
   ) |>
     dplyr::mutate(
@@ -30,7 +30,7 @@ fn_plot_mtdna_cov_circos <- function(
       depth = log2(depth + 1),
     )
 
-  source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
   # conserve_rate
 
   library(circlize)
@@ -186,7 +186,7 @@ fn_plot_mtdna_cov_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-coverage.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-coverage.pdf",
     width = 13,
     height = 10
   )
@@ -195,7 +195,7 @@ fn_plot_mtdna_cov_circos <- function(
 }
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-coverage-scaley.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-coverage-scaley.pdf",
     width = 13,
     height = 10
   )
@@ -204,7 +204,7 @@ fn_plot_mtdna_cov_circos <- function(
 }
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-coverage-90.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-coverage-90.pdf",
     width = 13,
     height = 10
   )

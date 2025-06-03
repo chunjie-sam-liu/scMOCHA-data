@@ -53,10 +53,10 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
     Sex = sex
@@ -117,7 +117,7 @@ length(VARIANTS)
 
 # ! body --------------------------------------------------------------------
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 all_heteroplasmic_af |>
   # dtplyr::lazy_dt() |>
@@ -326,7 +326,7 @@ ch_af
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_AD.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/heatmap_cluster_af_SC5P-PE_AD.pdf",
     width = 20,
     height = 9
   )

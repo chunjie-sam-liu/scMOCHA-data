@@ -19,14 +19,14 @@ import typer
 from rich import print
 from tqdm import tqdm
 
-OUTDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/EXPR")
+OUTDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR")
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 
 BARCODE_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.feather"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype.feather"
 )
 
 # Fix: Use BARCODE_FILENAME instead of SRR_FILENAME with read_ipc

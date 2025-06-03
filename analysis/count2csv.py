@@ -30,7 +30,7 @@ log = logging.getLogger("rich")
 log.info("Hello, World!")
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
@@ -200,7 +200,7 @@ def gseid_srrid_srrdir_cluster():
 
 def slurm_run_all():
     outfile = (
-        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/slurm_run_all.sh"
+        "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/slurm_run_all.sh"
     )
     row_dicts = gseid_srrid_srrdir_cluster()
     cmds = []
@@ -211,7 +211,7 @@ def slurm_run_all():
         cluster = row["cluster"]
         cmd = [
             "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
-            "/home/liuc9/github/scMOCHA-data/stats/stats/count2csv.py",
+            "/home/liuc9/github/scMOCHA-data/analysis/count2csv.py",
             "run-one",
             gseid,
             srrid,

@@ -25,14 +25,14 @@ logging.basicConfig(
 log = logging.getLogger("rich")
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
 
 
 ALL_VARIANT_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.csv"
 )
 ALL_VARIANT_DF = pl.read_csv(ALL_VARIANT_FILENAME)
 HETEROPLASMIC_DF = (
@@ -100,7 +100,7 @@ CONFIG = {
 # ALTS = [variant.split(">")[1] for variant in VARIANTS]
 # POSALTS = [f"{pos}_{alt}" for pos, alt in zip(POSISTIONS, ALTS)]
 
-TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/TABLES")
+TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/TABLES")
 
 
 def load_table_pl(gseid, srrid, cluster, hh):
@@ -306,7 +306,7 @@ def create_sh(
         srrid = row["srrid"]
         cmd = [
             "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
-            "/home/liuc9/github/scMOCHA-data/stats/stats/all_variant_cells.py",
+            "/home/liuc9/github/scMOCHA-data/analysis/all_variant_cells.py",
             "heteroplasmic-af",
             gseid,
             srrid,

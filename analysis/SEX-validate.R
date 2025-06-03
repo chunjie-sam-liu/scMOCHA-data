@@ -48,12 +48,12 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 
 # load data ---------------------------------------------------------------
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     gseid, srrid, srrdir,
     sex_pred = sex
   )
-sex_real <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs") |>
+sex_real <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
   dplyr::select(gseid, srrid, sex_real = Gender)
 
 # body --------------------------------------------------------------------
@@ -87,7 +87,7 @@ sex_pred_real |>
   dplyr::left_join(sex_real_str, by = "sex_real") ->
 for_sankey_plot
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 library(ggalluvial)
 for_sankey_plot |>
   dplyr::mutate(sex_pred = factor(sex_pred, levels = c("Female", "Male"))) |>
@@ -136,7 +136,7 @@ ggsave(
   filename = "SEX-validate.pdf",
   plot = sex_pred_real_plot,
   device = "pdf",
-  path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/",
   height = 4,
   width = 6,
 )

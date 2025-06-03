@@ -82,7 +82,7 @@ theme_cor <- function() {
 
 # load data ---------------------------------------------------------------
 
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/go"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 library(clusterProfiler)
@@ -91,11 +91,11 @@ variant_go_all <- import(file.path(outdir, "variant_go_all.qs"))
 expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs") |>
   dplyr::filter(celltype == "Mono")
 
-v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
+v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
   dplyr::filter(celltype == "Mono")
 
 import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 ) |>
   dplyr::select(srrid, disease, Chemistry) |>
   dplyr::filter(
@@ -113,7 +113,7 @@ metadata
 
 fn_load_corr <- function(.variant) {
   import(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
   ) |>
     dplyr::filter(celltype == "Mono") |>
     dplyr::filter(pval < 0.05) |>
@@ -146,7 +146,7 @@ expr_v_3173G_A
 
 # ? plot scatter and correlation --------------------------------------------------------------------
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 expr_v_3173G_A |>
   dplyr::mutate(
@@ -245,7 +245,7 @@ expr_v_3173G_A_plot |>
         .filename <- glue::glue("{.x}.pdf")
         ggsave(
           filename = .filename,
-          path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/3173G_A",
+          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A",
           plot = .y,
           width = 7,
           height = 6,
@@ -261,7 +261,7 @@ expr_v_3173G_A_plot |>
 
 expr_v_3173G_A_plot |>
   export(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/3173G_A/3173G_A_corr.qs"
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A/3173G_A_corr.qs"
   )
 
 
@@ -321,7 +321,7 @@ plot_corr_3173G_A
 
 ggsave(
   filename = "corr_gene_3173G_A_in_mono.pdf",
-  path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
   plot = plot_corr_3173G_A,
   width = 10,
   height = 6,
@@ -345,7 +345,7 @@ variants |>
   purrr::map(
     ~ {
       import(
-        "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+        "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
       ) |>
         dplyr::mutate(variant = .x)
     }
@@ -447,7 +447,7 @@ variant_topcorrgenes_3173G_A_forplot |>
 variant_topcorrgenes_3173G_A_tileplot
 
 ggsave(
-  path = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
   filename = file.path("variant_topcorrgenes_3173G_A_tileplot.pdf"),
   plot = variant_topcorrgenes_3173G_A_tileplot,
   width = 12,

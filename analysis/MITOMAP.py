@@ -111,12 +111,12 @@ if __name__ == "__main__":
         show_table_info(conn, "conservation_rate")
         conservation_rate = extract_table_data(conn, "conservation_rate")
         conservation_rate.write_csv(
-            "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/conservation_rate.csv"
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/conservation_rate.csv"
         )
         extract_table_data(conn, "refseq")
         gnomad = extract_table_data(conn, "gnomad")
         gnomad.write_csv(
-            "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/gnomad.csv"
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.csv"
         )
 
         conn.close()

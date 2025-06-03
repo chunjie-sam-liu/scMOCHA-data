@@ -103,7 +103,7 @@ fn_plot_mtdna_circle <- function() {
 
   # af_hom is gnomad AF
   gnomad <- data.table::fread(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/gnomad.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.csv"
   ) |>
     dplyr::filter(filters == "PASS") |>
     dplyr::select(position, af = af_hom, ac = ac_hom) |>
@@ -125,7 +125,7 @@ fn_plot_mtdna_circle <- function() {
   # all variants
   all_variant <- readr::read_rds(
     file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.rds"
     )
   ) |>
     dplyr::mutate(
@@ -448,7 +448,7 @@ fn_plot_mtdna_circle <- function() {
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-homo-hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-homo-hetero.pdf",
     width = 13,
     height = 10
   )

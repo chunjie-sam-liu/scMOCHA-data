@@ -17,7 +17,7 @@ import duckdb
 import polars as pl
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
@@ -48,5 +48,5 @@ df = pl.concat(dfs)
 # Reorder columns
 df = df.select(["gseid", "srrid", "barcode", "celltype"])
 df.write_csv(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype.csv"
 )

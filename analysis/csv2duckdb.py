@@ -27,14 +27,14 @@ logger.info("Hello, World!")
 
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
 CLUSTERS = ["cell", "cluster"]
 TABLEDIR = Path("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/TABLES")
 
-DUCKDB_DIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db")
+DUCKDB_DIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db")
 DUCKDB_VERSION = duckdb.__version__
 
 

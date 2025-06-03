@@ -23,11 +23,11 @@ YGENES = ["RPS4Y1", "KDM5D", "DDX3Y"]
 XGENES = ["XIST"]
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
 SRR
-OUTDIR = Path("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/SEX")
+OUTDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/SEX")
 
 
 class SCESEX:
@@ -209,7 +209,7 @@ def estimate_sex_all_srr(max_workers: int = 20):
         SRR.with_columns(
             sexests_out,
         ).write_csv(
-            "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.csv",
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.csv",
             include_header=True,
         )
     else:

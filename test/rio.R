@@ -53,11 +53,11 @@ import("/home/liuc9/github/dotfiles/Renv/renv.yaml")
 
 
 convert(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.rds",
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.rds",
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.qs"
 )
 
-clean_data_dir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data"
+clean_data_dir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data"
 rdss <- list.files(
   clean_data_dir,
   pattern = ".rds$",
@@ -72,7 +72,7 @@ purrr::map(
   )
 )
 
-clean_data_dir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data"
+clean_data_dir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data"
 csvs <- list.files(
   clean_data_dir,
   pattern = ".csv$",
@@ -89,8 +89,8 @@ purrr::map(
 
 
 convert(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.fst",
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/barcode_celltype.feather"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype.fst",
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype.feather"
 )
 
 {
@@ -144,7 +144,7 @@ nrow(a)
 
 old <- import("/scr1/users/liuc9/tmp/scanpy/GSE155673_GSM4712885_celltype_gene_expr.csv")
 
-new <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/EXPR/GSE155673_GSM4712885_celltype_gene_expr.csv")
+new <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR/GSE155673_GSM4712885_celltype_gene_expr.csv")
 
 old |>
   dplyr::select(genename, bold = B) |>
@@ -196,3 +196,17 @@ import(
   "https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs"
 )
 data.table::fread("https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix")
+import("https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs")
+
+
+d <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
+
+export(
+  d,
+  "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+)
+
+export(
+  gnomad,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
+)

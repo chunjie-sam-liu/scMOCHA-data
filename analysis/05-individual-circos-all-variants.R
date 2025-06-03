@@ -4,30 +4,15 @@ fn_plot_mtdna_circos <- function(
     canvas.ylim = c(-1, 1),
     gap.degree = 1) {
   LENGTH <- 16569
-  gtf_gene_df <- import("https://github.com/chunjie-sam-liu/scMOCHA-data/blob/e8a4fd3ae11d35df76254a43ebd137d88edd43a0/config/mtdna_genes_dloop.fst")
+  gtf_gene_df <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
 
-  phastCons100way <- data.table::fread(
-    "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix"
-  ) |>
-    tibble::rowid_to_column() |>
-    tibble::add_column(
-      seqnames = "MT",
-      .before = 1
-    ) |>
-    dplyr::mutate(
-      start = rowid,
-      end = rowid
-    ) |>
-    dplyr::select(
-      seqnames,
-      start = rowid,
-      end = rowid,
-      phastCons100wayScore = "fixedStep chrom=chrM start=1 step=1"
-    )
+  phastCons100way <- import(
+    "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"
+  )
 
   # af_hom is gnomad AF
-  gnomad <- data.table::fread(
-    "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/db/gnomad.csv"
+  gnomad <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
   ) |>
     dplyr::filter(filters == "PASS") |>
     dplyr::select(position, af = af_hom, ac = ac_hom) |>
@@ -47,10 +32,8 @@ fn_plot_mtdna_circos <- function(
     dplyr::filter(af > 0.01)
 
   # coverage
-  coverage <- data.table::fread(
-    file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "gse_data_coverage.csv"
-    )
+  coverage <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_coverage.fst"
   ) |>
     dplyr::mutate(
       seqnames = "MT",
@@ -68,10 +51,8 @@ fn_plot_mtdna_circos <- function(
     )
 
   # all variants
-  all_variant <- readr::read_rds(
-    file.path(
-      "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/", "all_variant.rds"
-    )
+  all_variant <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
   ) |>
     dplyr::mutate(
       paf = n / 577
@@ -131,7 +112,7 @@ fn_plot_mtdna_circos <- function(
   #   "gene_name_bg" = "#EAF7FF",
   #   "coverage" = "#3FB5FF"
   # )
-  source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
   # conserve_rate
 
@@ -439,7 +420,7 @@ fn_plot_mtdna_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-homo-hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-homo-hetero.pdf",
     width = 13,
     height = 10
   )
@@ -450,7 +431,7 @@ fn_plot_mtdna_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/heteroplasmic/circos-homo-hetero-90.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/circos-homo-hetero-90.pdf",
     width = 13,
     height = 10
   )

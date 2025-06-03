@@ -43,7 +43,7 @@
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 
 
 gseids <- c(

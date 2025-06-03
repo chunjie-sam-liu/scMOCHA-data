@@ -50,20 +50,20 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # load data ---------------------------------------------------------------
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/sex"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/sex"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
 # gse_dataset_metadata_full <- import(
-#   "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 # )
 
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.qs") |>
+all_variant <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs") |>
   dplyr::select(variant, issomatic)
 
 all_hetero_af_cluster <- import(
@@ -90,14 +90,14 @@ all_hetero_af_cluster |>
   ) ->
 all_hetero_af_cluster_bulk
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
     sex
   )
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 ) |>
   dplyr::left_join(
     sex_pred,
@@ -240,7 +240,7 @@ admeta_sc5p_variant_type_af_ttest_rank |>
   dplyr::arrange(variant) ->
 top5_variant
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 library(ggh4x)
 library(ggbeeswarm)

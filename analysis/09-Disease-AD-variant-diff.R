@@ -50,19 +50,19 @@ log_layout(layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/disease"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease"
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/all_variant.qs") |>
+all_variant <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs") |>
   dplyr::select(variant, issomatic)
 
 all_hetero_af_cluster <- import(
@@ -250,7 +250,7 @@ top5_variant
 topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 library(ggh4x)
 library(ggbeeswarm)
@@ -676,7 +676,7 @@ ggsave(
 )
 
 # ! save forplot_ for correlation --------------------------------------------------------------------
-OUTDIR <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/ad"
+OUTDIR <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad"
 dir.create(OUTDIR, recursive = TRUE)
 outfilename <- file.path(
   OUTDIR,

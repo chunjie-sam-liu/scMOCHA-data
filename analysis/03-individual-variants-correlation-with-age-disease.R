@@ -61,9 +61,9 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # color_chemistry <- viridis::viridis_pal(option = "D")(4) |>
 #   prismatic::color()
 
-source("/home/liuc9/github/scMOCHA-data/stats/stats/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
     sex_pred = sex
@@ -73,7 +73,7 @@ sex_pred <- import("/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/g
   )
 
 anno_meta_info_clean <- import(
-  "/home/liuc9/github/scMOCHA-data/stats/stats/zzz/clean-data/gse_dataset_metadata_full.fst"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.fst"
 ) |>
   dplyr::mutate(
     Chemistry = factor(
@@ -278,7 +278,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
   p_combined
 }
 
-zzz_out <- "/home/liuc9/github/scMOCHA-data/stats/stats/zzz"
+zzz_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 fn_eda_ggpubr(anno_meta_info_clean)
 ggsave(
   path = zzz_out,
