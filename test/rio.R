@@ -167,3 +167,32 @@ convert(
 d <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.fst")
 
 d
+
+phastCons100way <- data.table::fread(
+  "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix"
+) |>
+  tibble::rowid_to_column() |>
+  tibble::add_column(
+    seqnames = "MT",
+    .before = 1
+  ) |>
+  dplyr::mutate(
+    start = rowid,
+    end = rowid
+  ) |>
+  dplyr::select(
+    seqnames,
+    start = rowid,
+    end = rowid,
+    phastCons100wayScore = "fixedStep chrom=chrM start=1 step=1"
+  )
+
+export(
+  phastCons100way,
+  "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"
+)
+
+import(
+  "https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs"
+)
+data.table::fread("https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix")

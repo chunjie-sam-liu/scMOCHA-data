@@ -4,7 +4,7 @@ fn_plot_mtdna_circos <- function(
     canvas.ylim = c(-1, 1),
     gap.degree = 1) {
   LENGTH <- 16569
-  gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
+  gtf_gene_df <- import("https://github.com/chunjie-sam-liu/scMOCHA-data/blob/e8a4fd3ae11d35df76254a43ebd137d88edd43a0/config/mtdna_genes_dloop.fst")
 
   phastCons100way <- data.table::fread(
     "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix"
