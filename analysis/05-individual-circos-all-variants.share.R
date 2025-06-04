@@ -1,8 +1,54 @@
+#' Plot Mitochondrial DNA Circos Plot with Variants and Annotations
+#'
+#' Creates a comprehensive circular plot (circos plot) of mitochondrial DNA showing
+#' various genomic features including gene annotations, conservation scores, population
+#' frequencies, variant allele frequencies, and sequencing coverage.
+#'
+#' @param start.degree Numeric. Starting degree for the circular plot (default: 90)
+#' @param canvas.xlim Numeric vector. X-axis limits for the canvas (default: c(-1, 1))
+#' @param canvas.ylim Numeric vector. Y-axis limits for the canvas (default: c(-1, 1))
+#' @param gap.degree Numeric. Gap degree between sectors (default: 1)
+#' @param LENGTH Numeric. Length of mitochondrial genome in base pairs (default: 16569)
+#' @param gtf_gene_df Data frame. Gene annotation data imported from mtdna_genes_dloop.qs
+#' @param phastCons100way Data frame. Conservation scores from phastCons100way analysis
+#' @param gnomad Data frame. Population frequency data from gnomAD database
+#' @param coverage Data frame. Sequencing coverage data across mitochondrial positions
+#' @param all_variant Data frame. All variant data including homoplasmic and heteroplasmic variants
+#'
+#' @details
+#' The function creates multiple concentric tracks in the circos plot:
+#' - Outer track: Gene names and annotations
+#' - Gene structure track: Visual representation of gene locations
+#' - Conservation track: PhastCons conservation scores
+#' - Population frequency track: gnomAD allele frequencies
+#' - Variant frequency tracks: Homoplasmic and heteroplasmic variant frequencies
+#' - Allele frequency tracks: Individual variant allele frequencies (points)
+#' - Coverage track: Sequencing depth across positions
+#'
+#' Special highlighting is applied to D-Loop and MT rRNA regions.
+#' Only variants with population allele frequency > 1% from gnomAD are displayed.
+#'
+#' @return NULL (creates a circos plot as side effect)
+#'
+#' @examples
+#' # Basic usage with default parameters
+#' fn_plot_mtdna_circos()
+#'
+#' # Custom canvas size and starting position
+#' fn_plot_mtdna_circos(
+#'   start.degree = 0,
+#'   canvas.xlim = c(-1.2, 1.2),
+#'   canvas.ylim = c(-1.2, 1.2)
+#' )
+#'
+#' @note
+#' Requires the circlize package
+#'
 fn_plot_mtdna_circos <- function(
     start.degree = 90,
     canvas.xlim = c(-1, 1),
     canvas.ylim = c(-1, 1),
-    gap.degree = 1
+    gap.degree = 1,
     LENGTH <- 16569,
     gtf_gene_df = import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"),
     phastCons100way = import("/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"),
