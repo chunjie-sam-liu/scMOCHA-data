@@ -44,6 +44,31 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # future: :plan(future: :multisession, workers = 10)
 
+
+# load data ---------------------------------------------------------------
+
+cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+all_variant <- import(
+  file.path(cleandatadir, "all_variant.qs")
+)
+all_variant |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  ) ->
+v_hete
+
+all_variant |>
+  dplyr::filter(
+    issomatic == "homoplasmic"
+  ) ->
+v_homo
+
+all_variant |>
+  dplyr::filter(
+    issomatic %in% c("homoplasmic", "heteroplasmic")
+  ) ->
+v_homo_hete
+
 # function ----------------------------------------------------------------
 
 fn_variant_L_H_strand <- function(.v) {
@@ -86,25 +111,25 @@ fn_variant_L_H_strand <- function(.v) {
     "A>T" = "T>A"
   )
   spontaneous_deamination <- c(
-    "C>T",
     "A>G",
+    "C>T",
     # complementary
-    "G>A",
-    "T>C"
+    "T>C",
+    "G>A"
   )
   ros_damage <- c(
     "G>T",
     "G>C",
     # complementary
     "C>A",
-    "T>A"
+    "C>G"
   )
   other_damage <- c(
     "T>G",
     "T>A",
     # complementary
     "A>C",
-    "A>G"
+    "A>T"
   )
   .v |>
     dplyr::mutate(
@@ -158,34 +183,94 @@ fn_variant_L_H_strand <- function(.v) {
     )
 }
 
-# load data ---------------------------------------------------------------
+fn_plot_pie <- function(.d, .colors = NULL) {
+  .d |>
+    dplyr::select(group = 1, n) |>
+    dplyr::arrange(-n) |>
+    dplyr::mutate(csum = rev(cumsum(rev(n)))) %>%
+    dplyr::mutate(pos = n / 2 + dplyr::lead(csum, 1)) %>%
+    dplyr::mutate(pos = dplyr::if_else(is.na(pos), n / 2, pos)) %>%
+    dplyr::mutate(percentage = n / sum(n)) |>
+    dplyr::mutate(group = factor(group, levels = group)) ->
+  .dd
 
-cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
-all_variant <- import(
-  file.path(cleandatadir, "all_variant.qs")
-)
-all_variant |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  ) ->
-v_hete
+  .scalefill <- if (is.null(.colors)) {
+    ggsci::scale_fill_aaas(
+      name = NULL
+    )
+  } else {
+    scale_fill_manual(
+      name = NULL,
+      values = .colors
+    )
+  }
+  .scalecolor <- if (is.null(.colors)) {
+    ggsci::scale_color_aaas(
+      name = NULL
+    )
+  } else {
+    scale_color_manual(
+      name = NULL,
+      values = .colors
+    )
+  }
 
-all_variant |>
-  dplyr::filter(
-    issomatic == "homoplasmic"
-  ) ->
-v_homo
-
-all_variant |>
-  dplyr::filter(
-    issomatic %in% c("homoplasmic", "heteroplasmic")
-  ) ->
-v_homo_hete
+  .dd |>
+    ggplot(aes(
+      x = "",
+      y = n,
+    )) +
+    geom_bar(
+      aes(fill = group),
+      stat = "identity",
+      width = 1,
+      color = "white",
+      show.legend = FALSE
+    ) +
+    .scalefill +
+    ggrepel::geom_label_repel(
+      aes(
+        y = pos,
+        label = glue::glue("{group}\n{n} ({scales::percent(percentage)})"),
+        color = group,
+      ),
+      size = 6,
+      nudge_x = 1,
+      nudge_y = 0,
+      show.legend = FALSE,
+      max.overlaps = Inf,
+    ) +
+    .scalecolor +
+    coord_polar(theta = "y", start = 0) +
+    theme_void() +
+    theme(
+      plot.title = element_text(
+        hjust = 0.5,
+        size = 22,
+      ),
+      # legend.position = "none"
+    )
+}
 
 # body --------------------------------------------------------------------
 
 
 v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
+v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
+
+v_hete_L_H_strand |>
+  dplyr::count(variant_location)
+
+v_hete_L_H_strand |>
+  ggplot(aes(
+    x = variant_six,
+    fill = L_H_strand
+  )) +
+  geom_bar()
+
+v_hete_L_H_strand |>
+  dplyr::count(deamination_ros) |>
+  fn_plot_pie()
 
 # footer ------------------------------------------------------------------
 
