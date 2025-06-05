@@ -1,5 +1,45 @@
-       -3σ        0        +3σ
---------|--------|--------|--------
-        <---|   --->
-       一侧    一侧
-      p/2     p/2
+flowchart TD
+    HSC["Hematopoietic Stem Cell<br>HSC<br>Bone Marrow"] --> CMP["Common Myeloid Progenitor<br>CMP"] & CLP["Common Lymphoid Progenitor<br>CLP"]
+    CMP --> Mono["Monocyte<br>Lifespan: about 1-3 days"] & DC["Dendritic Cell cDC and pDC<br>Lifespan: about 2-5 days"]
+    CLP --> BcellPre["B cell precursor<br>Bone Marrow"] & TcellPrecursor["T cell Precursor"] & NK["NK cell<br>Lifespan: about 1-2 weeks"]
+    BcellPre --> BcellNaive["Naive B cell<br>Peripheral lymphoid organs<br>Lifespan: weeks to months"]
+    BcellNaive --> MemoryB["Memory B cell<br>Lifespan: months to years"] & Plasma["Plasma cell<br>Lifespan: days to weeks or months to years"]
+    TcellPrecursor --> Thymus["Thymus<br>Maturation"]
+    Thymus --> CD4T["CD4+ T cell<br>Lifespan: years"] & CD8T["CD8+ T cell<br>Lifespan: years"] & OtherT["Other T cells<br>gamma delta and regulatory T<br>Lifespan: variable"]
+    CD4T --> CD4_Naive["Naive CD4+ T<br>weeks to months"] & CD4_Effector["Effector CD4+ T<br>days to weeks"] & CD4_Memory["Memory CD4+ T<br>months to years"]
+    CD8T --> CD8_Naive["Naive CD8+ T<br>weeks to months"] & CD8_Effector["Effector CD8+ T<br>days to weeks"] & CD8_Memory["Memory CD8+ T<br>months to years"]
+
+     HSC:::bone
+     CMP:::bone
+     CLP:::bone
+     Mono:::Mono
+     DC:::DC
+     BcellPre:::Bcell
+     TcellPrecursor:::Tpre
+     NK:::NK
+     BcellNaive:::Bcell
+     MemoryB:::Bcell
+     Plasma:::Bcell
+     Thymus:::Tpre
+     CD4T:::CD4T
+     CD8T:::CD8T
+     OtherT:::OtherT
+     CD4_Naive:::CD4T
+     CD4_Effector:::CD4T
+     CD4_Memory:::CD4T
+     CD8_Naive:::CD8T
+     CD8_Effector:::CD8T
+     CD8_Memory:::CD8T
+    classDef bone fill:#fce4ec
+    classDef Bcell fill:#66C2A5FF
+    classDef CD4T fill:#FC8D62FF
+    classDef CD8T fill:#8DA0CBFF
+    classDef DC fill:#E78AC3FF
+    classDef Mono fill:#A6D854FF
+    classDef NK fill:#FFD92FFF
+    classDef OtherT fill:#E5C494FF
+    classDef other fill:grey
+    classDef Tpre fill:#EFF7F9
+    classDef active fill:#fff3e0
+
+
