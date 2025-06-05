@@ -74,7 +74,7 @@ fn_plot_mtdna_circos <- function(a = 90, b = c(-1, 1), cc = c(-1, 1), d = 1, e =
   source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
   library(circlize)
   circos.clear()
-  circos.par(start.degree = a, canvas.xlim = b, canvas.ylim = cc, gap.degree = d)
+  circos.par(start.degree = a, canvas.xlim = b, canvas.ylim = cc, gap.degree = d, clock.wise = FALSE)
   circos.genomicInitialize(data = i, plotType = "axis", axis.labels.cex = 0.8 * par("cex"))
   n <- f |> dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA"))
   for (o in seq_len(nrow(n))) {
