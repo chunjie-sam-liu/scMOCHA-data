@@ -56,11 +56,88 @@ all_heteroplasmic_af <- import(
 
 
 # function ----------------------------------------------------------------
+fn_ks_test <- function(.gsid_srrid) {
+  # .gseid_srrid <- "GSE226602_GSM7080017"
+  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |> glue::glue()
+  d <- import(.filename)
+  d |>
+    tidyr::pivot_longer(
+      cols = -c(celltype, barcode),
+      names_to = "variant",
+      values_to = "af"
+    ) |>
+    tidyr::nest(
+      .by = "variant",
+      .key = "celltype_af"
+    ) ->
+  d_nest
 
+  d_nest |>
+    # head(100) |>
+    dplyr::mutate(
+      ks_test = parallel::mclapply(
+        X = celltype_af,
+        FUN = function(.m) {
+          .m |>
+            dplyr::filter(af > 0) |>
+            dplyr::filter(celltype != "other") -> .mm
+          tryCatch(
+            {
+              kruskal.test(
+                af ~ celltype,
+                data = .mm
+              ) -> .fit
+              .fit |>
+                broom::tidy()
+            },
+            error = \(e){
+              return(tibble::tibble(
+                statistic = NA_real_,
+                p.value = NA_real_,
+                method = "Kruskal-Wallis test",
+                parameter = NA_real_
+              ))
+            }
+          )
+        },
+        mc.cores = 10
+      )
+    ) |>
+    tidyr::unnest(ks_test) |>
+    dplyr::arrange(p.value) ->
+  d_ks
+
+  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |> glue::glue()
+  export(
+    d_ks,
+    .filename_out,
+  )
+}
 
 # body --------------------------------------------------------------------
+#
 
-d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.GSE226602_GSM7080029.qs")
+all_heteroplasmic_af |>
+  dplyr::select(gseid, srrid) |>
+  dplyr::distinct() |>
+  dplyr::mutate(
+    gseid_srrid = paste(gseid, srrid, sep = "_")
+  ) |>
+  dplyr::mutate(
+    a = purrr::map(
+      gseid_srrid,
+      fn_ks_test
+    )
+  )
+
+#
+#
+#
+#
+#
+#
+#
+d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.GSE226602_GSM7080017.qs")
 
 d |>
   tidyr::pivot_longer(
@@ -79,16 +156,17 @@ d_nest |>
   dplyr::mutate(
     ks_test = parallel::mclapply(
       X = celltype_af,
-      FUN = function(.x) {
-        .x |>
+      FUN = function(.m) {
+        .m |>
           dplyr::filter(af > 0) |>
-          dplyr::filter(celltype != "other") -> .xx
+          dplyr::filter(celltype != "other") -> .mm
         tryCatch(
           {
             kruskal.test(
               af ~ celltype,
-              data = .xx
-            ) |>
+              data = .mm
+            ) -> .fit
+            .fit |>
               broom::tidy()
           },
           error = \(e){
@@ -110,21 +188,36 @@ d_nest |>
 d_ks
 
 d_ks$celltype_af[[1]] -> .x
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 .x |>
-  dplyr::filter(celltype != "other") |>
   dplyr::filter(af > 0) |>
+  dplyr::mutate(celltype = gsub(
+    "_",
+    " ",
+    celltype
+  )) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype)),
+  ) ->
+.xx
+
+.xx |>
   ggplot(aes(
     x = af,
     y = celltype,
     fill = celltype
   )) +
-  ggjoy::geom_joy()
+  ggjoy::geom_joy() +
+  scale_fill_manual(
+    values = color_celltype,
+    name = "Cell type"
+  )
 
 
 FSA::dunnTest(
   af ~ celltype,
-  data = .x,
+  data = .xx,
   method = "bh"
 ) -> .dunn
 

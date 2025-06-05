@@ -20,10 +20,10 @@ color_gender <- c(
 )
 
 color_celltype <- c(
+  "B" = "#66C2A5FF",
   "CD4 T" = "#FC8D62FF",
   "CD8 T" = "#8DA0CBFF",
   "other T" = "#E5C494FF",
-  "B" = "#66C2A5FF",
   "NK" = "#FFD92FFF",
   "DC" = "#E78AC3FF",
   "Mono" = "#A6D854FF",
