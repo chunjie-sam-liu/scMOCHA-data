@@ -1,5 +1,5 @@
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 
 sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
@@ -146,11 +146,11 @@ for_sankey_plot |>
   ) +
   scale_x_discrete(
     limits = c("Chemistry_str", "Age_str", "Gender_str", "Race_str", "Ethnicity_str", "Disease_str"),
-    labels = gsub("_str", "", c("Chemistry_str", "Age_str", "Gender_str", "Race_str", "Ethnicity_str", "Disease_str")),
+    labels = gsub("_str", "", c("Chemistry_str", "Age_str", "Sex_str", "Race_str", "Ethnicity_str", "Disease_str")),
     expand = c(0.2, 0.05)
   ) +
   scale_y_continuous(
-    expand = expand_scale(mult = c(0.01, 0.02))
+    expand = expansion(mult = c(0.01, 0.02))
   ) +
   # ggsci::scale_fill_aaas() +
   theme(

@@ -27,7 +27,7 @@ color_celltype <- c(
   "NK" = "#FFD92FFF",
   "DC" = "#E78AC3FF",
   "Mono" = "#A6D854FF",
-  "other" = "grey"
+  "other" = "grey50"
 )
 
 color_circos_track <- c(

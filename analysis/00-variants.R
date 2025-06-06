@@ -5,8 +5,8 @@ variants_tobe_excluded <- c(
   regions_rare_heteroplasmic_variants
 )
 
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
 
@@ -141,16 +141,17 @@ variant_count
 
 
 {
-  data.table::fwrite(
+  export(
     variant_count,
     file = file.path(
       "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.csv"
     ),
+    format = "both",
     sep = ",",
     row.names = FALSE,
     col.names = TRUE,
   )
-  readr::write_rds(
+  export(
     variant_count,
     file = file.path(
       "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.rds"

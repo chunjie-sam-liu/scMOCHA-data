@@ -220,14 +220,14 @@ gse_dataset_metadata_full <- readr::read_rds(
 # save gse_dataset_metadata_full
 {
   outdir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
-  data.table::fwrite(
+  export(
     gse_dataset_metadata_full,
     file.path(outdir, "gse_dataset_metadata_full.csv"),
-    sep = ",",
+    format = "both"
   )
-  readr::write_rds(
+  export(
     gse_dataset_metadata_full,
-    file.path(outdir, "gse_dataset_metadata_full.rds")
+    file.path(outdir, "gse_dataset_metadata_full.qs"),
   )
 }
 
@@ -276,19 +276,24 @@ gse_data
   #   file.path(outdir, "gse_data.csv"),
   #   sep = ",",
   # )
-  readr::write_rds(
+  export(
     gse_data,
     file.path(outdir, "gse_data.rds")
   )
+  export(
+    gse_data,
+    file.path(outdir, "gse_data.qs")
+  )
   gse_data |>
     dplyr::select(1, 2, 3) |>
-    data.table::fwrite(
+    export(
       file.path(outdir, "gse_srrid_srrdir.csv"),
+      format = "both",
       sep = ",",
     )
   gse_data |>
     dplyr::select(1, 2, 3) |>
-    readr::write_rds(
+    export(
       file.path(outdir, "gse_srrid_srrdir.rds")
     )
 }
