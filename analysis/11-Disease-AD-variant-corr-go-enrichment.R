@@ -197,7 +197,7 @@ fn_variant_go <- function(.variant) {
 # load data ---------------------------------------------------------------
 
 
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/go"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 variants <- c(
@@ -333,7 +333,7 @@ export(
     )
   }
 
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/pos"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/pos"
   variants <- c(
     "1670A>G",
     "1397T>A",
@@ -528,7 +528,7 @@ export(
   expr_v_3173G_A |>
     dplyr::select(genename, corr, pval) |>
     export(
-      file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A/3173G_A_corr.csv"
+      file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A/3173G_A_corr.csv"
     )
 
 

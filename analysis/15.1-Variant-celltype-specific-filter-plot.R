@@ -48,11 +48,12 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/celltype-specific-variant"
+ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
 gseid_srrid_ks_load <- import(
   file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
+    ks_test_dir,
     "a_gseid_srrid_ks_load.qs"
   )
 )

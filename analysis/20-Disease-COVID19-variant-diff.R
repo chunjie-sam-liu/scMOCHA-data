@@ -52,7 +52,7 @@ log_layout(layout_glue_colors)
 
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad"
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 

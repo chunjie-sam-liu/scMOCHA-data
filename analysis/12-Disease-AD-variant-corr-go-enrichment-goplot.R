@@ -48,7 +48,7 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 
 # load data ---------------------------------------------------------------
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/go"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 variants <- c(
@@ -381,7 +381,7 @@ expr_v_3173G_A_plot |>
         .filename <- glue::glue("{.x}.pdf")
         ggsave(
           filename = .filename,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A",
+          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A",
           plot = .y,
           width = 7,
           height = 6,
@@ -395,7 +395,7 @@ expr_v_3173G_A |>
   dplyr::arrange(corr) |>
   dplyr::select(genename, corr, pval) |>
   export(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A/3173G_A_corr.csv"
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A/3173G_A_corr.csv"
   )
 
 expr_v_3173G_A |>
@@ -499,7 +499,7 @@ variant_corr_top10_3173G_A_forplot |>
 variant_corr_top10_3173G_A_plot
 
 ggsave(
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
   filename = file.path("variant_corr_top10_3173G_A_celltype.pdf"),
   plot = variant_corr_top10_3173G_A_plot,
   width = 12,
@@ -584,7 +584,7 @@ variant_corr_top10 |>
 variant_corr_top10_5variant_plot
 
 ggsave(
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
   filename = file.path("variant_corr_top10_5_variant.pdf"),
   plot = variant_corr_top10_5variant_plot,
   width = 12,

@@ -82,7 +82,7 @@ theme_cor <- function() {
 
 # load data ---------------------------------------------------------------
 
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/go"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
 library(clusterProfiler)
@@ -245,7 +245,7 @@ expr_v_3173G_A_plot |>
         .filename <- glue::glue("{.x}.pdf")
         ggsave(
           filename = .filename,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A",
+          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A",
           plot = .y,
           width = 7,
           height = 6,
@@ -261,7 +261,7 @@ expr_v_3173G_A_plot |>
 
 expr_v_3173G_A_plot |>
   export(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/3173G_A/3173G_A_corr.qs"
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A/3173G_A_corr.qs"
   )
 
 
@@ -321,7 +321,7 @@ plot_corr_3173G_A
 
 ggsave(
   filename = "corr_gene_3173G_A_in_mono.pdf",
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
   plot = plot_corr_3173G_A,
   width = 10,
   height = 6,
@@ -447,7 +447,7 @@ variant_topcorrgenes_3173G_A_forplot |>
 variant_topcorrgenes_3173G_A_tileplot
 
 ggsave(
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease/corr/",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
   filename = file.path("variant_topcorrgenes_3173G_A_tileplot.pdf"),
   plot = variant_topcorrgenes_3173G_A_tileplot,
   width = 12,
