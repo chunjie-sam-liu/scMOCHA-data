@@ -107,7 +107,7 @@ fn_ks_test <- function(.gseid_srrid) {
     dplyr::arrange(p.value) ->
   d_ks
 
-  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |> glue::glue()
+  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |> glue::glue()
   export(
     d_ks,
     .filename_out,
@@ -141,7 +141,7 @@ gseid_srrid |>
       \(.x) {
         import(
           file.path(
-            "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test",
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
             glue::glue("{.x}.ks_test.qs")
           )
         )
@@ -155,10 +155,13 @@ gseid_srrid_ks_load
 export(
   gseid_srrid_ks_load,
   file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test",
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
     "a_gseid_srrid_ks_load.qs"
   )
 )
+
+
+# ? don't run below --------------------------------------------------------------------
 
 source("./analysis/00-colors.R")
 
@@ -173,32 +176,13 @@ gseid_srrid_ks_load |>
     fill = "grey50",
     color = "black",
     alpha = 0.5
+  ) +
+  geom_vline(
+    xintercept = 50,
+    linetype = "dashed",
+    color = "red"
   )
 
-variants_df <- data.frame(
-  short = c(
-    "3571insC", "3664G>A", "3916G>A", "4063G>A", "4142G>A",
-    "5910G>A", "5949G>A", "6124T>C", "6253T>C", "6340C>T",
-    "6567C>T", "6663A>G", "6924G>T", "8932C>T", "10398A>G",
-    "11778G>A", "11872insC", "12425delA", "13802C>T", "13937delAC",
-    "14429delG", "15342insT", "3243A>G", "8344A>G", "8993T>G"
-  ),
-  detailed = c(
-    "OC m.3571insC", "PC, OC m.3664G>A", "OC m.3916G>A", "OC m.4063G>A", "PC m.4142G>A",
-    "PC m.5910G>A", "PC m.5949G>A", "PC m.6124T>C", "PC m.6253T>C", "PC 6340C>T",
-    "OC m.6567C>T", "PC m.6663A>G", "PC m.6924G>T", "PC m.8932C>T", "PC m.10398A>G",
-    "LHON m.11778G>A", "OC m.11872insC", "OC m.12425delA", "PC m.13802C>T", "OC m.13937delAC",
-    "OC m.14429delG", "OC m.15342insT", "MELAS syndrome m.3243A>G", "MERRF syndrome m.8344A>G", "NARP m.8993T>G"
-  ),
-  note = c(
-    "", "", "", "", "",
-    "", "", "", "", "",
-    "", "", "", "", "",
-    "LHON", "", "", "", "",
-    "", "", "MELAS syndrome", "MERRF syndrome", "NARP"
-  ),
-  stringsAsFactors = FALSE
-)
 
 
 # gseid_srrid_ks_load |>
@@ -214,10 +198,7 @@ gseid_srrid_ks_load |>
   dplyr::filter(
     p.value < 0.05,
     statistic > 100
-  ) |>
-  dplyr::count(variant) |>
-  dplyr::arrange(desc(n)) |>
-  print(n = 20)
+  )
 
 
 thevariant <- "7833T>C"

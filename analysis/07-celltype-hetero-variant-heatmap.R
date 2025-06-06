@@ -337,7 +337,7 @@ ch_af
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/heteroplasmic/heatmap_cluster_af.hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/heatmap_cluster_af.hetero.pdf",
     width = 22,
     height = 9
   )
