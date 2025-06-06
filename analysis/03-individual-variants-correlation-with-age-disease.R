@@ -278,7 +278,7 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
   p_combined
 }
 
-zzz_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
+zzz_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 fn_eda_ggpubr(anno_meta_info_clean)
 ggsave(
   path = zzz_out,

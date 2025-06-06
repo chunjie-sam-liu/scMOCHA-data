@@ -326,7 +326,7 @@ ch_af
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/heatmap_cluster_af_SC5P-PE_AD.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/heatmap_cluster_af_SC5P-PE_AD.pdf",
     width = 20,
     height = 9
   )

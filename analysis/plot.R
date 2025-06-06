@@ -448,7 +448,7 @@ fn_plot_mtdna_circle <- function() {
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-homo-hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-homo-hetero.pdf",
     width = 13,
     height = 10
   )

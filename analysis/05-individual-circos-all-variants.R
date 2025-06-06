@@ -410,7 +410,7 @@ fn_plot_mtdna_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-homo-hetero.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-homo-hetero.pdf",
     width = 13,
     height = 10
   )
@@ -421,7 +421,7 @@ fn_plot_mtdna_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-homo-hetero-90.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-homo-hetero-90.pdf",
     width = 13,
     height = 10
   )

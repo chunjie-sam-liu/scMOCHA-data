@@ -51,14 +51,15 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 
-gse_dataset_metadata_full <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.rds"
+gse_dataset_metadata_full <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
 
-gse_data <- readr::read_rds(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.rds"
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
 gse_dataset_metadata_full |>
@@ -140,7 +141,7 @@ gse_data |>
 gse_data_read
 
 # body --------------------------------------------------------------------
-
+source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 
@@ -179,17 +180,17 @@ gses_meta_read_all
 
 gses_meta_read_all |>
   dplyr::mutate(
-    Chemistry = factor(Chemistry, levels = chem_levels)
+    Chemistry = factor(Chemistry, levels = names(color_chemistry)),
   ) |>
   dplyr::arrange(
     Chemistry, -`Avg. somatic mutation`
   ) ->
 df
 
-chem_colors <- viridis::viridis_pal(option = "D")(4) |>
-  prismatic::color()
+# chem_colors <- viridis::viridis_pal(option = "D")(4) |>
+#   prismatic::color()
 
-df |> dplyr::glimpse()
+# df |> dplyr::glimpse()
 
 
 the_header <- data.frame(
@@ -268,24 +269,24 @@ flextable::flextable(df) |>
   flextable::merge_h(part = "header", i = c(1, 2)) |>
   flextable::theme_booktabs(bold_header = TRUE) |>
   flextable::bg(
-    i = ~ Chemistry == chem_levels[1],
+    i = ~ Chemistry == names(color_chemistry)[1],
     j = c("Chemistry"),
-    bg = chem_colors[1]
+    bg = color_chemistry[1]
   ) |>
   flextable::bg(
-    i = ~ Chemistry == chem_levels[2],
+    i = ~ Chemistry == names(color_chemistry)[2],
     j = c("Chemistry"),
-    bg = chem_colors[2]
+    bg = color_chemistry[2]
   ) |>
   flextable::bg(
-    i = ~ Chemistry == chem_levels[3],
+    i = ~ Chemistry == names(color_chemistry)[3],
     j = c("Chemistry"),
-    bg = chem_colors[3]
+    bg = color_chemistry[3]
   ) |>
   flextable::bg(
-    i = ~ Chemistry == chem_levels[4],
+    i = ~ Chemistry == names(color_chemistry)[4],
     j = c("Chemistry"),
-    bg = chem_colors[4]
+    bg = color_chemistry[4]
   ) |>
   flextable::bg(
     bg = scales::col_numeric(

@@ -375,7 +375,7 @@ ch_af
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/heatmap_cluster_af_SC5P-PE.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/heatmap_cluster_af_SC5P-PE.pdf",
     width = 20,
     height = 9
   )
@@ -449,7 +449,7 @@ ch_af_within_group
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/heatmap_cluster_af_SC5P-PE_within_group-celltype.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/heatmap_cluster_af_SC5P-PE_within_group-celltype.pdf",
     width = 20,
     height = 9
   )

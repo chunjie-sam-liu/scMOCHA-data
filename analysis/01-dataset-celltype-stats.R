@@ -51,6 +51,7 @@ log_layout(layout_glue_colors)
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
   dplyr::select(
     srrid,
@@ -485,6 +486,7 @@ p_celltype_count
   p_collect
 }
 
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 
 ggsave(
   filename = file.path(outdir, "celltype_ratio.pdf" |> glue::glue()),

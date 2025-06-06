@@ -186,7 +186,7 @@ fn_plot_mtdna_cov_circos <- function(
 
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-coverage.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-coverage.pdf",
     width = 13,
     height = 10
   )
@@ -195,7 +195,7 @@ fn_plot_mtdna_cov_circos <- function(
 }
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-coverage-scaley.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-coverage-scaley.pdf",
     width = 13,
     height = 10
   )
@@ -204,7 +204,7 @@ fn_plot_mtdna_cov_circos <- function(
 }
 {
   pdf(
-    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/out-heteroplasmic/circos-coverage-90.pdf",
+    file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/circos-coverage-90.pdf",
     width = 13,
     height = 10
   )
