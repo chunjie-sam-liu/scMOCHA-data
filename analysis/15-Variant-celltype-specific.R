@@ -56,7 +56,7 @@ all_heteroplasmic_af <- import(
 
 
 # function ----------------------------------------------------------------
-fn_ks_test <- function(.gsid_srrid) {
+fn_ks_test <- function(.gseid_srrid) {
   # .gseid_srrid <- "GSE226602_GSM7080017"
   .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |> glue::glue()
   d <- import(.filename)
@@ -100,7 +100,7 @@ fn_ks_test <- function(.gsid_srrid) {
             }
           )
         },
-        mc.cores = 10
+        mc.cores = 20
       )
     ) |>
     tidyr::unnest(ks_test) |>
@@ -116,39 +116,118 @@ fn_ks_test <- function(.gsid_srrid) {
 
 # body --------------------------------------------------------------------
 #
+# fn_ks_test("GSE155673_GSM4712885")
 
 all_heteroplasmic_af |>
   dplyr::select(gseid, srrid) |>
   dplyr::distinct() |>
   dplyr::mutate(
     gseid_srrid = paste(gseid, srrid, sep = "_")
-  ) |>
+  ) ->
+gseid_srrid
+# gseid_srrid |>
+#   dplyr::mutate(
+#     a = purrr::map(
+#       gseid_srrid,
+#       fn_ks_test
+#     )
+#   )
+
+gseid_srrid |>
+  # head(10) |>
   dplyr::mutate(
-    a = purrr::map(
+    load = purrr::map(
       gseid_srrid,
-      fn_ks_test
+      \(.x) {
+        import(
+          file.path(
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test",
+            glue::glue("{.x}.ks_test.qs")
+          )
+        )
+      }
     )
+  ) |>
+  tidyr::unnest(cols = load) |>
+  dplyr::arrange(p.value) ->
+gseid_srrid_ks_load
+
+export(
+  gseid_srrid_ks_load,
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test",
+    "a_gseid_srrid_ks_load.qs"
+  )
+)
+
+source("./analysis/00-colors.R")
+
+gseid_srrid_ks_load |>
+  dplyr::filter(p.value < 0.05) |>
+  ggplot(
+    aes(x = statistic)
+  ) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 100,
+    fill = "grey50",
+    color = "black",
+    alpha = 0.5
   )
 
-#
-#
-#
-#
-#
-#
-#
-d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.GSE226602_GSM7080017.qs")
-
-d |>
-  tidyr::pivot_longer(
-    cols = -c(celltype, barcode),
-    names_to = "variant",
-    values_to = "af"
+gseid_srrid_ks_load |>
+  dplyr::filter(
+    p.value < 0.05,
+    statistic > 200
   ) |>
-  tidyr::nest(
-    .by = "variant",
-    .key = "celltype_af"
-  ) ->
+  dplyr::count(variant) |>
+  dplyr::arrange(desc(n)) |>
+  print(n = 20)
+
+thevariant <- "7833T>C"
+
+gseid_srrid_ks_load |>
+  dplyr::filter(variant == "10645T>G") |>
+  tidyr::unnest(cols = celltype_af) |>
+  dplyr::filter(af > 0) |>
+  dplyr::mutate(
+    celltype = gsub(
+      "_",
+      " ",
+      celltype
+    )
+  ) |>
+  dplyr::mutate(
+    celltype = factor(celltype, levels = names(color_celltype))
+  ) |>
+  ggplot(aes(
+    x = af,
+    y = celltype,
+    fill = celltype
+  )) +
+  ggjoy::geom_joy(
+    # scale = 0.9,
+    # alpha = 0.8,
+    rel_min_height = 0.01,
+    size = 0.1
+  ) +
+  scale_fill_manual(
+    values = color_celltype,
+    na.value = "grey50"
+  ) +
+  ggjoy::theme_joy()
+
+
+#
+#
+#
+#
+#
+#
+#
+d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test/GSE226602_GSM7080017.ks_test.qs")
+
+d ->
 d_nest
 
 d_nest |>
