@@ -381,17 +381,18 @@ ggsave(
     plotdir,
     "joy_variants100.pdf"
   ),
-  width = 40,
-  height = 40
+  width = 50,
+  height = 50,
+  limitsize = FALSE
 )
 
 
 
 # ? single variant joy --------------------------------------------------------------------
 
-thevariant <- "3727T>C"
 thevariant <- "3173G>A"
 thevariant <- "7833T>C"
+thevariant <- "3727T>C"
 gseid_srrid_ks_load |>
   dplyr::filter(variant == thevariant) |>
   dplyr::filter(
@@ -414,9 +415,9 @@ plot_thevariant_sample_list
 
 
 plot_thevariant_sample_list |>
-  dplyr::slice(1:36) |>
+  dplyr::slice(1:100) |>
   dplyr::pull(p) |>
-  wrap_plots(ncol = 6) +
+  wrap_plots(ncol = 10) +
   plot_layout(
     guides = "collect",
   ) ->
@@ -427,29 +428,12 @@ ggsave(
     plotdir,
     "{thevariant}_joy_sample.pdf" |> glue::glue()
   ),
-  width = 30,
-  height = 30
+  width = 50,
+  height = 50,
+  limitsize = FALSE
 )
 
 
-# ? do run below --------------------------------------------------------------------
-
-thevariant <- "7833T>C"
-thevariant <- "4175G>A"
-thevariant <- "2101C>A"
-thevariant <- "3664G>A"
-thevariant <- "3243A>G"
-
-gseid_srrid_ks_load |>
-  dplyr::filter(variant == thevariant) |>
-  dplyr::filter(
-    p.value < 0.05,
-    # statistic > 100
-  ) |>
-  dplyr::slice(1) |>
-  tidyr::unnest(cols = celltype_af) -> .d
-
-fn_plot_joy(.d)
 
 # footer ------------------------------------------------------------------
 
