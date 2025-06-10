@@ -51,21 +51,28 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-gseid_srrid_ks_load <- import(
-  file.path(
-    ks_test_dir,
-    "a_gseid_srrid_ks_load.qs"
-  )
-)
+# gseid_srrid_ks_load <- import(
+#   file.path(
+#     ks_test_dir,
+#     "a_gseid_srrid_ks_load.qs"
+#   )
+# )
 
-gseid_srrid_ks_load |>
-  dplyr::filter(
-    p.value < 0.05,
-    statistic > 25
-  ) ->
-gseid_srrid_ks_load_p0.05_s55
-export(
-  gseid_srrid_ks_load_p0.05_s55,
+# gseid_srrid_ks_load |>
+#   dplyr::filter(
+#     p.value < 0.05,
+#     statistic > 25
+#   ) ->
+# gseid_srrid_ks_load_p0.05_s55
+# export(
+#   gseid_srrid_ks_load_p0.05_s55,
+#   file.path(
+#     ks_test_dir,
+#     "b_gseid_srrid_ks_load_p0.05_s25.qs"
+#   )
+# )
+
+gseid_srrid_ks_load_p0.05_s55 <- import(
   file.path(
     ks_test_dir,
     "b_gseid_srrid_ks_load_p0.05_s25.qs"
@@ -434,6 +441,14 @@ ggsave(
 )
 
 
+
+
+# ? GSE226602_GSM7080017 azimuth.rda --------------------------------------------------------------------
+library(Seurat)
+library(SeuratData)
+library(SeuratDisk)
+GSE226602_GSM7080017 <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080017/sc_azimuth.rds.gz")
+GSE226602_GSM7080017$sc_azimuth@meta.data |> head()
 
 # footer ------------------------------------------------------------------
 
