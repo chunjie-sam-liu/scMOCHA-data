@@ -166,6 +166,10 @@ b_gseid_srrid_ks_load_p0.05_s25 <- import(
   )
 )
 
+b_gseid_srrid_ks_load_p0.05_s25 |>
+  tidyr::unnest(cols = celltype_af) ->
+b_gseid_srrid_ks_load_p0.05_s25_unnest
+
 v <- packageVersion("duckdb")
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
@@ -173,12 +177,23 @@ conn <- DBI::dbConnect(
 )
 DBI::dbWriteTable(
   conn,
-  "gseid_srrid_ks_load_p0.05_s25",
-  b_gseid_srrid_ks_load_p0.05_s25,
+  "gseid_srrid_ks_load_p0.05_s25_unnest",
+  b_gseid_srrid_ks_load_p0.05_s25_unnest,
   temporary = FALSE,
   overwrite = TRUE
 )
 DBI::dbDisconnect(conn, shutdown = TRUE)
+
+
+# conn <- DBI::dbConnect(
+#   duckdb::duckdb(),
+#   dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.duckdb.1.2.1"
+# )
+# dplyr::tbl(
+#   conn,
+#   "gseid_srrid_ks_load_p0.05_s25_unnest"
+# )
+# DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # ? don't run below --------------------------------------------------------------------
 
