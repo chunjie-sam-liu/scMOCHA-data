@@ -105,7 +105,20 @@ srr |>
   ) ->
 srr_load
 
-srr_load
+srr_load |>
+  dplyr::select(-srrdir) |>
+  tidyr::unnest(cols = c(load)) ->
+srr_load_unnest
+export(
+  srr_load_unnest,
+  file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype_detail.csv",
+  format = "both"
+)
+
+export(
+  srr_load_unnest,
+  file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/barcode_celltype_detail.qs"
+)
 
 # footer ------------------------------------------------------------------
 
