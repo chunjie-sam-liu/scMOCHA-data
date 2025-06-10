@@ -160,12 +160,25 @@ gseid_srrid_ks_load
 #   )
 # )
 
-gseid_srrid_ks_load <- import(
+b_gseid_srrid_ks_load_p0.05_s25 <- import(
   file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
-    "a_gseid_srrid_ks_load.qs"
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.qs"
   )
 )
+
+v <- packageVersion("duckdb")
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.duckdb.{v}" |> glue::glue()
+)
+DBI::dbWriteTable(
+  conn,
+  "gseid_srrid_ks_load_p0.05_s25",
+  b_gseid_srrid_ks_load_p0.05_s25,
+  temporary = FALSE,
+  overwrite = TRUE
+)
+DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # ? don't run below --------------------------------------------------------------------
 
