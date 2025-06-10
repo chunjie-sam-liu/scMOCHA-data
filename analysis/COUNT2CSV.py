@@ -199,9 +199,7 @@ def gseid_srrid_srrdir_cluster():
 
 
 def slurm_run_all():
-    outfile = (
-        "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/slurm_run_all.sh"
-    )
+    outfile = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/slurm_run_all.sh"
     row_dicts = gseid_srrid_srrdir_cluster()
     cmds = []
     for row in row_dicts:
