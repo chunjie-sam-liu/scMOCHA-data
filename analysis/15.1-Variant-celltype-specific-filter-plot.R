@@ -443,13 +443,146 @@ ggsave(
 
 
 
-# ? GSE226602_GSM7080017 azimuth.rda --------------------------------------------------------------------
-library(Seurat)
-library(SeuratData)
-library(SeuratDisk)
-GSE226602_GSM7080017 <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080017/sc_azimuth.rds.gz")
-GSE226602_GSM7080017$sc_azimuth@meta.data |> head()
+# ? GSE235050_GSM7493832 azimuth.rda --------------------------------------------------------------------
+source("./analysis/00-colors.R")
+fn_plot_joy_celltype_level <- function(
+    thevariant,
+    thegseid,
+    thesrrid,
+    thecelltype,
+    thecelltype_prefix,
+    thecelltype_level) {
+  celltypedetail <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/{thegseid}/final/{thesrrid}/sc_azimuth_celltype.csv" |> glue::glue())
 
+  gseid_srrid_ks_load_p0.05_s55 |>
+    dplyr::filter(
+      gseid == thegseid,
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    tidyr::unnest(cols = celltype_af) |>
+    dplyr::select(-celltype) |>
+    dplyr::left_join(
+      celltypedetail,
+      by = c("barcode")
+    ) |>
+    dplyr::rename(
+      plotcelltype = "celltype_{thecelltype_level}" |> glue::glue(),
+    ) ->
+  thevariant_data
+
+
+  thevariant_data |>
+    dplyr::filter(
+      celltype == thecelltype,
+      af > 0
+    ) |>
+    dplyr::filter(grepl(thecelltype_prefix, plotcelltype)) |>
+    dplyr::mutate(
+      plotcelltype = factor(
+        plotcelltype
+      )
+    ) ->
+  forplot
+
+  levels(forplot$plotcelltype)
+
+
+  color_celltype_detail <- log(seq(1, exp(1), length.out = length(levels(forplot$plotcelltype)))) |>
+    purrr::map_chr(
+      ~ prismatic::clr_lighten(
+        color_celltype[thecelltype],
+        .x
+      )
+    )
+  names(color_celltype_detail) <- levels(forplot$plotcelltype)
+
+  forplot |>
+    ggplot(aes(
+      x = af,
+      y = plotcelltype,
+      fill = plotcelltype
+    )) +
+    ggjoy::geom_joy(
+      rel_min_height = 0.01,
+      size = 0.1
+    ) +
+    scale_fill_manual(
+      values = color_celltype_detail,
+      na.value = "grey50"
+    ) +
+    ggjoy::theme_joy() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(
+        hjust = 0.5,
+        # size = 16
+      ),
+    ) +
+    labs(
+      title = "{thecelltype}-{thecelltype_level}-{thevariant}\n({thegseid}-{thesrrid})" |> glue::glue(),
+      x = "Allele Frequency",
+      y = "Cell Type"
+    )
+}
+# 3173G>A GSE226602_GSM7080057
+thevariant <- "3173G>A"
+thegseid <- "GSE226602"
+thesrrid <- "GSM7080057"
+thecelltype <- "B"
+thecelltype_prefix <- "B"
+thecelltype_level <- "l3"
+
+fn_plot_joy_celltype_level(
+  thevariant = thevariant,
+  thegseid = thegseid,
+  thesrrid = thesrrid,
+  thecelltype = thecelltype,
+  thecelltype_prefix = thecelltype_prefix,
+  thecelltype_level = thecelltype_level
+)
+tibble::tibble(
+  thevariant = thevariant,
+  thegseid = thegseid,
+  thesrrid = thesrrid,
+  thecelltype = c("B", "CD4 T", "CD8 T", "other T", "NK", "DC", "Mono", "other") |> rep(each = 2),
+  thecelltype_prefix = c("B", "CD4", "CD8", "", "NK", "DC", "Mono", "") |> rep(each = 2),
+  thecelltype_level = c("l2", "l3") |> rep(length.out = 16)
+) ->
+thevariant_celltype_df
+thevariant_celltype_df |>
+  dplyr::mutate(
+    p = purrr::pmap(
+      .l = list(
+        thevariant = thevariant,
+        thegseid = thegseid,
+        thesrrid = thesrrid,
+        thecelltype = thecelltype,
+        thecelltype_prefix = thecelltype_prefix,
+        thecelltype_level = thecelltype_level
+      ),
+      .f = fn_plot_joy_celltype_level
+    )
+  ) ->
+plot_thevariant_celltype_list
+
+plot_thevariant_celltype_list |>
+  dplyr::pull(p) |>
+  wrap_plots(ncol = 4) +
+  plot_layout(
+    guides = "collect",
+  ) ->
+plot_thevariant_celltype_joy
+ggsave(
+  plot = plot_thevariant_celltype_joy,
+  filename = file.path(
+    plotdir,
+    "{thevariant}_joy_celltype.pdf" |> glue::glue()
+  ),
+  width = 20,
+  height = 15,
+  limitsize = FALSE
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
