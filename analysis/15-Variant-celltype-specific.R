@@ -152,14 +152,20 @@ gseid_srrid |>
   dplyr::arrange(p.value) ->
 gseid_srrid_ks_load
 
-export(
-  gseid_srrid_ks_load,
+# export(
+#   gseid_srrid_ks_load,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
+#     "a_gseid_srrid_ks_load.qs"
+#   )
+# )
+
+gseid_srrid_ks_load <- import(
   file.path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
     "a_gseid_srrid_ks_load.qs"
   )
 )
-
 
 # ? don't run below --------------------------------------------------------------------
 
