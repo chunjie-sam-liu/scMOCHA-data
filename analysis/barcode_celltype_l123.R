@@ -69,10 +69,11 @@ srr |>
             .srrdir
           )
         )
-        sc <- import(
+        .sc <- import(
           file.path(.srrdir, "sc_azimuth.rds.gz")
         )
-        sc$sc_azimuth@meta.data |>
+
+        .sc$sc_azimuth@meta.data |>
           tibble::rownames_to_column("barcode") |>
           dplyr::select(
             -c(orig.ident, nCount_RNA, nFeature_RNA, percent.mt, percent.ribo, Percent.Largest.Gene),
@@ -80,14 +81,14 @@ srr |>
           ) |>
           data.table::as.data.table() ->
         .d
+
         .colnames <- gsub("\\.", "_", gsub("predicted.", "", colnames(.d)))
         colnames(.d) <- .colnames
         export(
           .d,
           file.path(.srrdir, "sc_azimuth_celltype.csv")
         )
-        rm(.d)
-        gc()
+
         log_success(
           sprintf(
             "Load %s, %d barcodes",
@@ -95,12 +96,17 @@ srr |>
             nrow(.d)
           )
         )
-        1
+        rm(.sc)
+        gc()
+        return(.d)
       },
-      mc.cores = 20
+      mc.cores = 50
     )
   ) ->
 srr_load
+
+srr
+
 
 # footer ------------------------------------------------------------------
 
