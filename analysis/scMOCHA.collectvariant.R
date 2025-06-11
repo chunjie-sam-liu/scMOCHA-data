@@ -321,7 +321,9 @@ fn_heatmap <- function(
   }
 
   .forplot$forplot |>
-    dplyr::select(barcode, variant, depth) |>
+    dplyr::select(barcode, variant, depth) ->
+  .depth_mtx_cell_variant_depth
+  .depth_mtx_cell_variant_depth |>
     dplyr::mutate(
       depth = log2(depth + 1)
     ) |>
@@ -603,10 +605,15 @@ fn_heatmap <- function(
       names_to = "barcode",
       values_to = "af"
     ) |>
+    dplyr::left_join(
+      .depth_mtx_cell_variant_depth,
+      by = c("variant", "barcode")
+    ) |>
     dplyr::mutate(
       variant_type = dplyr::case_when(
         is.na(af) ~ "white",
-        af <= 0 ~ "grey",
+        af < 0 ~ "grey",
+        af == 0 & depth >= 10 ~ "black",
         af > 0 ~ "colorful"
       )
     ) |>
@@ -1667,6 +1674,12 @@ if (file.exists("variant_annotation.tsv") | file.exists("cell_variant_annotation
 # ! raw --------------------------------------------------------------------
 
 log_info("start raw allele heatmap")
+
+# White, no reads.
+# Grey, total reads < 10
+# Black, total reads > 10, No variant,
+# Colorful, real variant
+
 cell_raw_ch_af_depth <- fn_heatmap(
   .forplot = cell_raw_cluster_forplot,
   .cell_variants = unique(cell_hetero$variant),

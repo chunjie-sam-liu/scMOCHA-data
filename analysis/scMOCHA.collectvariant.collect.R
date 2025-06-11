@@ -102,8 +102,29 @@ DBI::dbWriteTable(
 DBI::dbDisconnect(conn, shutdown = TRUE)
 
 
+
+
+# ? don't run below --------------------------------------------------------------------
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.duckdb.1.2.1"
+)
+dplyr::tbl(conn, "all_variant_cell") |>
+  dplyr::filter(
+    variant == "73A>G",
+    srrid == "GSM4712885",
+    variant_in_cell_cluster == "cell"
+  ) |>
+  as.data.table() |>
+  dplyr::count(
+    celltype, variant_type
+  ) |>
+  tidyr::pivot_wider(
+    names_from = variant_type,
+    values_from = n
+  )
+DBI::dbDisconnect(conn, shutdown = TRUE)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
-
-# save image --------------------------------------------------------------
