@@ -82,7 +82,7 @@ gseid_srrid_variant |>
 
         log_trace(
           glue::glue(
-            "Processing variant {thevariant} for srrid {thesrrid}"
+            "Processing variant {.y} for srrid {.x}"
           )
         )
         all_variant_cell_table |>
@@ -92,25 +92,22 @@ gseid_srrid_variant |>
             variant_in_cell_cluster == "cell"
           ) |>
           dplyr::select(
-            barcode, af, variant_type, celltype
+            barcode, af, depth, variant_type, celltype
           ) |>
           as.data.table() ->
         .d
+        .d |>
+          dplyr::group_by(celltype) |>
+          dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE), mean_depth = mean(depth, na.rm = T)) ->
+        .dd
         log_trace("has data in database ", nrow(.d))
         .d |>
           dplyr::count(
             celltype, variant_type
           ) |>
-          tidyr::pivot_wider(
-            names_from = variant_type,
-            values_from = n
-          ) |>
-          dplyr::mutate(
-            realvariant = ifelse(
-              colorful >= 3 & !is.na(colorful),
-              "yes",
-              "no"
-            )
+          dplyr::left_join(
+            .dd,
+            by = "celltype"
           )
       },
       mc.cores = 20,
@@ -121,45 +118,100 @@ gseid_srrid_variant_co
 
 
 gseid_srrid_variant_co |>
-  dplyr::mutate(
-    n = parallel::mcmapply(
-      .x = co,
-      FUN = \(.x) {
-        # .x <- gseid_srrid_variant_co$co[[1]]
-        .x |>
-          dplyr::filter(realvariant == "yes") |>
-          nrow()
-      },
-      SIMPLIFY = TRUE,
-      mc.cores = 20
-    )
+  tidyr::unnest(cols = co) |>
+  tidyr::pivot_wider(
+    names_from = variant_type,
+    values_from = c(n),
+  ) |>
+  tidyr::nest(
+    .by = c(gseid, srrid, variant),
+    .key = "variant_celltype"
   ) ->
-gseid_srrid_variant_co_n
+gseid_srrid_variant_celltype
 
-gseid_srrid_variant_co_n |>
-  dplyr::select(n) |>
-  ggplot(aes(x = n)) +
-  geom_histogram(
-    binwidth = 1,
-    fill = "steelblue",
-    color = "black"
-  ) +
-  labs(
-    title = "Number of real variants per srrid",
-    x = "Number of real variants",
-    y = "Count"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1)
+
+
+gseid_srrid_variant_celltype |>
+  dplyr::mutate(
+    n_colorful = parallel::mcmapply(
+      .x = variant_celltype,
+      FUN = \(.x) {
+        .x |>
+          tidyr::pivot_longer(
+            cols = -c(celltype, sum_depth, mean_depth),
+            names_to = "group",
+            values_to = "n",
+          ) |>
+          dplyr::mutate(
+            n = ifelse(
+              n >= 4,
+              n,
+              NA_real_
+            )
+          ) |>
+          dplyr::filter(
+            !is.na(n)
+          ) |>
+          dplyr::count(group) |>
+          tidyr::pivot_wider(
+            names_from = group,
+            values_from = n,
+            names_prefix = "n_"
+          )
+      },
+      mc.cores = 20,
+      SIMPLIFY = FALSE
+    )
+  ) |>
+  tidyr::unnest(n_colorful) ->
+gseid_srrid_variant_celltype_n
+
+
+gseid_srrid_variant_celltype_n |>
+  dplyr::filter(
+    !is.na(n_black),
+    n_black == 8,
+    n_colorful < 2
+  ) |>
+  # dplyr::slice(6) |>
+  dplyr::filter(
+    srrid == "GSM7080031"
+  ) |>
+  tidyr::unnest(cols = variant_celltype)
+
+
+
+# ? real somatic mutation --------------------------------------------------------------------
+
+ALLVARIANTS <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.rds"
+)) |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
   )
 
 
-gseid_srrid_variant_co_n |>
-  dplyr::filter(n == 1) |>
-  dplyr::slice(2) |>
-  tidyr::unnest(cols = co)
+
+
+gseid_srrid_variant_celltype_n |>
+  dplyr::filter(
+    # srrid == "GSM7080031"
+    variant %in% ALLVARIANTS$variant
+  ) |>
+  dplyr::filter(
+    n_black >= 6,
+    n_colorful < 6
+  ) |>
+  dplyr::filter(
+    # srrid == "GSM7080027"
+  ) |>
+  dplyr::group_by(srrid) |>
+  dplyr::filter(dplyr::n() > 3) |>
+  dplyr::ungroup() |>
+  dplyr::slice(3) |>
+  tidyr::unnest(cols = variant_celltype)
+
+
 
 # footer ------------------------------------------------------------------
 

@@ -85,7 +85,7 @@ export(
 )
 
 
-srr_load_unnest <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.qs")
+# srr_load_unnest <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.qs")
 
 v <- packageVersion("duckdb")
 conn <- DBI::dbConnect(
