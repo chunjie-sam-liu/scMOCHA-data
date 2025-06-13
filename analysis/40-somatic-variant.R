@@ -136,7 +136,7 @@ gseid_srrid_variant_co |>
   ) ->
 gseid_srrid_variant_celltype
 
-gseid_srrid_variant_celltype$variant_celltype[[1]]
+# gseid_srrid_variant_celltype$variant_celltype[[1]] -> .x
 
 
 gseid_srrid_variant_celltype |>
@@ -192,6 +192,15 @@ gseid_srrid_variant_celltype_n |>
 # ? real somatic mutation --------------------------------------------------------------------
 
 
+ALLVARIANTS <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
+)) |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  )
+
+META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
+  dplyr::select(gseid, srrid, Age_new, Age_group)
 
 
 gseid_srrid_variant_celltype_n |>
@@ -200,7 +209,7 @@ gseid_srrid_variant_celltype_n |>
     variant %in% ALLVARIANTS$variant
   ) |>
   dplyr::filter(
-    n_black >= 6,
+    n_black >= 7,
     n_colorful < 6
   ) ->
 somatic_variants
@@ -222,16 +231,6 @@ somatic_variants <- import(
 
 
 # ? for plot --------------------------------------------------------------------
-
-ALLVARIANTS <- import(file.path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
-)) |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  )
-
-META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
-  dplyr::select(gseid, srrid, Age_new, Age_group)
 
 META |>
   dplyr::left_join(
@@ -492,22 +491,222 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
 fn_plot_somatic_variant("6967G>A", "GSM7080026")
 fn_plot_somatic_variant("7757G>A", "GSM7437874")
 
+fn_plot_somatic_variant("12501G>A", "GSM5227130")
 # ? somatic variants hotspot ----------------------------------------------------
+
+fn_plot_mtdna <- function() {
+  # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
+
+  LENGTH <- 16569
+  # rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
+  gtf_gene_df <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
+
+
+  library(gggenes)
+  ggplot(
+    gtf_gene_df,
+    aes(
+      xmin = start,
+      xmax = end,
+      y = seqnames,
+    )
+  ) +
+    # geom_gene_arrow() +
+    geom_gene_arrow(
+      aes(
+        fill = COLOR
+      ),
+      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm"),
+    ) +
+    scale_fill_identity(
+      name = "Gene type",
+      guide = "legend",
+      labels = c("MT rRNA", "Protein coding", "MT tRNA", "MT OLR", "D-Loop")
+    ) +
+    # scale_fill_brewer(
+    #   palette = "Set1",
+    #   name = "Gene type",
+    #   labels = c("D-Loop", "MT rRNA", "MT tRNA", "Protein coding")
+    # ) +
+    ggrepel::geom_text_repel(
+      aes(
+        x = (start + end) / 2,
+        label = gsub(
+          pattern = "MT-",
+          replacement = "",
+          x = gene_name
+        ),
+      ),
+      color = "black",
+      # fill = "white",
+      # nudge_x =1,
+      # nudge_y =0.001,
+      size = 3,
+      show.legend = F,
+      max.overlaps = Inf,
+    ) +
+    # scale_color_brewer(palette = "Set1") +
+    scale_x_continuous(
+      limits = c(0, LENGTH),
+      breaks = c(seq(0, LENGTH, 1000), LENGTH),
+      labels = c(seq(0, LENGTH, 1000), LENGTH),
+      expand = expansion(mult = c(0, 0.01)),
+    ) +
+    scale_y_discrete(
+      expand = expansion(mult = c(0, 0), add = c(0, 0))
+    ) +
+    # theme_genes() +
+    theme(
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      legend.position = "bottom",
+      axis.title = element_blank(),
+      axis.text.y = element_blank(),
+      # axis.text.x = element_text(size = 14),
+      # legend.text = element_text(size = 14),
+      # panel.background = element_rect(
+      #   color = "red"
+      # ),
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.ticks.y = element_blank(),
+      axis.ticks.x = element_line(color = "black"),
+      axis.line.x = element_line(color = "black"),
+      axis.text.x = element_text(
+        vjust = -1,
+      ),
+    )
+}
 
 somatic_variants |>
   dplyr::count(variant) |>
-  dplyr::arrange(-n) |>
-  dplyr::filter()
+  dplyr::arrange(-n)
 
 somatic_variants |>
   dplyr::filter(
     variant == "14530T>C"
   ) |>
-  dplyr::slice(5) |>
+  dplyr::slice(1) |>
   tidyr::unnest(cols = variant_celltype)
 
-fn_plot_somatic_variant("13271T>C", "GSM5494119")
+fn_plot_somatic_variant("14530T>C", "GSM4670211")
 
+somatic_variants |>
+  dplyr::count(variant) |>
+  dplyr::arrange(-n) |>
+  dplyr::mutate(
+    pos = gsub(
+      "[ATGC]+|>",
+      "",
+      variant
+    ) |>
+      as.integer()
+  ) ->
+forplot_somatic_variant_hotspot
+forplot_somatic_variant_hotspot |>
+  ggplot(aes(
+    x = pos,
+    y = n
+  )) +
+  geom_segment(
+    aes(x = pos, xend = pos, y = 0, yend = n)
+  ) +
+  geom_point(
+    aes(size = n),
+    color = "red",
+    fill = "red",
+    # alpha = 0.7,
+    shape = 21,
+    stroke = 1
+  ) +
+  ggrepel::geom_text_repel(
+    data = forplot_somatic_variant_hotspot |>
+      dplyr::filter(
+        n > 2
+      ),
+    aes(label = variant),
+    # size = 3,
+    nudge_y = -0.1,
+    nudge_x = 0.1,
+    show.legend = FALSE,
+    max.overlaps = Inf,
+    segment.size = 0.2,
+    segment.color = "black",
+    box.padding = 0.5
+  ) +
+  scale_x_continuous(
+    expand = expansion(mult = c(0, 0.01)),
+    limits = c(1, 16569),
+    breaks = c(seq(0, 17000, 1000), 16569),
+    labels = c(seq(0, 17000, 1000), 16569),
+  ) +
+  scale_y_continuous(
+    expand = expansion(add = c(.05, 0.1)),
+    limits = c(0, 6),
+    breaks = seq(0, 6, 1),
+    labels = seq(0, 6, 1)
+  ) +
+  # scale_fill_identity(
+  #   name = "Sample"
+  # ) +
+  theme(
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    # panel.background = element_rect(color = "red"),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.line.y.left = element_line(color = "black"),
+    # axis.line.x.bottom = element_line(color = "black"),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.line.x = element_blank(),
+    axis.title.x = element_blank(),
+    # legend.position = c(0.8, 0.5),
+    legend.position = "none",
+    legend.key = element_blank(),
+    axis.title.y = element_text(size = 16, color = "black"),
+    axis.text.y = element_text(color = "black"),
+    legend.text = element_text(
+      size = 14,
+      color = "black"
+    ),
+    legend.title = element_text(
+      size = 16,
+      colour = "black"
+    ),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      size = 8,
+      color = "black",
+      face = "bold"
+    )
+  ) +
+  labs(
+    y = "Number of somatic variants",
+  ) ->
+p_somatic_variant_hotspot
+
+
+wrap_plots(
+  p_somatic_variant_hotspot,
+  plot_spacer(),
+  fn_plot_mtdna(),
+  ncol = 1,
+  heights = c(15, -0.7, 1)
+)
+
+ggsave(
+  plot = wrap_plots(
+    p_somatic_variant_hotspot,
+    plot_spacer(),
+    fn_plot_mtdna(),
+    ncol = 1,
+    heights = c(15, -0.7, 1)
+  ),
+  filename = file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
+    "somatic_variant_hotspot.pdf"
+  ),
+  width = 12, height = 6
+)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
