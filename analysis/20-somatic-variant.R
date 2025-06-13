@@ -271,6 +271,128 @@ p_real_somatic_variants_age |>
 
 
 
+
+# ? somatic mutation accumulation --------------------------------------------------------------------
+
+source("analysis/00-colors.R")
+gseid_srrid_variant_celltype_n |>
+  dplyr::filter(
+    # srrid == "GSM7080031"
+    variant %in% ALLVARIANTS$variant
+  ) |>
+  dplyr::filter(
+    n_black >= 6,
+    n_colorful <= 2
+  ) |>
+  # dplyr::slice(1) |>
+  tidyr::unnest(cols = variant_celltype) |>
+  dplyr::mutate(
+    issomatic = ifelse(
+      colorful >= 4,
+      "yes",
+      "no"
+    )
+  ) |>
+  dplyr::select(gseid, srrid, variant, celltype, issomatic) |>
+  dplyr::filter(issomatic == "yes") |>
+  dplyr::left_join(
+    META,
+    by = c("gseid", "srrid")
+  ) |>
+  dplyr::filter(
+    Age_group != "Unknown"
+  ) |>
+  dplyr::mutate(
+    Age_new_group = dplyr::case_when(
+      Age_new < 30 ~ "30<",
+      Age_new >= 30 & Age_new < 40 ~ "30~40",
+      Age_new >= 40 & Age_new < 50 ~ "40~50",
+      Age_new >= 50 & Age_new < 60 ~ "50~60",
+      Age_new >= 60 & Age_new < 70 ~ "60~70",
+      Age_new >= 70 & Age_new < 80 ~ "70~80",
+      Age_new >= 80 ~ ">=80",
+    )
+  ) |>
+  dplyr::mutate(
+    Age_new_group = factor(
+      Age_new_group,
+      levels = c("30<", "30~40", "40~50", "50~60", "60~70", "70~80", ">=80")
+    )
+  ) ->
+somatic_variants_age_group
+
+somatic_variants_age_group |>
+  dplyr::select(
+    Age_new_group, celltype, variant
+  ) |>
+  dplyr::distinct() |>
+  dplyr::count(
+    Age_new_group,
+    celltype
+  ) |>
+  dplyr::mutate(
+    celltype = as.character(celltype),
+  ) |>
+  dplyr::mutate(
+    celltype = gsub(
+      pattern = "_",
+      replacement = " ",
+      x = celltype
+    )
+  ) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = names(color_celltype)
+    )
+  ) ->
+forplot_age_group
+
+# forplot_age_group |>
+# dplyr::filter(Age_group == "45~50") |>
+forplot_age_group |>
+  ggplot(aes(
+    x = Age_new_group,
+    y = n,
+    fill = celltype
+  )) +
+  geom_col() +
+  scale_fill_manual(
+    name = "Cell Type",
+    values = color_celltype,
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.01))
+  ) +
+  theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    axis.text.x = element_text(size = 14, color = "black"),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 16, color = "black"),
+    axis.text.y = element_text(size = 14, color = "black"),
+    legend.position = "right",
+    legend.key = element_blank(),
+    legend.text = element_text(size = 14, color = "black"),
+    legend.title = element_text(size = 16, colour = "black"),
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    axis.line = element_line(color = "black"),
+  ) +
+  labs(
+    y = "Number of mutation",
+  ) ->
+p_somatic_variants_age_group
+p_somatic_variants_age_group |>
+  ggplot2::ggsave(
+    filename = file.path(
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
+      "real_somatic_variants_age_group.pdf"
+    ),
+    width = 8, height = 6
+  )
+
+
 # ? somatic variant example --------------------------------------------------------------------
 
 somatic_variants |>
