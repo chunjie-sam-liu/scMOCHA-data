@@ -78,6 +78,54 @@ gseid_srrid_ks_load_p0.05_s55 <- import(
     "b_gseid_srrid_ks_load_p0.05_s25.qs"
   )
 )
+gseid_srrid_ks_load <- gseid_srrid_ks_load_p0.05_s55
+
+gseid_srrid_ks_load |>
+  dplyr::count(variant) |>
+  dplyr::arrange(-n) |>
+  ggplot(aes(
+    x = n
+  )) +
+  geom_histogram(
+    aes(y = after_stat(density)),
+    bins = 100,
+    fill = "grey50",
+    color = "black",
+    alpha = 0.5
+  )
+
+
+ALLVARIANTS <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
+)) |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  )
+
+gseid_srrid_ks_load |>
+  dplyr::select(
+    -celltype_af, -parameter, -method
+  ) |>
+  dplyr::filter(
+    variant %in% ALLVARIANTS$variant
+  ) ->
+gseid_srrid_ks_load_variant
+
+export(
+  gseid_srrid_ks_load_variant,
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
+    "celltype_specific_variant.qs"
+  )
+)
+export(
+  gseid_srrid_ks_load_variant,
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
+    "celltype_specific_variant.csv"
+  ),
+  format = "both"
+)
 
 # function ----------------------------------------------------------------
 
@@ -550,6 +598,7 @@ tibble::tibble(
   thecelltype_level = c("l2", "l3") |> rep(length.out = 16)
 ) ->
 thevariant_celltype_df
+
 thevariant_celltype_df |>
   dplyr::mutate(
     p = purrr::pmap(
@@ -583,6 +632,9 @@ ggsave(
   height = 15,
   limitsize = FALSE
 )
+
+
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
