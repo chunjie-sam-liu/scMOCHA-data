@@ -33,5 +33,8 @@
     // "**/data": true
   },
   "python.terminal.activateEnvironment": true,
-  "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python"
+  "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python",
+  "python-envs.defaultEnvManager": "ms-python.python:conda",
+  "python-envs.defaultPackageManager": "ms-python.python:conda",
+  "python-envs.pythonProjects": []
 }

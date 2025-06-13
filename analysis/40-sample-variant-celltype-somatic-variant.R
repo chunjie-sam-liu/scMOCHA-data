@@ -183,15 +183,7 @@ gseid_srrid_variant_celltype_n |>
 
 # ? real somatic mutation --------------------------------------------------------------------
 
-ALLVARIANTS <- import(file.path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
-)) |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  )
 
-META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
-  dplyr::select(gseid, srrid, Age_new, Age_group)
 
 
 gseid_srrid_variant_celltype_n |>
@@ -212,6 +204,26 @@ export(
     "real_somatic_variant_celltype.qs"
   )
 )
+
+somatic_variants <- import(
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+    "real_somatic_variant_celltype.qs"
+  )
+)
+
+
+# ? for plot --------------------------------------------------------------------
+
+ALLVARIANTS <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
+)) |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  )
+
+META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
+  dplyr::select(gseid, srrid, Age_new, Age_group)
 
 META |>
   dplyr::left_join(
@@ -266,206 +278,228 @@ somatic_variants |>
 
 thevariant <- "6967G>A"
 thesrrid <- "GSM7080026"
+fn_plot_somatic_variant <- function(thevariant, thesrrid) {
+  all_variant_cell_table |>
+    dplyr::filter(
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    dplyr::collect() |>
+    dplyr::mutate(
+      variant_type = dplyr::case_match(
+        variant_type,
+        "colorful" ~ "red",
+        "black" ~ "darkblue",
+        "white" ~ "white",
+        "grey" ~ "gray",
+        NA ~ "white"
+      )
+    ) |>
+    dplyr::mutate(
+      variant_type = factor(
+        variant_type,
+        levels = c("red", "darkblue", "gray", "white")
+      )
+    ) |>
+    dplyr::arrange(
+      variant_type,
+      -af
+    ) ->
+  forplot_
 
-all_variant_cell_table |>
+
+
+  forplot_ |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = forplot_$barcode
+      )
+    ) ->
+  forplot
+  source("analysis/00-colors.R")
+
+  thetheme <- theme(
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_blank(),
+    axis.title.x = element_blank(),
+  )
+
+
+  forplot |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        names(color_celltype)
+      )
+    ) |>
+    ggplot(aes(
+      x = barcode,
+      y = 1,
+      fill = celltype
+    )) +
+    geom_col() +
+    scale_fill_manual(
+      name = "Cell Type",
+      values = color_celltype,
+    ) +
+    thetheme +
+    labs(
+      y = "Cell Type",
+    ) ->
+  p1_celltype
+
+  forplot |>
+    dplyr::mutate(
+      af = ifelse(
+        af < 0.01,
+        NA_real_,
+        af
+      )
+    ) |>
+    ggplot(aes(
+      x = barcode,
+      y = af,
+      fill = af
+    )) +
+    geom_col() +
+    scale_fill_gradient(
+      name = "Allele Frequency",
+      high = "red",
+      low = "white"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0)),
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+    ) +
+    labs(
+      y = "Allele Frequency",
+    ) ->
+  p2_af
+
+
+
+  forplot |>
+    dplyr::mutate(
+      variant_type = as.character(variant_type),
+    ) |>
+    ggplot(aes(
+      x = barcode,
+      y = 1,
+      fill = variant_type
+    )) +
+    geom_col() +
+    scale_fill_identity(
+      guide = "legend",
+      name = "Variant cell",
+      breaks = c("red", "darkblue", "gray", "white"),
+      labels = c("Heteroplasmy", "Suficcient reads", "No sufficient reads", "No reads")
+    ) +
+    thetheme +
+    labs(
+      y = "Variant cells",
+    ) ->
+  p3_variant_cells
+
+
+  forplot |>
+    dplyr::mutate(
+      depth = log2(depth + 1) # log2 transform to reduce skewness
+    ) |>
+    ggplot(aes(
+      x = barcode,
+      y = depth,
+      fill = depth
+    )) +
+    geom_col() +
+    scale_fill_gradient(
+      name = "log2(depth + 1)",
+      high = "gold",
+      low = "white"
+    ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0)),
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+    ) +
+    labs(
+      y = "Log2(Depth + 1)",
+    ) ->
+  p4_depth
+
+  wrap_plots(
+    p2_af,
+    p4_depth,
+    p3_variant_cells,
+    p1_celltype,
+    ncol = 1,
+    heights = c(15, 15, 10, 10),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title =
+        glue::glue(
+          "Variant {thevariant} in {thesrrid}"
+        ),
+      theme = theme(
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
+      )
+    ) ->
+  p_all
+  p_all
+
+  ggsave(
+    p_all,
+    filename = file.path(
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
+      glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
+    ),
+    width = 12, height = 8
+  )
+}
+
+
+fn_plot_somatic_variant("6967G>A", "GSM7080026")
+fn_plot_somatic_variant("7757G>A", "GSM7437874")
+
+# ? somatic variants hotspot ----------------------------------------------------
+
+somatic_variants |>
+  dplyr::count(variant) |>
+  dplyr::arrange(-n) |>
+  dplyr::filter()
+
+somatic_variants |>
   dplyr::filter(
-    srrid == thesrrid,
-    variant == thevariant
+    variant == "14530T>C"
   ) |>
-  dplyr::collect() |>
-  dplyr::mutate(
-    variant_type = dplyr::case_match(
-      variant_type,
-      "colorful" ~ "red",
-      "black" ~ "darkblue",
-      "white" ~ "white",
-      "grey" ~ "gray",
-      NA ~ "white"
-    )
-  ) |>
-  dplyr::mutate(
-    variant_type = factor(
-      variant_type,
-      levels = c("red", "darkblue", "gray", "white")
-    )
-  ) |>
-  dplyr::arrange(
-    variant_type,
-    -af
-  ) ->
-forplot_
+  dplyr::slice(5) |>
+  tidyr::unnest(cols = variant_celltype)
 
+fn_plot_somatic_variant("13271T>C", "GSM5494119")
 
-
-forplot_ |>
-  dplyr::mutate(
-    barcode = factor(
-      barcode,
-      levels = forplot_$barcode
-    )
-  ) ->
-forplot
-source("analysis/00-colors.R")
-
-thetheme <- theme(
-  panel.background = element_blank(),
-  panel.grid = element_blank(),
-  axis.ticks = element_blank(),
-  axis.text = element_blank(),
-  axis.title.x = element_blank(),
-)
-
-
-forplot |>
-  dplyr::mutate(
-    celltype = gsub(
-      "_",
-      " ",
-      celltype
-    )
-  ) |>
-  dplyr::mutate(
-    celltype = factor(
-      celltype,
-      names(color_celltype)
-    )
-  ) |>
-  ggplot(aes(
-    x = barcode,
-    y = 1,
-    fill = celltype
-  )) +
-  geom_col() +
-  scale_fill_manual(
-    name = "Cell Type",
-    values = color_celltype,
-  ) +
-  thetheme +
-  labs(
-    y = "Cell Type",
-  ) ->
-p1_celltype
-
-forplot |>
-  dplyr::mutate(
-    af = ifelse(
-      af < 0.01,
-      NA_real_,
-      af
-    )
-  ) |>
-  ggplot(aes(
-    x = barcode,
-    y = af,
-    fill = af
-  )) +
-  geom_col() +
-  scale_fill_gradient(
-    name = "Allele Frequency",
-    high = "red",
-    low = "white"
-  ) +
-  scale_y_continuous(
-    expand = expansion(mult = c(0, 0)),
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_line(colour = "black"),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.title.x = element_blank(),
-  ) +
-  labs(
-    y = "Allele Frequency",
-  ) ->
-p2_af
-
-
-
-forplot |>
-  dplyr::mutate(
-    variant_type = as.character(variant_type),
-  ) |>
-  ggplot(aes(
-    x = barcode,
-    y = 1,
-    fill = variant_type
-  )) +
-  geom_col() +
-  scale_fill_identity(
-    guide = "legend",
-    name = "Variant cell",
-    breaks = c("red", "darkblue", "gray", "white"),
-    labels = c("Heteroplasmy", "Suficcient reads", "No sufficient reads", "No reads")
-  ) +
-  thetheme +
-  labs(
-    y = "Variant cells",
-  ) ->
-p3_variant_cells
-
-
-forplot |>
-  dplyr::mutate(
-    depth = log2(depth + 1) # log2 transform to reduce skewness
-  ) |>
-  ggplot(aes(
-    x = barcode,
-    y = depth,
-    fill = depth
-  )) +
-  geom_col() +
-  scale_fill_gradient(
-    name = "log2(depth + 1)",
-    high = "gold",
-    low = "white"
-  ) +
-  scale_y_continuous(
-    expand = expansion(mult = c(0, 0)),
-  ) +
-  theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.line = element_line(colour = "black"),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.title.x = element_blank(),
-  ) +
-  labs(
-    y = "Log2(Depth + 1)",
-  ) ->
-p4_depth
-
-wrap_plots(
-  p2_af,
-  p4_depth,
-  p3_variant_cells,
-  p1_celltype,
-  ncol = 1,
-  heights = c(15, 15, 10, 10),
-  guides = "collect"
-) +
-  plot_annotation(
-    title =
-      glue::glue(
-        "Variant {thevariant} in {thesrrid}"
-      ),
-    theme = theme(
-      plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
-    )
-  ) ->
-p_all
-p_all
-
-ggsave(
-  p_all,
-  filename = file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
-    glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
-  ),
-  width = 12, height = 8
-)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)

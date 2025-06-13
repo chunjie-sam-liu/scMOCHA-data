@@ -1674,7 +1674,6 @@ if (file.exists("variant_annotation.tsv") | file.exists("cell_variant_annotation
 # ! raw --------------------------------------------------------------------
 
 log_info("start raw allele heatmap")
-
 # White, no reads.
 # Grey, total reads < 10
 # Black, total reads > 10, No variant,
