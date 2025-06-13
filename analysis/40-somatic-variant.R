@@ -98,7 +98,10 @@ gseid_srrid_variant |>
         .d
         .d |>
           dplyr::group_by(celltype) |>
-          dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE), mean_depth = mean(depth, na.rm = T)) ->
+          dplyr::summarise(
+            sum_depth = sum(depth, na.rm = TRUE),
+            mean_depth = mean(depth, na.rm = T)
+          ) ->
         .dd
         log_trace("has data in database ", nrow(.d))
         .d |>
@@ -118,6 +121,10 @@ gseid_srrid_variant_co
 
 
 gseid_srrid_variant_co |>
+  dplyr::count(gseid, srrid) |>
+  dplyr::arrange(-n)
+
+gseid_srrid_variant_co |>
   tidyr::unnest(cols = co) |>
   tidyr::pivot_wider(
     names_from = variant_type,
@@ -129,6 +136,7 @@ gseid_srrid_variant_co |>
   ) ->
 gseid_srrid_variant_celltype
 
+gseid_srrid_variant_celltype$variant_celltype[[1]]
 
 
 gseid_srrid_variant_celltype |>
