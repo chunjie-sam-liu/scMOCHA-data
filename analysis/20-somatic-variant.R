@@ -332,6 +332,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     axis.ticks = element_blank(),
     axis.text = element_blank(),
     axis.title.x = element_blank(),
+    plot.margin = margin(t = 0, b = 0, unit = "cm"),
   )
 
 
@@ -359,7 +360,9 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       name = "Cell Type",
       values = color_celltype,
     ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
     thetheme +
+    # theme(panel.background = element_rect(color = "red")) +
     labs(
       y = "Cell Type",
     ) ->
@@ -394,6 +397,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       axis.ticks.x = element_blank(),
       axis.text.x = element_blank(),
       axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
     ) +
     labs(
       y = "Allele Frequency",
@@ -412,6 +416,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       fill = variant_type
     )) +
     geom_col() +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
     scale_fill_identity(
       guide = "legend",
       name = "Variant cell",
@@ -450,6 +455,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       axis.ticks.x = element_blank(),
       axis.text.x = element_blank(),
       axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
     ) +
     labs(
       y = "Log2(Depth + 1)",
@@ -458,11 +464,14 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
 
   wrap_plots(
     p2_af,
+    plot_spacer(),
     p4_depth,
+    plot_spacer(),
     p3_variant_cells,
+    plot_spacer(),
     p1_celltype,
     ncol = 1,
-    heights = c(15, 15, 10, 10),
+    heights = c(15, -1.05, 15, -1.05, 10, -1.05, 10),
     guides = "collect"
   ) +
     plot_annotation(
@@ -475,7 +484,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       )
     ) ->
   p_all
-  p_all
+  # p_all
 
   ggsave(
     p_all,
@@ -483,15 +492,30 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
       glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
     ),
-    width = 12, height = 8
+    width = 13, height = 8
   )
 }
 
 
 fn_plot_somatic_variant("6967G>A", "GSM7080026")
 fn_plot_somatic_variant("7757G>A", "GSM7437874")
-
 fn_plot_somatic_variant("12501G>A", "GSM5227130")
+
+srrid_variant_pairs <- data.frame(
+  srrid = c("GSM5227130", "GSM4905211", "GSM4905214", "GSM5494119", "GSM7493839", "GSM4670210", "GSM4670211", "GSM7080026", "GSM7437874"),
+  variant = c("12501G>A", "1314C>T", "1314C>T", "13271T>C", "13271T>C", "14530T>C", "14530T>C", "6967G>A", "7757G>A")
+)
+srrid_variant_pairs |>
+  dplyr::mutate(
+    a = parallel::mcmapply(
+      thesrrid = srrid,
+      thevariant = variant,
+      FUN = fn_plot_somatic_variant,
+      mc.cores = 5,
+      SIMPLIFY = FALSE
+    )
+  )
+
 # ? somatic variants hotspot ----------------------------------------------------
 
 fn_plot_mtdna <- function() {
