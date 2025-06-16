@@ -179,6 +179,87 @@ fn_plot_joy <- function(.d, .variant = NULL) {
       y = "Cell Type"
     )
 }
+
+fn_plot_joy_celltype_level <- function(
+    thevariant,
+    thegseid,
+    thesrrid,
+    thecelltype,
+    thecelltype_prefix,
+    thecelltype_level) {
+  celltypedetail <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/{thegseid}/final/{thesrrid}/sc_azimuth_celltype.csv" |> glue::glue())
+
+  gseid_srrid_ks_load_p0.05_s55 |>
+    dplyr::filter(
+      gseid == thegseid,
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    tidyr::unnest(cols = celltype_af) |>
+    dplyr::select(-celltype) |>
+    dplyr::left_join(
+      celltypedetail,
+      by = c("barcode")
+    ) |>
+    dplyr::rename(
+      plotcelltype = "celltype_{thecelltype_level}" |> glue::glue(),
+    ) ->
+  thevariant_data
+
+
+  thevariant_data |>
+    dplyr::filter(
+      celltype == thecelltype,
+      af > 0
+    ) |>
+    dplyr::filter(grepl(thecelltype_prefix, plotcelltype)) |>
+    dplyr::mutate(
+      plotcelltype = factor(
+        plotcelltype
+      )
+    ) ->
+  forplot
+
+  levels(forplot$plotcelltype)
+
+
+  color_celltype_detail <- log(seq(1, exp(1), length.out = length(levels(forplot$plotcelltype)))) |>
+    purrr::map_chr(
+      ~ prismatic::clr_lighten(
+        color_celltype[thecelltype],
+        .x
+      )
+    )
+  names(color_celltype_detail) <- levels(forplot$plotcelltype)
+
+  forplot |>
+    ggplot(aes(
+      x = af,
+      y = plotcelltype,
+      fill = plotcelltype
+    )) +
+    ggjoy::geom_joy(
+      rel_min_height = 0.01,
+      size = 0.1
+    ) +
+    scale_fill_manual(
+      values = color_celltype_detail,
+      na.value = "grey50"
+    ) +
+    ggjoy::theme_joy() +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(
+        hjust = 0.5,
+        # size = 16
+      ),
+    ) +
+    labs(
+      title = "{thecelltype}-{thecelltype_level}-{thevariant}\n({thegseid}-{thesrrid})" |> glue::glue(),
+      x = "Allele Frequency",
+      y = "Cell Type"
+    )
+}
 # body --------------------------------------------------------------------
 
 
@@ -493,86 +574,7 @@ ggsave(
 
 # ? GSE235050_GSM7493832 azimuth.rda --------------------------------------------------------------------
 source("./analysis/00-colors.R")
-fn_plot_joy_celltype_level <- function(
-    thevariant,
-    thegseid,
-    thesrrid,
-    thecelltype,
-    thecelltype_prefix,
-    thecelltype_level) {
-  celltypedetail <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/{thegseid}/final/{thesrrid}/sc_azimuth_celltype.csv" |> glue::glue())
 
-  gseid_srrid_ks_load_p0.05_s55 |>
-    dplyr::filter(
-      gseid == thegseid,
-      srrid == thesrrid,
-      variant == thevariant
-    ) |>
-    tidyr::unnest(cols = celltype_af) |>
-    dplyr::select(-celltype) |>
-    dplyr::left_join(
-      celltypedetail,
-      by = c("barcode")
-    ) |>
-    dplyr::rename(
-      plotcelltype = "celltype_{thecelltype_level}" |> glue::glue(),
-    ) ->
-  thevariant_data
-
-
-  thevariant_data |>
-    dplyr::filter(
-      celltype == thecelltype,
-      af > 0
-    ) |>
-    dplyr::filter(grepl(thecelltype_prefix, plotcelltype)) |>
-    dplyr::mutate(
-      plotcelltype = factor(
-        plotcelltype
-      )
-    ) ->
-  forplot
-
-  levels(forplot$plotcelltype)
-
-
-  color_celltype_detail <- log(seq(1, exp(1), length.out = length(levels(forplot$plotcelltype)))) |>
-    purrr::map_chr(
-      ~ prismatic::clr_lighten(
-        color_celltype[thecelltype],
-        .x
-      )
-    )
-  names(color_celltype_detail) <- levels(forplot$plotcelltype)
-
-  forplot |>
-    ggplot(aes(
-      x = af,
-      y = plotcelltype,
-      fill = plotcelltype
-    )) +
-    ggjoy::geom_joy(
-      rel_min_height = 0.01,
-      size = 0.1
-    ) +
-    scale_fill_manual(
-      values = color_celltype_detail,
-      na.value = "grey50"
-    ) +
-    ggjoy::theme_joy() +
-    theme(
-      legend.position = "none",
-      plot.title = element_text(
-        hjust = 0.5,
-        # size = 16
-      ),
-    ) +
-    labs(
-      title = "{thecelltype}-{thecelltype_level}-{thevariant}\n({thegseid}-{thesrrid})" |> glue::glue(),
-      x = "Allele Frequency",
-      y = "Cell Type"
-    )
-}
 # 3173G>A GSE226602_GSM7080057
 thevariant <- "3173G>A"
 thegseid <- "GSE226602"
