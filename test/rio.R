@@ -250,3 +250,10 @@ d |>
     tissue_site_detail == "Adrenal Gland"
   ) |>
   dplyr::arrange(AGE)
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.duckdb.1.2.1"
+)
+DBI::dbListTables(conn)
+dplyr::tbl(conn, "gseid_srrid_ks_load_p0.05_s25_unnest")

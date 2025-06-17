@@ -160,6 +160,45 @@ gseid_srrid_ks_load
 #   )
 # )
 
+
+gseid_srrid |>
+  # head(10) |>
+  dplyr::mutate(
+    load = parallel::mclapply(
+      X = gseid_srrid,
+      FUN = \(.x) {
+        import(
+          file.path(
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
+            glue::glue("{.x}.ks_test.qs")
+          )
+        ) |>
+          dplyr::select(-celltype_af, -parameter, -method)
+      },
+      mc.cores = 20
+    )
+  ) |>
+  tidyr::unnest(cols = load) |>
+  dplyr::arrange(p.value) ->
+gseid_srrid_ks_load
+
+
+
+gseid_srrid_ks_load
+export(
+  gseid_srrid_ks_load,
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/a_gseid_srrid_ks_load.nocellaf.qs"
+  )
+)
+
+
+
+
+
+
+# ? for duckdb --------------------------------------------------------------------
+
 b_gseid_srrid_ks_load_p0.05_s25 <- import(
   file.path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.qs"

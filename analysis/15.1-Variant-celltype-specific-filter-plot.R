@@ -51,12 +51,26 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-# gseid_srrid_ks_load <- import(
-#   file.path(
-#     ks_test_dir,
-#     "a_gseid_srrid_ks_load.qs"
-#   )
-# )
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+)
+DBI::dbListTables(conn)
+all_hetero_af_cell_tbl <- dplyr::tbl(
+  conn,
+  "all_hetero_af_cell"
+)
+
+gseid_srrid_ks_load <- import(
+  file.path(
+    ks_test_dir,
+    "a_gseid_srrid_ks_load.nocellaf.qs"
+  )
+) |>
+  dplyr::filter(
+    p.value < 0.05,
+    statistic > 25
+  )
 
 # gseid_srrid_ks_load |>
 #   dplyr::filter(
@@ -64,21 +78,15 @@ plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-
 #     statistic > 25
 #   ) ->
 # gseid_srrid_ks_load_p0.05_s55
-# export(
-#   gseid_srrid_ks_load_p0.05_s55,
+
+
+# gseid_srrid_ks_load_p0.05_s55 <- import(
 #   file.path(
 #     ks_test_dir,
 #     "b_gseid_srrid_ks_load_p0.05_s25.qs"
 #   )
 # )
-
-gseid_srrid_ks_load_p0.05_s55 <- import(
-  file.path(
-    ks_test_dir,
-    "b_gseid_srrid_ks_load_p0.05_s25.qs"
-  )
-)
-gseid_srrid_ks_load <- gseid_srrid_ks_load_p0.05_s55
+# gseid_srrid_ks_load <- gseid_srrid_ks_load_p0.05_s55
 
 gseid_srrid_ks_load |>
   dplyr::count(variant) |>
@@ -103,9 +111,6 @@ ALLVARIANTS <- import(file.path(
   )
 
 gseid_srrid_ks_load |>
-  dplyr::select(
-    -celltype_af, -parameter, -method
-  ) |>
   dplyr::filter(
     variant %in% ALLVARIANTS$variant
   ) ->
@@ -129,11 +134,11 @@ export(
 
 # function ----------------------------------------------------------------
 
-fn_plot_joy <- function(.d, .variant = NULL) {
+fn_plot_joy <- function(.d) {
   # thevariant <- "7833T>C"
-  if (is.null(.variant)) {
-    .variant <- .d$variant[1]
-  }
+  .variant <- .d$variant[1]
+  .gseid <- .d$gseid[1]
+  .srrid <- .d$srrid[1]
 
   .d |>
     dplyr::filter(af > 0) |>
@@ -174,13 +179,13 @@ fn_plot_joy <- function(.d, .variant = NULL) {
       ),
     ) +
     labs(
-      title = paste0(.variant),
+      title = paste0(.variant, "\n(", .gseid, "-", .srrid, ")"),
       x = "Allele Frequency",
       y = "Cell Type"
     )
 }
 
-fn_plot_joy_celltype_level <- function(
+fn_plot_joy_celltype_level2_level3 <- function(
     thevariant,
     thegseid,
     thesrrid,
@@ -189,14 +194,15 @@ fn_plot_joy_celltype_level <- function(
     thecelltype_level) {
   celltypedetail <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/{thegseid}/final/{thesrrid}/sc_azimuth_celltype.csv" |> glue::glue())
 
-  gseid_srrid_ks_load_p0.05_s55 |>
+  all_hetero_af_cell_tbl |>
     dplyr::filter(
       gseid == thegseid,
       srrid == thesrrid,
-      variant == thevariant
+      variant == thevariant,
+      af > 0
     ) |>
-    tidyr::unnest(cols = celltype_af) |>
     dplyr::select(-celltype) |>
+    dplyr::collect() |>
     dplyr::left_join(
       celltypedetail,
       by = c("barcode")
@@ -260,6 +266,45 @@ fn_plot_joy_celltype_level <- function(
       y = "Cell Type"
     )
 }
+
+fn_plot_joy_celltype_detail <- function(
+    thevariant,
+    thegseid,
+    thesrrid) {
+  tibble::tibble(
+    thevariant = thevariant,
+    thegseid = thegseid,
+    thesrrid = thesrrid,
+    thecelltype = c(
+      c("B", "CD4 T", "CD8 T", "other T") |> rep(times = 2),
+      c("NK", "DC", "Mono", "other") |> rep(times = 2)
+    ),
+    thecelltype_prefix = c(
+      c("B", "CD4", "CD8", "") |> rep(times = 2),
+      c("NK", "DC", "Mono", "") |> rep(times = 2)
+    ),
+    thecelltype_level = c("l2", "l3") |> rep(each = 4) |> rep(times = 2)
+  ) ->
+  thevariant_celltype_df
+
+  thevariant_celltype_df |>
+    dplyr::mutate(
+      p = parallel::mcmapply(
+        thevariant = thevariant,
+        thegseid = thegseid,
+        thesrrid = thesrrid,
+        thecelltype = thecelltype,
+        thecelltype_prefix = thecelltype_prefix,
+        thecelltype_level = thecelltype_level,
+        FUN = fn_plot_joy_celltype_level2_level3,
+        mc.cores = 5,
+        SIMPLIFY = FALSE
+      )
+    ) ->
+  plot_thevariant_celltype_list
+}
+
+
 # body --------------------------------------------------------------------
 
 
@@ -497,11 +542,23 @@ variant_list |>
       dplyr::filter(variant == thevariant) |>
       dplyr::filter(
         p.value < 0.05,
-        # statistic > 100
       ) |>
-      dplyr::slice(1) |>
-      tidyr::unnest(cols = celltype_af) |>
-      fn_plot_joy()
+      dplyr::slice(1) ->
+    thevariant_data
+    .gseid <- thevariant_data$gseid[1]
+    .srrid <- thevariant_data$srrid[1]
+    .variant <- thevariant_data$variant[1]
+
+    all_hetero_af_cell_tbl |>
+      dplyr::filter(
+        gseid == .gseid,
+        srrid == .srrid,
+        variant == .variant,
+        af > 0
+      ) |>
+      dplyr::collect() ->
+    thevariant_af_data
+    fn_plot_joy(thevariant_af_data)
   }) ->
 plot_variants_list
 
@@ -529,45 +586,64 @@ ggsave(
 thevariant <- "3173G>A"
 thevariant <- "7833T>C"
 thevariant <- "3727T>C"
-gseid_srrid_ks_load |>
-  dplyr::filter(variant == thevariant) |>
-  dplyr::filter(
-    p.value < 0.05,
-    # statistic > 100
-  ) |>
-  dplyr::mutate(
-    p = purrr::map2(
-      .x = gseid_srrid,
-      .y = celltype_af,
-      .f = function(.x, .y) {
-        fn_plot_joy(
-          .d = .y,
-          .variant = .x
-        )
-      }
-    )
-  ) ->
-plot_thevariant_sample_list
-
-
-plot_thevariant_sample_list |>
-  dplyr::slice(1:100) |>
-  dplyr::pull(p) |>
-  wrap_plots(ncol = 10) +
-  plot_layout(
-    guides = "collect",
-  ) ->
-plot_thevariant_sample_joy
-ggsave(
-  plot = plot_thevariant_sample_joy,
-  filename = file.path(
-    plotdir,
-    "{thevariant}_joy_sample.pdf" |> glue::glue()
-  ),
-  width = 50,
-  height = 50,
-  limitsize = FALSE
+thevariants <- c(
+  "3173G>A",
+  "7833T>C",
+  "3727T>C"
 )
+
+thevariants |>
+  purrr::map(
+    function(thevariant) {
+      gseid_srrid_ks_load |>
+        dplyr::filter(variant == thevariant) |>
+        dplyr::filter(
+          p.value < 0.05,
+          # statistic > 100
+        ) |>
+        dplyr::mutate(
+          p = parallel::mcmapply(
+            .srrid = srrid,
+            .variant = variant,
+            FUN = function(.srrid, .variant) {
+              all_hetero_af_cell_tbl |>
+                dplyr::filter(
+                  srrid == .srrid,
+                  variant == .variant,
+                  af > 0
+                ) |>
+                dplyr::collect() ->
+              thevariant_af_data
+              fn_plot_joy(thevariant_af_data)
+            },
+            mc.cores = 10,
+            SIMPLIFY = FALSE
+          )
+        ) ->
+      plot_thevariant_sample_list
+
+
+      plot_thevariant_sample_list |>
+        dplyr::slice(1:100) |>
+        dplyr::pull(p) |>
+        wrap_plots(ncol = 10) +
+        plot_layout(
+          guides = "collect",
+        ) ->
+      plot_thevariant_sample_joy
+
+      ggsave(
+        plot = plot_thevariant_sample_joy,
+        filename = file.path(
+          plotdir,
+          "{thevariant}_joy_sample.pdf" |> glue::glue()
+        ),
+        width = 50,
+        height = 50,
+        limitsize = FALSE
+      )
+    }
+  )
 
 
 
@@ -583,7 +659,7 @@ thecelltype <- "B"
 thecelltype_prefix <- "B"
 thecelltype_level <- "l3"
 
-fn_plot_joy_celltype_level(
+fn_plot_joy_celltype_level2_level3(
   thevariant = thevariant,
   thegseid = thegseid,
   thesrrid = thesrrid,
@@ -591,35 +667,28 @@ fn_plot_joy_celltype_level(
   thecelltype_prefix = thecelltype_prefix,
   thecelltype_level = thecelltype_level
 )
+
 tibble::tibble(
   thevariant = thevariant,
   thegseid = thegseid,
   thesrrid = thesrrid,
-  thecelltype = c("B", "CD4 T", "CD8 T", "other T", "NK", "DC", "Mono", "other") |> rep(each = 2),
-  thecelltype_prefix = c("B", "CD4", "CD8", "", "NK", "DC", "Mono", "") |> rep(each = 2),
-  thecelltype_level = c("l2", "l3") |> rep(length.out = 16)
+  thecelltype = c("B", "CD4 T", "CD8 T", "other T", "NK", "DC", "Mono", "other") |> rep(times = 2),
+  thecelltype_prefix = c("B", "CD4", "CD8", "", "NK", "DC", "Mono", "") |> rep(times = 2),
+  thecelltype_level = c("l2", "l3") |> rep(each = 8)
 ) ->
 thevariant_celltype_df
 
-thevariant_celltype_df |>
-  dplyr::mutate(
-    p = purrr::pmap(
-      .l = list(
-        thevariant = thevariant,
-        thegseid = thegseid,
-        thesrrid = thesrrid,
-        thecelltype = thecelltype,
-        thecelltype_prefix = thecelltype_prefix,
-        thecelltype_level = thecelltype_level
-      ),
-      .f = fn_plot_joy_celltype_level
-    )
-  ) ->
+thevariant <- "3727T>C"
+thegseid <- "GSE235050"
+thesrrid <- "GSM7493832"
+fn_plot_joy_celltype_detail(thevariant, thegseid, thesrrid) ->
 plot_thevariant_celltype_list
 
 plot_thevariant_celltype_list |>
   dplyr::pull(p) |>
-  wrap_plots(ncol = 4) +
+  wrap_plots(
+    ncol = 4
+  ) +
   plot_layout(
     guides = "collect",
   ) ->
@@ -630,8 +699,8 @@ ggsave(
     plotdir,
     "{thevariant}_joy_celltype.pdf" |> glue::glue()
   ),
-  width = 20,
-  height = 15,
+  width = 23,
+  height = 12,
   limitsize = FALSE
 )
 

@@ -164,16 +164,6 @@ export(
 )
 
 
-res <- simulateResiduals(model)
-plot(res)
-testUniformity(res)
-testDispersion(res)
-testQuantiles()
-plotResiduals(res)
-testZeroInflation(res)
-res$scaledResiduals
-plotResiduals(res)
-testOutliers(res)
 
 
 all_hetero_af_cell_variants_models |>
@@ -196,18 +186,115 @@ all_hetero_af_cell_variants_models_params
 
 all_hetero_af_cell_variants_models_params |>
   tidyr::unnest(cols = c(params)) |>
-  dplyr::filter(p < 0.05) |>
-  dplyr::select(
-    variant, Parameter, Coefficient
+  dplyr::filter(
+    p < 0.05
+  ) ->
+all_hetero_af_cell_variants_models_params_filtered
+
+lymphoid_cells <- c(
+  "B", "CD4_T", "CD8_T", "other_T", "NK"
+)
+myeloid_cells <- c(
+  "DC", "Mono"
+)
+
+all_hetero_af_cell_variants_models_params_filtered |>
+  dplyr::filter(
+    grepl("celltype", Parameter) |
+      grepl("Age_new", Parameter)
   ) |>
-  tidyr::pivot_wider(
-    names_from = Parameter,
-    values_from = Coefficient
+  dplyr::select(
+    variant, Parameter, Coefficient, p
+  ) |>
+  tidyr::nest(
+    .by = variant,
+    .key = "params"
+  ) |>
+  dplyr::mutate(
+    params_new = parallel::mclapply(
+      X = params,
+      FUN = function(.x) {
+        cell_age <- gsub("celltype", "", .x$Parameter)
+        tibble::tibble(
+          lymphoid_cell = intersect(lymphoid_cells, cell_age) |> length(),
+          myeloid_cell = intersect(myeloid_cells, cell_age) |> length(),
+          cell_age = intersect("Age_new", cell_age) |> length(),
+        )
+      },
+      mc.cores = 20
+    )
+  ) |>
+  dplyr::select(-params) |>
+  tidyr::unnest(cols = c(params_new)) ->
+all_hetero_af_cell_variants_models_params_filtered_sorted
+
+all_hetero_af_cell_variants_models_params_filtered_sorted |>
+  dplyr::filter(cell_age > 0)
+
+
+source("analysis/00-colors.R")
+
+.thevariant <- "3727T>C"
+.thevariant <- "12367A>G"
+.thevariant <- "4886C>T"
+.thevariant <- "1082A>G"
+.thevariant <- "8852G>A"
+.thevariant <- "2091A>T"
+
+all_hetero_af_cell_tbl |>
+  dplyr::filter(
+    variant == .thevariant,
+    # celltype == thecelltype,
+    af > 0
+  ) |>
+  as.data.table() |>
+  dplyr::inner_join(
+    META_age,
+    by = c("gseid", "srrid")
+  ) |>
+  dplyr::filter(af > 0) |>
+  dplyr::mutate(
+    celltype = gsub(
+      "_",
+      " ",
+      celltype
+    )
+  ) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = names(color_celltype) |> rev()
+    )
+  ) |>
+  ggplot(aes(
+    x = af,
+    y = celltype,
+    fill = celltype
+  )) +
+  ggjoy::geom_joy(
+    # scale = 0.9,
+    # alpha = 0.8,
+    rel_min_height = 0.01,
+    size = 0.1
+  ) +
+  scale_fill_manual(
+    values = color_celltype,
+    na.value = "grey50"
+  ) +
+  ggjoy::theme_joy() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 16
+    ),
+  ) +
+  labs(
+    x = "Allele Frequency",
+    y = "Cell Type"
   )
 
-performance::check_singularity(model)
-res <- DHARMa::simulateResiduals(model)
-plot(res)
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
