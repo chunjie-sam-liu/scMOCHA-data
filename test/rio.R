@@ -218,3 +218,35 @@ convert(
   "/home/liuc9/github/scMOCHA-data/config/Mito-Genome-Loci-MitoMAP-Foswiki.csv",
   "/home/liuc9/github/scMOCHA-data/config/Mito-Genome-Loci-MitoMAP-Foswiki.fst"
 )
+
+
+d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/used_samples/Fig_2c.csv")
+
+d |>
+  dplyr::count(tissue_site_detail)
+
+
+
+d |>
+  tidyr::nest(.by = tissue_site_detail) |>
+  dplyr::mutate(
+    a = purrr::map(
+      .x = data,
+      .f = \(.x) {
+        lm(HFN ~ AGE, data = .x) |>
+          broom::tidy() |>
+          dplyr::slice(2)
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = a) |>
+  dplyr::arrange(-estimate)
+
+d$AGE |> hist()
+
+
+d |>
+  dplyr::filter(
+    tissue_site_detail == "Adrenal Gland"
+  ) |>
+  dplyr::arrange(AGE)

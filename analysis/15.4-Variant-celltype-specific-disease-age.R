@@ -56,92 +56,158 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-all_heteroplasmic_af <- import(
-  file.path(cleandatadir, "all_hetero_af.cluster.fst"),
-) |>
-  dplyr::select(-num_variants) |>
-  dplyr::rename(celltype = barcode)
 
 
 META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
   dplyr::select(
     gseid, srrid, Age_new, Age_group,
+    Haplogroup,
     disease, Chemistry, sex_pred
+  ) |>
+  dplyr::mutate(
+    Haplogroup = purrr::map_chr(
+      .x = Haplogroup,
+      .f = \(.x) {
+        # if (stringr::str_starts(.x, "L")) {
+        #   gsub("L", "L0", .x)
+        # }
+        gsub("\\d+.*", "", .x)
+      }
+    )
   )
+
+
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1" |>
+    glue::glue()
+)
+
+all_hetero_af_cell_tbl <- dplyr::tbl(conn, "all_hetero_af_cell")
+
+all_hetero_af_cell_tbl |>
+  dplyr::select(variant) |>
+  dplyr::distinct() |>
+  dplyr::collect() ->
+all_hetero_af_cell_variants
+all_hetero_af_cell_tbl |>
+  dplyr::select(celltype) |>
+  dplyr::distinct() |>
+  dplyr::collect() ->
+all_hetero_af_cell_celltypes
 
 
 # function ----------------------------------------------------------------
-fn_ks_test <- function(.gseid_srrid) {
-  # .gseid_srrid <- "GSE226602_GSM7080017"
-  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |> glue::glue()
-  d <- import(.filename)
-  d |>
-    tidyr::pivot_longer(
-      cols = -c(celltype, barcode),
-      names_to = "variant",
-      values_to = "af"
-    ) |>
-    tidyr::nest(
-      .by = "variant",
-      .key = "celltype_af"
-    ) ->
-  d_nest
-
-  d_nest |>
-    # head(100) |>
-    dplyr::mutate(
-      ks_test = parallel::mclapply(
-        X = celltype_af,
-        FUN = function(.m) {
-          .m |>
-            dplyr::filter(af > 0) |>
-            dplyr::filter(celltype != "other") -> .mm
-          tryCatch(
-            {
-              kruskal.test(
-                af ~ celltype,
-                data = .mm
-              ) -> .fit
-              .fit |>
-                broom::tidy()
-            },
-            error = \(e){
-              return(tibble::tibble(
-                statistic = NA_real_,
-                p.value = NA_real_,
-                method = "Kruskal-Wallis test",
-                parameter = NA_real_
-              ))
-            }
-          )
-        },
-        mc.cores = 20
-      )
-    ) |>
-    tidyr::unnest(ks_test) |>
-    dplyr::arrange(p.value) ->
-  d_ks
-
-  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |> glue::glue()
-  export(
-    d_ks,
-    .filename_out,
-  )
-}
 
 
 # body --------------------------------------------------------------------
-all_heteroplasmic_af |>
-  dplyr::select(gseid, srrid) |>
-  dplyr::distinct() |>
+
+
+META |>
+  dplyr::select(-Age_group) |>
   dplyr::mutate(
-    gseid_srrid = paste(gseid, srrid, sep = "_")
+    disease = as.character(disease),
+  ) |>
+  dplyr::mutate(
+    disease = ifelse(disease == "Unknown", NA_character_, disease),
+  ) |>
+  dplyr::mutate(
+    Chemistry = as.character(Chemistry),
   ) ->
-gseid_srrid
+META_age
+
+library(glmmTMB)
+library(DHARMa)
+
+all_hetero_af_cell_variants |>
+  dplyr::mutate(
+    model = parallel::mclapply(
+      X = variant,
+      FUN = function(.thevariant) {
+        # .thevariant <- all_hetero_af_cell_variants$variant[[1]]
+        all_hetero_af_cell_tbl |>
+          dplyr::filter(
+            variant == .thevariant,
+            # celltype == thecelltype,
+            af > 0
+          ) |>
+          as.data.table() ->
+        .d
+        .d |>
+          dplyr::inner_join(
+            META_age,
+            by = c("gseid", "srrid")
+          ) |>
+          dplyr::mutate(
+            af = ifelse(af == 1, 0.9999, af),
+          ) ->
+        .dd
 
 
+        model <- glmmTMB(
+          af ~ celltype + Age_new + disease + Chemistry + Haplogroup + sex_pred + (1 | srrid
+          ),
+          family = beta_family(),
+          data = .dd
+        )
+        model
+      },
+      mc.cores = 50
+    )
+  ) ->
+all_hetero_af_cell_variants_models
+
+export(
+  all_hetero_af_cell_variants_models,
+  file = file.path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.glmmTMB", "all_hetero_af.cell.variants.models.qs")
+)
 
 
+res <- simulateResiduals(model)
+plot(res)
+testUniformity(res)
+testDispersion(res)
+testQuantiles()
+plotResiduals(res)
+testZeroInflation(res)
+res$scaledResiduals
+plotResiduals(res)
+testOutliers(res)
+
+
+all_hetero_af_cell_variants_models |>
+  # head(2) |>
+  dplyr::mutate(
+    params = parallel::mclapply(
+      X = model,
+      FUN = \(.model) {
+        # summary(.model)
+        if (performance::check_singularity(.model)) {
+          logger::log_warn("Model is singular, skipping parameter extraction.")
+          return(NULL)
+        }
+        parameters::model_parameters(.model) |> as.data.table()
+      },
+      mc.cores = 20
+    )
+  ) ->
+all_hetero_af_cell_variants_models_params
+
+all_hetero_af_cell_variants_models_params |>
+  tidyr::unnest(cols = c(params)) |>
+  dplyr::filter(p < 0.05) |>
+  dplyr::select(
+    variant, Parameter, Coefficient
+  ) |>
+  tidyr::pivot_wider(
+    names_from = Parameter,
+    values_from = Coefficient
+  )
+
+performance::check_singularity(model)
+res <- DHARMa::simulateResiduals(model)
+plot(res)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
