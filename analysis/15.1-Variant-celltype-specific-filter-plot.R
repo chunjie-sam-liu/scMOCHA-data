@@ -134,7 +134,19 @@ export(
 
 # function ----------------------------------------------------------------
 
-fn_plot_joy <- function(.d) {
+fn_plot_joy <- function(
+    thevariant,
+    thegseid,
+    thesrrid) {
+  all_hetero_af_cell_tbl |>
+    dplyr::filter(
+      gseid == thegseid,
+      srrid == thesrrid,
+      variant == thevariant,
+      af > 0
+    ) |>
+    dplyr::collect() ->
+  thevariant_af_data
   # thevariant <- "7833T>C"
   .variant <- .d$variant[1]
   .gseid <- .d$gseid[1]
@@ -548,17 +560,11 @@ variant_list |>
     .gseid <- thevariant_data$gseid[1]
     .srrid <- thevariant_data$srrid[1]
     .variant <- thevariant_data$variant[1]
-
-    all_hetero_af_cell_tbl |>
-      dplyr::filter(
-        gseid == .gseid,
-        srrid == .srrid,
-        variant == .variant,
-        af > 0
-      ) |>
-      dplyr::collect() ->
-    thevariant_af_data
-    fn_plot_joy(thevariant_af_data)
+    fn_plot_joy(
+      thevariant = .variant,
+      thegseid = .gseid,
+      thesrrid = .srrid
+    )
   }) ->
 plot_variants_list
 
@@ -603,18 +609,15 @@ thevariants |>
         ) |>
         dplyr::mutate(
           p = parallel::mcmapply(
-            .srrid = srrid,
             .variant = variant,
-            FUN = function(.srrid, .variant) {
-              all_hetero_af_cell_tbl |>
-                dplyr::filter(
-                  srrid == .srrid,
-                  variant == .variant,
-                  af > 0
-                ) |>
-                dplyr::collect() ->
-              thevariant_af_data
-              fn_plot_joy(thevariant_af_data)
+            .gseid = gseid,
+            .srrid = srrid,
+            FUN = function(.variant, .gseid, .srrid) {
+              fn_plot_joy(
+                thevariant = .variant,
+                thegseid = .gseid,
+                thesrrid = .srrid
+              )
             },
             mc.cores = 10,
             SIMPLIFY = FALSE
@@ -711,3 +714,4 @@ ggsave(
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
+DBI::dbDisconnect(conn, shutdown = TRUE)
