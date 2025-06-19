@@ -104,7 +104,7 @@ TABLEDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/TABLES")
 
 
 def load_table_pl(gseid, srrid, cluster, hh):
-    # gseid, srrid, cluster, hh = "GSE147794", "GSM4446059", "cluster", "HETEROPLASMIC"
+    # gseid, srrid, cluster, hh = "GSE147794", "GSM4446059", "cell", "HETEROPLASMIC"
     tablename = (
         f"{cluster}_cov.{gseid}_{srrid}"
         if cluster != "bulk"
@@ -188,7 +188,7 @@ def load_table_pl(gseid, srrid, cluster, hh):
         [df_sum_cov.select(["barcode"]), df_alt_af], how="horizontal"
     )
 
-    df_out = (
+    df_af = (
         result_df.with_columns(
             [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
         )
@@ -196,7 +196,34 @@ def load_table_pl(gseid, srrid, cluster, hh):
         .sort("barcode")
     )
 
-    return df_out
+    df_sum_depth = (
+        df_sum_cov.with_columns(
+            [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
+        )
+        .select(["gseid", "srrid", "barcode", *CONFIG[hh]["POSALTS"]])
+        .sort("barcode")
+    )
+    df_sum_depth.columns = [
+        "gseid",
+        "srrid",
+        "barcode",
+        *CONFIG[hh]["VARIANTS"],
+    ]
+    df_alt_depth = (
+        df_alt_cov.with_columns(
+            [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
+        )
+        .select(["gseid", "srrid", "barcode", *CONFIG[hh]["POSALTS"]])
+        .sort("barcode")
+    )
+    df_alt_depth.columns = [
+        "gseid",
+        "srrid",
+        "barcode",
+        *CONFIG[hh]["VARIANTS"],
+    ]
+
+    return df_af, df_sum_depth, df_alt_depth
 
 
 def save_table_pl(gseid, srrid, cluster, hh):
@@ -207,12 +234,24 @@ def save_table_pl(gseid, srrid, cluster, hh):
     #     else f"cluster_cov.{gseid}_{srrid}"
     # )
     log.info(f"Loading {tablename}")
-    table_path = (
+    df_af, df_sum_depth, df_alt_depth = load_table_pl(gseid, srrid, cluster, hh)
+    table_path_af = (
         CONFIG[hh]["table_path"] / f"{tablename}.{CONFIG[hh]['suffix']}.csv"
     )
-    df = load_table_pl(gseid, srrid, cluster, hh)
-    df.write_csv(table_path, include_header=True)
-    log.info(f"Saved {tablename} to {table_path}")
+    df_af.write_csv(table_path_af, include_header=True)
+    log.info(f"Saved {tablename} to {table_path_af}")
+    table_path_sum_depth = (
+        CONFIG[hh]["table_path"]
+        / f"{tablename}.sumdepth.{CONFIG[hh]['suffix']}.csv"
+    )
+    df_sum_depth.write_csv(table_path_sum_depth, include_header=True)
+    log.info(f"Saved {tablename} sum depth to {table_path_sum_depth}")
+    table_path_alt_depth = (
+        CONFIG[hh]["table_path"]
+        / f"{tablename}.altdepth.{CONFIG[hh]['suffix']}.csv"
+    )
+    df_alt_depth.write_csv(table_path_alt_depth, include_header=True)
+    log.info(f"Saved {tablename} alt depth to {table_path_alt_depth}")
 
 
 def load_file(row, cluster, hh):
@@ -306,7 +345,7 @@ def create_sh(
         srrid = row["srrid"]
         cmd = [
             "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
-            "/home/liuc9/github/scMOCHA-data/analysis/all_variant_cells.py",
+            "/home/liuc9/github/scMOCHA-data/analysis/ALL_VARIANT_CELLS_AF.py",
             "heteroplasmic-af",
             gseid,
             srrid,

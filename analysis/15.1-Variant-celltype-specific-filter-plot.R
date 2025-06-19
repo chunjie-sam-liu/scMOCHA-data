@@ -66,11 +66,13 @@ gseid_srrid_ks_load <- import(
     ks_test_dir,
     "a_gseid_srrid_ks_load.nocellaf.qs"
   )
-) |>
-  dplyr::filter(
-    p.value < 0.05,
-    statistic > 25
-  )
+)
+
+
+# dplyr::filter(
+#   p.value < 0.05,
+#   statistic > 25
+# )
 
 # gseid_srrid_ks_load |>
 #   dplyr::filter(
@@ -89,6 +91,10 @@ gseid_srrid_ks_load <- import(
 # gseid_srrid_ks_load <- gseid_srrid_ks_load_p0.05_s55
 
 gseid_srrid_ks_load |>
+  dplyr::filter(
+    p.value < 0.05,
+    statistic > 25
+  ) |>
   dplyr::count(variant) |>
   dplyr::arrange(-n) |>
   ggplot(aes(
@@ -111,6 +117,10 @@ ALLVARIANTS <- import(file.path(
   )
 
 gseid_srrid_ks_load |>
+  dplyr::filter(
+    p.value < 0.05,
+    statistic > 25
+  ) |>
   dplyr::filter(
     variant %in% ALLVARIANTS$variant
   ) ->
@@ -146,7 +156,7 @@ fn_plot_joy <- function(
       af > 0
     ) |>
     dplyr::collect() ->
-  thevariant_af_data
+  .d
   # thevariant <- "7833T>C"
   .variant <- .d$variant[1]
   .gseid <- .d$gseid[1]
@@ -497,7 +507,7 @@ ggsave(
 )
 
 
-
+variant_count_statistic |> dplyr::arrange(-n)
 
 # ? example --------------------------------------------------------------------
 variant_list <- c(
@@ -542,34 +552,37 @@ thevariant <- "3727T>C"
 
 variant_count_statistic |>
   dplyr::arrange(-mean_statistic) |>
-  dplyr::slice(1:100) |>
+  dplyr::slice(1:400) |>
   dplyr::pull(variant) ->
 variant_list
 
 
 length(variant_list)
 variant_list |>
-  purrr::map(function(thevariant) {
-    gseid_srrid_ks_load |>
-      dplyr::filter(variant == thevariant) |>
-      dplyr::filter(
-        p.value < 0.05,
-      ) |>
-      dplyr::slice(1) ->
-    thevariant_data
-    .gseid <- thevariant_data$gseid[1]
-    .srrid <- thevariant_data$srrid[1]
-    .variant <- thevariant_data$variant[1]
-    fn_plot_joy(
-      thevariant = .variant,
-      thegseid = .gseid,
-      thesrrid = .srrid
-    )
-  }) ->
+  parallel::mclapply(
+    function(thevariant) {
+      gseid_srrid_ks_load |>
+        dplyr::filter(variant == thevariant) |>
+        dplyr::filter(
+          p.value < 0.05,
+        ) |>
+        dplyr::slice(1) ->
+      thevariant_data
+      .gseid <- thevariant_data$gseid[1]
+      .srrid <- thevariant_data$srrid[1]
+      .variant <- thevariant_data$variant[1]
+      fn_plot_joy(
+        thevariant = .variant,
+        thegseid = .gseid,
+        thesrrid = .srrid
+      )
+    },
+    mc.cores = 10
+  ) ->
 plot_variants_list
 
 plot_variants_list |>
-  wrap_plots(ncol = 10) +
+  wrap_plots(ncol = 20) +
   plot_layout(
     guides = "collect",
   ) ->
@@ -578,10 +591,10 @@ ggsave(
   plot = plot_variants_joy,
   filename = file.path(
     plotdir,
-    "joy_variants100.pdf"
+    "joy_variants400.pdf"
   ),
-  width = 50,
-  height = 50,
+  width = 100,
+  height = 100,
   limitsize = FALSE
 )
 
@@ -595,7 +608,18 @@ thevariant <- "3727T>C"
 thevariants <- c(
   "3173G>A",
   "7833T>C",
-  "3727T>C"
+  "3727T>C",
+  "7159T>C",
+  "2666T>C",
+  "2193T>A",
+  "1474G>A",
+  "10500G>A",
+  "2666T>C",
+  "7833T>C",
+  "2763T>C",
+  "8005T>C",
+  "2871T>C",
+  "7757G>A"
 )
 
 thevariants |>
@@ -654,64 +678,127 @@ thevariants |>
 # ? GSE235050_GSM7493832 azimuth.rda --------------------------------------------------------------------
 source("./analysis/00-colors.R")
 
-# 3173G>A GSE226602_GSM7080057
-thevariant <- "3173G>A"
-thegseid <- "GSE226602"
-thesrrid <- "GSM7080057"
-thecelltype <- "B"
-thecelltype_prefix <- "B"
-thecelltype_level <- "l3"
 
-fn_plot_joy_celltype_level2_level3(
-  thevariant = thevariant,
-  thegseid = thegseid,
-  thesrrid = thesrrid,
-  thecelltype = thecelltype,
-  thecelltype_prefix = thecelltype_prefix,
-  thecelltype_level = thecelltype_level
+thevariants <- c(
+  "3173G>A",
+  "7833T>C",
+  "3727T>C",
+  "7159T>C",
+  "2666T>C",
+  "2193T>A",
+  "1474G>A",
+  "10500G>A",
+  "2666T>C",
+  "7833T>C",
+  "2763T>C",
+  "8005T>C",
+  "2871T>C"
 )
 
-tibble::tibble(
-  thevariant = thevariant,
-  thegseid = thegseid,
-  thesrrid = thesrrid,
-  thecelltype = c("B", "CD4 T", "CD8 T", "other T", "NK", "DC", "Mono", "other") |> rep(times = 2),
-  thecelltype_prefix = c("B", "CD4", "CD8", "", "NK", "DC", "Mono", "") |> rep(times = 2),
-  thecelltype_level = c("l2", "l3") |> rep(each = 8)
-) ->
-thevariant_celltype_df
+thevariants |>
+  purrr::map(
+    function(thevariant) {
+      gseid_srrid_ks_load |>
+        dplyr::filter(variant == thevariant) |>
+        dplyr::filter(
+          p.value < 0.05,
+          # statistic > 100
+        ) ->
+      thevariant_data
+      .gseid <- thevariant_data$gseid[1]
+      .srrid <- thevariant_data$srrid[1]
+      .variant <- thevariant_data$variant[1]
+
+      fn_plot_joy_celltype_detail(.variant, .gseid, .srrid) ->
+      plot_thevariant_celltype_list
+
+      plot_thevariant_celltype_list |>
+        dplyr::pull(p) |>
+        wrap_plots(
+          ncol = 4
+        ) +
+        plot_layout(
+          guides = "collect",
+        ) ->
+      plot_thevariant_celltype_joy
+      ggsave(
+        plot = plot_thevariant_celltype_joy,
+        filename = file.path(
+          plotdir,
+          "{thevariant}_joy_celltype.pdf" |> glue::glue()
+        ),
+        width = 23,
+        height = 12,
+        limitsize = FALSE
+      )
+    }
+  )
+
+
+
+
+
+# ? META --------------------------------------------------------------------
+META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
+  dplyr::select(
+    gseid, srrid, Age_new, Age_group,
+    Haplogroup,
+    disease, Chemistry, sex_pred
+  ) |>
+  dplyr::mutate(
+    Haplogroup = purrr::map_chr(
+      .x = Haplogroup,
+      .f = \(.x) {
+        # if (stringr::str_starts(.x, "L")) {
+        #   gsub("L", "L0", .x)
+        # }
+        gsub("\\d+.*", "", .x)
+      }
+    )
+  )
+
 
 thevariant <- "3727T>C"
-thegseid <- "GSE235050"
-thesrrid <- "GSM7493832"
-fn_plot_joy_celltype_detail(thevariant, thegseid, thesrrid) ->
-plot_thevariant_celltype_list
-
-plot_thevariant_celltype_list |>
-  dplyr::pull(p) |>
-  wrap_plots(
-    ncol = 4
-  ) +
-  plot_layout(
-    guides = "collect",
+gseid_srrid_ks_load |>
+  dplyr::filter(variant == thevariant) |>
+  dplyr::left_join(
+    META,
+    by = c("gseid", "srrid")
   ) ->
-plot_thevariant_celltype_joy
-ggsave(
-  plot = plot_thevariant_celltype_joy,
-  filename = file.path(
-    plotdir,
-    "{thevariant}_joy_celltype.pdf" |> glue::glue()
-  ),
-  width = 23,
-  height = 12,
-  limitsize = FALSE
+thevariant_meta
+
+library(plotly)
+thevariant_meta |>
+  dplyr::filter(!is.na(statistic)) |>
+  dplyr::filter(statistic > 0) |>
+  # dplyr::filter(
+  #   Chemistry == "SC5P-PE"
+  # ) |>
+  # dplyr::filter(
+  #   disease %in% c("Healthy", "Alzheimer's Disease")
+  # ) |>
+  ggplot(aes(
+    x = disease,
+    y = statistic,
+    label = gseid_srrid,
+  )) +
+  geom_point()
+
+fn_plot_joy(
+  thevariant = thevariant,
+  thegseid = "GSE235050",
+  thesrrid = "GSM7493832"
+) | fn_plot_joy(
+  thevariant = thevariant,
+  thegseid = "GSE155223",
+  thesrrid = "GSM4697614"
 )
 
 
+.d |>
+  # footer ------------------------------------------------------------------
 
-# footer ------------------------------------------------------------------
+  # future: :plan(future: :sequential)
 
-# future: :plan(future: :sequential)
-
-# save image --------------------------------------------------------------
-DBI::dbDisconnect(conn, shutdown = TRUE)
+  # save image --------------------------------------------------------------
+  DBI::dbDisconnect(conn, shutdown = TRUE)
