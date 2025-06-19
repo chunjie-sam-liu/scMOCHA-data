@@ -257,3 +257,8 @@ conn <- DBI::dbConnect(
 )
 DBI::dbListTables(conn)
 dplyr::tbl(conn, "gseid_srrid_ks_load_p0.05_s25_unnest")
+
+convert(
+  "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.fst",
+  "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.csv"
+)

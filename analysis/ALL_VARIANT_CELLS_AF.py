@@ -254,14 +254,12 @@ def save_table_pl(gseid, srrid, cluster, hh):
     log.info(f"Saved {tablename} alt depth to {table_path_alt_depth}")
 
 
-def load_file(row, cluster, hh):
+def load_file(row, cluster, hh, filename):
     """Load a single heteroplasmic file.
 
     This function must be outside of merge_pl to be picklable for multiprocessing.
     """
-    gseid = row["gseid"]
-    srrid = row["srrid"]
-    filename = f"{cluster}_cov.{gseid}_{srrid}.{CONFIG[hh]['suffix']}.csv"
+
     file_path = CONFIG[hh]["table_path"] / filename
     log.info(f"Loading {file_path}")
     try:
@@ -293,13 +291,34 @@ def merge_pl(cluster, hh):
 
     # Process the rows in parallel
     dfs = []
+    dfs_altdepth = []
+    dfs_sumdepth = []
     for row in row_list:
-        df = load_file(row, cluster, hh)
+        gseid = row["gseid"]
+        srrid = row["srrid"]
+        filename = f"{cluster}_cov.{gseid}_{srrid}.{CONFIG[hh]['suffix']}.csv"
+        df = load_file(row, cluster, hh, filename)
         if df is not None:
             dfs.append(df)
 
+        filename_altdepth = (
+            f"{cluster}_cov.{gseid}_{srrid}.altdepth.{CONFIG[hh]['suffix']}.csv"
+        )
+        df_altdepth = load_file(row, cluster, hh, filename_altdepth)
+        if df_altdepth is not None:
+            dfs_altdepth.append(df_altdepth)
+
+        filename_sumdepth = (
+            f"{cluster}_cov.{gseid}_{srrid}.sumdepth.{CONFIG[hh]['suffix']}.csv"
+        )
+        df_sumdepth = load_file(row, cluster, hh, filename_sumdepth)
+        if df_sumdepth is not None:
+            dfs_sumdepth.append(df_sumdepth)
+
     # Remove any None values that may have occurred due to errors
     dfs = [df for df in dfs if df is not None]
+    dfs_altdepth = [df for df in dfs_altdepth if df is not None]
+    dfs_sumdepth = [df for df in dfs_sumdepth if df is not None]
 
     # Concatenate all dataframes
     all_df = pl.concat(dfs, how="vertical")
@@ -310,6 +329,24 @@ def merge_pl(cluster, hh):
     )
     all_df.write_csv(output_path, include_header=True)
     log.info(f"Saved merged {CONFIG[hh]['suffix']} data to {output_path}")
+
+    all_def_altdepth = pl.concat(dfs_altdepth, how="vertical")
+    output_path_altdepth = Path(
+        f"/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_{CONFIG[hh]['suffix']}_altdepth.{cluster}.csv"
+    )
+    all_def_altdepth.write_csv(output_path_altdepth, include_header=True)
+    log.info(
+        f"Saved merged {CONFIG[hh]['suffix']} alt depth data to {output_path_altdepth}"
+    )
+
+    all_def_sumdepth = pl.concat(dfs_sumdepth, how="vertical")
+    output_path_sumdepth = Path(
+        f"/home/liuc9/github/scMOCHA-data/data/zzz/clean-data/all_{CONFIG[hh]['suffix']}_sumdepth.{cluster}.csv"
+    )
+    all_def_sumdepth.write_csv(output_path_sumdepth, include_header=True)
+    log.info(
+        f"Saved merged {CONFIG[hh]['suffix']} sum depth data to {output_path_sumdepth}"
+    )
 
 
 app = typer.Typer()
