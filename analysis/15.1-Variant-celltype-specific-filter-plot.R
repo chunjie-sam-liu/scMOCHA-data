@@ -814,7 +814,11 @@ thevariants |>
 
 
 
+
+# ? dont run below --------------------------------------------------------------------
+
 # ? META --------------------------------------------------------------------
+
 META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
   dplyr::select(
     gseid, srrid, Age_new, Age_group,
@@ -863,14 +867,19 @@ thevariant_meta |>
   )) +
   geom_point()
 
+fn_plot_joy(
+  thevariant = thevariant,
+  # thegseid = thegseid,
+  thesrrid = "GSM7493832"
+)
+
 
 
 tbl_all_hetero_af_cell |>
   dplyr::filter(
-    # gseid == thegseid,
-    srrid == thesrrid,
+    srrid == "GSM7493832",
     variant == thevariant,
-    af > 0
+    af > 0,
   ) |>
   dplyr::left_join(
     tbl_all_hetero_altdepth_cell,
@@ -885,14 +894,6 @@ tbl_all_hetero_af_cell |>
     by = c("gseid", "srrid", "barcode", "celltype")
   ) ->
 tbl_thevariant_data
-
-
-tbl_thevariant_data |>
-  dplyr::select(
-    barcode, celltype, af, altdepth, sumdepth
-  ) |>
-  dplyr::collect()
-
 
 # footer ------------------------------------------------------------------
 
