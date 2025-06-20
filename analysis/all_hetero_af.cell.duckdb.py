@@ -58,6 +58,7 @@ from concurrent.futures import (
 )
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Lock
 from typing import Annotated, List, Optional
 
 import duckdb
@@ -175,13 +176,15 @@ class DuckDBManager:
     def __init__(self, dbfile: str):
         self.dbfile = dbfile
         self._connection = None
+        self._lock = Lock()
 
     @property
     def connection(self):
         """Get connection, creating it if necessary (thread-safe)"""
-        if self._connection is None:
-            self._connection = duckdb.connect(self.dbfile)
-        return self._connection
+        with self._lock:
+            if self._connection is None:
+                self._connection = duckdb.connect(self.dbfile)
+            return self._connection
 
     def create_table(self, table_name: str, df: pl.DataFrame) -> bool:
         """Create a table in DuckDB from a Polars DataFrame"""
