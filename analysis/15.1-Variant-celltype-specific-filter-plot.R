@@ -37,7 +37,6 @@ Options:
 GetoptLong.options(help_style = "two-column")
 GetoptLong(spec, template_control = list(opt_width = 21))
 
-# src ---------------------------------------------------------------------
 
 # header ------------------------------------------------------------------
 
@@ -51,16 +50,6 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-conn <- DBI::dbConnect(
-  duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
-)
-DBI::dbListTables(conn)
-all_hetero_af_cell_tbl <- dplyr::tbl(
-  conn,
-  "all_hetero_af_cell"
-)
-
 gseid_srrid_ks_load <- import(
   file.path(
     ks_test_dir,
@@ -68,27 +57,6 @@ gseid_srrid_ks_load <- import(
   )
 )
 
-
-# dplyr::filter(
-#   p.value < 0.05,
-#   statistic > 25
-# )
-
-# gseid_srrid_ks_load |>
-#   dplyr::filter(
-#     p.value < 0.05,
-#     statistic > 25
-#   ) ->
-# gseid_srrid_ks_load_p0.05_s55
-
-
-# gseid_srrid_ks_load_p0.05_s55 <- import(
-#   file.path(
-#     ks_test_dir,
-#     "b_gseid_srrid_ks_load_p0.05_s25.qs"
-#   )
-# )
-# gseid_srrid_ks_load <- gseid_srrid_ks_load_p0.05_s55
 
 gseid_srrid_ks_load |>
   dplyr::filter(
@@ -142,15 +110,44 @@ export(
   format = "both"
 )
 
+
+# load conn --------------------------------------------------------------------
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+)
+DBI::dbListTables(conn)
+tbl_all_hetero_af_cell <- dplyr::tbl(
+  conn,
+  "all_hetero_af_cell"
+)
+tbl_all_hetero_altdepth_cell <- dplyr::tbl(
+  conn,
+  "all_hetero_altdepth_cell"
+)
+tbl_all_hetero_sumdepth_cell <- dplyr::tbl(
+  conn,
+  "all_hetero_sumdepth_cell"
+)
+tbl_barcode <- dplyr::tbl(
+  conn,
+  "barcode"
+)
+
+# src ---------------------------------------------------------------------
+source("./analysis/00-colors.R")
+
 # function ----------------------------------------------------------------
 
-fn_plot_joy <- function(
+fn_plot_ggdist <- function(
     thevariant,
     thegseid,
     thesrrid) {
-  all_hetero_af_cell_tbl |>
+  library(ggdist)
+  tbl_all_hetero_af_cell |>
     dplyr::filter(
-      gseid == thegseid,
+      # gseid == thegseid,
       srrid == thesrrid,
       variant == thevariant,
       af > 0
@@ -176,14 +173,90 @@ fn_plot_joy <- function(
         celltype,
         levels = names(color_celltype) |> rev()
       )
-    ) |>
+    ) ->
+  forplot_
+
+  forplot_ |>
     ggplot(aes(
       x = af,
       y = celltype,
       fill = celltype
     )) +
-    ggjoy::geom_joy(
-      # scale = 0.9,
+    ggdist::stat_halfeye(
+      scale = 1
+    ) +
+    ggdist::stat_interval(
+      show.legend = FALSE,
+    ) +
+    stat_summary(geom = "point", fun = median, show.legend = FALSE) +
+    scale_fill_manual(
+      values = color_celltype,
+      na.value = "grey50"
+    ) +
+    scale_color_manual(values = MetBrewer::met.brewer("VanGogh3")) +
+    # scale_color_brewer() +
+    guides(col = "none") +
+    ggridges::theme_ridges() +
+    # ggridges::stat_density_ridges(
+    #   quantile_lines = TRUE, quantiles = 2
+    # ) +
+    theme(
+      legend.position = "none",
+      plot.title = element_text(
+        hjust = 0.5,
+        size = 16
+      ),
+    ) +
+    labs(
+      title = paste0(.variant, "\n(", .gseid, "-", .srrid, ")"),
+      x = "Allele Frequency",
+      y = "Cell Type"
+    )
+}
+
+fn_plot_joy <- function(
+    thevariant,
+    thegseid,
+    thesrrid) {
+  tbl_all_hetero_af_cell |>
+    dplyr::filter(
+      # gseid == thegseid,
+      srrid == thesrrid,
+      variant == thevariant,
+      af > 0
+    ) |>
+    dplyr::collect() ->
+  .d
+  # thevariant <- "7833T>C"
+  .variant <- .d$variant[1]
+  .gseid <- .d$gseid[1]
+  .srrid <- .d$srrid[1]
+
+  .d |>
+    dplyr::filter(af > 0) |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        levels = names(color_celltype) |> rev()
+      )
+    ) ->
+  forplot_
+
+  forplot_ |>
+    ggplot(aes(
+      x = af,
+      y = celltype,
+      fill = celltype
+    )) +
+    ggridges::geom_density_ridges(
+      # scale = 3,
       # alpha = 0.8,
       rel_min_height = 0.01,
       size = 0.1
@@ -192,7 +265,10 @@ fn_plot_joy <- function(
       values = color_celltype,
       na.value = "grey50"
     ) +
-    ggjoy::theme_joy() +
+    ggridges::theme_ridges() +
+    # ggridges::stat_density_ridges(
+    #   quantile_lines = TRUE, quantiles = 2
+    # ) +
     theme(
       legend.position = "none",
       plot.title = element_text(
@@ -216,7 +292,7 @@ fn_plot_joy_celltype_level2_level3 <- function(
     thecelltype_level) {
   celltypedetail <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/{thegseid}/final/{thesrrid}/sc_azimuth_celltype.csv" |> glue::glue())
 
-  all_hetero_af_cell_tbl |>
+  tbl_all_hetero_af_cell |>
     dplyr::filter(
       gseid == thegseid,
       srrid == thesrrid,
@@ -266,7 +342,9 @@ fn_plot_joy_celltype_level2_level3 <- function(
       y = plotcelltype,
       fill = plotcelltype
     )) +
-    ggjoy::geom_joy(
+    ggridges::geom_density_ridges(
+      # scale = 3,
+      # alpha = 0.8,
       rel_min_height = 0.01,
       size = 0.1
     ) +
@@ -274,7 +352,7 @@ fn_plot_joy_celltype_level2_level3 <- function(
       values = color_celltype_detail,
       na.value = "grey50"
     ) +
-    ggjoy::theme_joy() +
+    ggridges::theme_ridges() +
     theme(
       legend.position = "none",
       plot.title = element_text(
@@ -333,7 +411,6 @@ fn_plot_joy_celltype_detail <- function(
 
 # ? plot ks statistic--------------------------------------------------------------------
 
-source("./analysis/00-colors.R")
 
 gseid_srrid_ks_load |>
   dplyr::filter(p.value < 0.05) |>
@@ -676,7 +753,6 @@ thevariants |>
 
 
 # ? GSE235050_GSM7493832 azimuth.rda --------------------------------------------------------------------
-source("./analysis/00-colors.R")
 
 
 thevariants <- c(
@@ -759,6 +835,9 @@ META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data
 
 
 thevariant <- "3727T>C"
+thegseid <- "GSE235050"
+thesrrid <- "GSM7493832"
+
 gseid_srrid_ks_load |>
   dplyr::filter(variant == thevariant) |>
   dplyr::left_join(
@@ -784,21 +863,40 @@ thevariant_meta |>
   )) +
   geom_point()
 
-fn_plot_joy(
-  thevariant = thevariant,
-  thegseid = "GSE235050",
-  thesrrid = "GSM7493832"
-) | fn_plot_joy(
-  thevariant = thevariant,
-  thegseid = "GSE155223",
-  thesrrid = "GSM4697614"
-)
 
 
-.d |>
-  # footer ------------------------------------------------------------------
+tbl_all_hetero_af_cell |>
+  dplyr::filter(
+    # gseid == thegseid,
+    srrid == thesrrid,
+    variant == thevariant,
+    af > 0
+  ) |>
+  dplyr::left_join(
+    tbl_all_hetero_altdepth_cell,
+    by = c("gseid", "srrid", "variant", "barcode")
+  ) |>
+  dplyr::left_join(
+    tbl_all_hetero_sumdepth_cell,
+    by = c("gseid", "srrid", "variant", "barcode")
+  ) |>
+  dplyr::left_join(
+    tbl_barcode,
+    by = c("gseid", "srrid", "barcode", "celltype")
+  ) ->
+tbl_thevariant_data
 
-  # future: :plan(future: :sequential)
 
-  # save image --------------------------------------------------------------
-  DBI::dbDisconnect(conn, shutdown = TRUE)
+tbl_thevariant_data |>
+  dplyr::select(
+    barcode, celltype, af, altdepth, sumdepth
+  ) |>
+  dplyr::collect()
+
+
+# footer ------------------------------------------------------------------
+
+# future: :plan(future: :sequential)
+
+# save image --------------------------------------------------------------
+DBI::dbDisconnect(conn, shutdown = TRUE)
