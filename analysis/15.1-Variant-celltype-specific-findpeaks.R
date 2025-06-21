@@ -50,39 +50,36 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-gseid_srrid_ks_load <- import(
-  file.path(
-    ks_test_dir,
-    "a_gseid_srrid_ks_load.nocellaf.qs"
-  )
-)
+# gseid_srrid_ks_load <- import(
+#   file.path(
+#     ks_test_dir,
+#     "a_gseid_srrid_ks_load.nocellaf.qs"
+#   )
+# )
 
 
 
-ALLVARIANTS <- import(file.path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
-)) |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  )
+# ALLVARIANTS <- import(file.path(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
+# ))
 
-META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
-  dplyr::select(
-    gseid, srrid, Age_new, Age_group,
-    Haplogroup,
-    disease, Chemistry, sex_pred
-  ) |>
-  dplyr::mutate(
-    Haplogroup = purrr::map_chr(
-      .x = Haplogroup,
-      .f = \(.x) {
-        # if (stringr::str_starts(.x, "L")) {
-        #   gsub("L", "L0", .x)
-        # }
-        gsub("\\d+.*", "", .x)
-      }
-    )
-  )
+# META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
+#   dplyr::select(
+#     gseid, srrid, Age_new, Age_group,
+#     Haplogroup,
+#     disease, Chemistry, sex_pred
+#   ) |>
+#   dplyr::mutate(
+#     Haplogroup = purrr::map_chr(
+#       .x = Haplogroup,
+#       .f = \(.x) {
+#         # if (stringr::str_starts(.x, "L")) {
+#         #   gsub("L", "L0", .x)
+#         # }
+#         gsub("\\d+.*", "", .x)
+#       }
+#     )
+#   )
 
 
 # load conn --------------------------------------------------------------------
@@ -91,7 +88,8 @@ conn <- DBI::dbConnect(
   duckdb::duckdb(),
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
 )
-DBI::dbListTables(conn)
+# DBI::dbListTables(conn)
+
 tbl_all_hetero_af_cell <- dplyr::tbl(
   conn,
   "all_hetero_af_cell"
@@ -108,6 +106,18 @@ tbl_barcode <- dplyr::tbl(
   conn,
   "barcode"
 )
+tbl_allvariants <- dplyr::tbl(
+  conn,
+  "allvariants"
+)
+tbl_meta <- dplyr::tbl(conn, "meta") |>
+  dplyr::select(
+    gseid, srrid, Age_new, Age_group,
+    Haplogroup,
+    disease, Chemistry, sex_pred
+  )
+
+# DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # src ---------------------------------------------------------------------
 source("./analysis/00-colors.R")
