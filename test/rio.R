@@ -262,3 +262,18 @@ convert(
   "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.fst",
   "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.df.csv"
 )
+
+
+a <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs")
+
+a
+
+
+a |>
+  dplyr::mutate(
+    dplyr::across(
+      dplyr::where(is.list),
+      ~ jsonlite::toJSON(.x, auto_unbox = TRUE, null = "null")
+    )
+  ) ->
+aa

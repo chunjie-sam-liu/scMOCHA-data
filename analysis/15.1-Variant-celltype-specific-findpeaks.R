@@ -120,6 +120,11 @@ tbl_meta <- dplyr::tbl(conn, "meta") |>
 
 # DBI::dbDisconnect(conn, shutdown = TRUE)
 
+tbl_allvariants_celltype_peaks <- dplyr::tbl(
+  conn,
+  "allvariants_celltype_peaks"
+)
+
 # src ---------------------------------------------------------------------
 source("./analysis/00-colors.R")
 
@@ -394,6 +399,42 @@ fn_plot_joy_celltype_detail <- function(
   plot_thevariant_celltype_list
 }
 
+find_major_peaks <- function(
+    x,
+    adjust = 1,
+    threshold_factor = 1.5,
+    minpeakdistance_frac = 0.05,
+    plot = FALSE) {
+  d <- density(x, adjust = adjust)
+  x_vals <- d$x
+  y_vals <- d$y
+
+  threshold_auto <- mean(y_vals) + threshold_factor * sd(y_vals)
+  minpeakdistance_auto <- round(length(x_vals) * minpeakdistance_frac)
+
+  peaks <- pracma::findpeaks(
+    y_vals,
+    threshold = threshold_auto,
+    minpeakdistance = minpeakdistance_auto
+  )
+
+  if (is.null(peaks)) {
+    warning("No major peaks detected.")
+    return(data.frame(Peak_X = numeric(0), Peak_Y = numeric(0)))
+  }
+
+  peak_x <- x_vals[peaks[, 2]]
+  peak_y <- y_vals[peaks[, 2]]
+
+  if (plot) {
+    plot(d, main = "Density with Major Peaks")
+    points(peak_x, peak_y, col = "red", pch = 19)
+    text(peak_x, peak_y, labels = round(peak_x, 2), pos = 3, col = "red")
+  }
+
+  return(data.frame(Peak_X = peak_x, Peak_Y = peak_y))
+}
+
 find_density_peaks <- function(x, bw = "nrd0", min_height = 0.01, min_prominence = 0.1, min_distance = 0.05, ...) {
   # Calculate density
   dx <- density(x, bw = bw, ...)
@@ -475,12 +516,369 @@ find_cell_density_peak <- function(x, pheight = 0.1, pprominence = 0.2) {
 
   data.table(
     npeaks = nrow(peaks_result$peaks),
-    peaks = list(peaks_result$peaks)
+    peakmin = min(peaks_result$peaks$x, na.rm = TRUE),
+    peaks = peaks_result$peaks |> jsonlite::toJSON() |> as.character()
   )
 }
 
+find_variant_celltype_peak <- function(thevariant) {
+  tbl_all_hetero_af_cell |>
+    dplyr::filter(
+      variant == thevariant,
+      af > 0,
+    ) |>
+    as.data.table() ->
+  thevariant_data
+
+  thevariant_data |>
+    tidyr::nest(
+      .by = c(variant, gseid, srrid, celltype),
+      .key = "data"
+    ) |>
+    dplyr::mutate(
+      peaks = parallel::mcmapply(
+        .x = data,
+        FUN = \(.x) {
+          if (nrow(.x) < 30) {
+            return(
+              NULL
+            )
+          }
+          tryCatch(
+            find_cell_density_peak(.x$af),
+            error = function(e) {
+              return(
+                NULL
+              )
+            }
+          )
+        },
+        SIMPLIFY = FALSE,
+        mc.cores = 5
+      )
+    ) |>
+    dplyr::select(-data, -variant) |>
+    tidyr::unnest(cols = peaks)
+}
+
+extract_haplogroup <- function(haplo) {
+  library(stringr)
+  level4 <- haplo
+  level3 <- str_extract(haplo, "^[A-Z]+\\d*")
+  level2 <- str_extract(haplo, "^[A-Z]+")
+
+  level1 <- dplyr::case_when(
+    str_detect(level2, "^L") ~ "L",
+    str_detect(level2, "^M") ~ "M",
+    str_detect(level2, "^(C|D|Z|G|E|Q|M7|M8|M9)") ~ "M",
+    str_detect(level2, "^N") ~ "N",
+    str_detect(level2, "^(R|H|J|T|U|K|B|F|V|A|Y)") ~ "R",
+    str_detect(level2, "^(W|X)") ~ "Other",
+    TRUE ~ "Unknown"
+  )
+
+  data.table(HG1 = level1, HG2 = level2, HG3 = level3, HG4 = level4)
+}
 
 # body --------------------------------------------------------------------
+
+tbl_allvariants |>
+  dplyr::filter(issomatic == "heteroplasmic") |>
+  dplyr::select(variant) |>
+  as.data.table() ->
+allvariants
+# ! don't run, it only run once
+# allvariants |>
+#   dplyr::mutate(
+#     peaks = parallel::mcmapply(
+#       thevariant = variant,
+#       FUN = find_variant_celltype_peak,
+#       mc.cores = 10,
+#       SIMPLIFY = FALSE
+#     )
+#   ) |>
+#   tidyr::unnest(cols = peaks) ->
+# allvariants_celltype_peaks
+
+# export(
+#   allvariants_celltype_peaks,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
+#     "celltype_specific_allvariants_celltype_peaks.qs"
+#   ),
+#   format = "both"
+# )
+# DBI::dbWriteTable(
+#   conn,
+#   "allvariants_celltype_peaks",
+#   allvariants_celltype_peaks,
+#   overwrite = TRUE,
+#   temporary = FALSE
+# )
+
+
+tbl_allvariants_celltype_peaks |>
+  dplyr::select(-peaks) |>
+  as.data.table() |>
+  dplyr::left_join(
+    tbl_meta |>
+      as.data.table() |>
+      dplyr::mutate(
+        HG = parallel::mcmapply(
+          haplo = Haplogroup,
+          FUN = extract_haplogroup,
+          mc.cores = 10,
+          SIMPLIFY = FALSE
+        )
+      ) |>
+      tidyr::unnest(cols = HG),
+    by = c("gseid", "srrid")
+  ) ->
+allvariants_celltype_peaks_meta
+
+
+
+# ? peak and age --------------------------------------------------------------------
+
+allvariants_celltype_peaks_meta |>
+  dplyr::filter(
+    !is.na(Age_new),
+    !is.na(peakmin)
+  ) |>
+  tidyr::nest(
+    .by = c(variant, celltype)
+  ) |>
+  # head(10) |>
+  dplyr::mutate(
+    cor_age = parallel::mclapply(
+      X = data,
+      FUN = \(.x) {
+        tryCatch(
+          {
+            .x |>
+              dplyr::filter(!is.na(Age_new)) |>
+              dplyr::filter(!is.na(peakmin)) -> .x
+            if (nrow(.x) > 30) {
+              cor.test(
+                .x$peakmin,
+                .x$Age_new,
+                method = "spearman",
+                use = "pairwise.complete.obs"
+              ) |>
+                broom::tidy() |>
+                dplyr::select(
+                  cor = estimate, pval = p.value
+                )
+            } else {
+              tibble::tibble(cor = NA_real_, pval = NA_real_)
+            }
+          },
+          error = function(e) {
+            tibble::tibble(cor = NA_real_, pval = NA_real_)
+          }
+        )
+      },
+      mc.cores = 10
+    )
+  ) |>
+  tidyr::unnest(cols = cor_age) ->
+allvariants_celltype_peaks_meta_cor_age
+
+# export(
+#   allvariants_celltype_peaks_meta_cor_age,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant",
+#     "000-celltype_specific_allvariants_celltype_peaks_meta_cor_age.qs"
+#   )
+# )
+
+allvariants_celltype_peaks_meta_cor_age |>
+  dplyr::filter(pval < 0.05, abs(cor) > 0.3) |>
+  dplyr::mutate(
+    n = purrr::map_int(
+      .x = data,
+      .f = nrow
+    ),
+  ) |>
+  dplyr::filter(n > 100) |>
+  dplyr::arrange(-cor) |>
+  dplyr::slice(1) |>
+  tidyr::unnest(cols = data) |>
+  ggplot(aes(
+    x = Age_new,
+    y = peakmin,
+  )) +
+  geom_point(aes(color = disease))
+
+allvariants_celltype_peaks_meta_cor_age |>
+  dplyr::group_by(variant) |>
+  dplyr::summarise(
+    ncelltype = dplyr::n(),
+    ncelltype_significant = sum(cor > 0.3, na.rm = TRUE),
+    ncelltype_significant_neg = sum(cor < -0.3, na.rm = TRUE),
+    ncelltype_significant_pos = sum(cor > 0.3, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+
+# ? peak and haplogroup --------------------------------------------------------------------
+allvariants_celltype_peaks_meta |>
+  dplyr::filter(
+    !is.na(HG2)
+  ) |>
+  tidyr::nest(
+    .by = c(variant, celltype)
+  ) |>
+  dplyr::mutate(
+    cor_haplo = parallel::mclapply(
+      X = data,
+      FUN = \(.x) {
+        tryCatch(
+          {
+            if (nrow(.x) > 30) {
+              kruskal.test(
+                peakmin ~ HG2,
+                data = .x
+              ) |>
+                broom::tidy() |>
+                dplyr::select(
+                  statistic = statistic, pval = p.value
+                )
+            } else {
+              tibble::tibble(statistic = NA_real_, pval = NA_real_)
+            }
+          },
+          error = function(e) {
+            tibble::tibble(statistic = NA_real_, pval = NA_real_)
+          }
+        )
+      },
+      mc.cores = 10
+    )
+  ) |>
+  tidyr::unnest(cols = cor_haplo) ->
+allvariants_celltype_peaks_meta_cor_haplo
+
+
+# export(
+#   allvariants_celltype_peaks_meta_cor_haplo,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant",
+#     "000-celltype_specific_allvariants_celltype_peaks_meta_cor_haplo.qs"
+#   )
+# )
+
+
+allvariants_celltype_peaks_meta_cor_haplo |>
+  dplyr::filter(pval < 0.05) |>
+  dplyr::arrange(pval)
+allvariants_celltype_peaks_meta_cor_haplo |>
+  dplyr::filter(
+    variant == "13762T>G",
+    celltype == "B"
+  ) |>
+  tidyr::unnest(cols = data) |>
+  ggplot(aes(
+    x = HG1,
+    y = peakmin,
+  )) +
+  geom_boxplot() +
+  geom_point()
+
+# ? sex --------------------------------------------------------------------
+
+
+allvariants_celltype_peaks_meta |>
+  tidyr::nest(
+    .by = c(variant, celltype)
+  ) |>
+  dplyr::mutate(
+    cor_sex = parallel::mclapply(
+      X = data,
+      FUN = \(.x) {
+        tryCatch(
+          {
+            if (nrow(.x) > 50) {
+              t.test(
+                peakmin ~ sex_pred, .x
+              ) |>
+                broom::tidy() |>
+                dplyr::select(
+                  statistic = statistic, pval = p.value
+                )
+            } else {
+              tibble::tibble(statistic = NA_real_, pval = NA_real_)
+            }
+          },
+          error = function(e) {
+            tibble::tibble(statistic = NA_real_, pval = NA_real_)
+          }
+        )
+      },
+      mc.cores = 10
+    )
+  ) |>
+  tidyr::unnest(cols = cor_sex) ->
+allvariants_celltype_peaks_meta_cor_sex
+
+
+# export(
+#   allvariants_celltype_peaks_meta_cor_sex,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant",
+#     "000-celltype_specific_allvariants_celltype_peaks_meta_cor_sex.qs"
+#   )
+# )
+
+allvariants_celltype_peaks_meta_cor_sex |>
+  dplyr::filter(pval < 0.05) |>
+  dplyr::arrange(statistic)
+
+allvariants_celltype_peaks_meta_cor_sex |>
+  # dplyr::filter(pval < 0.05) |>
+  # dplyr::arrange(-statistic) |>
+  # dplyr::slice(1) |>
+  dplyr::filter(variant == "6191C>T") |>
+  dplyr::mutate(
+    celltype = gsub(
+      "_",
+      " ",
+      celltype
+    )
+  ) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = names(color_celltype)
+    )
+  ) |>
+  tidyr::unnest(cols = data) |>
+  ggplot(aes(
+    x = sex_pred,
+    y = peakmin,
+  )) +
+  geom_boxplot() +
+  geom_point(aes(color = celltype)) +
+  scale_color_manual(
+    values = color_celltype,
+    na.value = "grey50"
+  ) +
+  ggsignif::geom_signif(
+    aes(
+      y = peakmin,
+    ),
+    comparisons = list(
+      c("Female", "Male")
+    ),
+    y_position = 0.8
+  ) +
+  facet_wrap(
+    ~celltype,
+    ncol = 8
+  )
+
+# ? don't run below --------------------------------------------------------------------
+
 
 thevariant <- "3727T>C"
 tbl_all_hetero_af_cell |>
@@ -507,6 +905,8 @@ tbl_all_hetero_af_cell |>
   dplyr::collect() ->
 thevariant_data
 
+
+
 thevariant_data |>
   tidyr::nest(
     .by = c(variant, srrid, celltype),
@@ -519,8 +919,7 @@ thevariant_data |>
         tryCatch(
           find_cell_density_peak(.x$af),
           error = function(e) {
-            message(glue::glue("Error processing {unique(.x$variant)} in {unique(.x$srrid)}: {e$message}"))
-            data.table(npeaks = 0, peaks = list(data.frame(x = numeric(0), y = numeric(0), prominence = numeric(0))))
+            NULL
           }
         )
       },
@@ -530,32 +929,207 @@ thevariant_data |>
 thevariant_data_peaks
 
 thevariant_data_peaks |>
+  dplyr::select(-data) |>
+  tidyr::unnest(cols = peaks) |>
+  dplyr::left_join(
+    tbl_meta |> dplyr::collect(),
+    by = c("srrid")
+  ) -> a
+
+a |>
+  dplyr::select(-peaks) |>
+  tidyr::nest(
+    .by = c(variant, celltype)
+  ) |>
+  dplyr::mutate(
+    cor_age = purrr::map(
+      .x = data,
+      .f = \(.x) {
+        tryCatch(
+          {
+            .x |>
+              dplyr::filter(!is.na(Age_new)) |>
+              dplyr::filter(!is.na(peakmin)) -> .x
+            if (nrow(.x) > 30) {
+              cor.test(
+                .x$peakmin,
+                .x$Age_new,
+                method = "spearman",
+                use = "pairwise.complete.obs"
+              ) |>
+                broom::tidy() |>
+                dplyr::select(
+                  cor = estimate, pval = p.value
+                )
+            } else {
+              tibble::tibble(cor = NA_real_, pval = NA_real_)
+            }
+          },
+          error = function(e) {
+            tibble::tibble(cor = NA_real_, pval = NA_real_)
+          }
+        )
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = cor_age) |>
+  dplyr::filter(pval < 0.05) ->
+aa
+
+
+aa |>
+  dplyr::slice(1) |>
+  dplyr::select(data) |>
+  tidyr::unnest(cols = data) |>
+  dplyr::arrange(peakmin) |>
+  dplyr::filter(!is.na(Age_new)) ->
+ddd
+
+
+thevariant_data_peaks |>
+  tidyr::unnest(cols = peaks) |>
+  dplyr::select(srrid, celltype, npeaks) |>
+  tidyr::pivot_wider(
+    names_from = celltype,
+    values_from = npeaks,
+    values_fill = 0
+  ) |>
+  dplyr::mutate(
+    m = purrr::map2_chr(
+      .x = Mono,
+      .y = DC,
+      .f = \(.x, .y) {
+        # 1. .x == 2 and .y == 2, M two peaks
+        # 2. .x == 1 or .y == 1, M one peak
+        # 3. no peaks, M no peaks
+        if (.x == 2 && .y == 2) {
+          "M two peak"
+        } else if (.x == 1 || .y == 1) {
+          "M one peak"
+        } else {
+          "M no peaks"
+        }
+      }
+    )
+  ) |>
+  dplyr::select(srrid, m) ->
+thevariant_data_peaks_rank_m
+
+thevariant_data_peaks |>
+  tidyr::unnest(cols = peaks) |>
+  dplyr::select(srrid, celltype, npeaks) |>
+  tidyr::pivot_wider(
+    names_from = celltype,
+    values_from = npeaks,
+    values_fill = 0
+  ) |>
+  dplyr::filter(
+    (CD4_T == 2 | CD8_T == 2 | NK == 2 | B == 2) &
+      (Mono == 1)
+  ) ->
+thevariant_data_peaks_rank_m2
+
+thevariant_data_peaks |>
   tidyr::unnest(cols = peaks) |>
   dplyr::select(
     srrid, celltype, npeaks
   ) |>
-  tidyr::spread(
-    key = celltype,
-    value = npeaks
+  dplyr::group_by(
+    srrid,
+  ) |>
+  dplyr::summarise(
+    sum_peaks = sum(npeaks, na.rm = TRUE),
+  ) |>
+  dplyr::arrange(sum_peaks) |>
+  dplyr::filter(sum_peaks > 0) |>
+  dplyr::filter(srrid %in% thevariant_data_peaks_rank_m2$srrid) ->
+thevariant_data_peaks_rank
+
+
+thevariant_data_peaks |>
+  dplyr::filter(celltype == "CD4_T") |>
+  tidyr::unnest(cols = peaks) |>
+  dplyr::mutate(
+    sortbypeak1 = purrr::map_dbl(
+      .x = peaks,
+      .f = \(.x) {
+        if (nrow(.x) > 0) {
+          min(.x$x)
+        } else {
+          NA_real_
+        }
+      }
+    )
+  ) |>
+  dplyr::filter(
+    !is.na(sortbypeak1)
+  ) |>
+  dplyr::arrange(-sortbypeak1) ->
+thevariant_data_peaks_rank_b
+
+thevariant_data |>
+  # dplyr::filter(
+  #   srrid %in% thevariant_data_peaks_rank$srrid,
+  # ) |>
+  dplyr::filter(
+    srrid %in% ddd$srrid,
+  ) |>
+  dplyr::filter(celltype == "CD4_T") |>
+  dplyr::mutate(
+    srrid = factor(
+      srrid,
+      ddd$srrid
+    )
   ) |>
   dplyr::mutate(
-    total_peaks = rowSums(dplyr::across(where(is.numeric)), na.rm = TRUE)
+    celltype = gsub(
+      "_",
+      " ",
+      celltype
+    )
   ) |>
-  dplyr::arrange(-total_peaks) ->
-thevariant_data_peaks_summary
-
-thevariant_data_peaks_summary |>
-  dplyr::filter(total_peaks < 10)
-
-fn_plot_joy(
-  thevariant = thevariant,
-  thesrrid = "GSM4697614"
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = names(color_celltype)
+    )
+  ) |>
+  ggplot(aes(
+    x = af,
+    y = srrid,
+  )) +
+  ggridges::geom_density_ridges(
+    aes(
+      fill = celltype,
+      color = celltype
+    ),
+    rel_min_height = 0.01,
+    size = 0.1,
+    # from = 0,
+    # to = 1,
+  ) +
+  scale_color_manual(
+    values = color_celltype,
+    na.value = "grey50"
+  ) +
+  scale_fill_manual(
+    values = color_celltype,
+    na.value = "grey50"
+  ) +
+  scale_y_discrete(expand = c(0, 0)) +
+  scale_x_continuous(expand = c(0, 0)) +
+  ggridges::theme_ridges(
+    grid = FALSE
+  ) +
+  coord_cartesian(clip = "off") +
+  theme(
+    legend.position = "none",
+    axis.text.y = element_blank()
+  )
+facet_wrap(
+  ~celltype,
+  ncol = 8
 )
-fn_plot_joy_celltype_detail(
-  thevariant = thevariant,
-  thesrrid = "GSM4697614"
-) -> a
-
 
 # footer ------------------------------------------------------------------
 
