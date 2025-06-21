@@ -36,5 +36,28 @@
   "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python",
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
-  "python-envs.pythonProjects": []
+  "python-envs.pythonProjects": [],
+  "sqltools.connections": [],
+  "dbcode.connections": [
+    {
+      "connectionId": "NqZcZoWzpvaeT7EQqBoB2",
+      "name": "all_hetero_af.cell.duckdb.1.2.1",
+      "driver": "duckdb",
+      "color": "#BD0014",
+      "connectionType": "socket",
+      "socket": "scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+      "readOnly": true,
+      "role": "development"
+    },
+    {
+      "connectionId": "mDyBd13OQYJGpH5A7vx-l",
+      "name": "all_variant_cell.duckdb.1.2.1",
+      "driver": "duckdb",
+      "color": "#F9F871",
+      "connectionType": "socket",
+      "socket": "scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.duckdb.1.2.1",
+      "readOnly": true,
+      "role": "development"
+    }
+  ]
 }

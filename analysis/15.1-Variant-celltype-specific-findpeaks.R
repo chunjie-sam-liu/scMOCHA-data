@@ -88,7 +88,8 @@ conn <- DBI::dbConnect(
   duckdb::duckdb(),
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
 )
-# DBI::dbListTables(conn)
+DBI::dbListTables(conn)
+DBI::dbDisconnect(conn, shutdown = TRUE)
 
 tbl_all_hetero_af_cell <- dplyr::tbl(
   conn,
