@@ -213,11 +213,6 @@ class DuckDBManager:
             return False
 
 
-tasks: List[tuple] = []
-cluster = "cell"
-for row in SRR.head(10).iter_rows(named=True):
-    tasks.append((row["gseid"], row["srrid"], cluster))
-
 TABLEPATH = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/TABLES")
 DBPATH = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB")
 DBFILE = DBPATH / "scMOCHA.duckdb.1.2.2"

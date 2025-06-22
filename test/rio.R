@@ -277,3 +277,24 @@ a |>
     )
   ) ->
 aa
+
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB/cov.duckdb"
+)
+path <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/PARQUET/covall/**/*.parquet"
+sql <- glue("CREATE OR REPLACE VIEW covall AS SELECT * FROM read_parquet('{path}')")
+DBI::dbExecute(conn, sql)
+DBI::dbListTables(conn)
+a <- dplyr::tbl(conn, "covall")
+dplyr::count(a)
+a |>
+  dplyr::select(
+    gseid, srrid, barcode, base, `3173`
+  ) |>
+  dplyr::filter(
+    base == "A"
+  )
+
+DBI::dbDisconnect(conn = conn, shutdown = TRUE)
