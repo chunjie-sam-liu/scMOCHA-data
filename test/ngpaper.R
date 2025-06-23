@@ -16,5 +16,8 @@ d4 <- readxl::read_excel(
 )
 
 
-d3 |> dplyr::arrange(-mean)
-dplyr::filter(POS == 3243)
+d4 |>
+  dplyr::mutate(
+    variant = "{POS}{REF}>{ALT}" |> glue()
+  ) |>
+  dplyr::count(variant)
