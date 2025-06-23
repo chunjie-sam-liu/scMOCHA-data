@@ -233,6 +233,11 @@ def load_data_pl(
         )
         .collect()
     )
+    # covall_df.unpivot(
+    #     index=["gseid", "srrid", "base", "barcode"],
+    #     variable_name="pos",
+    #     value_name="coverage",
+    # )
     return covall_df
 
 
@@ -293,7 +298,7 @@ def load_batch_data(batch_tasks: List[tuple], cov_fw_rv: str) -> pl.DataFrame:
 
 def process_data_in_batches(
     tasks: List[tuple],
-    batch_size: int = 20,
+    batch_size: int = 5,
     cov_types: List[str] = ["cov", "fw", "rv"],
 ) -> None:
     """Process all data in batches with parallel loading and sequential database insertion"""
@@ -369,7 +374,7 @@ app = typer.Typer(help="scMOCHA Data Processing - Batch load data into DuckDB")
 def process_command(
     batch_size: Annotated[
         int, typer.Option(help="Batch size for parallel processing")
-    ] = 20,
+    ] = 5,
     max_samples: Annotated[
         Optional[int],
         typer.Option(help="Maximum number of samples to process (for testing)"),
@@ -524,7 +529,7 @@ def insert_all_command(
     all_tasks = []
     cluster = "cell"
 
-    for row in SRR.head(20).iter_rows(named=True):
+    for row in SRR.iter_rows(named=True):
         all_tasks.append((row["gseid"], row["srrid"], cluster))
 
     console.print("[bold cyan]Insert All Data Command[/bold cyan]")

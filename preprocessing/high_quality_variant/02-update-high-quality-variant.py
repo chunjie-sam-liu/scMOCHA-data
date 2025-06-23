@@ -121,6 +121,8 @@ def hqv(
     """
     Load the high quality variant files.
     """
+    # srrdir, cl =Path( SRR[0, "srrdir"]), "cell"
+
     # hetero_df = load_hetero_df(srrdir, cl)
     stats_df = load_stats(srrdir, cl, cutoff_vmr, cutoff_strand_correlation)
     anno_df = load_variant_anno(srrdir)
