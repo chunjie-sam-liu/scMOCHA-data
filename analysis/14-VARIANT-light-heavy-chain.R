@@ -258,8 +258,6 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
 v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
 
-v_hete_L_H_strand |>
-  dplyr::count(variant_location)
 
 v_hete_L_H_strand |>
   ggplot(aes(
@@ -271,6 +269,12 @@ v_hete_L_H_strand |>
 v_hete_L_H_strand |>
   dplyr::count(deamination_ros) |>
   fn_plot_pie()
+v_homo_hete_L_H_strand |>
+  ggplot(aes(
+    x = variant_six,
+    fill = L_H_strand
+  )) +
+  geom_bar()
 
 # footer ------------------------------------------------------------------
 
