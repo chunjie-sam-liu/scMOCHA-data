@@ -215,7 +215,7 @@ class DuckDBManager:
 
 TABLEPATH = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/TABLES")
 DBPATH = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB")
-DBFILE = DBPATH / "scMOCHA.duckdb.1.2.2"
+DBFILE = DBPATH / "cov.duckdb"
 TABLENAMES = {"cov": "covall", "fw": "covfw", "rv": "covrv"}
 
 
@@ -230,11 +230,6 @@ def load_data_pl(
         .lazy()
         .with_columns(
             [pl.lit(gseid).alias("gseid"), pl.lit(srrid).alias("srrid")]
-        )
-        .unpivot(
-            index=["gseid", "srrid", "barcode", "base"],
-            variable_name="pos",
-            value_name=cov_fw_rv,
         )
         .collect()
     )
@@ -252,6 +247,13 @@ def insert_data_to_duckdb(
     table_name = TABLENAMES[cov_fw_rv]
     with DuckDBManager(DBFILE) as db_manager:
         db_manager.insert_or_create_table(table_name, covall_df)
+    del covall_df  # Clean up memory
+    gc.collect()  # Force garbage collection
+
+
+# insert_data_to_duckdb(
+#     gseid="GSE147794", srrid="GSM4446059", cluster="cell", cov_fw_rv="cov"
+# )
 
 
 def load_batch_data(batch_tasks: List[tuple], cov_fw_rv: str) -> pl.DataFrame:
@@ -501,7 +503,7 @@ def main_batch_processing():
 def insert_all_command(
     batch_size: Annotated[
         int, typer.Option(help="Batch size for parallel processing")
-    ] = 20,
+    ] = 5,
     cov_types: Annotated[
         List[str], typer.Option(help="Coverage types to process")
     ] = ["cov", "fw", "rv"],
@@ -522,7 +524,7 @@ def insert_all_command(
     all_tasks = []
     cluster = "cell"
 
-    for row in SRR.iter_rows(named=True):
+    for row in SRR.head(20).iter_rows(named=True):
         all_tasks.append((row["gseid"], row["srrid"], cluster))
 
     console.print("[bold cyan]Insert All Data Command[/bold cyan]")
