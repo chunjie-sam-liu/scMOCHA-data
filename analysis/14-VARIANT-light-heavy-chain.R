@@ -257,6 +257,7 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 
 v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
 v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
+v_hete_L_H_strand |> dplyr::pull(variant)
 
 
 v_hete_L_H_strand |>
