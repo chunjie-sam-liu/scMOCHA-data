@@ -973,7 +973,8 @@ a |>
     )
   ) |>
   tidyr::unnest(cols = cor_age) |>
-  dplyr::filter(pval < 0.05) ->
+  dplyr::filter(pval < 0.05) |>
+  dplyr::arrange(-cor) ->
 aa
 
 
@@ -981,8 +982,7 @@ aa |>
   dplyr::slice(1) |>
   dplyr::select(data) |>
   tidyr::unnest(cols = data) |>
-  dplyr::arrange(peakmin) |>
-  dplyr::filter(!is.na(Age_new)) ->
+  dplyr::arrange(-peakmin) ->
 ddd
 
 
@@ -1049,22 +1049,7 @@ thevariant_data_peaks_rank
 thevariant_data_peaks |>
   dplyr::filter(celltype == "CD4_T") |>
   tidyr::unnest(cols = peaks) |>
-  dplyr::mutate(
-    sortbypeak1 = purrr::map_dbl(
-      .x = peaks,
-      .f = \(.x) {
-        if (nrow(.x) > 0) {
-          min(.x$x)
-        } else {
-          NA_real_
-        }
-      }
-    )
-  ) |>
-  dplyr::filter(
-    !is.na(sortbypeak1)
-  ) |>
-  dplyr::arrange(-sortbypeak1) ->
+  dplyr::arrange(-peakmin) ->
 thevariant_data_peaks_rank_b
 
 thevariant_data |>
@@ -1074,7 +1059,7 @@ thevariant_data |>
   dplyr::filter(
     srrid %in% ddd$srrid,
   ) |>
-  dplyr::filter(celltype == "CD4_T") |>
+  # dplyr::filter(celltype == "CD4_T") |>
   dplyr::mutate(
     srrid = factor(
       srrid,
@@ -1124,11 +1109,47 @@ thevariant_data |>
   coord_cartesian(clip = "off") +
   theme(
     legend.position = "none",
-    axis.text.y = element_blank()
-  )
-facet_wrap(
-  ~celltype,
-  ncol = 8
+    axis.text.y = element_blank(),
+    axis.line = element_line(color = "black"),
+    strip.background = element_rect(
+      fill = "white",
+      color = "black"
+    ),
+  ) +
+  facet_wrap(
+    ~celltype,
+    ncol = 8
+  ) +
+  labs(
+    title = paste0(thevariant, ", pisitive correlated with age in DC cells"),
+    x = "Allele Frequency",
+    y = "Sample"
+  ) ->
+p
+ggsave(
+  plot = p,
+  filename = file.path(
+    plotdir,
+    paste0(thevariant, ".variant_celltype_peaks.pdf")
+  ),
+  width = 12,
+  height = 8
+)
+
+fn_plot_ggdist(
+  thevariant = thevariant,
+  thegseid = "GSE235050",
+  thesrrid = "GSM7493832"
+) ->
+p_ggdist
+ggsave(
+  plot = p_ggdist,
+  filename = file.path(
+    plotdir,
+    paste0(thevariant, ".variant_celltype_peaks.ggdist.pdf")
+  ),
+  width = 12,
+  height = 8
 )
 
 # footer ------------------------------------------------------------------
