@@ -298,3 +298,9 @@ a |>
   )
 
 DBI::dbDisconnect(conn = conn, shutdown = TRUE)
+
+d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs")
+
+d |>
+  dplyr::count(variant, issomatic) |>
+  dplyr::filter(n > 1)
