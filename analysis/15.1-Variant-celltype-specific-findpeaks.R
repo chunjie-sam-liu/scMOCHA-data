@@ -691,6 +691,30 @@ allvariants_celltype_peaks_meta_cor_age
 #     "000-celltype_specific_allvariants_celltype_peaks_meta_cor_age.qs"
 #   )
 # )
+allvariants_celltype_peaks_meta_cor_age |>
+  dplyr::filter(variant == "3727T>C") |>
+  dplyr::filter(!is.na(cor)) |>
+  tidyr::unnest(cols = data) |>
+  ggplot(aes(
+    x = Age_new,
+    y = peakmin,
+  )) +
+  geom_point(aes(color = disease)) +
+  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed") +
+  ggpubr::stat_cor(method = "spearman", label.x.npc = "left", label.y.npc = "top") +
+  theme_bw() +
+  labs(
+    title = "Correlation between Age and 3727T>C Peak Minimum",
+    x = "Age (years)",
+    y = "Peak Minimum"
+  ) +
+  facet_wrap(
+    ~celltype,
+    nrow = 1
+  )
+
+
+
 
 allvariants_celltype_peaks_meta_cor_age |>
   dplyr::filter(pval < 0.05, abs(cor) > 0.3) |>
