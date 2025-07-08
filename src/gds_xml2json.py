@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- conding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2025-02-28 11:33:36

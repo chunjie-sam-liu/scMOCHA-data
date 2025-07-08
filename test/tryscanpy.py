@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- conding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2025-05-21 11:52:34
@@ -195,15 +195,14 @@ sc.pl.dotplot(
 sc.tl.rank_genes_groups(adata, groupby="leiden_res_0.50", method="wilcoxon")
 
 sc.pl.rank_genes_groups_dotplot(
-    adata,
-    groupby="leiden_res_0.50",
-    standard_scale="var",
-    n_genes=5
+    adata, groupby="leiden_res_0.50", standard_scale="var", n_genes=5
 )
 
 sc.get.rank_genes_groups_df(adata, group="7").head(5)
 
-dc_cluster_genes = sc.get.rank_genes_groups_df(adata, group="7").head(5)["names"]
+dc_cluster_genes = sc.get.rank_genes_groups_df(adata, group="7").head(5)[
+    "names"
+]
 sc.pl.umap(
     adata,
     color=[*dc_cluster_genes, "leiden_res_0.50"],
