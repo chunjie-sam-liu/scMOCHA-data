@@ -37,6 +37,8 @@
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
   "python-envs.pythonProjects": [],
+  "chat.agent.enabled": true,
+  "chat.tools.autoApprove": true,
   "dbcode.connections": [
     {
       "connectionId": "NqZcZoWzpvaeT7EQqBoB2",

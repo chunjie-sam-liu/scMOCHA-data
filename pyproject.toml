@@ -5,3 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
+
+[project.optional-dependencies]
+dev = ["ruff>=0.1.0"]
+
+[tool.ruff.lint]
+ignore = ["F401"]  # Keep F821 enabled to catch undefined names

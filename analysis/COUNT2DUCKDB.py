@@ -484,6 +484,15 @@ def main_batch_processing():
     """Main function to run the batch processing"""
     console.print("[bold cyan]Starting scMOCHA Data Processing[/bold cyan]")
 
+    # Create tasks from SRR data
+    tasks = []
+    cluster = "cell"
+
+    for row in SRR.iter_rows(named=True):
+        tasks.append((row["gseid"], row["srrid"], cluster))
+
+    console.print(f"Processing {len(tasks)} samples with batch size 20")
+
     # Show initial database state
     with DuckDBManager(DBFILE) as db_manager:
         console.print("\n[bold]Current database state:[/bold]")
