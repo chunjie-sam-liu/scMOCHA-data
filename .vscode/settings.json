@@ -27,10 +27,15 @@
     "**/data/": true
   },
   "files.watcherExclude": {
-    "data/": true
+    "data/": true,
+    ".ruff_cache/": true,
+    ".venv/": true
   },
   "files.exclude": {
     // "**/data": true
+    "**/data/": true,
+    "**/.ruff_cache/": true,
+    "**/.venv/": true
   },
   "python.terminal.activateEnvironment": true,
   "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python",
