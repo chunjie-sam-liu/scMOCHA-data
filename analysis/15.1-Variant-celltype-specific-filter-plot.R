@@ -535,6 +535,15 @@ variant_count_statistic$mean_log10p |> summary()
 variant_count_statistic$mean_statistic |> summary()
 
 variant_count_statistic |>
+  dplyr::filter(n > 10) |>
+  writexl::write_xlsx(
+    file.path(
+      plotdir,
+      "variant_count_statistic.xlsx"
+    )
+  )
+
+variant_count_statistic |>
   ggplot(aes(
     x = mean_statistic,
     y = mean_log10p,
