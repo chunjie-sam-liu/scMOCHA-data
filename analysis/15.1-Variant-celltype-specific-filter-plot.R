@@ -149,10 +149,41 @@ tbl_meta <- dplyr::tbl(
   "meta"
 )
 
+tbl_gseid_srrid_variant <- dplyr::tbl(
+  conn,
+  "gseid_srrid_variant"
+) |>
+  dplyr::collect() |>
+  dplyr::mutate(
+    variant = purrr::map(
+      .x = variant_alltype,
+      ~ {
+        .x |>
+          jsonlite::fromJSON() -> .xx
+        .hetero <- .xx$heteroplasmic_variant
+        if (length(.hetero) == 0) {
+          return(NULL)
+        } else {
+          return(list(.hetero))
+        }
+      }
+    )
+  ) |>
+  dplyr::select(gseid, srrid, variant) |>
+  tidyr::unnest(cols = variant) |>
+  tidyr::unnest(cols = variant)
+
 tbl_gseid_srrid_variant_celltype_ks_test <- dplyr::tbl(
   conn,
   "gseid_srrid_variant_celltype_ks_test"
-)
+) |>
+  dplyr::collect() |>
+  dplyr::semi_join(
+    tbl_gseid_srrid_variant,
+    by = c("gseid", "srrid", "variant")
+  )
+
+
 # src ---------------------------------------------------------------------
 source("./analysis/00-colors.R")
 
@@ -289,7 +320,7 @@ fn_plot_joy <- function(
       legend.position = "none",
       plot.title = element_text(
         hjust = 0.5,
-        size = 16
+        # size = 16
       ),
     ) +
     labs(
@@ -464,9 +495,9 @@ tbl_gseid_srrid_variant_celltype_ks_test |>
   ) +
   theme_bw() +
   labs(
-    x = "KS statistic",
+    x = "Kruskal-Wallis statistic",
     y = "Density",
-    title = "Distribution of KS statistic for all variants"
+    title = "Distribution of Kruskal-Wallis statistic for all variants"
   ) -> plot_ks_statistic
 ggsave(
   file.path(
@@ -497,7 +528,8 @@ tbl_gseid_srrid_variant_celltype_ks_test |>
   dplyr::mutate(
     mean_log10p = -log10(mean_p_value),
   ) |>
-  as.data.table() -> variant_count_statistic
+  as.data.table() |>
+  dplyr::arrange(-n) -> variant_count_statistic
 
 variant_count_statistic$mean_log10p |> summary()
 variant_count_statistic$mean_statistic |> summary()
@@ -576,9 +608,9 @@ variant_count_statistic |>
     nudge_y = 2
   ) +
   labs(
-    x = "Mean KS Statistic",
+    x = "Mean Kruskal-Wallis Statistic",
     y = "-log10(Mean P-value)",
-    title = "Variant Count vs. Mean KS Statistic and P-value"
+    title = "Variant Count vs. Mean Kruskal-Wallis Statistic and P-value"
   ) +
   theme_bw() +
   guides(
@@ -594,14 +626,14 @@ ggsave(
     "ks_variant_count_statistic.pdf"
   ),
   plot = plot_variant_count_statistic,
-  width = 11,
-  height = 6
+  width = 9,
+  height = 5
 )
 
 
 variant_count_statistic |> dplyr::arrange(-n)
 
-# ? example --------------------------------------------------------------------
+# ? 400 variants --------------------------------------------------------------------
 variant_list <- c(
   "7833T>C",
   # sort by mean_statistic
@@ -659,6 +691,9 @@ variant_list |>
           p.value < 0.05,
         ) |>
         dplyr::slice(1) -> thevariant_data
+      if (nrow(thevariant_data) == 0) {
+        return(NULL)
+      }
       .gseid <- thevariant_data$gseid[1]
       .srrid <- thevariant_data$srrid[1]
       .variant <- thevariant_data$variant[1]
@@ -688,7 +723,7 @@ ggsave(
 )
 
 
-# ? single variant joy --------------------------------------------------------------------
+# ? single variant joyplot --------------------------------------------------------------------
 
 thevariant <- "3173G>A"
 thevariant <- "7833T>C"
@@ -717,7 +752,7 @@ thevariants |>
         as.data.table() |>
         dplyr::filter(variant == thevariant) |>
         dplyr::filter(
-          p.value < 0.05,
+          # p.value < 0.05,
           # statistic > 100
         ) |>
         dplyr::mutate(
@@ -751,15 +786,15 @@ thevariants |>
           plotdir,
           "{thevariant}_joy_sample.pdf" |> glue::glue()
         ),
-        width = 50,
-        height = 50,
+        width = 30,
+        height = 20,
         limitsize = FALSE
       )
     }
   )
 
 
-# ? GSE235050_GSM7493832 azimuth.rda --------------------------------------------------------------------
+# ? celltype level2 and level3 --------------------------------------------------------------------
 
 thevariants <- c(
   "3173G>A",
