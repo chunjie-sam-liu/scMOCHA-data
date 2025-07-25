@@ -377,3 +377,51 @@ DBI::dbWriteTable(
   temporary = FALSE
 )
 DBI::dbListTables(conn)
+
+
+cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
+ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
+plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
+gseid_srrid_ks_load <- import(
+  file.path(
+    ks_test_dir,
+    "a_gseid_srrid_ks_load.nocellaf.qs"
+  )
+)
+
+
+ALLVARIANTS <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+  "all_variant.qs"
+)) |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  )
+
+
+gseid_srrid_ks_load |>
+  dplyr::filter(
+    p.value < 0.05,
+    statistic > 25
+  ) |>
+  dplyr::filter(
+    variant %in% ALLVARIANTS$variant
+  ) -> gseid_srrid_ks_load_variant
+
+gseid_srrid_variant_celltype_ks_test <- import(
+  file.path(
+    ks_test_dir,
+    "a_gseid_srrid_ks_load.nocellaf.qs"
+  )
+)
+
+
+DBI::dbListTables(conn)
+DBI::dbWriteTable(
+  conn,
+  "gseid_srrid_variant_celltype_ks_test",
+  gseid_srrid_variant_celltype_ks_test,
+  overwrite = TRUE,
+  temporary = FALSE
+)

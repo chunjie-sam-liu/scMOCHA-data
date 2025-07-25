@@ -46,65 +46,63 @@ dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
 ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
-gseid_srrid_ks_load <- import(
-  file.path(
-    ks_test_dir,
-    "a_gseid_srrid_ks_load.nocellaf.qs"
-  )
-)
+# gseid_srrid_ks_load <- import(
+#   file.path(
+#     ks_test_dir,
+#     "a_gseid_srrid_ks_load.nocellaf.qs"
+#   )
+# )
 
+# gseid_srrid_ks_load |>
+#   dplyr::filter(
+#     p.value < 0.05,
+#     # statistic > 25
+#   ) |>
+#   dplyr::count(variant) |>
+#   dplyr::arrange(-n) |>
+#   ggplot(aes(
+#     x = n
+#   )) +
+#   geom_histogram(
+#     aes(y = after_stat(density)),
+#     bins = 100,
+#     fill = "grey50",
+#     color = "black",
+#     alpha = 0.5
+#   )
 
-gseid_srrid_ks_load |>
-  dplyr::filter(
-    p.value < 0.05,
-    statistic > 25
-  ) |>
-  dplyr::count(variant) |>
-  dplyr::arrange(-n) |>
-  ggplot(aes(
-    x = n
-  )) +
-  geom_histogram(
-    aes(y = after_stat(density)),
-    bins = 100,
-    fill = "grey50",
-    color = "black",
-    alpha = 0.5
-  )
+# ALLVARIANTS <- import(file.path(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+#   "all_variant.qs"
+# )) |>
+#   dplyr::filter(
+#     issomatic == "heteroplasmic"
+#   )
 
+# gseid_srrid_ks_load |>
+#   dplyr::filter(
+#     p.value < 0.05,
+#     statistic > 25
+#   ) |>
+#   dplyr::filter(
+#     variant %in% ALLVARIANTS$variant
+#   ) -> gseid_srrid_ks_load_variant
 
-ALLVARIANTS <- import(file.path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
-  "all_variant.qs"
-)) |>
-  dplyr::filter(
-    issomatic == "heteroplasmic"
-  )
-
-gseid_srrid_ks_load |>
-  dplyr::filter(
-    p.value < 0.05,
-    statistic > 25
-  ) |>
-  dplyr::filter(
-    variant %in% ALLVARIANTS$variant
-  ) -> gseid_srrid_ks_load_variant
-
-export(
-  gseid_srrid_ks_load_variant,
-  file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
-    "celltype_specific_variant.qs"
-  )
-)
-export(
-  gseid_srrid_ks_load_variant,
-  file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
-    "celltype_specific_variant.csv"
-  ),
-  format = "both"
-)
+# export(
+#   gseid_srrid_ks_load_variant,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
+#     "celltype_specific_variant.qs"
+#   )
+# )
+# export(
+#   gseid_srrid_ks_load_variant,
+#   file.path(
+#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data",
+#     "celltype_specific_variant.csv"
+#   ),
+#   format = "both"
+# )
 
 # disease_variant <- import(
 #   "/home/liuc9/github/scMOCHA-data/analysis/zzz/disease-variant-list/mitochondrial_mutations.csv"
@@ -151,6 +149,10 @@ tbl_meta <- dplyr::tbl(
   "meta"
 )
 
+tbl_gseid_srrid_variant_celltype_ks_test <- dplyr::tbl(
+  conn,
+  "gseid_srrid_variant_celltype_ks_test"
+)
 # src ---------------------------------------------------------------------
 source("./analysis/00-colors.R")
 
@@ -427,7 +429,7 @@ fn_plot_joy_celltype_detail <- function(
 
 # ? plot ks statistic--------------------------------------------------------------------
 
-gseid_srrid_ks_load |>
+tbl_gseid_srrid_variant_celltype_ks_test |>
   dplyr::filter(p.value < 0.05) |>
   ggplot(
     aes(x = statistic)
@@ -479,7 +481,7 @@ ggsave(
 
 # ? find examples --------------------------------------------------------------------
 
-gseid_srrid_ks_load |>
+tbl_gseid_srrid_variant_celltype_ks_test |>
   dplyr::filter(
     p.value < 0.05,
     statistic > 20
@@ -494,7 +496,8 @@ gseid_srrid_ks_load |>
   ) |>
   dplyr::mutate(
     mean_log10p = -log10(mean_p_value),
-  ) -> variant_count_statistic
+  ) |>
+  as.data.table() -> variant_count_statistic
 
 variant_count_statistic$mean_log10p |> summary()
 variant_count_statistic$mean_statistic |> summary()
@@ -649,7 +652,8 @@ length(variant_list)
 variant_list |>
   parallel::mclapply(
     function(thevariant) {
-      gseid_srrid_ks_load |>
+      tbl_gseid_srrid_variant_celltype_ks_test |>
+        as.data.table() |>
         dplyr::filter(variant == thevariant) |>
         dplyr::filter(
           p.value < 0.05,
@@ -709,7 +713,8 @@ thevariants <- c(
 thevariants |>
   purrr::map(
     function(thevariant) {
-      gseid_srrid_ks_load |>
+      tbl_gseid_srrid_variant_celltype_ks_test |>
+        as.data.table() |>
         dplyr::filter(variant == thevariant) |>
         dplyr::filter(
           p.value < 0.05,
@@ -775,7 +780,8 @@ thevariants <- c(
 thevariants |>
   purrr::map(
     function(thevariant) {
-      gseid_srrid_ks_load |>
+      tbl_gseid_srrid_variant_celltype_ks_test |>
+        as.data.table() |>
         dplyr::filter(variant == thevariant) |>
         dplyr::filter(
           p.value < 0.05,
@@ -847,7 +853,8 @@ thevariant <- "3727T>C"
 thegseid <- "GSE235050"
 thesrrid <- "GSM7493832"
 
-gseid_srrid_ks_load |>
+tbl_gseid_srrid_variant_celltype_ks_test |>
+  as.data.table() |>
   dplyr::filter(variant == thevariant) |>
   dplyr::left_join(
     META,

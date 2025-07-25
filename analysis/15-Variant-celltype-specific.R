@@ -54,7 +54,7 @@ all_heteroplasmic_af <- import(
 # function ----------------------------------------------------------------
 fn_ks_test <- function(.gseid_srrid) {
   # .gseid_srrid <- "GSE226602_GSM7080017"
-  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |>
+  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |>
     glue::glue()
   d <- import(.filename)
   d |>
