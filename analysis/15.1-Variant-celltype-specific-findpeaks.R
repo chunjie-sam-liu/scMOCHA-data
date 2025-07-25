@@ -105,7 +105,18 @@ tbl_allvariants <- dplyr::tbl(
   conn,
   "allvariants"
 )
-tbl_meta <- dplyr::tbl(conn, "meta") |>
+
+tbl_allvariants |>
+  dplyr::filter(Disease != "") |>
+  dplyr::filter(
+    issomatic == "heteroplasmic"
+  )
+
+
+tbl_meta <- dplyr::tbl(
+  conn,
+  "meta"
+) |>
   dplyr::select(
     gseid,
     srrid,
@@ -119,10 +130,39 @@ tbl_meta <- dplyr::tbl(conn, "meta") |>
 
 # DBI::dbDisconnect(conn, shutdown = TRUE)
 
+tbl_gseid_srrid_variant <- dplyr::tbl(
+  conn,
+  "gseid_srrid_variant"
+) |>
+  dplyr::collect() |>
+  dplyr::mutate(
+    variant = purrr::map(
+      .x = variant_alltype,
+      ~ {
+        .x |>
+          jsonlite::fromJSON() -> .xx
+        .hetero <- .xx$heteroplasmic_variant
+        if (length(.hetero) == 0) {
+          return(NULL)
+        } else {
+          return(list(.hetero))
+        }
+      }
+    )
+  ) |>
+  dplyr::select(gseid, srrid, variant) |>
+  tidyr::unnest(cols = variant) |>
+  tidyr::unnest(cols = variant)
+
 tbl_allvariants_celltype_peaks <- dplyr::tbl(
   conn,
   "allvariants_celltype_peaks"
-)
+) |>
+  dplyr::collect() |>
+  dplyr::semi_join(
+    tbl_gseid_srrid_variant,
+    by = c("gseid", "srrid", "variant" = "variant")
+  )
 
 # src ---------------------------------------------------------------------
 source("./analysis/00-colors.R")
@@ -698,68 +738,118 @@ allvariants_celltype_peaks_meta |>
   ) |>
   tidyr::unnest(cols = cor_age) -> allvariants_celltype_peaks_meta_cor_age
 
-# export(
-#   allvariants_celltype_peaks_meta_cor_age,
-#   file.path(
-#     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant",
-#     "000-celltype_specific_allvariants_celltype_peaks_meta_cor_age.qs"
-#   )
-# )
+
+export(
+  allvariants_celltype_peaks_meta_cor_age,
+  file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant",
+    "000-celltype_specific_allvariants_celltype_peaks_meta_cor_age.qs"
+  )
+)
+
 allvariants_celltype_peaks_meta_cor_age |>
   dplyr::filter(variant == "3727T>C") |>
-  dplyr::filter(!is.na(cor)) |>
+  dplyr::filter(celltype == "Mono") |>
+  tidyr::unnest(cols = data) |>
+  dplyr::select(variant, srrid, peakmin) |>
+  dplyr::arrange(peakmin) -> mm
+
+allvariants_celltype_peaks_meta_cor_age |>
+  dplyr::filter(variant == "3727T>C") |>
+  # dplyr::filter(!is.na(cor)) |>
   tidyr::unnest(cols = data) |>
   ggplot(aes(
     x = Age_new,
     y = peakmin,
   )) +
   geom_point(aes(color = disease)) +
-  geom_smooth(method = "lm", se = TRUE, color = "black", linetype = "dashed") +
+  scale_color_manual(
+    name = "Disease",
+    values = color_disease,
+    na.value = "grey50"
+  ) +
+  geom_smooth(
+    method = "lm",
+    se = TRUE,
+    color = "black",
+    linetype = "dashed"
+  ) +
   ggpubr::stat_cor(
     method = "spearman",
     label.x.npc = "left",
     label.y.npc = "top"
   ) +
   theme_bw() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 16
+    ),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.x = element_blank(),
+    # axis.text.x = element_text(angle = 45, hjust = 1)
+  ) +
   labs(
     title = "Correlation between Age and 3727T>C Peak Minimum",
     x = "Age (years)",
     y = "Peak Minimum"
   ) +
-  facet_wrap(
+  ggh4x::facet_wrap2(
     ~celltype,
-    nrow = 1
-  )
-
-
-allvariants_celltype_peaks_meta_cor_age |>
-  dplyr::filter(pval < 0.05, abs(cor) > 0.3) |>
-  dplyr::mutate(
-    n = purrr::map_int(
-      .x = data,
-      .f = nrow
+    nrow = 2,
+    strip.position = "top",
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = TRUE,
     ),
-  ) |>
-  dplyr::filter(n > 100) |>
-  dplyr::arrange(-cor) |>
-  dplyr::slice(1) |>
-  tidyr::unnest(cols = data) |>
-  ggplot(aes(
-    x = Age_new,
-    y = peakmin,
-  )) +
-  geom_point(aes(color = disease))
+    # scales = "free_y",
+  ) -> p_3727T_C_peak_age
 
-allvariants_celltype_peaks_meta_cor_age |>
-  dplyr::group_by(variant) |>
-  dplyr::summarise(
-    ncelltype = dplyr::n(),
-    ncelltype_significant = sum(cor > 0.3, na.rm = TRUE),
-    ncelltype_significant_neg = sum(cor < -0.3, na.rm = TRUE),
-    ncelltype_significant_pos = sum(cor > 0.3, na.rm = TRUE),
-    .groups = "drop"
-  )
+ggsave(
+  filename = file.path(
+    plotdir,
+    "3727T>C_peak_cor_age.pdf"
+  ),
+  plot = p_3727T_C_peak_age,
+  width = 11,
+  height = 6,
+)
 
+
+# allvariants_celltype_peaks_meta_cor_age |>
+#   dplyr::filter(pval < 0.05, abs(cor) > 0.3) |>
+#   dplyr::mutate(
+#     n = purrr::map_int(
+#       .x = data,
+#       .f = nrow
+#     ),
+#   ) |>
+#   dplyr::filter(n > 100) |>
+#   dplyr::arrange(-cor) |>
+#   dplyr::slice(1) |>
+#   tidyr::unnest(cols = data) |>
+#   ggplot(aes(
+#     x = Age_new,
+#     y = peakmin,
+#   )) +
+#   geom_point(aes(color = disease))
+
+# allvariants_celltype_peaks_meta_cor_age |>
+#   dplyr::group_by(variant) |>
+#   dplyr::summarise(
+#     ncelltype = dplyr::n(),
+#     ncelltype_significant = sum(cor > 0.3, na.rm = TRUE),
+#     ncelltype_significant_neg = sum(cor < -0.3, na.rm = TRUE),
+#     ncelltype_significant_pos = sum(cor > 0.3, na.rm = TRUE),
+#     .groups = "drop"
+#   )
 
 # ? peak and haplogroup --------------------------------------------------------------------
 allvariants_celltype_peaks_meta |>
@@ -809,20 +899,25 @@ allvariants_celltype_peaks_meta |>
 # )
 
 allvariants_celltype_peaks_meta_cor_haplo |>
-  dplyr::filter(pval < 0.05) |>
-  dplyr::arrange(pval)
-allvariants_celltype_peaks_meta_cor_haplo |>
-  dplyr::filter(
-    variant == "13762T>G",
-    celltype == "B"
-  ) |>
-  tidyr::unnest(cols = data) |>
-  ggplot(aes(
-    x = HG1,
-    y = peakmin,
-  )) +
-  geom_boxplot() +
-  geom_point()
+  dplyr::filter(variant == "3727T>C") |>
+  dplyr::slice(5) |>
+  tidyr::unnest(cols = data)
+
+# allvariants_celltype_peaks_meta_cor_haplo |>
+#   dplyr::filter(pval < 0.05) |>
+#   dplyr::arrange(pval)
+# allvariants_celltype_peaks_meta_cor_haplo |>
+#   dplyr::filter(
+#     variant == "13762T>G",
+#     celltype == "B"
+#   ) |>
+#   tidyr::unnest(cols = data) |>
+#   ggplot(aes(
+#     x = HG1,
+#     y = peakmin,
+#   )) +
+#   geom_boxplot() +
+#   geom_point()
 
 # ? sex --------------------------------------------------------------------
 
@@ -836,7 +931,7 @@ allvariants_celltype_peaks_meta |>
       FUN = \(.x) {
         tryCatch(
           {
-            if (nrow(.x) > 50) {
+            if (nrow(.x) > 20) {
               t.test(
                 peakmin ~ sex_pred,
                 .x
@@ -861,6 +956,11 @@ allvariants_celltype_peaks_meta |>
   tidyr::unnest(cols = cor_sex) -> allvariants_celltype_peaks_meta_cor_sex
 
 
+allvariants_celltype_peaks_meta_cor_sex |>
+  dplyr::filter(variant == "3727T>C") |>
+  dplyr::slice(5) |>
+  tidyr::unnest(cols = data)
+
 # export(
 #   allvariants_celltype_peaks_meta_cor_sex,
 #   file.path(
@@ -869,56 +969,67 @@ allvariants_celltype_peaks_meta |>
 #   )
 # )
 
-allvariants_celltype_peaks_meta_cor_sex |>
-  dplyr::filter(pval < 0.05) |>
-  dplyr::arrange(statistic)
+# allvariants_celltype_peaks_meta_cor_sex |>
+#   dplyr::filter(pval < 0.05) |>
+#   dplyr::arrange(statistic)
 
-allvariants_celltype_peaks_meta_cor_sex |>
-  # dplyr::filter(pval < 0.05) |>
-  # dplyr::arrange(-statistic) |>
-  # dplyr::slice(1) |>
-  dplyr::filter(variant == "6191C>T") |>
-  dplyr::mutate(
-    celltype = gsub(
-      "_",
-      " ",
-      celltype
-    )
-  ) |>
-  dplyr::mutate(
-    celltype = factor(
-      celltype,
-      levels = names(color_celltype)
-    )
-  ) |>
-  tidyr::unnest(cols = data) |>
-  ggplot(aes(
-    x = sex_pred,
-    y = peakmin,
-  )) +
-  geom_boxplot() +
-  geom_point(aes(color = celltype)) +
-  scale_color_manual(
-    values = color_celltype,
-    na.value = "grey50"
-  ) +
-  ggsignif::geom_signif(
-    aes(
-      y = peakmin,
-    ),
-    comparisons = list(
-      c("Female", "Male")
-    ),
-    y_position = 0.8
-  ) +
-  facet_wrap(
-    ~celltype,
-    ncol = 8
-  )
+# allvariants_celltype_peaks_meta_cor_sex |>
+#   # dplyr::filter(pval < 0.05) |>
+#   # dplyr::arrange(-statistic) |>
+#   # dplyr::slice(1) |>
+#   dplyr::filter(variant == "6191C>T") |>
+#   dplyr::mutate(
+#     celltype = gsub(
+#       "_",
+#       " ",
+#       celltype
+#     )
+#   ) |>
+#   dplyr::mutate(
+#     celltype = factor(
+#       celltype,
+#       levels = names(color_celltype)
+#     )
+#   ) |>
+#   tidyr::unnest(cols = data) |>
+#   ggplot(aes(
+#     x = sex_pred,
+#     y = peakmin,
+#   )) +
+#   geom_boxplot() +
+#   geom_point(aes(color = celltype)) +
+#   scale_color_manual(
+#     values = color_celltype,
+#     na.value = "grey50"
+#   ) +
+#   ggsignif::geom_signif(
+#     aes(
+#       y = peakmin,
+#     ),
+#     comparisons = list(
+#       c("Female", "Male")
+#     ),
+#     y_position = 0.8
+#   ) +
+#   facet_wrap(
+#     ~celltype,
+#     ncol = 8
+#   )
 
-# ? don't run below --------------------------------------------------------------------
+dplyr::tbl(
+  conn,
+  "allvariants_celltype_peaks"
+) |>
+  dplyr::collect() |>
+  dplyr::filter(variant == "3727T>C")
+
+# ! find peaks for a specific variant --------------------------------------
+# ! 3727T>C ----------------------------------------------------------------
 
 thevariant <- "3727T>C"
+thevariant <- "3173G>A"
+thevariant <- "4175G>A"
+
 tbl_all_hetero_af_cell |>
   dplyr::filter(
     variant == thevariant,
@@ -947,7 +1058,11 @@ tbl_all_hetero_af_cell |>
     celltype_l2,
     celltype_l3
   ) |>
-  dplyr::collect() -> thevariant_data
+  dplyr::collect() |>
+  dplyr::semi_join(
+    tbl_gseid_srrid_variant,
+    by = c("srrid", "variant" = "variant")
+  ) -> thevariant_data
 
 
 thevariant_data |>
@@ -959,10 +1074,17 @@ thevariant_data |>
     peaks = parallel::mclapply(
       X = data,
       FUN = \(.x) {
+        if (nrow(.x) < 30) {
+          return(
+            NULL
+          )
+        }
         tryCatch(
           find_cell_density_peak(.x$af),
           error = function(e) {
-            NULL
+            return(
+              NULL
+            )
           }
         )
       },
@@ -970,15 +1092,29 @@ thevariant_data |>
     )
   ) -> thevariant_data_peaks
 
+
 thevariant_data_peaks |>
   dplyr::select(-data) |>
   tidyr::unnest(cols = peaks) |>
   dplyr::left_join(
     tbl_meta |> dplyr::collect(),
     by = c("srrid")
-  ) -> a
+  ) |>
+  dplyr::semi_join(
+    tbl_gseid_srrid_variant,
+    by = c("gseid", "srrid", "variant")
+  ) -> thevariant_data_peaks_meta
 
-a |>
+# thevariant_data_peaks_meta |>
+#   dplyr::filter(celltype == "Mono") |>
+#   dplyr::select(variant, srrid, peakmin) |>
+#   dplyr::arrange(peakmin) |>
+#   print(n = Inf) -> m
+
+# m |>
+#   dplyr::filter(!srrid %in% mm$srrid)
+
+thevariant_data_peaks_meta |>
   dplyr::select(-peaks) |>
   tidyr::nest(
     .by = c(variant, celltype)
@@ -992,7 +1128,7 @@ a |>
             .x |>
               dplyr::filter(!is.na(Age_new)) |>
               dplyr::filter(!is.na(peakmin)) -> .x
-            if (nrow(.x) > 30) {
+            if (nrow(.x) > 10) {
               cor.test(
                 .x$peakmin,
                 .x$Age_new,
@@ -1016,95 +1152,103 @@ a |>
     )
   ) |>
   tidyr::unnest(cols = cor_age) |>
-  dplyr::filter(pval < 0.05) |>
-  dplyr::arrange(-cor) -> aa
+  # dplyr::filter(pval < 0.05) |>
+  dplyr::arrange(-cor) -> thevariant_data_peaks_meta_cor_age
 
 
-aa |>
+thevariant_data_peaks_meta_cor_age |>
   dplyr::slice(1) |>
+  # dplyr::filter(celltype == "Mono") |>
   dplyr::select(data) |>
   tidyr::unnest(cols = data) |>
-  dplyr::arrange(-peakmin) -> ddd
+  # dplyr::filter(
+  #   disease %in% c("Alzheimer's Disease", "Healthy"),
+  #   Chemistry == "SC5P-PE"
+  # ) |>
+  # dplyr::arrange(
+  #   dplyr::desc(disease),
+  #   -peakmin
+  # )  |>
+  dplyr::arrange(peakmin) -> thevariant_data_peaks_meta_cor_age_rank #ddd
 
 
-thevariant_data_peaks |>
-  tidyr::unnest(cols = peaks) |>
-  dplyr::select(srrid, celltype, npeaks) |>
-  tidyr::pivot_wider(
-    names_from = celltype,
-    values_from = npeaks,
-    values_fill = 0
-  ) |>
-  dplyr::mutate(
-    m = purrr::map2_chr(
-      .x = Mono,
-      .y = DC,
-      .f = \(.x, .y) {
-        # 1. .x == 2 and .y == 2, M two peaks
-        # 2. .x == 1 or .y == 1, M one peak
-        # 3. no peaks, M no peaks
-        if (.x == 2 && .y == 2) {
-          "M two peak"
-        } else if (.x == 1 || .y == 1) {
-          "M one peak"
-        } else {
-          "M no peaks"
-        }
-      }
-    )
-  ) |>
-  dplyr::select(srrid, m) -> thevariant_data_peaks_rank_m
+# thevariant_data_peaks |>
+#   tidyr::unnest(cols = peaks) |>
+#   dplyr::select(srrid, celltype, npeaks) |>
+#   tidyr::pivot_wider(
+#     names_from = celltype,
+#     values_from = npeaks,
+#     values_fill = 0
+#   ) |>
+#   dplyr::mutate(
+#     m = purrr::map2_chr(
+#       .x = Mono,
+#       .y = DC,
+#       .f = \(.x, .y) {
+#         # 1. .x == 2 and .y == 2, M two peaks
+#         # 2. .x == 1 or .y == 1, M one peak
+#         # 3. no peaks, M no peaks
+#         if (.x == 2 && .y == 2) {
+#           "M two peak"
+#         } else if (.x == 1 || .y == 1) {
+#           "M one peak"
+#         } else {
+#           "M no peaks"
+#         }
+#       }
+#     )
+#   ) |>
+#   dplyr::select(srrid, m) -> thevariant_data_peaks_rank_m
 
-thevariant_data_peaks |>
-  tidyr::unnest(cols = peaks) |>
-  dplyr::select(srrid, celltype, npeaks) |>
-  tidyr::pivot_wider(
-    names_from = celltype,
-    values_from = npeaks,
-    values_fill = 0
-  ) |>
-  dplyr::filter(
-    (CD4_T == 2 | CD8_T == 2 | NK == 2 | B == 2) &
-      (Mono == 1)
-  ) -> thevariant_data_peaks_rank_m2
+# thevariant_data_peaks |>
+#   tidyr::unnest(cols = peaks) |>
+#   dplyr::select(srrid, celltype, npeaks) |>
+#   tidyr::pivot_wider(
+#     names_from = celltype,
+#     values_from = npeaks,
+#     values_fill = 0
+#   ) |>
+#   dplyr::filter(
+#     (CD4_T == 2 | CD8_T == 2 | NK == 2 | B == 2) &
+#       (Mono == 1)
+#   ) -> thevariant_data_peaks_rank_m2
 
-thevariant_data_peaks |>
-  tidyr::unnest(cols = peaks) |>
-  dplyr::select(
-    srrid,
-    celltype,
-    npeaks
-  ) |>
-  dplyr::group_by(
-    srrid,
-  ) |>
-  dplyr::summarise(
-    sum_peaks = sum(npeaks, na.rm = TRUE),
-  ) |>
-  dplyr::arrange(sum_peaks) |>
-  dplyr::filter(sum_peaks > 0) |>
-  dplyr::filter(
-    srrid %in% thevariant_data_peaks_rank_m2$srrid
-  ) -> thevariant_data_peaks_rank
+# thevariant_data_peaks |>
+#   tidyr::unnest(cols = peaks) |>
+#   dplyr::select(
+#     srrid,
+#     celltype,
+#     npeaks
+#   ) |>
+#   dplyr::group_by(
+#     srrid,
+#   ) |>
+#   dplyr::summarise(
+#     sum_peaks = sum(npeaks, na.rm = TRUE),
+#   ) |>
+#   dplyr::arrange(sum_peaks) |>
+#   dplyr::filter(sum_peaks > 0) |>
+#   dplyr::filter(
+#     srrid %in% thevariant_data_peaks_rank_m2$srrid
+#   ) -> thevariant_data_peaks_rank
 
-
-thevariant_data_peaks |>
-  dplyr::filter(celltype == "CD4_T") |>
-  tidyr::unnest(cols = peaks) |>
-  dplyr::arrange(-peakmin) -> thevariant_data_peaks_rank_b
+# thevariant_data_peaks |>
+#   dplyr::filter(celltype == "CD4_T") |>
+#   tidyr::unnest(cols = peaks) |>
+#   dplyr::arrange(-peakmin) -> thevariant_data_peaks_rank_b
 
 thevariant_data |>
   # dplyr::filter(
   #   srrid %in% thevariant_data_peaks_rank$srrid,
   # ) |>
   dplyr::filter(
-    srrid %in% ddd$srrid,
+    srrid %in% thevariant_data_peaks_meta_cor_age_rank$srrid,
   ) |>
   # dplyr::filter(celltype == "CD4_T") |>
   dplyr::mutate(
     srrid = factor(
       srrid,
-      ddd$srrid
+      thevariant_data_peaks_meta_cor_age_rank$srrid
     )
   ) |>
   dplyr::mutate(
@@ -1134,6 +1278,11 @@ thevariant_data |>
     # from = 0,
     # to = 1,
   ) +
+  geom_hline(
+    yintercept = 29,
+    linetype = "dashed",
+    color = "red",
+  ) +
   scale_color_manual(
     values = color_celltype,
     na.value = "grey50"
@@ -1157,12 +1306,30 @@ thevariant_data |>
       color = "black"
     ),
   ) +
-  facet_wrap(
+  # facet_wrap(
+  #   ~celltype,
+  #   ncol = 8
+  # ) +
+  ggh4x::facet_wrap2(
     ~celltype,
-    ncol = 8
+    # nrow = 2,
+    ncol = 8,
+    strip.position = "top",
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = color_celltype
+      ),
+      text_x = ggh4x::elem_list_text(
+        colour = "white",
+        face = c("bold")
+      ),
+      by_layer_y = TRUE,
+    ),
+    # scales = "free_y",
   ) +
   labs(
-    title = paste0(thevariant, ", pisitive correlated with age in DC cells"),
+    # title = paste0(thevariant, ", pisitive correlated with age in CD8T cells"),
+
     x = "Allele Frequency",
     y = "Sample"
   ) -> p
@@ -1172,24 +1339,24 @@ ggsave(
     plotdir,
     paste0(thevariant, ".variant_celltype_peaks.pdf")
   ),
-  width = 12,
+  width = 15,
   height = 8
 )
 
-fn_plot_ggdist(
-  thevariant = thevariant,
-  thegseid = "GSE235050",
-  thesrrid = "GSM7493832"
-) -> p_ggdist
-ggsave(
-  plot = p_ggdist,
-  filename = file.path(
-    plotdir,
-    paste0(thevariant, ".variant_celltype_peaks.ggdist.pdf")
-  ),
-  width = 12,
-  height = 8
-)
+# fn_plot_ggdist(
+#   thevariant = thevariant,
+#   thegseid = "GSE235050",
+#   thesrrid = "GSM7493832"
+# ) -> p_ggdist
+# ggsave(
+#   plot = p_ggdist,
+#   filename = file.path(
+#     plotdir,
+#     paste0(thevariant, ".variant_celltype_peaks.ggdist.pdf")
+#   ),
+#   width = 12,
+#   height = 8
+# )
 
 # footer ------------------------------------------------------------------
 
