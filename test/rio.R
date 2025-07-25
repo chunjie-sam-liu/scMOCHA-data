@@ -1,6 +1,5 @@
 # ! read --------------------------------------------------------------------
 
-
 tictoc::tic()
 d <- readr::read_rds("/scr1/users/liuc9/tmp/gse_data.rds")
 tictoc::toc()
@@ -16,8 +15,6 @@ bench::mark(
 
 
 # ! write --------------------------------------------------------------------
-
-
 
 # tictoc::tic()
 # readr::write_rds(d, "/scr1/users/liuc9/tmp/gse_data.rds")
@@ -99,23 +96,21 @@ convert(
     "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst"
   )
 
-
-  d <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst")
-
+  d <- import(
+    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst"
+  )
 
   d |>
     tidyr::pivot_longer(
       cols = -c(gseid, srrid, genename),
       names_to = "celltype",
       values_to = "expr"
-    ) ->
-  dd
+    ) -> dd
 
   dd |>
     dplyr::group_by(genename, celltype) |>
     tidyr::nest(.key = "expr") |>
-    dplyr::ungroup() ->
-  ddd
+    dplyr::ungroup() -> ddd
 
   export(
     ddd,
@@ -124,27 +119,30 @@ convert(
 }
 
 
-
 convert(
   "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.csv.gz",
   "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.fst"
 )
 
 # feather --------------------------------------------------------------------
-a <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.fst")
+a <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/barcode_celltype.fst"
+)
 a$barcode |>
   unique() |>
   length()
 nrow(a)
 
 
-
-
 # ! test --------------------------------------------------------------------
 
-old <- import("/scr1/users/liuc9/tmp/scanpy/GSE155673_GSM4712885_celltype_gene_expr.csv")
+old <- import(
+  "/scr1/users/liuc9/tmp/scanpy/GSE155673_GSM4712885_celltype_gene_expr.csv"
+)
 
-new <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR/GSE155673_GSM4712885_celltype_gene_expr.csv")
+new <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR/GSE155673_GSM4712885_celltype_gene_expr.csv"
+)
 
 old |>
   dplyr::select(genename, bold = B) |>
@@ -153,7 +151,6 @@ old |>
       dplyr::select(genename, newb = B),
     by = "genename"
   )
-
 
 
 convert(
@@ -195,8 +192,12 @@ export(
 import(
   "https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs"
 )
-data.table::fread("https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix")
-import("https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs")
+data.table::fread(
+  "https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix"
+)
+import(
+  "https://raw.githubusercontent.com/chunjie-sam-liu/scMOCHA-data/main/config/chrM.phastCons100way.wigFix.qs"
+)
 
 
 d <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
@@ -220,11 +221,12 @@ convert(
 )
 
 
-d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/used_samples/Fig_2c.csv")
+d <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/used_samples/Fig_2c.csv"
+)
 
 d |>
   dplyr::count(tissue_site_detail)
-
 
 
 d |>
@@ -264,7 +266,9 @@ convert(
 )
 
 
-a <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs")
+a <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+)
 
 a
 
@@ -275,8 +279,7 @@ a |>
       dplyr::where(is.list),
       ~ jsonlite::toJSON(.x, auto_unbox = TRUE, null = "null")
     )
-  ) ->
-aa
+  ) -> aa
 
 
 conn <- DBI::dbConnect(
@@ -284,14 +287,20 @@ conn <- DBI::dbConnect(
   dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB/cov.duckdb"
 )
 path <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/PARQUET/covall/**/*.parquet"
-sql <- glue("CREATE OR REPLACE VIEW covall AS SELECT * FROM read_parquet('{path}')")
+sql <- glue(
+  "CREATE OR REPLACE VIEW covall AS SELECT * FROM read_parquet('{path}')"
+)
 DBI::dbExecute(conn, sql)
 DBI::dbListTables(conn)
 a <- dplyr::tbl(conn, "covall")
 dplyr::count(a)
 a |>
   dplyr::select(
-    gseid, srrid, barcode, base, `3173`
+    gseid,
+    srrid,
+    barcode,
+    base,
+    `3173`
   ) |>
   dplyr::filter(
     base == "A"
@@ -299,8 +308,72 @@ a |>
 
 DBI::dbDisconnect(conn = conn, shutdown = TRUE)
 
-d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs")
+d <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
+)
 
 d |>
   dplyr::count(variant, issomatic) |>
   dplyr::filter(n > 1)
+
+gse_data <- import(
+  "analysis/zzz/clean-data/gse_data.qs"
+)
+
+
+regions_missalignment_error <- c(
+  66:71,
+  300:316,
+  513:525,
+  3106:3107,
+  12418:12425,
+  16182:16194
+)
+regions_rare_heteroplasmic_variants <- c(499, 538, 545, 10953, 12684)
+variants_tobe_excluded <- c(
+  regions_missalignment_error,
+  regions_rare_heteroplasmic_variants
+)
+
+gse_data_variant_heteroplasmic <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_variant_heteroplasmic.qs"
+)
+
+DBI::dbListTables(conn)
+
+gse_data_variant_heteroplasmic |>
+  dplyr::select(gseid, srrid, heteroplasmic) |>
+  dplyr::mutate(
+    a = purrr::map_chr(
+      heteroplasmic,
+      \(.x) {
+        # tibble::tibble(
+        #   hetero = .x$heteroplasmic_variant |>
+        #     jsonlite::toJSON(
+        #       auto_unbox = TRUE,
+        #       null = "null"
+        #     ),
+        #   homo = .x$homoplasmic_variant |>
+        #     jsonlite::toJSON(
+        #       auto_unbox = TRUE,
+        #       null = "null"
+        #     )
+        # )
+        .x |> jsonlite::toJSON()
+      }
+    )
+  ) |>
+  dplyr::select(
+    gseid,
+    srrid,
+    variant_alltype = a
+  ) -> gseid_srrid_variant
+
+DBI::dbWriteTable(
+  conn,
+  "gseid_srrid_variant",
+  gseid_srrid_variant,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+DBI::dbListTables(conn)

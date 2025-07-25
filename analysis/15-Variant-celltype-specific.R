@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,9 +39,7 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
-
 
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
@@ -58,7 +54,8 @@ all_heteroplasmic_af <- import(
 # function ----------------------------------------------------------------
 fn_ks_test <- function(.gseid_srrid) {
   # .gseid_srrid <- "GSE226602_GSM7080017"
-  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |> glue::glue()
+  .filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell/all_hetero_af.cell.{.gseid_srrid}.qs" |>
+    glue::glue()
   d <- import(.filename)
   d |>
     tidyr::pivot_longer(
@@ -69,8 +66,7 @@ fn_ks_test <- function(.gseid_srrid) {
     tidyr::nest(
       .by = "variant",
       .key = "celltype_af"
-    ) ->
-  d_nest
+    ) -> d_nest
 
   d_nest |>
     # head(100) |>
@@ -90,7 +86,7 @@ fn_ks_test <- function(.gseid_srrid) {
               .fit |>
                 broom::tidy()
             },
-            error = \(e){
+            error = \(e) {
               return(tibble::tibble(
                 statistic = NA_real_,
                 p.value = NA_real_,
@@ -104,10 +100,10 @@ fn_ks_test <- function(.gseid_srrid) {
       )
     ) |>
     tidyr::unnest(ks_test) |>
-    dplyr::arrange(p.value) ->
-  d_ks
+    dplyr::arrange(p.value) -> d_ks
 
-  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |> glue::glue()
+  .filename_out <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/{.gseid_srrid}.ks_test.qs" |>
+    glue::glue()
   export(
     d_ks,
     .filename_out,
@@ -123,8 +119,7 @@ all_heteroplasmic_af |>
   dplyr::distinct() |>
   dplyr::mutate(
     gseid_srrid = paste(gseid, srrid, sep = "_")
-  ) ->
-gseid_srrid
+  ) -> gseid_srrid
 # gseid_srrid |>
 #   dplyr::mutate(
 #     a = purrr::map(
@@ -133,24 +128,23 @@ gseid_srrid
 #     )
 #   )
 
-gseid_srrid |>
-  # head(10) |>
-  dplyr::mutate(
-    load = purrr::map(
-      gseid_srrid,
-      \(.x) {
-        import(
-          file.path(
-            "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
-            glue::glue("{.x}.ks_test.qs")
-          )
-        )
-      }
-    )
-  ) |>
-  tidyr::unnest(cols = load) |>
-  dplyr::arrange(p.value) ->
-gseid_srrid_ks_load
+# gseid_srrid |>
+#   # head(10) |>
+#   dplyr::mutate(
+#     load = purrr::map(
+#       gseid_srrid,
+#       \(.x) {
+#         import(
+#           file.path(
+#             "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test",
+#             glue::glue("{.x}.ks_test.qs")
+#           )
+#         )
+#       }
+#     )
+#   ) |>
+#   tidyr::unnest(cols = load) |>
+#   dplyr::arrange(p.value) -> gseid_srrid_ks_load
 
 # export(
 #   gseid_srrid_ks_load,
@@ -159,7 +153,6 @@ gseid_srrid_ks_load
 #     "a_gseid_srrid_ks_load.qs"
 #   )
 # )
-
 
 gseid_srrid |>
   # head(10) |>
@@ -179,9 +172,7 @@ gseid_srrid |>
     )
   ) |>
   tidyr::unnest(cols = load) |>
-  dplyr::arrange(p.value) ->
-gseid_srrid_ks_load
-
+  dplyr::arrange(p.value) -> gseid_srrid_ks_load
 
 
 gseid_srrid_ks_load
@@ -193,10 +184,6 @@ export(
 )
 
 
-
-
-
-
 # ? for duckdb --------------------------------------------------------------------
 
 b_gseid_srrid_ks_load_p0.05_s25 <- import(
@@ -206,13 +193,13 @@ b_gseid_srrid_ks_load_p0.05_s25 <- import(
 )
 
 b_gseid_srrid_ks_load_p0.05_s25 |>
-  tidyr::unnest(cols = celltype_af) ->
-b_gseid_srrid_ks_load_p0.05_s25_unnest
+  tidyr::unnest(cols = celltype_af) -> b_gseid_srrid_ks_load_p0.05_s25_unnest
 
 v <- packageVersion("duckdb")
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
-  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.duckdb.{v}" |> glue::glue()
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.ks_test/b_gseid_srrid_ks_load_p0.05_s25.duckdb.{v}" |>
+    glue::glue()
 )
 DBI::dbWriteTable(
   conn,
@@ -255,7 +242,6 @@ gseid_srrid_ks_load |>
     linetype = "dashed",
     color = "red"
   )
-
 
 
 # gseid_srrid_ks_load |>
@@ -324,10 +310,11 @@ gseid_srrid_ks_load |>
 #
 #
 #
-d <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test/GSE226602_GSM7080017.ks_test.qs")
+d <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.ks_test/GSE226602_GSM7080017.ks_test.qs"
+)
 
-d ->
-d_nest
+d -> d_nest
 
 d_nest |>
   # head(100) |>
@@ -347,7 +334,7 @@ d_nest |>
             .fit |>
               broom::tidy()
           },
-          error = \(e){
+          error = \(e) {
             return(tibble::tibble(
               statistic = NA_real_,
               p.value = NA_real_,
@@ -362,23 +349,23 @@ d_nest |>
   ) |>
   tidyr::unnest(ks_test) |>
   dplyr::filter(p.value < 0.05) |>
-  dplyr::arrange(p.value) ->
-d_ks
+  dplyr::arrange(p.value) -> d_ks
 
 d_ks$celltype_af[[1]] -> .x
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
 .x |>
   dplyr::filter(af > 0) |>
-  dplyr::mutate(celltype = gsub(
-    "_",
-    " ",
-    celltype
-  )) |>
+  dplyr::mutate(
+    celltype = gsub(
+      "_",
+      " ",
+      celltype
+    )
+  ) |>
   dplyr::mutate(
     celltype = factor(celltype, levels = names(color_celltype)),
-  ) ->
-.xx
+  ) -> .xx
 
 .xx |>
   ggplot(aes(
