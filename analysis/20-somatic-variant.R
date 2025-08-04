@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -43,32 +41,34 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
-
 # load data ---------------------------------------------------------------
-conn <- DBI::dbConnect(
+conn_all_variant_cell <- DBI::dbConnect(
   duckdb::duckdb(),
   dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.duckdb.1.2.1"
 )
-
+conn_all_hetero_af <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+)
+DBI::dbListTables(conn_all_hetero_af)
 # function ----------------------------------------------------------------
 
-
 # body --------------------------------------------------------------------
-dplyr::tbl(conn, "all_variant_cell") |>
+dplyr::tbl(conn_all_variant_cell, "all_variant_cell") |>
   dplyr::filter(
     variant_in_cell_cluster == "cell"
   ) |>
   dplyr::select(
-    gseid, srrid, variant
+    gseid,
+    srrid,
+    variant
   ) |>
   dplyr::distinct() |>
-  as.data.table() ->
-gseid_srrid_variant
+  as.data.table() -> gseid_srrid_variant
 
-all_variant_cell_table <- dplyr::tbl(conn, "all_variant_cell")
+all_variant_cell_table <- dplyr::tbl(conn_all_variant_cell, "all_variant_cell")
 
 gseid_srrid_variant |>
   # head(100) |>
@@ -92,21 +92,24 @@ gseid_srrid_variant |>
             variant_in_cell_cluster == "cell"
           ) |>
           dplyr::select(
-            barcode, af, depth, variant_type, celltype
+            barcode,
+            af,
+            depth,
+            variant_type,
+            celltype
           ) |>
-          as.data.table() ->
-        .d
+          as.data.table() -> .d
         .d |>
           dplyr::group_by(celltype) |>
           dplyr::summarise(
             sum_depth = sum(depth, na.rm = TRUE),
             mean_depth = mean(depth, na.rm = T)
-          ) ->
-        .dd
+          ) -> .dd
         log_trace("has data in database ", nrow(.d))
         .d |>
           dplyr::count(
-            celltype, variant_type
+            celltype,
+            variant_type
           ) |>
           dplyr::left_join(
             .dd,
@@ -116,8 +119,7 @@ gseid_srrid_variant |>
       mc.cores = 20,
       SIMPLIFY = FALSE
     )
-  ) ->
-gseid_srrid_variant_co
+  ) -> gseid_srrid_variant_co
 
 
 gseid_srrid_variant_co |>
@@ -133,11 +135,9 @@ gseid_srrid_variant_co |>
   tidyr::nest(
     .by = c(gseid, srrid, variant),
     .key = "variant_celltype"
-  ) ->
-gseid_srrid_variant_celltype
+  ) -> gseid_srrid_variant_celltype
 
 # gseid_srrid_variant_celltype$variant_celltype[[1]] -> .x
-
 
 gseid_srrid_variant_celltype |>
   dplyr::mutate(
@@ -171,8 +171,7 @@ gseid_srrid_variant_celltype |>
       SIMPLIFY = FALSE
     )
   ) |>
-  tidyr::unnest(n_colorful) ->
-gseid_srrid_variant_celltype_n
+  tidyr::unnest(n_colorful) -> gseid_srrid_variant_celltype_n
 
 
 gseid_srrid_variant_celltype_n |>
@@ -188,20 +187,28 @@ gseid_srrid_variant_celltype_n |>
   tidyr::unnest(cols = variant_celltype)
 
 
-
 # ? real somatic mutation --------------------------------------------------------------------
-
-
-ALLVARIANTS <- import(file.path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "all_variant.qs"
-)) |>
+# ALLVARIANTS <- import(file.path(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+#   "all_variant.qs"
+# )) |>
+#   dplyr::filter(
+#     issomatic == "heteroplasmic"
+#   )
+ALLVARIANTS <- dplyr::tbl(conn_all_hetero_af, "allvariants") |>
   dplyr::filter(
     issomatic == "heteroplasmic"
-  )
+  ) |>
+  dplyr::collect()
 
-META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
-  dplyr::select(gseid, srrid, Age_new, Age_group)
+META <- dplyr::tbl(conn_all_hetero_af, "meta") |>
+  dplyr::select(gseid, srrid, Age_new, Age_group) |>
+  dplyr::collect()
 
+# META <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
+# ) |>
+#   dplyr::select(gseid, srrid, Age_new, Age_group)
 
 gseid_srrid_variant_celltype_n |>
   dplyr::filter(
@@ -211,8 +218,7 @@ gseid_srrid_variant_celltype_n |>
   dplyr::filter(
     n_black >= 7,
     n_colorful < 6
-  ) ->
-somatic_variants
+  ) -> somatic_variants
 
 export(
   somatic_variants,
@@ -248,17 +254,20 @@ META |>
     )
   ) |>
   ggpubr::ggscatter(
-    x = "Age_new", y = "n",
-    color = "black", shape = 20, size = 3, # Points color, shape and size
+    x = "Age_new",
+    y = "n",
+    color = "black",
+    shape = 20,
+    size = 3, # Points color, shape and size
     add = "loess", # Add regressin line
     add.params = list(color = "blue", fill = "lightgray"), # Customize reg. line
     conf.int = TRUE, # Add confidence interval
     cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
     cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n"),
     jitter = 0.2,
-    xlab = "Age (years)", ylab = "Number of somatic variants",
-  ) ->
-p_real_somatic_variants_age
+    xlab = "Age (years)",
+    ylab = "Number of somatic variants",
+  ) -> p_real_somatic_variants_age
 
 p_real_somatic_variants_age |>
   ggplot2::ggsave(
@@ -266,10 +275,9 @@ p_real_somatic_variants_age |>
       "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
       "real_somatic_variants_age.pdf"
     ),
-    width = 8, height = 6
+    width = 8,
+    height = 6
   )
-
-
 
 
 # ? somatic mutation accumulation --------------------------------------------------------------------
@@ -318,12 +326,13 @@ gseid_srrid_variant_celltype_n |>
       Age_new_group,
       levels = c("30<", "30~40", "40~50", "50~60", "60~70", "70~80", ">=80")
     )
-  ) ->
-somatic_variants_age_group
+  ) -> somatic_variants_age_group
 
 somatic_variants_age_group |>
   dplyr::select(
-    Age_new_group, celltype, variant
+    Age_new_group,
+    celltype,
+    variant
   ) |>
   dplyr::distinct() |>
   dplyr::count(
@@ -345,8 +354,7 @@ somatic_variants_age_group |>
       celltype,
       levels = names(color_celltype)
     )
-  ) ->
-forplot_age_group
+  ) -> forplot_age_group
 
 # forplot_age_group |>
 # dplyr::filter(Age_group == "45~50") |>
@@ -381,15 +389,15 @@ forplot_age_group |>
   ) +
   labs(
     y = "Number of mutation",
-  ) ->
-p_somatic_variants_age_group
+  ) -> p_somatic_variants_age_group
 p_somatic_variants_age_group |>
   ggplot2::ggsave(
     filename = file.path(
       "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
       "real_somatic_variants_age_group.pdf"
     ),
-    width = 8, height = 6
+    width = 8,
+    height = 6
   )
 
 
@@ -408,7 +416,7 @@ somatic_variants |>
 thevariant <- "6967G>A"
 thesrrid <- "GSM7080026"
 fn_plot_somatic_variant <- function(thevariant, thesrrid) {
-  all_variant_cell_table |>
+  dplyr::tbl(conn_all_variant_cell, "all_variant_cell") |>
     dplyr::filter(
       srrid == thesrrid,
       variant == thevariant
@@ -433,10 +441,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     dplyr::arrange(
       variant_type,
       -af
-    ) ->
-  forplot_
-
-
+    ) -> forplot_
 
   forplot_ |>
     dplyr::mutate(
@@ -444,8 +449,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
         barcode,
         levels = forplot_$barcode
       )
-    ) ->
-  forplot
+    ) -> forplot
   source("analysis/00-colors.R")
 
   thetheme <- theme(
@@ -456,7 +460,6 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     axis.title.x = element_blank(),
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
   )
-
 
   forplot |>
     dplyr::mutate(
@@ -487,8 +490,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     # theme(panel.background = element_rect(color = "red")) +
     labs(
       y = "Cell Type",
-    ) ->
-  p1_celltype
+    ) -> p1_celltype
 
   forplot |>
     dplyr::mutate(
@@ -523,10 +525,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     ) +
     labs(
       y = "Allele Frequency",
-    ) ->
-  p2_af
-
-
+    ) -> p2_af
 
   forplot |>
     dplyr::mutate(
@@ -543,14 +542,17 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
       guide = "legend",
       name = "Variant cell",
       breaks = c("red", "darkblue", "gray", "white"),
-      labels = c("Heteroplasmy", "Suficcient reads", "No sufficient reads", "No reads")
+      labels = c(
+        "Heteroplasmy",
+        "Suficcient reads",
+        "No sufficient reads",
+        "No reads"
+      )
     ) +
     thetheme +
     labs(
       y = "Variant cells",
-    ) ->
-  p3_variant_cells
-
+    ) -> p3_variant_cells
 
   forplot |>
     dplyr::mutate(
@@ -581,8 +583,7 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     ) +
     labs(
       y = "Log2(Depth + 1)",
-    ) ->
-  p4_depth
+    ) -> p4_depth
 
   wrap_plots(
     p2_af,
@@ -597,25 +598,26 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
     guides = "collect"
   ) +
     plot_annotation(
-      title =
-        glue::glue(
-          "Variant {thevariant} in {thesrrid}"
-        ),
+      title = glue::glue(
+        "Variant {thevariant} in {thesrrid}"
+      ),
       theme = theme(
         plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
       )
-    ) ->
-  p_all
+    ) -> p_all
   # p_all
 
-  ggsave(
-    p_all,
-    filename = file.path(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
-      glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
-    ),
-    width = 13, height = 8
-  )
+  # ggsave(
+  #   p_all,
+  #   filename = file.path(
+  #     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
+  #     glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
+  #   ),
+  #   width = 13,
+  #   height = 8
+  # )
+
+  p_all
 }
 
 
@@ -624,8 +626,28 @@ fn_plot_somatic_variant("7757G>A", "GSM7437874")
 fn_plot_somatic_variant("12501G>A", "GSM5227130")
 
 srrid_variant_pairs <- data.frame(
-  srrid = c("GSM5227130", "GSM4905211", "GSM4905214", "GSM5494119", "GSM7493839", "GSM4670210", "GSM4670211", "GSM7080026", "GSM7437874"),
-  variant = c("12501G>A", "1314C>T", "1314C>T", "13271T>C", "13271T>C", "14530T>C", "14530T>C", "6967G>A", "7757G>A")
+  srrid = c(
+    "GSM5227130",
+    "GSM4905211",
+    "GSM4905214",
+    "GSM5494119",
+    "GSM7493839",
+    "GSM4670210",
+    "GSM4670211",
+    "GSM7080026",
+    "GSM7437874"
+  ),
+  variant = c(
+    "12501G>A",
+    "1314C>T",
+    "1314C>T",
+    "13271T>C",
+    "13271T>C",
+    "14530T>C",
+    "14530T>C",
+    "6967G>A",
+    "7757G>A"
+  )
 )
 srrid_variant_pairs |>
   dplyr::mutate(
@@ -645,8 +667,9 @@ fn_plot_mtdna <- function() {
 
   LENGTH <- 16569
   # rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
-  gtf_gene_df <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
-
+  gtf_gene_df <- import(
+    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+  )
 
   library(gggenes)
   ggplot(
@@ -662,7 +685,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = COLOR
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm"),
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm"),
     ) +
     scale_fill_identity(
       name = "Gene type",
@@ -746,8 +770,7 @@ somatic_variants |>
       variant
     ) |>
       as.integer()
-  ) ->
-forplot_somatic_variant_hotspot
+  ) -> forplot_somatic_variant_hotspot
 forplot_somatic_variant_hotspot |>
   ggplot(aes(
     x = pos,
@@ -827,8 +850,7 @@ forplot_somatic_variant_hotspot |>
   ) +
   labs(
     y = "Number of somatic variants",
-  ) ->
-p_somatic_variant_hotspot
+  ) -> p_somatic_variant_hotspot
 
 
 wrap_plots(
@@ -851,7 +873,8 @@ ggsave(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
     "somatic_variant_hotspot.pdf"
   ),
-  width = 12, height = 6
+  width = 12,
+  height = 6
 )
 # footer ------------------------------------------------------------------
 
