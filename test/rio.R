@@ -425,3 +425,58 @@ DBI::dbWriteTable(
   overwrite = TRUE,
   temporary = FALSE
 )
+
+
+d <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+)
+
+
+d |> dplyr::glimpse()
+d$gseid[[1]] |>
+  jsonlite::toJSON(auto_unbox = TRUE, null = "null") |>
+  jsonlite::fromJSON()
+
+d$haplo_violin[[1]] |> jsonlite::toJSON(auto_unbox = TRUE, null = "null") -> m
+
+jsonlite::fromJSON(m)
+
+d |>
+  # dplyr::select(1:7) |>
+  dplyr::mutate_if(
+    dplyr::where(is.list),
+    ~ {
+      parallel::mclapply(
+        X = .x,
+        FUN = \(.xx) {
+          jsonlite::toJSON(.xx, auto_unbox = TRUE, null = "null")
+        },
+        mc.cores = 20
+      )
+    }
+  ) -> dd
+
+DBI::dbListTables(conn_all_hetero_af)
+
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "gse_data",
+  dd,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+
+dplyr::tbl(conn_all_hetero_af, "gse_data") |>
+  dplyr::collect() |>
+  dplyr::mutate(
+    metrics = purrr::map(
+      .x = metrics,
+      ~ jsonlite::fromJSON(.x)
+    )
+  ) -> ddd
+
+dplyr::tbl(conn_all_hetero_af) |>
+  dplyr::tbl("gseid_srrid_variant") |>
+  dplyr::collect() |>
+
+

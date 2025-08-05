@@ -58,6 +58,9 @@ conn_all_hetero_af <- DBI::dbConnect(
 )
 DBI::dbListTables(conn_all_hetero_af)
 
+conn_all_hetero_af |>
+  dplyr::tbl("gseid_srrid_variant")
+
 tbl_allvariants <- conn_all_hetero_af |>
   dplyr::tbl("allvariants")
 
@@ -281,17 +284,6 @@ fn_plot_somatic_variant <- function(thevariant, thesrrid) {
         plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
       )
     ) -> p_all
-  # p_all
-
-  # ggsave(
-  #   p_all,
-  #   filename = file.path(
-  #     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant",
-  #     glue::glue("somatic_variant_{thevariant}_{thesrrid}.pdf")
-  #   ),
-  #   width = 13,
-  #   height = 8
-  # )
 
   p_all
 }
