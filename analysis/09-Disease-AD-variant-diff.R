@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad"
@@ -62,7 +59,9 @@ gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs") |>
+all_variant <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
+) |>
   dplyr::select(variant, issomatic)
 
 all_hetero_af_cluster <- import(
@@ -86,40 +85,39 @@ all_hetero_af_bulk <- import(
 all_hetero_af_cluster |>
   dplyr::bind_rows(
     all_hetero_af_bulk
-  ) ->
-all_hetero_af_cluster_bulk
+  ) -> all_hetero_af_cluster_bulk
 
 # body --------------------------------------------------------------------
-
 
 gse_dataset_metadata_full |>
   dplyr::filter(
     disease %in% c("Healthy", "Alzheimer's Disease")
   ) |>
   dplyr::select(
-    gseid, srrid, Chemistry, disease
-  ) ->
-admeta
+    gseid,
+    srrid,
+    Chemistry,
+    disease
+  ) -> admeta
 
 admeta |>
   dplyr::count(
-    disease, Chemistry
+    disease,
+    Chemistry
   )
 
 admeta |>
   dplyr::filter(
     # Chemistry %in% c("SC5P-PE", "SC5P-R2")
     Chemistry == "SC5P-PE"
-  ) ->
-admeta_sc5p
+  ) -> admeta_sc5p
 
 
 admeta_sc5p |>
   dplyr::left_join(
     gse_data,
     by = c("gseid", "srrid")
-  ) ->
-admeta_sc5p_variant
+  ) -> admeta_sc5p_variant
 
 admeta_sc5p_variant |>
   dplyr::mutate(
@@ -139,11 +137,12 @@ admeta_sc5p_variant |>
     )
   ) |>
   dplyr::select(
-    gseid, srrid, Chemistry, disease, variant_type
-  ) ->
-admeta_sc5p_variant_type
-
-
+    gseid,
+    srrid,
+    Chemistry,
+    disease,
+    variant_type
+  ) -> admeta_sc5p_variant_type
 
 
 # ! compare variant between AD and healthy --------------------------------------------------------------------
@@ -154,17 +153,19 @@ admeta_sc5p_variant_type |>
     issomatic == "heteroplasmic"
   ) |>
   dplyr::select(
-    srrid, disease, variant
+    srrid,
+    disease,
+    variant
   ) |>
   dplyr::left_join(
     all_hetero_af_cluster_bulk,
     by = c("srrid", "variant")
-  ) ->
-admeta_sc5p_variant_type_af
+  ) -> admeta_sc5p_variant_type_af
 
 admeta_sc5p_variant_type_af |>
   dplyr::group_by(
-    variant, barcode
+    variant,
+    barcode
   ) |>
   tidyr::nest() |>
   dplyr::ungroup() |>
@@ -177,8 +178,7 @@ admeta_sc5p_variant_type_af |>
           tidyr::pivot_wider(
             names_from = disease,
             values_from = n
-          ) ->
-        .xx
+          ) -> .xx
         tryCatch(
           expr = {
             t.test(
@@ -188,7 +188,12 @@ admeta_sc5p_variant_type_af |>
             ) |>
               broom::tidy() |>
               dplyr::select(
-                estimate, estimate1, estimate2, p.value, conf.low, conf.high
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
               ) |>
               dplyr::bind_cols(
                 .xx
@@ -204,17 +209,17 @@ admeta_sc5p_variant_type_af |>
       mc.cores = 10,
       SIMPLIFY = FALSE
     )
-  ) ->
-admeta_sc5p_variant_type_af_ttest
+  ) -> admeta_sc5p_variant_type_af_ttest
 
 export(
   admeta_sc5p_variant_type_af_ttest,
   file = file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"),
   format = "qs"
 )
-admeta_sc5p_variant_type_af_ttest <- import(file.path(outdir, "admeta_sc5p_variant_type_af_ttest.qs"))
-
-
+admeta_sc5p_variant_type_af_ttest <- import(file.path(
+  outdir,
+  "admeta_sc5p_variant_type_af_ttest.qs"
+))
 
 
 admeta_sc5p_variant_type_af_ttest |>
@@ -237,15 +242,12 @@ admeta_sc5p_variant_type_af_ttest |>
   dplyr::filter(
     ad >= 10,
     Healthy >= 10
-  ) ->
-admeta_sc5p_variant_type_af_ttest_rank
-
+  ) -> admeta_sc5p_variant_type_af_ttest_rank
 
 
 admeta_sc5p_variant_type_af_ttest_rank |>
   dplyr::filter(estimate > 0.03) |>
-  dplyr::arrange(variant) ->
-top5_variant
+  dplyr::arrange(variant) -> top5_variant
 
 topvariants <- c("1397T>A", "1670A>G", "3173G>A", "3176A>T", "3178T>A")
 
@@ -279,7 +281,10 @@ admeta_sc5p_variant_type_af_ttest |>
     barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
   ) |>
   dplyr::mutate(
-    barcode = factor(barcode, levels = names(color_celltype_bulk)),
+    barcode = factor(
+      barcode,
+      levels = names(color_celltype_bulk)
+    ),
   ) |>
   dplyr::mutate(
     point_color = ifelse(
@@ -294,8 +299,7 @@ admeta_sc5p_variant_type_af_ttest |>
       variant,
       NA
     ),
-  ) ->
-forplot_test
+  ) -> forplot_test
 
 forplot_test |>
   ggplot(aes(
@@ -380,8 +384,7 @@ forplot_test |>
   labs(
     y = "-log10(p-value)",
     x = "Effect Size (AD - Healthy)",
-  ) ->
-p_variant_boxplot_af_sc_ttest
+  ) -> p_variant_boxplot_af_sc_ttest
 ggsave(
   filename = file.path(outdir, "ad-variant_pointplot-ttest-all.pdf"),
   plot = p_variant_boxplot_af_sc_ttest,
@@ -389,8 +392,6 @@ ggsave(
   height = 3.5,
   device = cairo_pdf
 )
-
-
 
 
 #
@@ -402,8 +403,7 @@ admeta_sc5p_variant_type_af |>
   ) |>
   dplyr::mutate(
     barcode = factor(barcode, levels = names(color_celltype_bulk)),
-  ) ->
-forplot_
+  ) -> forplot_
 
 
 forplot_ |>
@@ -503,8 +503,7 @@ forplot_ |>
   ) +
   labs(
     y = "Allele Frequency",
-  ) ->
-p_variant_boxplot_af
+  ) -> p_variant_boxplot_af
 
 ggsave(
   filename = file.path(outdir, "ad-variant_boxplot.pdf"),
@@ -513,7 +512,6 @@ ggsave(
   height = 8,
   device = cairo_pdf
 )
-
 
 
 # ! single cell level --------------------------------------------------------------------
@@ -535,8 +533,7 @@ variant_sc_af |>
   dplyr::left_join(
     admeta_sc5p,
     by = c("gseid", "srrid")
-  ) ->
-topvariant_sc_af_meta
+  ) -> topvariant_sc_af_meta
 
 BARCODES <- import(
   file.path(
@@ -559,8 +556,7 @@ topvariant_sc_af_meta |>
   ) |>
   dplyr::mutate(
     celltype = factor(celltype, levels = names(color_celltype)),
-  ) ->
-forplot_sc
+  ) -> forplot_sc
 
 forplot_sc |>
   ggplot(aes(x = disease)) +
@@ -654,8 +650,7 @@ forplot_sc |>
   ) +
   labs(
     y = "Allele Frequency",
-  ) ->
-p_variant_boxplot_af_sc
+  ) -> p_variant_boxplot_af_sc
 
 # ggsave(
 #   filename = file.path(outdir, "ad-variant_boxplot-single-cell.pdf"),
@@ -664,7 +659,6 @@ p_variant_boxplot_af_sc
 #   height = 8,
 #   device = "pdf"
 # )
-
 
 ggsave(
   filename = file.path(outdir, "ad-variant_boxplot-single-cell.png"),
@@ -691,7 +685,9 @@ forplot_ |>
     values_from = af
   ) |>
   dplyr::relocate(
-    gseid, srrid, disease,
+    gseid,
+    srrid,
+    disease,
     .before = 1
   ) -> df
 
@@ -704,8 +700,6 @@ forplot_ |>
 #       "ad-celltype-variant-af-gse-srrid.csv"
 #     )
 #   )
-
-
 
 df |>
   # dplyr::nest_by(variant) |>
@@ -755,8 +749,7 @@ df |>
             celltype
           ) |>
           tidyr::nest(.key = "af") |>
-          dplyr::ungroup() ->
-        .yy
+          dplyr::ungroup() -> .yy
         export(
           x = .yy,
           file = outfilename
@@ -764,11 +757,6 @@ df |>
       }
     )
   )
-
-
-
-
-
 
 # footer ------------------------------------------------------------------
 

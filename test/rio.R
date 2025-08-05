@@ -562,3 +562,40 @@ DBI::dbWriteTable(
 # )
 
 DBI::dbListTables(conn_all_hetero_af)
+all_hetero_af_bulk <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.bulk.fst"
+) |>
+  dplyr::select(-num_variants) |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, barcode),
+    names_to = "variant",
+    values_to = "af"
+  )
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "all_hetero_af_bulk",
+  all_hetero_af_bulk,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+all_hetero_af_cluster <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.cluster.fst"
+) |>
+  dplyr::select(-num_variants) |>
+  tidyr::pivot_longer(
+    cols = -c(gseid, srrid, barcode),
+    names_to = "variant",
+    values_to = "af"
+  )
+DBI::dbListTables(conn_all_hetero_af)
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "all_hetero_af_cluster",
+  all_hetero_af_cluster,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+
+
+DBI::dbListTables(conn_all_hetero_af)
+dplyr::tbl(conn_all_hetero_af, "all_hetero_sumdepth_cell")
