@@ -552,3 +552,13 @@ DBI::dbWriteTable(
   overwrite = TRUE,
   temporary = FALSE
 )
+
+# DBI::dbListTables(conn_all_hetero_af)
+# DBI::dbExecute(
+#   conn_all_hetero_af,
+#   "
+#   ALTER TABLE allvariant_cell RENAME TO allvariants_cell
+# "
+# )
+
+DBI::dbListTables(conn_all_hetero_af)
