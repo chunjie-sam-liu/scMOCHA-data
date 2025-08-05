@@ -479,5 +479,63 @@ dplyr::tbl(conn_all_hetero_af) |>
   dplyr::tbl("gseid_srrid_variant") |>
   dplyr::collect()
 
-conn_all_hetero_af |>
+conn_all_hetero_af |> DBI::dbListTables()
+
+# for somatic plot
+tbl_gseid_srrid_variant <- conn_all_hetero_af |>
   dplyr::tbl("gseid_srrid_variant")
+
+
+tbl_gseid_srrid_variant |>
+  dplyr::collect() |>
+  dplyr::mutate(
+    a = purrr::map(
+      .x = variant_alltype,
+      ~ {
+        jsonlite::fromJSON(.x) |>
+          purrr::pluck("heteroplasmic_variant") -> .v
+        if (length(.v) == 0) {
+          return(NULL)
+        } else {
+          return(tibble::tibble(variant = .v))
+        }
+      }
+    )
+  ) |>
+  dplyr::select(-variant_alltype) |>
+  tidyr::unnest(cols = c(a)) -> gseid_srrid_variant_hetero
+
+
+gseid_srrid_variant_hetero |>
+  # head(5) |>
+  dplyr::mutate(
+    forplot = parallel::mcmapply(
+      FUN = \(
+        thevariant,
+        thesrrid
+      ) {
+        .d <- fn_forplot(thevariant, thesrrid)
+        # jsonlite::toJSON(.d, auto_unbox = TRUE, null = "null")
+      },
+      thevariant = variant,
+      thesrrid = srrid,
+      mc.cores = 20,
+      SIMPLIFY = FALSE
+    )
+  ) -> gseid_srrid_variant_hetero_somatic_forplot
+
+
+gseid_srrid_variant_hetero_somatic_forplot |>
+  dplyr::select(forplot) |>
+  tidyr::unnest(
+    cols = c(forplot)
+  ) -> gseid_srrid_variant_hetero_somatic_forplot_
+
+DBI::dbListTables(conn_all_hetero_af)
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "gseid_srrid_variant_hetero_somatic_forplot",
+  gseid_srrid_variant_hetero_somatic_forplot_,
+  overwrite = TRUE,
+  temporary = FALSE
+)
