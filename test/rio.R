@@ -515,7 +515,7 @@ gseid_srrid_variant_hetero |>
         thesrrid
       ) {
         .d <- fn_forplot(thevariant, thesrrid)
-        # jsonlite::toJSON(.d, auto_unbox = TRUE, null = "null")
+        jsonlite::toJSON(.d, auto_unbox = TRUE, null = "null")
       },
       thevariant = variant,
       thesrrid = srrid,
@@ -525,17 +525,30 @@ gseid_srrid_variant_hetero |>
   ) -> gseid_srrid_variant_hetero_somatic_forplot
 
 
-gseid_srrid_variant_hetero_somatic_forplot |>
-  dplyr::select(forplot) |>
-  tidyr::unnest(
-    cols = c(forplot)
-  ) -> gseid_srrid_variant_hetero_somatic_forplot_
+# gseid_srrid_variant_hetero_somatic_forplot |>
+#   dplyr::select(forplot) |>
+#   tidyr::unnest(
+#     cols = c(forplot)
+#   ) -> gseid_srrid_variant_hetero_somatic_forplot_
 
 DBI::dbListTables(conn_all_hetero_af)
 DBI::dbWriteTable(
   conn_all_hetero_af,
   "gseid_srrid_variant_hetero_somatic_forplot",
-  gseid_srrid_variant_hetero_somatic_forplot_,
+  gseid_srrid_variant_hetero_somatic_forplot,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+DBI::dbListTables(conn_all_variant_cell)
+conn_all_variant_cell |>
+  dplyr::tbl("all_variant_cell")
+
+DBI::dbListTables(conn_all_variant_cell)
+# copy table all_variant_cell in  conn_all_variant_cell in to conn_all_hetero_af
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "all_variant_cell",
+  dplyr::tbl(conn_all_variant_cell, "all_variant_cell") |> dplyr::collect(),
   overwrite = TRUE,
   temporary = FALSE
 )
