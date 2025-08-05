@@ -477,6 +477,7 @@ dplyr::tbl(conn_all_hetero_af, "gse_data") |>
 
 dplyr::tbl(conn_all_hetero_af) |>
   dplyr::tbl("gseid_srrid_variant") |>
-  dplyr::collect() |>
+  dplyr::collect()
 
-
+conn_all_hetero_af |>
+  dplyr::tbl("gseid_srrid_variant")
