@@ -48,3 +48,10 @@ color_mtdna_gene_type <- c(
   "Protein coding" = "#BEBADA",
   "MT OLR" = "#FDB462"
 )
+
+color_variantcell <- c(
+  "Heteroplasmy" = "red",
+  "Sufficient reads" = "darkblue",
+  "No sufficient reads" = "gray",
+  "No reads" = "white"
+)

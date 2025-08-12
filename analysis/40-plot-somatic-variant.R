@@ -94,14 +94,12 @@ tbl_gseid_srrid_variant |>
 fn_forplot <- function(thevariant, thesrrid) {
   source("analysis/00-colors.R")
 
-  colorcode <- c(
-    "darkblue" = "Sufficient reads",
-    "red" = "Heteroplasmy",
-    "gray" = "No sufficient reads",
-    "white" = "No reads"
-  )
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
 
-  dplyr::tbl(conn_all_variant_cell, "all_variant_cell") |>
+  dplyr::tbl(
+    conn_all_variant_cell,
+    "all_variant_cell"
+  ) |>
     dplyr::filter(
       srrid == thesrrid,
       variant == thevariant
@@ -120,7 +118,7 @@ fn_forplot <- function(thevariant, thesrrid) {
     dplyr::mutate(
       variant_type = factor(
         variant_type,
-        levels = c("red", "darkblue", "gray", "white")
+        levels = color_variantcell
       )
     ) |>
     dplyr::arrange(
@@ -175,12 +173,7 @@ fn_forplot <- function(thevariant, thesrrid) {
 fn_plot_somatic_variant <- function(forplot_) {
   source("analysis/00-colors.R")
 
-  colorcode <- c(
-    "darkblue" = "Sufficient reads",
-    "red" = "Heteroplasmy",
-    "gray" = "No sufficient reads",
-    "white" = "No reads"
-  )
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
   thetheme <- theme(
     panel.background = element_blank(),
     panel.grid = element_blank(),
@@ -361,41 +354,193 @@ fn_plot_somatic_variant <- function(forplot_) {
 
   p_all
 }
+fn_cellvarianttype <- function(forplot) {
+  source("analysis/00-colors.R")
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
 
-fn_plot <- function(thevariant, thesrrid) {
-  {
-    #
-    forplot <- fn_forplot(thevariant, thesrrid)
-    p_all <- fn_plot_somatic_variant(forplot)
-    colorcode <- c(
-      "darkblue" = "Sufficient reads",
-      "red" = "Heteroplasmy",
-      "gray" = "No sufficient reads",
-      "white" = "No reads"
-    )
-
-    forplot |>
-      dplyr::mutate(
-        color = as.character(variant_type),
-      ) |>
-      dplyr::count(color) |>
-      dplyr::mutate(
-        varianttype = colorcode[color]
-      ) |>
-      dplyr::mutate(
-        varianttype = factor(
-          varianttype,
-          levels = colorcode
-        )
-      ) |>
-      dplyr::arrange(varianttype) -> cellvarianttype
-
-    tibble::tibble(
-      plot = list(p_all),
-      cellvarianttype = list(cellvarianttype),
-    )
-  }
+  forplot |>
+    dplyr::mutate(
+      color = as.character(variant_type),
+    ) |>
+    dplyr::count(color) |>
+    dplyr::mutate(
+      varianttype = colorcode[color]
+    ) |>
+    dplyr::mutate(
+      varianttype = factor(
+        varianttype,
+        levels = colorcode
+      )
+    ) |>
+    dplyr::arrange(varianttype) -> cellvarianttype
 }
+fn_cellvarianttype_ratio <- function(.x) {
+  .x |>
+    dplyr::select(n, varianttype) |>
+    tidyr::pivot_wider(
+      names_from = varianttype,
+      values_from = n,
+      values_fill = 0,
+      names_prefix = "count_"
+    ) |>
+    dplyr::mutate(
+      count_total = sum(dplyr::across(starts_with("count_")))
+    ) -> .xx
+  .x |>
+    dplyr::mutate(
+      ratio = n / sum(n)
+    ) |>
+    dplyr::select(
+      varianttype,
+      ratio
+    ) |>
+    tidyr::pivot_wider(
+      names_from = varianttype,
+      values_from = ratio,
+      values_fill = 0,
+      names_prefix = "ratio_"
+    ) -> .xxx
+  .xx |> dplyr::bind_cols(.xxx)
+}
+fn_plot <- function(thevariant, thesrrid) {
+  #
+  forplot <- fn_forplot(thevariant, thesrrid)
+  p_all <- fn_plot_somatic_variant(forplot)
+  cellvarianttype <- fn_cellvarianttype(forplot)
+
+  tibble::tibble(
+    plot = list(p_all),
+    cellvarianttype = list(cellvarianttype),
+  )
+}
+
+fn_plot_variant_ratio <- function(.d) {
+  source("analysis/00-colors.R")
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
+  .d |>
+    dplyr::mutate(
+      varianttype = factor(
+        varianttype,
+        levels = names(color_variantcell) |>
+          rev()
+      )
+    ) |>
+    dplyr::group_by(
+      srrid,
+    ) |>
+    dplyr::mutate(
+      ratio = count / sum(count)
+    ) |>
+    dplyr::ungroup() -> .d_forplot
+
+  .d_forplot |>
+    dplyr::filter(
+      varianttype == "Heteroplasmy"
+    ) |>
+    dplyr::arrange(ratio) |>
+    dplyr::pull(srrid) -> rank_srrid
+
+  .d_forplot |>
+    dplyr::group_by(srrid) |>
+    dplyr::summarise(
+      count = sum(count),
+      .groups = "drop"
+    ) |>
+    dplyr::pull(count) |>
+    quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
+
+  .d_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = count,
+    )) +
+    geom_col(
+      aes(
+        fill = varianttype
+      ),
+      position = "stack"
+    ) +
+    scale_fill_manual(
+      name = "Variant cell",
+      values = color_variantcell
+    ) +
+    scale_x_discrete(
+      limits = rank_srrid,
+    ) +
+    scale_y_continuous(
+      limits = c(0, count_quantiles["100%"]),
+      expand = expansion(mult = c(0.005, 0.03)),
+      labels = scales::label_comma()
+    ) +
+    theme(
+      # panel.background = element_blank(),
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      axis.line = element_line(color = "black"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    ) +
+    labs(y = "# of cell") -> p_count
+
+  .d_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = ratio,
+    )) +
+    geom_col(
+      aes(
+        fill = varianttype
+      ),
+      position = "stack"
+    ) +
+    # scale_fill_manual(
+    #   name = "Cell Type",
+    #   values = RColorBrewer::brewer.pal(8, "Set2")
+    # ) +
+    scale_fill_manual(
+      name = "Variant cell",
+      values = color_variantcell
+    ) +
+    scale_y_continuous(
+      expand = expansion(add = c(0.005, 0.01)),
+      labels = scales::percent_format(accuracy = 1)
+    ) +
+    scale_x_discrete(
+      limits = rank_srrid,
+    ) +
+    theme(
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      # axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      axis.line = element_line(color = "black"),
+    ) +
+    labs(y = "Cell ratio") -> p_ratio
+
+  wrap_plots(
+    p_ratio,
+    p_count,
+    ncol = 1,
+    heights = c(1, 1),
+    guides = "collect"
+  )
+}
+
 
 # body --------------------------------------------------------------------
 thevariant <- "3173G>A"
@@ -420,30 +565,32 @@ gseid_srrid_variant_hetero |>
     )
   ) -> gseid_srrid_variant_hetero_plot
 
-
-gseid_srrid_variant_hetero_plot |>
-  tidyr::unnest(cols = c(p)) |>
-  dplyr::mutate(
-    # save image to /home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants
-    a = parallel::mcmapply(
-      FUN = \(.gseid, .srrid, .variant, .p) {
-        .filename = "{.gseid}_{.srrid}_{.variant}.pdf" |> glue::glue()
-        ggsave(
-          plot = .p,
-          filename = .filename,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
-          width = 13,
-          height = 8
-        )
-      },
-      .gseid = gseid,
-      .srrid = srrid,
-      .variant = variant,
-      .p = plot,
-      SIMPLIFY = FALSE,
-      mc.cores = 20
-    )
-  ) -> gseid_srrid_variant_hetero_plot_save
+# save image
+{
+  gseid_srrid_variant_hetero_plot |>
+    tidyr::unnest(cols = c(p)) |>
+    dplyr::mutate(
+      # save image to /home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants
+      a = parallel::mcmapply(
+        FUN = \(.gseid, .srrid, .variant, .p) {
+          .filename = "{.gseid}_{.srrid}_{.variant}.pdf" |> glue::glue()
+          ggsave(
+            plot = .p,
+            filename = .filename,
+            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
+            width = 13,
+            height = 8
+          )
+        },
+        .gseid = gseid,
+        .srrid = srrid,
+        .variant = variant,
+        .p = plot,
+        SIMPLIFY = FALSE,
+        mc.cores = 20
+      )
+    ) -> gseid_srrid_variant_hetero_plot_save
+}
 
 
 gseid_srrid_variant_hetero_plot |>
@@ -451,34 +598,7 @@ gseid_srrid_variant_hetero_plot |>
   dplyr::mutate(
     ratio = purrr::map(
       .x = cellvarianttype,
-      ~ {
-        .x |>
-          dplyr::select(n, varianttype) |>
-          tidyr::pivot_wider(
-            names_from = varianttype,
-            values_from = n,
-            values_fill = 0,
-            names_prefix = "count_"
-          ) |>
-          dplyr::mutate(
-            count_total = sum(dplyr::across(starts_with("count_")))
-          ) -> .xx
-        .x |>
-          dplyr::mutate(
-            ratio = n / sum(n)
-          ) |>
-          dplyr::select(
-            varianttype,
-            ratio
-          ) |>
-          tidyr::pivot_wider(
-            names_from = varianttype,
-            values_from = ratio,
-            values_fill = 0,
-            names_prefix = "ratio_"
-          ) -> .xxx
-        .xx |> dplyr::bind_cols(.xxx)
-      }
+      fn_cellvarianttype_ratio
     )
   ) |>
   tidyr::unnest(cols = c(ratio)) -> gseid_srrid_variant_hetero_plot_ratio
@@ -487,6 +607,7 @@ gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::select(-c(plot, cellvarianttype)) |>
   dplyr::group_by(variant) |>
   dplyr::slice_max(order_by = ratio_Heteroplasmy, n = 1) |>
+  dplyr::ungroup() |>
   dplyr::select(gseid, srrid, variant, ratio_Heteroplasmy, count_total)
 
 
@@ -494,7 +615,6 @@ gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::select(-c(plot, cellvarianttype)) |>
   dplyr::filter(variant == "3727T>C", srrid == "GSM7493836") |>
   dplyr::glimpse()
-
 
 gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::filter(variant == "3727T>C") |>
@@ -507,41 +627,7 @@ gseid_srrid_variant_hetero_plot_ratio |>
     names_prefix = "count_"
   ) |>
   dplyr::filter(varianttype != "total") |>
-  dplyr::mutate(
-    varianttype = factor(
-      varianttype,
-      levels = c(
-        "Heteroplasmy",
-        "Sufficient reads",
-        "No sufficient reads",
-        "No reads"
-      ) |>
-        rev()
-    )
-  ) |>
-  ggplot(aes(
-    x = srrid,
-    y = count,
-    fill = varianttype
-  )) +
-  geom_col() +
-  scale_fill_manual(
-    name = "Variant cell",
-    values = c(
-      "Heteroplasmy" = "red",
-      "Sufficient reads" = "darkblue",
-      "No sufficient reads" = "gray",
-      "No reads" = "white"
-    )
-  ) +
-  theme(
-    # panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.ticks = element_blank(),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    axis.title.x = element_blank(),
-    plot.margin = margin(t = 0, b = 0, unit = "cm"),
-  ) -> p_3727T_C
+  fn_plot_variant_ratio() -> p_3727T_C
 ggsave(
   plot = p_3727T_C,
   filename = "3727T_C.pdf",
