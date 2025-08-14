@@ -58,8 +58,8 @@ conn_all_hetero_af <- DBI::dbConnect(
 )
 DBI::dbListTables(conn_all_hetero_af)
 
-conn_all_hetero_af |>
-  dplyr::tbl("gseid_srrid_variant")
+# conn_all_hetero_af |>
+#   dplyr::tbl("gseid_srrid_variant")
 
 tbl_allvariants <- conn_all_hetero_af |>
   dplyr::tbl("allvariants")
@@ -417,6 +417,13 @@ fn_plot <- function(thevariant, thesrrid) {
 fn_plot_variant_ratio <- function(.d) {
   source("analysis/00-colors.R")
   colorcode <- setNames(names(color_variantcell), color_variantcell)
+
+  .n_gse <- unique(.d$gseid) |> length()
+  .n_srr <- unique(.d$srrid) |> length()
+  .n_cells <- sum(.d$count)
+  .variant <- unique(.d$variant)
+  # scales::label_comma()(.n_srr)
+
   .d |>
     dplyr::mutate(
       varianttype = factor(
@@ -538,7 +545,16 @@ fn_plot_variant_ratio <- function(.d) {
     ncol = 1,
     heights = c(1, 1),
     guides = "collect"
-  )
+  ) +
+    plot_annotation(
+      title = "{.variant} in {.n_gse} projects and {scales::label_comma()(.n_srr)} samples and {scales::label_comma()(.n_cells)} cells" |>
+        glue::glue(),
+      theme = theme(
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        # legend.position = "bottom",
+        # legend.direction = "horizontal",
+      )
+    )
 }
 
 
@@ -577,7 +593,7 @@ gseid_srrid_variant_hetero |>
           ggsave(
             plot = .p,
             filename = .filename,
-            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
+            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/individual_variant",
             width = 13,
             height = 8
           )
@@ -616,8 +632,8 @@ gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::filter(variant == "3727T>C", srrid == "GSM7493836") |>
   dplyr::glimpse()
 
+
 gseid_srrid_variant_hetero_plot_ratio |>
-  dplyr::filter(variant == "3727T>C") |>
   dplyr::select(-c(plot, cellvarianttype)) |>
   dplyr::select(gseid, srrid, variant, dplyr::contains("count_")) |>
   tidyr::pivot_longer(
@@ -627,14 +643,46 @@ gseid_srrid_variant_hetero_plot_ratio |>
     names_prefix = "count_"
   ) |>
   dplyr::filter(varianttype != "total") |>
-  fn_plot_variant_ratio() -> p_3727T_C
-ggsave(
-  plot = p_3727T_C,
-  filename = "3727T_C.pdf",
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T_C",
-  width = 10,
-  height = 6
-)
+  tidyr::nest(
+    .by = variant,
+    .key = "ratio"
+  ) |>
+  dplyr::mutate(
+    p = purrr::map2(
+      .x = variant,
+      .y = ratio,
+      ~ {
+        .y |> dplyr::mutate(variant = .x) -> .d
+        fn_plot_variant_ratio(.d) -> .p
+        .p
+      }
+    )
+  ) -> gseid_srrid_variant_hetero_plot_ratio_plot
+
+
+# save plots
+gseid_srrid_variant_hetero_plot_ratio_plot |>
+  dplyr::mutate(
+    a = purrr::map2(
+      .x = variant,
+      .y = p,
+      ~ {
+        .dir <- glue::glue(
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.x}"
+        )
+        if (dir.exists(.dir) == FALSE) {
+          dir.create(.dir, recursive = TRUE)
+        }
+        ggsave(
+          plot = .y,
+          filename = glue::glue("{.x}-individual-cell-variant-proportion.pdf"),
+          path = .dir,
+          width = 10,
+          height = 6
+        )
+      }
+    )
+  )
 
 # footer ------------------------------------------------------------------
 
