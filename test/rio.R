@@ -599,3 +599,27 @@ DBI::dbWriteTable(
 
 DBI::dbListTables(conn_all_hetero_af)
 dplyr::tbl(conn_all_hetero_af, "all_hetero_sumdepth_cell")
+
+
+# ? expression --------------------------------------------------------------------
+packageVersion("duckdb")
+duckdbversion <- packageVersion("duckdb")
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB/expr.duckdb.{duckdbversion}" |>
+    glue::glue()
+)
+DBI::dbListTables(conn)
+expr_celltype <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
+) |>
+  tidyr::unnest(cols = expr)
+
+DBI::dbWriteTable(
+  conn = conn,
+  name = "gse_srrid_celltype_gene_expr",
+  value = expr_celltype,
+  temporary = FALSE,
+  overwrite = TRUE,
+)
+DBI::dbDisconnect(conn = conn, shutdown = TRUE)
