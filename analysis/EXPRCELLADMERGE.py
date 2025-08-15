@@ -11,7 +11,6 @@ import concurrent.futures
 from pathlib import Path
 
 import anndata as ad
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import polars as pl
@@ -20,7 +19,7 @@ import typer
 from rich import print
 from tqdm import tqdm
 
-OUTDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPR")
+OUTDIR = Path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/EXPRMERGE")
 SRR_FILENAME = Path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )

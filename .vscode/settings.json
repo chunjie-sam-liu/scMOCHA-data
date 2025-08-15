@@ -23,17 +23,18 @@
   "search.exclude": {
     "**/.git/": true,
     "**/.Rproj.user": true,
-    "**/.vscode/": true,
-    "**/data/": true
+    "**/data/": true,
+    "**/zzz/": true
   },
   "files.watcherExclude": {
     "data/": true,
     ".ruff_cache/": true,
-    ".venv/": true
+    ".venv/": true,
+    "**/data/": true,
+    "**/zzz/": true
   },
   "files.exclude": {
     // "**/data": true
-    "**/data/": true,
     "**/.ruff_cache/": true,
     "**/.venv/": true
   },
@@ -43,7 +44,22 @@
   "python-envs.defaultPackageManager": "ms-python.python:conda",
   "python-envs.pythonProjects": [],
   "chat.agent.enabled": true,
-  "chat.tools.autoApprove": true,
+  "chat.tools.terminal.autoApprove": {
+    // Auto-approve terminal commands
+    "/^Remove-Item\\b/i": false, // Don't auto-approve Remove-Item
+    "mkdir": true,
+    "ls": true,
+    "cd": true,
+    "pwd": true,
+    "cp": true,
+    "mv": true,
+    "rm": false, // Don't auto-approve rm
+    "rmdir": false, // Don't auto-approve rmdir
+    "/^git (status|show)\\b/": true,
+    "conda": true,
+    "python": true,
+    "timeout": true
+  },
   "dbcode.connections": [
     {
       "connectionId": "NqZcZoWzpvaeT7EQqBoB2",
