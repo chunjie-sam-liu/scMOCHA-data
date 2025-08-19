@@ -109,7 +109,7 @@ fn_forplot <- function(thevariant, thesrrid) {
 
   dplyr::tbl(
     conn_all_hetero_af,
-    "all_variant_cell"
+    "allvariants_cell"
   ) |>
     dplyr::filter(
       srrid == thesrrid,
@@ -424,10 +424,13 @@ fn_plot <- function(thevariant, thesrrid) {
     cellvarianttype = list(cellvarianttype),
   )
 }
-
 fn_plot_variant_ratio <- function(.d) {
   source("analysis/00-colors.R")
   colorcode <- setNames(names(color_variantcell), color_variantcell)
+  color_celltype_bulk <- c(
+    "Pseudo-bulk" = "red",
+    color_celltype
+  )
 
   .n_gse <- unique(.d$gseid) |> length()
   .n_srr <- unique(.d$srrid) |> length()
@@ -524,10 +527,6 @@ fn_plot_variant_ratio <- function(.d) {
       ),
       position = "stack"
     ) +
-    # scale_fill_manual(
-    #   name = "Cell Type",
-    #   values = RColorBrewer::brewer.pal(8, "Set2")
-    # ) +
     scale_fill_manual(
       name = "Variant cell",
       values = color_variantcell
@@ -550,11 +549,65 @@ fn_plot_variant_ratio <- function(.d) {
     ) +
     labs(y = "Cell ratio") -> p_ratio
 
+  .d |>
+    dplyr::select(gseid, srrid, variant) |>
+    dplyr::distinct() |>
+    fn_hetero_bulk() |>
+    dplyr::filter(barcode == "Pseudo-bulk") -> .bulk_forplot
+
+  .bulk_forplot |>
+    dplyr::pull(af) |>
+    quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
+
+  .bulk_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(x = srrid, y = af, fill = barcode)) +
+    geom_col() +
+    geom_hline(
+      aes(yintercept = 0.05),
+      linetype = 20,
+      color = "red"
+    ) +
+    geom_hline(
+      aes(yintercept = 0.1),
+      linetype = 21,
+      color = "black"
+    ) +
+    scale_fill_manual(
+      name = "Cell type",
+      # values = color_celltype_bulk
+      values = "gold"
+    ) +
+    scale_y_continuous(
+      name = "Heteroplasmy Freq",
+      limits = c(0, count_quantiles["100%"]),
+      breaks = seq(0, count_quantiles["100%"], by = 0.1),
+      expand = expansion(mult = c(0.005, 0.03)),
+      labels = scales::percent_format(accuracy = 1),
+    ) +
+    theme(
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      # axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      axis.line = element_line(color = "black"),
+      panel.background = element_blank(),
+      legend.position = "none",
+    ) -> p_haf
+
   wrap_plots(
+    p_haf,
     p_ratio,
     p_count,
     ncol = 1,
-    heights = c(1, 1),
+    heights = c(0.8, 1, 1),
     guides = "collect"
   ) +
     plot_annotation(
@@ -567,9 +620,41 @@ fn_plot_variant_ratio <- function(.d) {
       )
     )
 }
-
-
 fn_hetero_bulk <- function(.d) {
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  color_celltype_bulk <- c(
+    "Pseudo-bulk" = "red",
+    color_celltype
+  )
+  .variant <- unique(.d$variant)
+  .n_srr <- unique(.d$srrid) |> length()
+  .n_gse <- unique(.d$gseid) |> length()
+
+  dplyr::bind_rows(
+    tbl_all_hetero_af_bulk |>
+      dplyr::filter(variant == .variant) |>
+      dplyr::filter(srrid %in% .d$srrid) |>
+      dplyr::collect(),
+    tbl_all_hetero_af_cluster |>
+      dplyr::filter(variant == .variant) |>
+      dplyr::filter(srrid %in% .d$srrid) |>
+      dplyr::collect()
+  ) -> .all_hetero_af_thevariant
+
+  .all_hetero_af_thevariant |>
+    dplyr::mutate(
+      barcode = gsub(barcode, pattern = "_", replacement = " "),
+      barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
+    ) |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = names(color_celltype_bulk)
+      ),
+    ) -> .forplot
+  .forplot
+}
+fn_plot_hetero_bulk <- function(.forplot) {
   source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
   color_celltype_bulk <- c(
     "Pseudo-bulk" = "red",
@@ -672,6 +757,7 @@ fn_hetero_bulk <- function(.d) {
     )
 }
 
+
 # body --------------------------------------------------------------------
 thevariant <- "3173G>A"
 thesrrid <- "GSM7080053"
@@ -703,11 +789,17 @@ gseid_srrid_variant_hetero |>
       # save image to /home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants
       a = parallel::mcmapply(
         FUN = \(.gseid, .srrid, .variant, .p) {
-          .filename = "{.gseid}_{.srrid}_{.variant}.pdf" |> glue::glue()
+          .filename = "{.variant}_{.gseid}_{.srrid}.pdf" |> glue::glue()
+          .dir <- glue::glue(
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.variant}/somatic_plot"
+          )
+          if (dir.exists(.dir) == FALSE) {
+            dir.create(.dir, recursive = TRUE)
+          }
           ggsave(
             plot = .p,
             filename = .filename,
-            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/individual_variant",
+            path = .dir,
             width = 13,
             height = 8
           )
@@ -723,6 +815,57 @@ gseid_srrid_variant_hetero |>
 }
 
 
+# ? bulk bulk-variant-proportion--------------------------------------------------------------------
+
+gseid_srrid_variant_hetero |>
+  dplyr::filter(variant %in% thevariants) |>
+  tidyr::nest(
+    .by = "variant",
+    .key = "gse_srr"
+  ) -> variant_individuals
+
+# plot
+variant_individuals |>
+  dplyr::mutate(
+    p = purrr::map2(
+      variant,
+      gse_srr,
+      ~ {
+        .y |> dplyr::mutate(variant = .x) -> .d
+        fn_plot_hetero_bulk(.d) -> .p
+        .p
+      }
+    )
+  ) -> variant_individuals_plot
+
+# save plot
+
+variant_individuals_plot |>
+  dplyr::mutate(
+    a = purrr::map2(
+      variant,
+      p,
+      ~ {
+        .dir <- glue::glue(
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.x}"
+        )
+        if (dir.exists(.dir) == FALSE) {
+          dir.create(.dir, recursive = TRUE)
+        }
+        ggsave(
+          plot = .y,
+          filename = glue::glue("{.x}-bulk-variant-proportion.pdf"),
+          path = .dir,
+          width = 15,
+          height = 8
+        )
+      }
+    )
+  )
+
+
+# ? plot ratio variant individual-cell-variant-proportion--------------------------------------------------------------------
+
 gseid_srrid_variant_hetero_plot |>
   tidyr::unnest(cols = c(p)) |>
   dplyr::mutate(
@@ -732,20 +875,6 @@ gseid_srrid_variant_hetero_plot |>
     )
   ) |>
   tidyr::unnest(cols = c(ratio)) -> gseid_srrid_variant_hetero_plot_ratio
-
-gseid_srrid_variant_hetero_plot_ratio |>
-  dplyr::select(-c(plot, cellvarianttype)) |>
-  dplyr::group_by(variant) |>
-  dplyr::slice_max(order_by = ratio_Heteroplasmy, n = 1) |>
-  dplyr::ungroup() |>
-  dplyr::select(gseid, srrid, variant, ratio_Heteroplasmy, count_total)
-
-
-gseid_srrid_variant_hetero_plot_ratio |>
-  dplyr::select(-c(plot, cellvarianttype)) |>
-  dplyr::filter(variant == "3727T>C", srrid == "GSM7493836") |>
-  dplyr::glimpse()
-
 
 gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::select(-c(plot, cellvarianttype)) |>
@@ -760,7 +889,9 @@ gseid_srrid_variant_hetero_plot_ratio |>
   tidyr::nest(
     .by = variant,
     .key = "ratio"
-  ) |>
+  ) -> gseid_srrid_variant_hetero_plot_ratio_
+
+gseid_srrid_variant_hetero_plot_ratio_ |>
   dplyr::mutate(
     p = purrr::map2(
       .x = variant,
@@ -791,56 +922,8 @@ gseid_srrid_variant_hetero_plot_ratio_plot |>
           plot = .y,
           filename = glue::glue("{.x}-individual-cell-variant-proportion.pdf"),
           path = .dir,
-          width = 10,
-          height = 6
-        )
-      }
-    )
-  )
-
-# ? bulk --------------------------------------------------------------------
-
-gseid_srrid_variant_hetero |>
-  dplyr::filter(variant %in% thevariants) |>
-  tidyr::nest(
-    .by = "variant",
-    .key = "gse_srr"
-  ) -> variant_individuals
-
-# plot
-variant_individuals |>
-  dplyr::mutate(
-    p = purrr::map2(
-      variant,
-      gse_srr,
-      ~ {
-        .y |> dplyr::mutate(variant = .x) -> .d
-        fn_hetero_bulk(.d) -> .p
-        .p
-      }
-    )
-  ) -> variant_individuals_plot
-
-# save plot
-
-variant_individuals_plot |>
-  dplyr::mutate(
-    a = purrr::map2(
-      variant,
-      p,
-      ~ {
-        .dir <- glue::glue(
-          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.x}"
-        )
-        if (dir.exists(.dir) == FALSE) {
-          dir.create(.dir, recursive = TRUE)
-        }
-        ggsave(
-          plot = .y,
-          filename = glue::glue("{.x}-bulk-variant-proportion.pdf"),
-          path = .dir,
-          width = 10,
-          height = 6
+          width = 15,
+          height = 8
         )
       }
     )
