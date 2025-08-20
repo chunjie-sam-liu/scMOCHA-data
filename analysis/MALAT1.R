@@ -42,9 +42,10 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # future: :plan(future: :multisession, workers = 10)
 
 # load data ---------------------------------------------------------------
-gseid <- "GSE226602"
-srrid <- "GSM7080049"
-# thepath <- "/home/liuc9/github/scMOCHA-data/data/GSE226602/final/GSM7080049"
+gseid <- "GSE171555"
+srrid <- "GSM5227110"
+thepath <- "/home/liuc9/github/scMOCHA-data/data/{gseid}/final/{srrid}" |>
+  glue::glue()
 srrdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv" |>
   import()
 
@@ -56,12 +57,14 @@ sc <- readr::read_rds(
     "sc_azimuth.rds.gz"
   )
 )
+
+fn_plot_malat1(gseid, srrid, sc) -> p
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
-fn_plot <- function(gseid, srrid, sc) {
+fn_plot_malat1 <- function(gseid, srrid, sc) {
   sc$sct <- Seurat::SCTransform(
     object = sc$sc,
     vars.to.regress = c("percent.mt", "percent.ribo")
@@ -77,7 +80,7 @@ fn_plot <- function(gseid, srrid, sc) {
     barcode = colnames(sc$sc)
   ) |>
     dplyr::mutate(
-      keep = barcode %in% colnames(sc$sc_filter$RNA),
+      keep = barcode %in% colnames(sc$sc_filter),
     ) |>
     dplyr::mutate(
       kept = ifelse(keep, "kept", "filtered")
@@ -116,7 +119,7 @@ srrdir |>
             "sc_azimuth.rds.gz"
           )
         )
-        fn_plot(gseid, srrid, sc) -> p
+        fn_plot_malat1(gseid, srrid, sc) -> p
         ggsave(
           plot = p,
           filename = file.path(
@@ -127,6 +130,8 @@ srrdir |>
           width = 10,
           height = 6,
         )
+        rm(sc)
+        gc()
         p
       },
       gseid = gseid,

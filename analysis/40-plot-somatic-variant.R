@@ -58,8 +58,6 @@ conn_all_hetero_af <- DBI::dbConnect(
 )
 DBI::dbListTables(conn_all_hetero_af)
 
-# conn_all_hetero_af |>
-#   dplyr::tbl("gseid_srrid_variant")
 
 tbl_allvariants <- conn_all_hetero_af |>
   dplyr::tbl("allvariants")
@@ -92,17 +90,62 @@ tbl_all_hetero_af_bulk <- dplyr::tbl(
   conn_all_hetero_af,
   "all_hetero_af_bulk"
 )
-
 tbl_all_hetero_af_cluster <- dplyr::tbl(
   conn_all_hetero_af,
   "all_hetero_af_cluster"
+)
+tbl_all_hetero_af_cell <- dplyr::tbl(
+  conn_all_hetero_af,
+  "all_hetero_af_cell"
 )
 
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
 
-fn_forplot <- function(thevariant, thesrrid) {
+fn_cellvarianttype_ratio <- function(.x) {
+  .x |>
+    dplyr::select(n, varianttype) |>
+    tidyr::pivot_wider(
+      names_from = varianttype,
+      values_from = n,
+      values_fill = 0,
+      names_prefix = "count_"
+    ) |>
+    dplyr::mutate(
+      count_total = sum(dplyr::across(starts_with("count_")))
+    ) -> .xx
+  .x |>
+    dplyr::mutate(
+      ratio = n / sum(n)
+    ) |>
+    dplyr::select(
+      varianttype,
+      ratio
+    ) |>
+    tidyr::pivot_wider(
+      names_from = varianttype,
+      values_from = ratio,
+      values_fill = 0,
+      names_prefix = "ratio_"
+    ) -> .xxx
+  .xx |> dplyr::bind_cols(.xxx)
+}
+
+# fn_plot_cell_af_depth
+fn_plot_cell_af_depth <- function(thevariant, thesrrid) {
+  #
+  forplot_ <- fn_plot_cell_af_depth_forplot(thevariant, thesrrid)
+  p_all <- fn_plot_cell_af_somatic_variant(forplot_)
+  cellvarianttype <- fn_plot_cell_af_cellvarianttype(forplot_)
+
+  tibble::tibble(
+    plot = list(p_all),
+    cellvarianttype = list(cellvarianttype),
+    forplot = list(forplot_)
+  )
+}
+fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
   source("analysis/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
@@ -181,7 +224,7 @@ fn_forplot <- function(thevariant, thesrrid) {
     ) -> forplot
   forplot
 }
-fn_plot_somatic_variant <- function(forplot_) {
+fn_plot_cell_af_somatic_variant <- function(forplot_) {
   source("analysis/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
@@ -221,12 +264,6 @@ fn_plot_somatic_variant <- function(forplot_) {
         af
       )
     ) |>
-    # dplyr::mutate(
-    #   variant_type = as.character(variant_type),
-    # ) |>
-    dplyr::mutate(
-      depth = log2(depth + 1) # log2 transform to reduce skewness
-    ) |>
     dplyr::mutate(
       cellvarianttype = colorcode[variant_type]
     ) |>
@@ -237,6 +274,44 @@ fn_plot_somatic_variant <- function(forplot_) {
       )
     ) -> forplot
 
+  fn_plot_cell_af_somatic_variant_af(forplot, thetheme) -> p_af
+  fn_plot_cell_af_somatic_variant_depth(forplot, thetheme) -> p_depth
+  fn_plot_cell_af_somatic_variant_cell(forplot, thetheme) -> p_variant_cells
+  fn_plot_cell_af_somatic_variant_celltype(forplot, thetheme) -> p_celltype
+
+  .gseid <- unique(forplot$gseid)
+  .srrid <- unique(forplot$srrid)
+  .variant <- unique(forplot$variant)
+
+  wrap_plots(
+    p_af,
+    plot_spacer(),
+    p_depth,
+    plot_spacer(),
+    p_variant_cells,
+    plot_spacer(),
+    p_celltype,
+    ncol = 1,
+    heights = c(15, -1.05, 15, -1.05, 10, -1.05, 10),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title = glue::glue(
+        "Variant {.variant} in {.gseid}-{.srrid}"
+      ),
+      theme = theme(
+        plot.title = element_text(
+          hjust = 0.5,
+          size = 16,
+          face = "bold"
+        )
+      )
+    ) -> p_all
+
+  p_all
+}
+
+fn_plot_cell_af_somatic_variant_celltype <- function(forplot, thetheme) {
   forplot |>
     ggplot(aes(
       x = barcode,
@@ -253,7 +328,11 @@ fn_plot_somatic_variant <- function(forplot_) {
     # theme(panel.background = element_rect(color = "red")) +
     labs(
       y = "Cell Type",
-    ) -> p1_celltype
+    )
+}
+fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {
+  fn_ybreaks_ylimits(forplot$af, step = 0.2) -> .ybl
+
   forplot |>
     ggplot(aes(
       x = barcode,
@@ -261,6 +340,16 @@ fn_plot_somatic_variant <- function(forplot_) {
       fill = af
     )) +
     geom_col() +
+    geom_hline(
+      aes(yintercept = 0.05),
+      linetype = 20,
+      color = "red"
+    ) +
+    geom_hline(
+      aes(yintercept = 0.1),
+      linetype = 21,
+      color = "black"
+    ) +
     scale_fill_gradient2(
       name = "Allele Frequency",
       high = "#FDE725FF",
@@ -268,6 +357,15 @@ fn_plot_somatic_variant <- function(forplot_) {
       low = "#440154FF"
     ) +
     scale_y_continuous(
+      limits = .ybl$ylimits,
+      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      labels = \(b) {
+        dplyr::case_when(
+          b == 0.1 ~ "gnomAD cutoff 10%",
+          b == 0.05 ~ "our cutoff 5%",
+          TRUE ~ scales::percent_format(accuracy = 1)(b)
+        )
+      },
       expand = expansion(mult = c(0, 0)),
     ) +
     theme(
@@ -281,8 +379,53 @@ fn_plot_somatic_variant <- function(forplot_) {
     ) +
     labs(
       y = "Allele Frequency",
-    ) -> p2_af
+    )
+}
+fn_plot_cell_af_somatic_variant_depth <- function(forplot, thetheme) {
+  fn_ybreaks_ylimits(forplot$depth, step = 1) -> .ybl_depth
+  forplot |>
+    ggplot(aes(
+      x = barcode,
+      y = depth,
+      fill = depth
+    )) +
+    geom_col() +
+    geom_hline(
+      aes(yintercept = log2(10 + 1)),
+      linetype = 21,
+      color = "black"
+    ) +
+    scale_fill_gradient(
+      name = "log2(depth + 1)",
+      high = "gold",
+      low = "white"
+    ) +
+    scale_y_continuous(
+      limits = .ybl_depth$ylimits,
+      breaks = c(.ybl_depth$ybreaks, log2(10 + 1)) |> unique() |> sort(),
+      labels = \(b) {
+        dplyr::case_when(
+          b == log2(10 + 1) ~ "cutoff 10",
+          TRUE ~ scales::label_number()(b)
+        )
+      },
+      expand = expansion(mult = c(0, 0)),
+    ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    ) +
+    labs(
+      y = "Log2(Depth + 1)",
+    )
+}
 
+fn_plot_cell_af_somatic_variant_cell <- function(forplot, thetheme) {
   forplot |>
     dplyr::mutate(
       variant_type = as.character(variant_type),
@@ -293,7 +436,9 @@ fn_plot_somatic_variant <- function(forplot_) {
       fill = variant_type
     )) +
     geom_col() +
-    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
+    scale_y_continuous(
+      expand = expansion(mult = c(0, 0)),
+    ) +
     scale_fill_identity(
       guide = "legend",
       name = "Variant cell",
@@ -308,64 +453,10 @@ fn_plot_somatic_variant <- function(forplot_) {
     thetheme +
     labs(
       y = "Variant cells",
-    ) -> p3_variant_cells
-
-  forplot |>
-    ggplot(aes(
-      x = barcode,
-      y = depth,
-      fill = depth
-    )) +
-    geom_col() +
-    scale_fill_gradient(
-      name = "log2(depth + 1)",
-      high = "gold",
-      low = "white"
-    ) +
-    scale_y_continuous(
-      expand = expansion(mult = c(0, 0)),
-    ) +
-    theme(
-      panel.background = element_blank(),
-      panel.grid = element_blank(),
-      axis.line = element_line(colour = "black"),
-      axis.ticks.x = element_blank(),
-      axis.text.x = element_blank(),
-      axis.title.x = element_blank(),
-      plot.margin = margin(t = 0, b = 0, unit = "cm"),
-    ) +
-    labs(
-      y = "Log2(Depth + 1)",
-    ) -> p4_depth
-
-  .gseid <- unique(forplot$gseid)
-  .srrid <- unique(forplot$srrid)
-  .variant <- unique(forplot$variant)
-
-  wrap_plots(
-    p2_af,
-    plot_spacer(),
-    p4_depth,
-    plot_spacer(),
-    p3_variant_cells,
-    plot_spacer(),
-    p1_celltype,
-    ncol = 1,
-    heights = c(15, -1.05, 15, -1.05, 10, -1.05, 10),
-    guides = "collect"
-  ) +
-    plot_annotation(
-      title = glue::glue(
-        "Variant {.variant} in {.gseid}-{.srrid}"
-      ),
-      theme = theme(
-        plot.title = element_text(hjust = 0.5, size = 16, face = "bold")
-      )
-    ) -> p_all
-
-  p_all
+    )
 }
-fn_cellvarianttype <- function(forplot) {
+
+fn_plot_cell_af_cellvarianttype <- function(forplot) {
   source("analysis/00-colors.R")
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
@@ -385,292 +476,9 @@ fn_cellvarianttype <- function(forplot) {
     ) |>
     dplyr::arrange(varianttype) -> cellvarianttype
 }
-fn_cellvarianttype_ratio <- function(.x) {
-  .x |>
-    dplyr::select(n, varianttype) |>
-    tidyr::pivot_wider(
-      names_from = varianttype,
-      values_from = n,
-      values_fill = 0,
-      names_prefix = "count_"
-    ) |>
-    dplyr::mutate(
-      count_total = sum(dplyr::across(starts_with("count_")))
-    ) -> .xx
-  .x |>
-    dplyr::mutate(
-      ratio = n / sum(n)
-    ) |>
-    dplyr::select(
-      varianttype,
-      ratio
-    ) |>
-    tidyr::pivot_wider(
-      names_from = varianttype,
-      values_from = ratio,
-      values_fill = 0,
-      names_prefix = "ratio_"
-    ) -> .xxx
-  .xx |> dplyr::bind_cols(.xxx)
-}
-fn_plot <- function(thevariant, thesrrid) {
-  #
-  forplot <- fn_forplot(thevariant, thesrrid)
-  p_all <- fn_plot_somatic_variant(forplot)
-  cellvarianttype <- fn_cellvarianttype(forplot)
 
-  tibble::tibble(
-    plot = list(p_all),
-    cellvarianttype = list(cellvarianttype),
-  )
-}
-fn_plot_variant_ratio <- function(.d) {
-  source("analysis/00-colors.R")
-  colorcode <- setNames(names(color_variantcell), color_variantcell)
-  color_celltype_bulk <- c(
-    "Pseudo-bulk" = "red",
-    color_celltype
-  )
-
-  .n_gse <- unique(.d$gseid) |> length()
-  .n_srr <- unique(.d$srrid) |> length()
-  .n_cells <- sum(.d$count)
-  .n_cells_hete <- sum(
-    .d |>
-      dplyr::filter(varianttype == "Heteroplasmy") |>
-      dplyr::pull(count)
-  )
-  .variant <- unique(.d$variant)
-  # scales::label_comma()(.n_srr)
-
-  .d |>
-    dplyr::mutate(
-      varianttype = factor(
-        varianttype,
-        levels = names(color_variantcell) |>
-          rev()
-      )
-    ) |>
-    dplyr::group_by(
-      srrid,
-    ) |>
-    dplyr::mutate(
-      ratio = count / sum(count)
-    ) |>
-    dplyr::ungroup() -> .d_forplot
-
-  .d_forplot |>
-    dplyr::filter(
-      varianttype == "Heteroplasmy"
-    ) |>
-    dplyr::arrange(ratio) |>
-    dplyr::pull(srrid) -> rank_srrid
-
-  .d_forplot |>
-    dplyr::group_by(srrid) |>
-    dplyr::summarise(
-      count = sum(count),
-      .groups = "drop"
-    ) |>
-    dplyr::pull(count) |>
-    quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
-
-  fn_ybreaks_ylimits(count_quantiles, step = 2000) -> .count_ybl
-
-  .d_forplot |>
-    dplyr::mutate(
-      srrid = factor(
-        srrid,
-        levels = rank_srrid
-      )
-    ) |>
-    ggplot(aes(
-      x = srrid,
-      y = count,
-    )) +
-    geom_col(
-      aes(
-        fill = varianttype
-      ),
-      position = "stack"
-    ) +
-    scale_fill_manual(
-      name = "Variant cell",
-      values = color_variantcell
-    ) +
-    scale_x_discrete(
-      limits = rank_srrid,
-    ) +
-    scale_y_continuous(
-      limits = .count_ybl$ylimits,
-      breaks = .count_ybl$ybreaks,
-      expand = expansion(mult = c(0.005, 0.03)),
-      labels = scales::label_comma()
-    ) +
-    theme(
-      # panel.background = element_blank(),
-      panel.grid = element_blank(),
-      # axis.ticks = element_blank(),
-      axis.line = element_line(color = "black"),
-      axis.text.x = element_text(angle = 45, hjust = 1),
-      axis.title.x = element_blank(),
-      plot.margin = margin(t = 0, b = 0, unit = "cm"),
-    ) +
-    labs(y = "# of cell") -> p_count
-
-  .d_forplot |>
-    dplyr::mutate(
-      srrid = factor(
-        srrid,
-        levels = rank_srrid
-      )
-    ) |>
-    ggplot(aes(
-      x = srrid,
-      y = ratio,
-    )) +
-    geom_col(
-      aes(
-        fill = varianttype
-      ),
-      position = "stack"
-    ) +
-    scale_fill_manual(
-      name = "Variant cell",
-      values = color_variantcell
-    ) +
-    scale_y_continuous(
-      expand = expansion(add = c(0.005, 0.01)),
-      labels = scales::percent_format(accuracy = 1)
-    ) +
-    scale_x_discrete(
-      limits = rank_srrid,
-    ) +
-    theme(
-      panel.grid = element_blank(),
-      # axis.ticks = element_blank(),
-      # axis.text.x = element_text(angle = 45, hjust = 1),
-      axis.text.x = element_blank(),
-      axis.title.x = element_blank(),
-      plot.margin = margin(t = 0, b = 0, unit = "cm"),
-      axis.line = element_line(color = "black"),
-    ) +
-    labs(y = "Cell ratio") -> p_ratio
-
-  .d |>
-    dplyr::select(gseid, srrid, variant) |>
-    dplyr::distinct() |>
-    fn_hetero_bulk() |>
-    dplyr::filter(barcode == "Pseudo-bulk") -> .bulk_forplot
-
-  .bulk_forplot |>
-    dplyr::pull(af) |>
-    quantile(probs = seq(0, 1, 0.1)) -> .count_quantiles
-
-  fn_ybreaks_ylimits(.count_quantiles, step = 0.1) -> .ybl
-
-  .bulk_forplot |>
-    dplyr::mutate(
-      srrid = factor(
-        srrid,
-        levels = rank_srrid
-      )
-    ) |>
-    ggplot(aes(x = srrid, y = af, fill = barcode)) +
-    geom_col() +
-    geom_hline(
-      aes(yintercept = 0.05),
-      linetype = 20,
-      color = "red"
-    ) +
-    geom_hline(
-      aes(yintercept = 0.1),
-      linetype = 21,
-      color = "black"
-    ) +
-    scale_fill_manual(
-      name = "Cell type",
-      # values = color_celltype_bulk
-      values = "gold"
-    ) +
-    scale_y_continuous(
-      name = "Pseudo-bulk HAF",
-      limits = .ybl$ylimits,
-      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
-      labels = \(b) {
-        dplyr::case_when(
-          b == 0.1 ~ "gnomAD cutoff 10%",
-          b == 0.05 ~ "our cutoff 5%",
-          TRUE ~ scales::percent_format(accuracy = 1)(b)
-        )
-      },
-      expand = expansion(mult = c(0.01, 0.01)),
-    ) +
-    theme(
-      panel.grid = element_blank(),
-      # axis.ticks = element_blank(),
-      # axis.text.x = element_text(angle = 45, hjust = 1),
-      axis.text.x = element_blank(),
-      axis.title.x = element_blank(),
-      plot.margin = margin(t = 0, b = 0, unit = "cm"),
-      axis.line = element_line(color = "black"),
-      panel.background = element_blank(),
-      legend.position = "none",
-    ) -> p_haf
-
-  wrap_plots(
-    p_haf,
-    p_ratio,
-    p_count,
-    ncol = 1,
-    heights = c(0.8, 1, 1),
-    guides = "collect"
-  ) +
-    plot_annotation(
-      title = "{.variant} in {.n_gse} projects and {scales::label_comma()(.n_srr)} samples and {scales::label_percent(accuracy = 0.01)(.n_cells_hete/.n_cells)} ({scales::label_comma()(.n_cells_hete)}/{scales::label_comma()(.n_cells)}) cells" |>
-        glue::glue(),
-      theme = theme(
-        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
-        # legend.position = "bottom",
-        # legend.direction = "horizontal",
-      )
-    )
-}
-fn_hetero_bulk <- function(.d) {
-  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
-  color_celltype_bulk <- c(
-    "Pseudo-bulk" = "red",
-    color_celltype
-  )
-  .variant <- unique(.d$variant)
-  .n_srr <- unique(.d$srrid) |> length()
-  .n_gse <- unique(.d$gseid) |> length()
-
-  dplyr::bind_rows(
-    tbl_all_hetero_af_bulk |>
-      dplyr::filter(variant == .variant) |>
-      dplyr::filter(srrid %in% .d$srrid) |>
-      dplyr::collect(),
-    tbl_all_hetero_af_cluster |>
-      dplyr::filter(variant == .variant) |>
-      dplyr::filter(srrid %in% .d$srrid) |>
-      dplyr::collect()
-  ) -> .all_hetero_af_thevariant
-
-  .all_hetero_af_thevariant |>
-    dplyr::mutate(
-      barcode = gsub(barcode, pattern = "_", replacement = " "),
-      barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
-    ) |>
-    dplyr::mutate(
-      barcode = factor(
-        barcode,
-        levels = names(color_celltype_bulk)
-      ),
-    ) -> .forplot
-  .forplot
-}
-fn_plot_hetero_bulk <- function(.forplot) {
+# pseudo-bulk
+fn_plot_hetero_pseudo_bulk <- function(.d) {
   source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
   color_celltype_bulk <- c(
     "Pseudo-bulk" = "red",
@@ -707,11 +515,7 @@ fn_plot_hetero_bulk <- function(.forplot) {
     dplyr::filter(barcode == "Pseudo-bulk") |>
     dplyr::arrange(-af) -> .rank_pseudo_bulk
 
-  .forplot |>
-    dplyr::pull(af) |>
-    quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
-
-  fn_ybreaks_ylimits(count_quantiles, step = 0.1) -> .ybl
+  fn_ybreaks_ylimits(.forplot$af, step = 0.1) -> .ybl
 
   .forplot |>
     dplyr::mutate(
@@ -781,6 +585,375 @@ fn_plot_hetero_bulk <- function(.forplot) {
     )
 }
 
+# variant ratio
+fn_plot_variant_ratio <- function(.d) {
+  source("analysis/00-colors.R")
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
+  color_celltype_bulk <- c(
+    "Pseudo-bulk" = "red",
+    color_celltype
+  )
+
+  .n_gse <- unique(.d$gseid) |> length()
+  .n_srr <- unique(.d$srrid) |> length()
+  .n_cells <- sum(.d$count)
+  .n_cells_hete <- sum(
+    .d |>
+      dplyr::filter(varianttype == "Heteroplasmy") |>
+      dplyr::pull(count)
+  )
+  .variant <- unique(.d$variant)
+
+  .d |>
+    dplyr::select(-forplot) |>
+    dplyr::mutate(
+      varianttype = factor(
+        varianttype,
+        levels = names(color_variantcell) |>
+          rev()
+      )
+    ) |>
+    dplyr::group_by(
+      srrid,
+    ) |>
+    dplyr::mutate(
+      ratio = count / sum(count)
+    ) |>
+    dplyr::ungroup() -> .dd
+
+  .dd |>
+    dplyr::filter(
+      varianttype == "Heteroplasmy"
+    ) |>
+    dplyr::arrange(ratio) |>
+    dplyr::pull(srrid) -> rank_srrid
+
+  .dd |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) -> .d_forplot
+
+  #plot count
+  fn_plot_variant_ratio_count(.d_forplot, rank_srrid) -> p_count
+  # plot ratio
+  fn_plot_variant_ratio_ratio(.d_forplot, rank_srrid) -> p_ratio
+  # paf
+  fn_plot_variant_ratio_paf(.d, rank_srrid) -> p_haf_list
+  p_haf <- p_haf_list$p
+  .mean_af <- p_haf_list$mean_af
+
+  wrap_plots(
+    p_haf,
+    p_ratio,
+    p_count,
+    ncol = 1,
+    heights = c(0.8, 1, 1),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title = "{.variant} in {.n_gse} projects and  {scales::label_comma()(.n_srr)} samples" |>
+        glue::glue(),
+      subtitle = "{scales::label_percent(accuracy = 0.01)(.n_cells_hete/.n_cells)} ({scales::label_comma()(.n_cells_hete)}/{scales::label_comma()(.n_cells)}) cells with average HAF {scales::label_number(accuracy=0.01)(.mean_af)}" |>
+        glue::glue(),
+      theme = theme(
+        plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 14, face = "bold"),
+      )
+    )
+}
+fn_plot_variant_ratio_count <- function(.d_forplot, rank_srrid) {
+  .d_forplot |>
+    dplyr::group_by(srrid) |>
+    dplyr::summarise(
+      count = sum(count),
+      .groups = "drop"
+    ) -> .m
+
+  fn_ybreaks_ylimits(.m$count, step = 2000) -> .count_ybl
+  # count
+  .d_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = count,
+    )) +
+    geom_col(
+      aes(
+        fill = varianttype
+      ),
+      position = "stack"
+    ) +
+    scale_fill_manual(
+      name = "Variant cell",
+      values = color_variantcell
+    ) +
+    scale_x_discrete(
+      limits = rank_srrid,
+    ) +
+    scale_y_continuous(
+      limits = .count_ybl$ylimits,
+      breaks = .count_ybl$ybreaks,
+      expand = expansion(mult = c(0.005, 0.03)),
+      labels = scales::label_comma()
+    ) +
+    theme(
+      # panel.background = element_blank(),
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      axis.line = element_line(color = "black"),
+      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    ) +
+    labs(y = "# of cell")
+}
+fn_plot_variant_ratio_ratio <- function(.d_forplot, rank_srrid) {
+  .d_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(
+      x = srrid,
+      y = ratio,
+    )) +
+    geom_col(
+      aes(
+        fill = varianttype
+      ),
+      position = "stack"
+    ) +
+    scale_fill_manual(
+      name = "Variant cell",
+      values = color_variantcell
+    ) +
+    scale_y_continuous(
+      expand = expansion(add = c(0.005, 0.01)),
+      labels = scales::percent_format(accuracy = 1)
+    ) +
+    scale_x_discrete(
+      limits = rank_srrid,
+    ) +
+    theme(
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      # axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      axis.line = element_line(color = "black"),
+    ) +
+    labs(y = "Cell ratio")
+}
+fn_get_hetero_pseudo_bulk <- function(.d) {
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  color_celltype_bulk <- c(
+    "Pseudo-bulk" = "red",
+    color_celltype
+  )
+  .variant <- unique(.d$variant)
+  .n_srr <- unique(.d$srrid) |> length()
+  .n_gse <- unique(.d$gseid) |> length()
+
+  dplyr::bind_rows(
+    tbl_all_hetero_af_bulk |>
+      dplyr::filter(variant == .variant) |>
+      dplyr::filter(srrid %in% .d$srrid) |>
+      dplyr::collect(),
+    tbl_all_hetero_af_cluster |>
+      dplyr::filter(variant == .variant) |>
+      dplyr::filter(srrid %in% .d$srrid) |>
+      dplyr::collect()
+  ) -> .all_hetero_af_thevariant
+
+  .all_hetero_af_thevariant |>
+    dplyr::mutate(
+      barcode = gsub(barcode, pattern = "_", replacement = " "),
+      barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
+    ) |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = names(color_celltype_bulk)
+      ),
+    ) -> .forplot
+  .forplot
+}
+fn_plot_variant_ratio_paf <- function(.d, rank_srrid) {
+  .d |>
+    dplyr::select(gseid, srrid, variant) |>
+    dplyr::distinct() |>
+    fn_get_hetero_pseudo_bulk() |>
+    dplyr::filter(barcode == "Pseudo-bulk") -> .bulk_forplot
+
+  fn_ybreaks_ylimits(.bulk_forplot$af, step = 0.1) -> .ybl
+
+  mean(.bulk_forplot$af) -> .mean_af
+
+  .bulk_forplot |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    ggplot(aes(x = srrid, y = af, fill = barcode)) +
+    geom_col() +
+    geom_hline(
+      aes(yintercept = 0.05),
+      linetype = 20,
+      color = "red"
+    ) +
+    geom_hline(
+      aes(yintercept = 0.1),
+      linetype = 21,
+      color = "black"
+    ) +
+    scale_fill_manual(
+      name = "Cell type",
+      # values = color_celltype_bulk
+      values = "gold"
+    ) +
+    scale_y_continuous(
+      name = "Pseudo-bulk HAF",
+      limits = .ybl$ylimits,
+      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      labels = \(b) {
+        dplyr::case_when(
+          b == 0.1 ~ "gnomAD cutoff 10%",
+          b == 0.05 ~ "our cutoff 5%",
+          TRUE ~ scales::percent_format(accuracy = 1)(b)
+        )
+      },
+      expand = expansion(mult = c(0.01, 0.01)),
+    ) +
+    theme(
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      # axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      axis.line = element_line(color = "black"),
+      panel.background = element_blank(),
+      legend.position = "none",
+    ) -> .p
+
+  list(
+    p = .p,
+    mean_af = .mean_af
+  )
+}
+fn_plot_variant_ratio_swarm <- function(.d, rank_srrid) {
+  # Heteroplasmy
+  .d |>
+    dplyr::select(forplot) |>
+    tidyr::unnest(cols = forplot) |>
+    dplyr::filter(cellvarianttype == "Heteroplasmy") -> .dd
+
+  fn_ybreaks_ylimits(
+    .dd$af,
+    step = 0.1
+  ) -> .ybl
+
+  mean(.dd$af) -> .mean_af
+
+  .dd |>
+    dplyr::group_by(srrid) |>
+    dplyr::summarise(
+      meanaf = mean(af, na.rm = TRUE),
+    ) -> .dd_meanaf
+
+  .dd |>
+    dplyr::mutate(
+      srrid = factor(
+        srrid,
+        levels = rank_srrid
+      )
+    ) |>
+    dplyr::left_join(
+      .dd_meanaf,
+      by = "srrid"
+    ) |>
+    ggplot(aes(x = srrid)) +
+    geom_violin(
+      aes(
+        y = af,
+        fill = meanaf,
+      ),
+      alpha = 0.5,
+      size = 1,
+      color = NA,
+      show.legend = FALSE
+    ) +
+    scale_fill_gradient2(
+      name = "AF",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5,
+    ) +
+    ggbeeswarm::geom_quasirandom(
+      aes(
+        y = af,
+        color = af
+      ),
+      size = 1,
+      dodge.width = .75,
+      alpha = .5,
+    ) +
+    scale_color_gradient2(
+      name = "AF",
+      low = "white",
+      mid = "red",
+      high = "#3B0049",
+      midpoint = 0.5,
+    ) +
+    geom_hline(
+      aes(yintercept = 0.05),
+      linetype = 20,
+      color = "red"
+    ) +
+    geom_hline(
+      aes(yintercept = 0.1),
+      linetype = 21,
+      color = "black"
+    ) +
+    scale_y_continuous(
+      name = "HAF",
+      limits = .ybl$ylimits,
+      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      labels = \(b) {
+        dplyr::case_when(
+          b == 0.1 ~ "gnomAD cutoff 10%",
+          b == 0.05 ~ "our cutoff 5%",
+          TRUE ~ scales::percent_format(accuracy = 1)(b)
+        )
+      },
+      expand = expansion(mult = c(0.01, 0.01)),
+    ) +
+    theme(
+      panel.grid = element_blank(),
+      # axis.ticks = element_blank(),
+      # axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+      axis.line = element_line(color = "black"),
+      panel.background = element_blank(),
+      legend.position = "none",
+    )
+}
 
 # body --------------------------------------------------------------------
 thevariant <- "3173G>A"
@@ -797,7 +970,7 @@ gseid_srrid_variant_hetero |>
   dplyr::filter(variant %in% thevariants) |>
   dplyr::mutate(
     p = parallel::mcmapply(
-      FUN = fn_plot,
+      FUN = fn_plot_cell_af_depth,
       thevariant = variant,
       thesrrid = srrid,
       SIMPLIFY = FALSE,
@@ -806,6 +979,7 @@ gseid_srrid_variant_hetero |>
   ) -> gseid_srrid_variant_hetero_plot
 
 # save image
+#
 {
   gseid_srrid_variant_hetero_plot |>
     tidyr::unnest(cols = c(p)) |>
@@ -839,7 +1013,9 @@ gseid_srrid_variant_hetero |>
 }
 
 
-# ? bulk bulk-variant-proportion--------------------------------------------------------------------
+#
+#
+# ? bulk pseudo-bulk-variant-proportion--------------------------------------------------------------------
 
 gseid_srrid_variant_hetero |>
   dplyr::filter(variant %in% thevariants) |>
@@ -856,7 +1032,7 @@ variant_individuals |>
       gse_srr,
       ~ {
         .y |> dplyr::mutate(variant = .x) -> .d
-        fn_plot_hetero_bulk(.d) -> .p
+        fn_plot_hetero_pseudo_bulk(.d) -> .p
         .p
       }
     )
@@ -887,7 +1063,8 @@ variant_individuals_plot |>
     )
   )
 
-
+#
+#
 # ? plot ratio variant individual-cell-variant-proportion--------------------------------------------------------------------
 
 gseid_srrid_variant_hetero_plot |>
@@ -902,7 +1079,7 @@ gseid_srrid_variant_hetero_plot |>
 
 gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::select(-c(plot, cellvarianttype)) |>
-  dplyr::select(gseid, srrid, variant, dplyr::contains("count_")) |>
+  dplyr::select(gseid, srrid, variant, forplot, dplyr::contains("count_")) |>
   tidyr::pivot_longer(
     cols = dplyr::contains("count_"),
     names_to = "varianttype",
@@ -921,7 +1098,8 @@ gseid_srrid_variant_hetero_plot_ratio_ |>
       .x = variant,
       .y = ratio,
       ~ {
-        .y |> dplyr::mutate(variant = .x) -> .d
+        .y |>
+          dplyr::mutate(variant = .x) -> .d
         fn_plot_variant_ratio(.d) -> .p
         .p
       }
