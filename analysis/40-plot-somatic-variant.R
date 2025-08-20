@@ -470,6 +470,8 @@ fn_plot_variant_ratio <- function(.d) {
     dplyr::pull(count) |>
     quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
 
+  fn_ybreaks_ylimits(count_quantiles, step = 2000) -> .count_ybl
+
   .d_forplot |>
     dplyr::mutate(
       srrid = factor(
@@ -495,7 +497,8 @@ fn_plot_variant_ratio <- function(.d) {
       limits = rank_srrid,
     ) +
     scale_y_continuous(
-      limits = c(0, count_quantiles["100%"]),
+      limits = .count_ybl$ylimits,
+      breaks = .count_ybl$ybreaks,
       expand = expansion(mult = c(0.005, 0.03)),
       labels = scales::label_comma()
     ) +
@@ -557,7 +560,9 @@ fn_plot_variant_ratio <- function(.d) {
 
   .bulk_forplot |>
     dplyr::pull(af) |>
-    quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
+    quantile(probs = seq(0, 1, 0.1)) -> .count_quantiles
+
+  fn_ybreaks_ylimits(.count_quantiles, step = 0.1) -> .ybl
 
   .bulk_forplot |>
     dplyr::mutate(
@@ -584,11 +589,17 @@ fn_plot_variant_ratio <- function(.d) {
       values = "gold"
     ) +
     scale_y_continuous(
-      name = "Heteroplasmy Freq",
-      limits = c(0, count_quantiles["100%"]),
-      breaks = seq(0, count_quantiles["100%"], by = 0.1),
-      expand = expansion(mult = c(0.005, 0.03)),
-      labels = scales::percent_format(accuracy = 1),
+      name = "Pseudo-bulk HAF",
+      limits = .ybl$ylimits,
+      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      labels = \(b) {
+        dplyr::case_when(
+          b == 0.1 ~ "gnomAD cutoff 10%",
+          b == 0.05 ~ "our cutoff 5%",
+          TRUE ~ scales::percent_format(accuracy = 1)(b)
+        )
+      },
+      expand = expansion(mult = c(0.01, 0.01)),
     ) +
     theme(
       panel.grid = element_blank(),
@@ -695,6 +706,8 @@ fn_plot_hetero_bulk <- function(.forplot) {
     dplyr::pull(af) |>
     quantile(probs = seq(0, 1, 0.1)) -> count_quantiles
 
+  fn_ybreaks_ylimits(count_quantiles, step = 0.1) -> .ybl
+
   .forplot |>
     dplyr::mutate(
       srrid = factor(srrid, levels = .rank_pseudo_bulk$srrid),
@@ -717,10 +730,16 @@ fn_plot_hetero_bulk <- function(.forplot) {
     ) +
     scale_y_continuous(
       name = "Heteroplasmy frequency",
-      limits = c(0, count_quantiles["100%"]),
-      breaks = seq(0, count_quantiles["100%"], by = 0.1),
+      limits = .ybl$ylimits,
+      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
       expand = expansion(mult = c(0.005, 0.03)),
-      labels = scales::percent_format(accuracy = 1),
+      labels = \(b) {
+        dplyr::case_when(
+          b == 0.1 ~ "gnomAD cutoff 10%",
+          b == 0.05 ~ "our cutoff 5%",
+          TRUE ~ scales::percent_format(accuracy = 1)(b)
+        )
+      },
     ) +
     ggh4x::facet_grid2(
       ~barcode,
