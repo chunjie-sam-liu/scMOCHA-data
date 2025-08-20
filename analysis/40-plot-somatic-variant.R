@@ -435,6 +435,11 @@ fn_plot_variant_ratio <- function(.d) {
   .n_gse <- unique(.d$gseid) |> length()
   .n_srr <- unique(.d$srrid) |> length()
   .n_cells <- sum(.d$count)
+  .n_cells_hete <- sum(
+    .d |>
+      dplyr::filter(varianttype == "Heteroplasmy") |>
+      dplyr::pull(count)
+  )
   .variant <- unique(.d$variant)
   # scales::label_comma()(.n_srr)
 
@@ -622,7 +627,7 @@ fn_plot_variant_ratio <- function(.d) {
     guides = "collect"
   ) +
     plot_annotation(
-      title = "{.variant} in {.n_gse} projects and {scales::label_comma()(.n_srr)} samples and {scales::label_comma()(.n_cells)} cells" |>
+      title = "{.variant} in {.n_gse} projects and {scales::label_comma()(.n_srr)} samples and {scales::label_percent(accuracy = 0.01)(.n_cells_hete/.n_cells)} ({scales::label_comma()(.n_cells_hete)}/{scales::label_comma()(.n_cells)}) cells" |>
         glue::glue(),
       theme = theme(
         plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
