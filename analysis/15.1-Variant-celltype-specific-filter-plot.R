@@ -512,6 +512,12 @@ ggsave(
 
 # ? find examples --------------------------------------------------------------------
 
+#
+#
+# ? statistics and pvalue --------------------------------------------------------------------
+#
+#
+
 tbl_gseid_srrid_variant_celltype_ks_test |>
   dplyr::filter(
     p.value < 0.05,
@@ -543,96 +549,127 @@ variant_count_statistic |>
     )
   )
 
+
+variant_2inl_1inm <- c(
+  "3727T>C",
+  "3728C>T",
+  "3735A>G",
+  "3734A>G",
+  "3216C>T",
+  "3215C>A",
+  "4175G>A",
+  "13762T>G",
+  "13589T>A"
+)
+variant_2inm_1inl <- c()
+interesting_variant <- c("10500G>A")
+
 variant_count_statistic |>
+  dplyr::mutate(
+    mean_statistic = ifelse(
+      mean_statistic > 200,
+      200,
+      mean_statistic
+    )
+  ) |>
+  dplyr::mutate(
+    lm = ifelse(
+      variant %in% variant_2inl_1inm,
+      "Yes",
+      "No"
+    )
+  ) |>
   ggplot(aes(
     x = mean_statistic,
     y = mean_log10p,
     size = n
   )) +
-  ggpointdensity::geom_pointdensity(
-    adjust = 0.01,
-    # show.legend = FALSE,
+  geom_point(
+    aes(color = lm),
+    alpha = 0.5,
+    shape = 16,
   ) +
-  # geom_point() +
-  viridis::scale_color_viridis() +
+  ggsci::scale_color_aaas() +
+  geom_hline(
+    yintercept = -log10(0.05),
+    linetype = "dashed",
+    color = "red"
+  ) +
   scale_x_continuous(
-    limits = c(20, 170),
+    limits = c(20, 200),
     labels = scales::number,
-    breaks = seq(20, 170, by = 10),
-    expand = expansion(add = c(0.01, 0))
+    breaks = seq(20, 200, by = 20),
+    expand = expansion(mult = c(0.01, 0.01))
   ) +
   scale_y_continuous(
-    limits = c(2, 15),
+    limits = c(2, 16),
     labels = scales::number,
-    breaks = seq(2, 15, by = 1),
-    expand = expansion(add = c(0.01, 0))
+    breaks = seq(2, 16, by = 2),
+    expand = expansion(mult = c(0.01, 0.01))
   ) +
   ggrepel::geom_text_repel(
     data = variant_count_statistic |>
+      dplyr::mutate(
+        mean_statistic = ifelse(
+          mean_statistic > 200,
+          200,
+          mean_statistic
+        )
+      ) |>
       dplyr::filter(
         variant %in%
           c(
-            "7833T>C",
-            # sort by mean_statistic
-            "3030A>G",
-            "7430A>C",
-            "4175G>A",
-            "3727T>C",
-            "7418C>A",
-            "6409T>C",
-            "6669C>G",
-            "7583T>G",
-            "7582C>G",
-            "929A>C",
-            # sort by mean_log10p
-            "4886C>T",
-            "1082A>G",
-            # "15213T>C",
-            "3173G>A",
-            "6669C>G",
-            "13956A>G",
-            "14063T>C",
-            "8849T>C",
-            "8285C>A",
-            "4794G>A",
-            "11502T>C",
-            # sort by n
-            "4175G>A",
-            "2289G>T",
-            "10645T>G",
-            "3584A>C",
-            "3030A>G",
-            "3520A>C",
-            "2193T>A",
-            "9076A>C",
-            "8072T>G",
-            "3577A>C"
+            # "3173G>A",
+            # "3176A>T",
+            # "3178T>A",
+            # "3727T>C",
+            # "3728C>T",
+            variant_2inl_1inm
           )
       ),
     aes(label = variant),
     size = 3,
     max.overlaps = 20,
     show.legend = FALSE,
-    nudge_x = 5,
-    nudge_y = 2
+    # nudge_x = 2,
+    nudge_y = 1
   ) +
   labs(
     x = "Mean Kruskal-Wallis Statistic",
     y = "-log10(Mean P-value)",
-    title = "Variant Count vs. Mean Kruskal-Wallis Statistic and P-value"
+    title = "48% (236/495) cell type specific variant",
   ) +
   theme_bw() +
   guides(
-    size = guide_legend(title = "Variant Count"),
-    color = guide_colorbar(title = "Density")
+    size = guide_legend(title = "Variant in # of samples"),
+    color = guide_legend(
+      title = "Variant two peak in Lymphoid one single in Myeloid"
+    )
   ) +
   theme(
+    panel.background = element_blank(),
+    panel.grid = element_line(colour = "grey", linetype = "dashed"),
+    panel.grid.major = element_line(
+      colour = "grey",
+      linetype = "dashed",
+      size = 0.2
+    ),
     plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = c(0.25, 0.75),
+    legend.background = element_rect(
+      fill = NA,
+      color = NA
+    ),
+    legend.box.background = element_rect(
+      fill = NA,
+      color = NA
+    ),
   ) -> plot_variant_count_statistic
 ggsave(
   file.path(
     plotdir,
-    "ks_variant_count_statistic.pdf"
+    "ks_variant_count_statistic_new.pdf"
   ),
   plot = plot_variant_count_statistic,
   width = 9,
@@ -730,6 +767,20 @@ ggsave(
   height = 100,
   limitsize = FALSE
 )
+
+variant_2inl_1inm <- c(
+  "3727T>C",
+  "3728C>T",
+  "3735A>G",
+  "3734A>G",
+  "3216C>T",
+  "3215C>A",
+  "4175G>A",
+  "13762T>G",
+  "13589T>A"
+)
+variant_2inm_1inl <- c()
+interesting_variant <- c("10500G>A")
 
 
 # ? single variant joyplot --------------------------------------------------------------------

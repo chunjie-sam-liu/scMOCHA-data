@@ -1131,6 +1131,180 @@ gseid_srrid_variant_hetero_plot_ratio_plot |>
     )
   )
 
+
+#
+#
+# ? 3727 3728 --------------------------------------------------------------------
+#
+#
+
+gseid_srrid_variant_hetero_plot_ratio_$ratio[[4]] |>
+  dplyr::filter(varianttype == "Heteroplasmy") -> v3728
+
+gseid_srrid_variant_hetero_plot_ratio_$ratio[[5]] |>
+  dplyr::filter(varianttype == "Heteroplasmy") -> v3727
+
+shared_individuals <- intersect(
+  v3728$srrid,
+  v3727$srrid
+)
+
+ggvenn::ggvenn(
+  data = list(
+    "m.3727T>C" = v3727$srrid,
+    "m.3728C>T" = v3728$srrid
+  ),
+  fill_color = ggsci::pal_aaas()(2),
+  stroke_color = "white"
+) -> venn_3727_3728
+
+ggsave(
+  plot = venn_3727_3728,
+  filename = "venn_3727_3728.pdf",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+  width = 6,
+  height = 5
+)
+
+v3728 |>
+  dplyr::filter(srrid %in% shared_individuals) |>
+  dplyr::select(forplot) |>
+  tidyr::unnest(cols = forplot) |>
+  dplyr::filter(
+    cellvarianttype == "Heteroplasmy"
+  ) |>
+  dplyr::mutate(
+    barcode_new = glue::glue("{gseid}_{srrid}_{barcode}")
+  ) |>
+  dplyr::select(
+    gseid,
+    srrid,
+    barcode_new,
+    v3728_af = af,
+    celltype,
+  ) -> v3728_shared
+
+v3727 |>
+  dplyr::filter(srrid %in% shared_individuals) |>
+  dplyr::select(forplot) |>
+  tidyr::unnest(cols = forplot) |>
+  dplyr::filter(
+    cellvarianttype == "Heteroplasmy"
+  ) |>
+  dplyr::mutate(
+    barcode_new = glue::glue("{gseid}_{srrid}_{barcode}")
+  ) |>
+  dplyr::select(
+    gseid,
+    srrid,
+    barcode_new,
+    v3727_af = af,
+    celltype,
+  ) -> v3727_shared
+
+v3728_shared |>
+  dplyr::select(-c(gseid, srrid)) |>
+  dplyr::full_join(
+    v3727_shared |> dplyr::select(-c(gseid, srrid)),
+    by = c("barcode_new", "celltype"),
+    # suffix = c("_3728", "_3727")
+  ) |>
+  tidyr::replace_na(
+    list(
+      v3728_af = 0,
+      v3727_af = 0
+    )
+  ) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = names(color_celltype) |> rev()
+    )
+  ) -> v3728_3727_shared
+
+v3728_3727_shared |>
+  dplyr::filter(v3728_af > 0 & v3727_af > 0) |>
+  nrow() -> n_cells_shared
+
+
+v3728_3727_shared |>
+  ggplot(aes(
+    x = v3728_af,
+    y = v3727_af,
+    color = celltype
+  )) +
+  geom_point() +
+  scale_color_manual(
+    values = color_celltype,
+    na.value = "grey50",
+    name = "Celltype"
+  ) +
+  geom_vline(
+    aes(xintercept = 0.05),
+    linetype = 20,
+    color = "red"
+  ) +
+  geom_hline(
+    aes(yintercept = 0.05),
+    linetype = 20,
+    color = "red"
+  ) +
+  scale_x_continuous(
+    name = "m.3728C>T",
+    limits = c(0, 1),
+    breaks = c(seq(0, 1, 0.1), 0.05, 0.1) |> unique() |> sort(),
+    labels = \(b) {
+      dplyr::case_when(
+        b == 0.05 ~ "5%",
+        TRUE ~ scales::percent_format(accuracy = 1)(b)
+      )
+    },
+    expand = expansion(mult = c(0.01, 0.01)),
+  ) +
+  scale_y_continuous(
+    name = "m.3727T>C",
+    limits = c(0, 1),
+    breaks = c(seq(0, 1, 0.1), 0.05, 0.1) |> unique() |> sort(),
+    labels = \(b) {
+      dplyr::case_when(
+        b == 0.05 ~ "our cutoff 5%",
+        TRUE ~ scales::percent_format(accuracy = 1)(b)
+      )
+    },
+    expand = expansion(mult = c(0.01, 0.01)),
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    # axis.ticks = element_blank(),
+    # axis.text.x = element_text(angle = 45, hjust = 1),
+    # axis.text.x = element_blank(),
+    # axis.title.x = element_blank(),
+    axis.title = element_text(
+      size = 14,
+      color = "black",
+      face = "bold"
+    ),
+    # plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    axis.line = element_line(color = "black"),
+    panel.background = element_blank(),
+    legend.position = c(0.8, 0.7),
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5, size = 14),
+  ) +
+  labs(
+    title = "Variant m.3727T>C and m.3728C>T mutate independently",
+    subtitle = "Variant m.3727T>C in {scales::label_comma()(nrow(v3727_shared))} from {scales::label_comma()(length(unique(v3727_shared$gseid)))} projects and {scales::label_comma()(length(unique(v3727_shared$srrid)))} samples\nVariant m.3728C>T in {scales::label_comma()(nrow(v3728_shared))} from {scales::label_comma()(length(unique(v3728_shared$gseid)))} projects and {scales::label_comma()(length(unique(v3728_shared$srrid)))} samples\nOnly {scales::label_comma()(n_cells_shared)} cells both variants satisfied cutoff" |>
+      glue::glue()
+  ) -> p_3727_3728_corr
+
+ggsave(
+  plot = p_3727_3728_corr,
+  filename = "p_3727_3728_corr.pdf",
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+  width = 13,
+  height = 8
+)
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
