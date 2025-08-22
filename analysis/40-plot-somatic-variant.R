@@ -331,7 +331,7 @@ fn_plot_cell_af_somatic_variant_celltype <- function(forplot, thetheme) {
     )
 }
 fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {
-  fn_ybreaks_ylimits(forplot$af, step = 0.2) -> .ybl
+  fn_xy_breaks_limits(forplot$af, step = 0.2) -> .ybl
 
   forplot |>
     ggplot(aes(
@@ -357,8 +357,8 @@ fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {
       low = "#440154FF"
     ) +
     scale_y_continuous(
-      limits = .ybl$ylimits,
-      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      limits = .ybl$limits,
+      breaks = c(.ybl$breaks, 0.05, 0.1) |> unique() |> sort(),
       labels = \(b) {
         dplyr::case_when(
           b == 0.1 ~ "gnomAD cutoff 10%",
@@ -382,7 +382,7 @@ fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {
     )
 }
 fn_plot_cell_af_somatic_variant_depth <- function(forplot, thetheme) {
-  fn_ybreaks_ylimits(forplot$depth, step = 1) -> .ybl_depth
+  fn_xy_breaks_limits(forplot$depth, step = 1) -> .ybl_depth
   forplot |>
     ggplot(aes(
       x = barcode,
@@ -401,8 +401,8 @@ fn_plot_cell_af_somatic_variant_depth <- function(forplot, thetheme) {
       low = "white"
     ) +
     scale_y_continuous(
-      limits = .ybl_depth$ylimits,
-      breaks = c(.ybl_depth$ybreaks, log2(10 + 1)) |> unique() |> sort(),
+      limits = .ybl_depth$limits,
+      breaks = c(.ybl_depth$breaks, log2(10 + 1)) |> unique() |> sort(),
       labels = \(b) {
         dplyr::case_when(
           b == log2(10 + 1) ~ "cutoff 10",
@@ -515,7 +515,7 @@ fn_plot_hetero_pseudo_bulk <- function(.d) {
     dplyr::filter(barcode == "Pseudo-bulk") |>
     dplyr::arrange(-af) -> .rank_pseudo_bulk
 
-  fn_ybreaks_ylimits(.forplot$af, step = 0.1) -> .ybl
+  fn_xy_breaks_limits(.forplot$af, step = 0.1) -> .ybl
 
   .forplot |>
     dplyr::mutate(
@@ -539,8 +539,8 @@ fn_plot_hetero_pseudo_bulk <- function(.d) {
     ) +
     scale_y_continuous(
       name = "Heteroplasmy frequency",
-      limits = .ybl$ylimits,
-      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      limits = .ybl$limits,
+      breaks = c(.ybl$breaks, 0.05, 0.1) |> unique() |> sort(),
       expand = expansion(mult = c(0.005, 0.03)),
       labels = \(b) {
         dplyr::case_when(
@@ -672,7 +672,7 @@ fn_plot_variant_ratio_count <- function(.d_forplot, rank_srrid) {
       .groups = "drop"
     ) -> .m
 
-  fn_ybreaks_ylimits(.m$count, step = 2000) -> .count_ybl
+  fn_xy_breaks_limits(.m$count, step = 2000) -> .count_ybl
   # count
   .d_forplot |>
     dplyr::mutate(
@@ -699,8 +699,8 @@ fn_plot_variant_ratio_count <- function(.d_forplot, rank_srrid) {
       limits = rank_srrid,
     ) +
     scale_y_continuous(
-      limits = .count_ybl$ylimits,
-      breaks = .count_ybl$ybreaks,
+      limits = .count_ybl$limits,
+      breaks = .count_ybl$breaks,
       expand = expansion(mult = c(0.005, 0.03)),
       labels = scales::label_comma()
     ) +
@@ -796,7 +796,7 @@ fn_plot_variant_ratio_paf <- function(.d, rank_srrid) {
     fn_get_hetero_pseudo_bulk() |>
     dplyr::filter(barcode == "Pseudo-bulk") -> .bulk_forplot
 
-  fn_ybreaks_ylimits(.bulk_forplot$af, step = 0.1) -> .ybl
+  fn_xy_breaks_limits(.bulk_forplot$af, step = 0.1) -> .ybl
 
   mean(.bulk_forplot$af) -> .mean_af
 
@@ -826,8 +826,8 @@ fn_plot_variant_ratio_paf <- function(.d, rank_srrid) {
     ) +
     scale_y_continuous(
       name = "Pseudo-bulk HAF",
-      limits = .ybl$ylimits,
-      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      limits = .ybl$limits,
+      breaks = c(.ybl$breaks, 0.05, 0.1) |> unique() |> sort(),
       labels = \(b) {
         dplyr::case_when(
           b == 0.1 ~ "gnomAD cutoff 10%",
@@ -861,7 +861,7 @@ fn_plot_variant_ratio_swarm <- function(.d, rank_srrid) {
     tidyr::unnest(cols = forplot) |>
     dplyr::filter(cellvarianttype == "Heteroplasmy") -> .dd
 
-  fn_ybreaks_ylimits(
+  fn_xy_breaks_limits(
     .dd$af,
     step = 0.1
   ) -> .ybl
@@ -931,8 +931,8 @@ fn_plot_variant_ratio_swarm <- function(.d, rank_srrid) {
     ) +
     scale_y_continuous(
       name = "HAF",
-      limits = .ybl$ylimits,
-      breaks = c(.ybl$ybreaks, 0.05, 0.1) |> unique() |> sort(),
+      limits = .ybl$limits,
+      breaks = c(.ybl$breaks, 0.05, 0.1) |> unique() |> sort(),
       labels = \(b) {
         dplyr::case_when(
           b == 0.1 ~ "gnomAD cutoff 10%",
