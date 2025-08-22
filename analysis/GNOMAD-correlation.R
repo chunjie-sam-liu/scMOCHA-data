@@ -62,6 +62,9 @@ tbl_gseid_srrid_variant <- dplyr::tbl(
   conn,
   "gseid_srrid_variant"
 )
+gse_data <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+)
 
 tbl_gseid_srrid_variant |>
   dplyr::collect() |>
@@ -298,12 +301,12 @@ gseid_srrid_variant_hetero |>
           dplyr::count(gnomad_cutoff) |>
           tibble::deframe() -> .n
         tibble::tibble(
-          gnomad_TRUE = .n["TRUE"],
-          gnomad_FALSE = .n["FALSE"]
+          gnomad_gt_0.1 = .n["TRUE"],
+          gnomad_lt_0.1 = .n["FALSE"]
         ) |>
           tidyr::replace_na(list(
-            gnomad_TRUE = 0,
-            gnomad_FALSE = 0
+            gnomad_gt_0.1 = 0,
+            gnomad_lt_0.1 = 0
           ))
       }
     )
@@ -324,85 +327,94 @@ gseid_srrid_variant_hetero |>
   ) -> gseid_srrid_variant_hetero_gnomad
 
 gseid_srrid_variant_hetero_gnomad |>
-  dplyr::filter(!inrnr) |>
-  dplyr::filter(gnomad_TRUE > 0) |>
-  dplyr::arrange(-gnomad_TRUE)
-
-
-#
-dplyr::group_by(variant) |>
-  dplyr::summarise(
-    new_freq = dplyr::n() / 577,
-    new_af = mean(af)
+  dplyr::mutate(
+    innoncoding = grepl(
+      "rRNA|MitoTIP|non-coding",
+      aachange,
+    )
   ) |>
   dplyr::mutate(
-    new_freq = ifelse(new_af > 0, new_freq, 0)
+    ingnomad = gnomad_gt_0.1 / gnomad_lt_0.1 > 1
   ) |>
-  dplyr::arrange(-new_freq) |>
-  dplyr::left_join(
-    hete_variants,
-    by = "variant"
-  ) |>
-  dplyr::filter(
-    !dplyr::between(Position, rnr1[1], rnr1[2])
-  ) |>
-  dplyr::filter(
-    !dplyr::between(Position, rnr2[1], rnr2[2])
-  ) -> hete_variants_new
-
-hete_variants_new |> dplyr::arrange(-new_freq)
-
-
-fn_xy_breaks_limits(
-  hete_variants_new$new_freq,
-  step = 0.001,
-  max = FALSE
-) -> xbl_hete_new
-fn_xy_breaks_limits(
-  hete_variants$`Gnomad Frequency`,
-  step = 0.001,
-  max = FALSE
-) -> ybl_hete_new
-
-cor.test(
-  ~ `Gnomad Frequency` + freq,
-  data = hete_variants_new
-)
-
-hete_variants_new |>
-  ggpubr::ggscatter(
-    x = "new_freq",
-    y = "Gnomad Frequency",
-    # conf.int = TRUE,
-    cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-    cor.coeff.args = list(
-      method = "pearson",
-      label.x = 0.005,
-      label.sep = "\n",
-      size = 5
+  dplyr::mutate(
+    variant_type = ifelse(
+      ingnomad,
+      "Psudo-bulk AF >= 0.1 (n=42)",
+      "Psudo-bulk AF < 0.1 (n=453)"
     )
+  ) |>
+  dplyr::mutate(
+    variant_type = ifelse(
+      innoncoding & ingnomad,
+      "Psudo-bulk AF >= 0.1 & noncoding(n=14)",
+      variant_type
+    )
+  ) |>
+  dplyr::mutate(
+    variant_type = ifelse(
+      (!innoncoding) & ingnomad,
+      "Psudo-bulk AF >= 0.1 & coding(n=28)",
+      variant_type
+    )
+  ) -> forplot
+
+
+fn_xy_breaks_limits(
+  forplot$freq,
+  step = 0.05,
+  max = FALSE
+) -> xbl_hete
+fn_xy_breaks_limits(
+  forplot$`Gnomad Frequency`,
+  step = 0.05,
+  max = FALSE
+) -> ybl_hete
+
+
+forplot |>
+  dplyr::filter(ingnomad) |>
+  dplyr::arrange(-freq) |>
+  head(5) -> forlabel
+
+forplot |>
+  ggplot(aes(
+    x = `freq`,
+    y = `Gnomad Frequency`,
+    color = variant_type,
+  )) +
+  geom_point(
+    alpha = 0.7,
+    size = 1.5
   ) +
-  # geom_point(alpha = 0.7) +
-  ggpointdensity::geom_pointdensity(
-    adjust = 0.01,
-    show.legend = FALSE,
+  ggrepel::geom_label_repel(
+    data = forlabel,
+    aes(
+      label = variant,
+    ),
+    size = 3.5,
+    nudge_x = 0.01,
+    nudge_y = 0.01,
+    show.legend = FALSE
   ) +
-  viridis::scale_color_viridis() +
   scale_x_continuous(
-    limits = xbl_hete_new$limits,
-    breaks = xbl_hete_new$breaks,
+    limits = xbl_hete$limits,
+    breaks = xbl_hete$breaks,
     labels = scales::label_number(
-      accuracy = 0.001
+      accuracy = 0.01
     ),
     expand = expansion(mult = c(0.01, 0.01))
   ) +
   scale_y_continuous(
-    limits = xbl_hete_new$limits,
-    breaks = xbl_hete_new$breaks,
+    limits = xbl_hete$limits,
+    breaks = xbl_hete$breaks,
     labels = scales::label_number(
-      accuracy = 0.001
+      accuracy = 0.01
     ),
     expand = expansion(mult = c(0.01, 0.01))
+  ) +
+  scale_color_brewer(
+    palette = "Set1",
+    name = "Variant Type"
   ) +
   labs(
     x = "Heteroplasmic variant population frequency (n=577)",
@@ -416,7 +428,25 @@ hete_variants_new |>
   ) +
   theme(
     axis.title = element_text(size = 16),
-  )
+    panel.grid = element_blank(),
+    panel.background = element_rect(fill = NA),
+    axis.line = element_line(
+      color = "black",
+      linewidth = 0.5
+    ),
+    legend.position = c(0.5, 0.6)
+  ) -> p_hete_corr_gnomad_newcutoff
+
+ggsave(
+  filename = file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/gnomad",
+    "heteroplasmic_variant_correlates_with_gnomad_newcutoff.pdf"
+  ),
+  plot = p_hete_corr_gnomad_newcutoff,
+  width = 6,
+  height = 5,
+  dpi = 300
+)
 
 # footer ------------------------------------------------------------------
 
