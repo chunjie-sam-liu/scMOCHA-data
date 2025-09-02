@@ -1130,7 +1130,10 @@ gseid_srrid_variant_hetero_plot_ratio_plot |>
       }
     )
   )
-
+export(
+  gseid_srrid_variant_hetero_plot_ratio,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_hetero_plot_ratio.qs"
+)
 
 #
 #
