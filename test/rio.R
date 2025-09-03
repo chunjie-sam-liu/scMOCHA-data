@@ -623,3 +623,27 @@ DBI::dbWriteTable(
   overwrite = TRUE,
 )
 DBI::dbDisconnect(conn = conn, shutdown = TRUE)
+
+
+#
+#
+# ?  --------------------------------------------------------------------
+#
+#
+gseid_srrid_variant_hetero_plot_ratio <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_hetero_plot_ratio.qs"
+)
+
+
+gseid_srrid_variant_hetero_plot_ratio |>
+  dplyr::select(
+    gseid,
+    srrid,
+    variant,
+    # forplot,
+    # tidyselect::contains("ratio")
+  ) |>
+  export(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant",
+    format = "both"
+  )

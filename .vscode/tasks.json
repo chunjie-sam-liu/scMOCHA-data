@@ -5,7 +5,11 @@
       "label": "Attach R Terminal",
       "type": "shell",
       "command": "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/radian",
-      "group": "build",
+      "isBackground": true,
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
       "presentation": {
         "echo": true,
         "reveal": "always",
