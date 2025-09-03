@@ -84,7 +84,9 @@ gseid_srrid_variant_sc |>
     load = parallel::mclapply(
       sc_file,
       function(f) {
-        import(f)
+        .sc <- import(f)
+        .sc[["SCT"]]@scale.data <- matrix()
+        .sc
       },
       mc.cores = 10
     )
@@ -100,9 +102,32 @@ sc_merge <- merge(
   merge.data = FALSE # not merge the scale.data, for memory sake
 )
 
-
+DefaultAssay(sc_merge)
 Assays(sc_merge)
 Layers(sc_merge[["SCT"]])
+
+sc_merge <- Seurat::PrepSCTFindMarkers(sc_merge)
+
+export(
+  sc_merge,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/sc_merge.sct.3727T>C.qs"
+)
+
+
+markers <- Seurat::FindMarkers(
+  object = sc_merge,
+  ident.1 = "Heteroplasmy",
+  ident.2 = "Sufficient reads",
+  assay = "SCT",
+  slot = "data",
+  test.use = "wilcox",
+  group.by = "cellvarianttype",
+  latent.vars = "srrid"
+)
+export(
+  markers,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/markers.hetero_vs_sufficient.3727T>C.qs"
+)
 
 # footer ------------------------------------------------------------------
 

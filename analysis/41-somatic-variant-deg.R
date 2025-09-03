@@ -63,6 +63,27 @@ fn_de <- function(
     "final",
     thesrrid
   )
+  .dir_de <- file.path(
+    .dir,
+    "de"
+  )
+  if (
+    file.exists(
+      file.path(
+        .dir_de,
+        "sc_azimuth.markers.hetero_vs_sufficient.qs"
+      )
+    )
+  ) {
+    markers <- import(
+      file.path(
+        .dir_de,
+        "sc_azimuth.markers.hetero_vs_sufficient.qs"
+      )
+    )
+    return(markers)
+  }
+
   sc <- import(
     file.path(
       .dir,
@@ -102,13 +123,10 @@ fn_de <- function(
   )
   DefaultAssay(sc_azimuth) <- "SCT"
 
-  .dir_de <- file.path(
-    .dir,
-    "de"
-  )
   if (dir.exists(.dir_de) == FALSE) {
     dir.create(.dir_de)
   }
+  sc_azimuth[["SCT"]]@scale.data <- matrix()
 
   export(
     sc_azimuth,
@@ -236,8 +254,13 @@ forplot_ <- filtered_data$forplot[[1]]
 #
 #
 
+thegseid <- filtered_data$gseid[[6]]
+thesrrid <- filtered_data$srrid[[6]]
+thevariant <- filtered_data$variant[[6]]
+forplot_ <- filtered_data$forplot[[6]]
+
 filtered_data |>
-  head(10) |>
+  # head(6) |>
   dplyr::mutate(
     p = parallel::mcmapply(
       FUN = \(thegseid, thesrrid, thevariant, forplot_) {
@@ -270,6 +293,53 @@ filtered_data |>
   ) |>
   dplyr::select(-forplot) -> filtered_data_plots
 
+
+filtered_data_plots |>
+  dplyr::mutate(
+    saveimage = parallel::mcmapply(
+      FUN = \(.x) {
+        message(.x)
+      },
+      .x = gseid
+    )
+  )
+
+filtered_data_plots |>
+  dplyr::mutate(
+    saveimage = parallel::mcmapply(
+      FUN = \(p, gseid, srrid, variant) {
+        if (is.null(p)) {
+          return(NULL)
+        }
+        .outdir <- file.path(
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
+          variant,
+          "deg"
+        )
+        dir.create(
+          .outdir,
+          recursive = TRUE,
+          showWarnings = FALSE
+        )
+        ggsave(
+          filename = file.path(
+            .outdir,
+            "{gseid}-{srrid}-m.{variant}.deg.hetero_vs_sufficient.pdf" |>
+              glue::glue()
+          ),
+          plot = p,
+          width = 6,
+          height = 5
+        )
+      },
+      p = p,
+      gseid = gseid,
+      srrid = srrid,
+      variant = variant,
+      mc.cores = 8,
+      SIMPLIFY = FALSE
+    )
+  )
 # footer------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
