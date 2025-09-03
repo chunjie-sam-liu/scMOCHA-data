@@ -95,6 +95,12 @@ gseid_srrid_variant_sc |>
 
 sc_list <- gseid_srrid_variant_sc_filtered |> dplyr::pull(load)
 
+lapply(
+  sc_list,
+  Seurat::VariableFeatures
+) |>
+  unlist() |>
+  unique() -> var_features
 
 sc_merge <- merge(
   x = sc_list[[1]],
@@ -102,17 +108,21 @@ sc_merge <- merge(
   merge.data = FALSE # not merge the scale.data, for memory sake
 )
 
+Seurat::VariableFeatures(sc_merge) <- var_features
+
 DefaultAssay(sc_merge)
 Assays(sc_merge)
 Layers(sc_merge[["SCT"]])
 
-sc_merge <- Seurat::PrepSCTFindMarkers(sc_merge)
+sc_merge <- Seurat::PrepSCTFindMarkers(
+  sc_merge,
+  # features = Seurat::VariableFeatures(sc_merge)
+)
 
 export(
   sc_merge,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/sc_merge.sct.3727T>C.qs"
 )
-
 
 markers <- Seurat::FindMarkers(
   object = sc_merge,
@@ -122,11 +132,79 @@ markers <- Seurat::FindMarkers(
   slot = "data",
   test.use = "wilcox",
   group.by = "cellvarianttype",
-  latent.vars = "srrid"
+  latent.vars = "srrid",
+  features = Seurat::VariableFeatures(sc_merge)
 )
 export(
   markers,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/markers.hetero_vs_sufficient.3727T>C.qs"
+)
+
+#
+#
+# ? 3728C>T --------------------------------------------------------------------
+#
+#
+gseid_srrid_variant_sc |>
+  dplyr::filter(variant == "3728C>T") |>
+  dplyr::mutate(
+    load = parallel::mclapply(
+      sc_file,
+      function(f) {
+        .sc <- import(f)
+        .sc[["SCT"]]@scale.data <- matrix()
+        .sc
+      },
+      mc.cores = 10,
+    )
+  ) -> gseid_srrid_variant_sc_filtered
+
+
+sc_list <- gseid_srrid_variant_sc_filtered |> dplyr::pull(load)
+
+lapply(
+  sc_list,
+  Seurat::VariableFeatures
+) |>
+  unlist() |>
+  unique() -> var_features
+
+sc_merge <- merge(
+  x = sc_list[[1]],
+  y = sc_list[2:length(sc_list)],
+  merge.data = FALSE # not merge the scale.data, for memory sake
+)
+
+Seurat::VariableFeatures(sc_merge) <- var_features
+
+DefaultAssay(sc_merge)
+Assays(sc_merge)
+Layers(sc_merge[["SCT"]])
+
+sc_merge <- Seurat::PrepSCTFindMarkers(
+  sc_merge,
+  # features = Seurat::VariableFeatures(sc_merge)
+)
+
+export(
+  sc_merge,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/sc_merge.sct.3728C>T.qs"
+)
+
+markers <- Seurat::FindMarkers(
+  object = sc_merge,
+  ident.1 = "Heteroplasmy",
+  ident.2 = "Sufficient reads",
+  assay = "SCT",
+  slot = "data",
+  test.use = "wilcox",
+  group.by = "cellvarianttype",
+  latent.vars = "srrid",
+  features = Seurat::VariableFeatures(sc_merge)
+)
+export(
+  markers,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/markers.hetero_vs_sufficient.3728C>T.qs"
 )
 
 # footer ------------------------------------------------------------------
