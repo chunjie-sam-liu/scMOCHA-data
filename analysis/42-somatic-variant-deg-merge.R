@@ -342,15 +342,17 @@ DefaultAssay(sc_merge)
 Assays(sc_merge)
 Layers(sc_merge[["SCT"]])
 
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
 
 export(
   sc_merge,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/sc_merge.sct.3727T>C.qs"
 )
+
+sc_merge <- Seurat::PrepSCTFindMarkers(
+  sc_merge,
+  # features = Seurat::VariableFeatures(sc_merge)
+)
+
 
 markers <- Seurat::FindMarkers(
   object = sc_merge,
@@ -440,17 +442,21 @@ tibble::tibble(
 gseid_srrid_variant_sc |>
   dplyr::filter(variant == "3728C>T") |>
   dplyr::mutate(
-    load = parallel::mclapply(
+    # load = parallel::mclapply(
+    load = lapply(
       sc_file,
       function(f) {
         .sc <- import(f)
         .sc[["SCT"]]@scale.data <- matrix()
         .sc
-      },
-      mc.cores = 10,
+      }
+      # mc.cores = 12,
     )
   ) -> gseid_srrid_variant_sc_filtered
 
+# GSM7080030
+
+# gseid_srrid_variant_sc_filtered |> dplyr::filter(srrid == "GSM7080030")
 
 sc_list <- gseid_srrid_variant_sc_filtered |> dplyr::pull(load)
 
@@ -473,14 +479,15 @@ DefaultAssay(sc_merge)
 Assays(sc_merge)
 Layers(sc_merge[["SCT"]])
 
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
 
 export(
   sc_merge,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/sc_merge.sct.3728C>T.qs"
+)
+
+sc_merge <- Seurat::PrepSCTFindMarkers(
+  sc_merge,
+  # features = Seurat::VariableFeatures(sc_merge)
 )
 
 markers <- Seurat::FindMarkers(

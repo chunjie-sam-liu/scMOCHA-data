@@ -71,14 +71,16 @@ fn_de <- function(
     file.exists(
       file.path(
         .dir_de,
-        "sc_azimuth.markers.hetero_vs_sufficient.qs"
+        "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
+          glue::glue()
       )
     )
   ) {
     markers <- import(
       file.path(
         .dir_de,
-        "sc_azimuth.markers.hetero_vs_sufficient.qs"
+        "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
+          glue::glue()
       )
     )
     return(markers)
@@ -123,9 +125,12 @@ fn_de <- function(
   )
   DefaultAssay(sc_azimuth) <- "SCT"
 
-  if (dir.exists(.dir_de) == FALSE) {
-    dir.create(.dir_de)
-  }
+  dir.create(
+    .dir_de,
+    showWarnings = FALSE,
+    recursive = TRUE
+  )
+
   sc_azimuth[["SCT"]]@scale.data <- matrix()
 
   export(
@@ -145,7 +150,8 @@ fn_de <- function(
     markers,
     file = file.path(
       .dir_de,
-      "sc_azimuth.markers.hetero_vs_sufficient.qs"
+      "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
+        glue::glue()
     ),
   )
 
@@ -254,10 +260,14 @@ forplot_ <- filtered_data$forplot[[1]]
 #
 #
 
-thegseid <- filtered_data$gseid[[6]]
-thesrrid <- filtered_data$srrid[[6]]
-thevariant <- filtered_data$variant[[6]]
-forplot_ <- filtered_data$forplot[[6]]
+filtered_data |>
+  tibble::rowid_to_column("id") |>
+  dplyr::filter(srrid == "GSM7080030")
+
+thegseid <- filtered_data$gseid[[20]]
+thesrrid <- filtered_data$srrid[[20]]
+thevariant <- filtered_data$variant[[20]]
+forplot_ <- filtered_data$forplot[[20]]
 
 filtered_data |>
   # head(6) |>

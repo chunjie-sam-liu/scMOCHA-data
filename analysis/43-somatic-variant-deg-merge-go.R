@@ -319,7 +319,10 @@ fn_de_ <- function(
   #   title = "Markers: {hetero_label} High vs Low (m.{thevariant})" |>
   #     glue::glue()
   # )
-
+  sc <- Seurat::PrepSCTFindMarkers(
+    sc,
+    # features = Seurat::VariableFeatures(sc_merge)
+  )
   markers_hetero_high_vs_low <- Seurat::FindMarkers(
     object = sc,
     ident.1 = .ident.1,
@@ -560,16 +563,14 @@ fn_variant_ <- function(
 }
 
 
-fn_variant_cell_ <- function(thevariant) {
+fn_variant_cell_ <- function(thevariant, sc) {
   library(Seurat)
-  sc <- fn_load_sc(thevariant = thevariant)
-
   sc$predicted.celltype.l1 |> unique() -> celltypes
 
   parallel::mclapply(
     celltypes,
     function(.celltype) {
-      sc_sub <- Seurat::subset(
+      sc_sub <- subset(
         sc,
         subset = predicted.celltype.l1 == .celltype
       )
@@ -579,7 +580,7 @@ fn_variant_cell_ <- function(thevariant) {
         .celltype = .celltype
       )
     },
-    mc.cores = 10
+    mc.cores = length(celltypes)
   )
 }
 # body --------------------------------------------------------------------
@@ -589,30 +590,35 @@ fn_variant_cell_ <- function(thevariant) {
 # ? 3727T>C --------------------------------------------------------------------
 #
 #
-
+library(Seurat)
+sc_3727 <- fn_load_sc(
+  thevariant = "3727T>C"
+)
 fn_variant_(
   thevariant = "3727T>C",
-  sc = fn_load_sc(
-    thevariant = "3727T>C"
-  )
+  sc = sc_3727
 )
 
 fn_variant_cell_(
-  thevariant = "3727T>C"
+  thevariant = "3727T>C",
+  sc = sc_3727
 )
 #
 #
 # ? 3728C>T --------------------------------------------------------------------
 #
 #
+sc_3728 <- fn_load_sc(
+  thevariant = "3728C>T"
+)
 fn_variant_(
   thevariant = "3728C>T",
-  sc = fn_load_sc(
-    thevariant = "3728C>T"
-  )
+  sc = sc_3728
 )
+
 fn_variant_cell_(
-  thevariant = "3728C>T"
+  thevariant = "3728C>T",
+  sc = sc_3728
 )
 
 # footer ------------------------------------------------------------------
