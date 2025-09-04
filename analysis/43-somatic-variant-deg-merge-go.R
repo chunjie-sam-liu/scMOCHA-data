@@ -19,6 +19,7 @@ library(glue)
 library(parallel)
 library(GetoptLong)
 library(logger)
+library(scales)
 
 # args --------------------------------------------------------------------
 
@@ -88,6 +89,14 @@ fn_de_plot <- function(
       )
     ) -> forplot
 
+  # forplot |>
+  #   dplyr::count(color) |>
+  #   print()
+
+  forplot |>
+    dplyr::count(color) |>
+    tibble::deframe() -> n_color
+
   forplot |>
     ggplot(aes(
       x = avg_log2FC,
@@ -121,7 +130,13 @@ fn_de_plot <- function(
     labs(
       x = "Fold change(Heteroplasmy/Sufficient reads)",
       y = "FDR",
-      # title = "{thegseid}-{thesrrid}-m.{thevariant}" |> glue::glue()
+      subtitle = glue::glue(
+        "Up:{
+          scales::label_comma()(n_color[[3]])
+        }, down: {
+          scales::label_comma()(n_color[[1]])
+        };(Cutoff: FDR<{.cutoff_pval}, log2FC>{.cutoff_log2fc}, Pct>{.pct})"
+      )
     ) +
     theme(
       plot.title = element_text(
@@ -129,7 +144,13 @@ fn_de_plot <- function(
         face = "bold",
         color = "black",
         size = 16
-      )
+      ),
+      plot.subtitle = element_text(
+        hjust = 0.5,
+        # face = "bold",
+        color = "black",
+        size = 12
+      ),
     ) -> p
   list(
     p = p,
@@ -284,7 +305,8 @@ fn_de_ <- function(
   .ident.2,
   .group.by,
   .prefix,
-  .labs
+  .labs,
+  .celltype = NULL
 ) {
   # .ident.1 <- glue::glue("{hetero_label} high")
   # .ident.2 <- glue::glue("{hetero_label} low")
@@ -310,10 +332,34 @@ fn_de_ <- function(
     features = Seurat::VariableFeatures(sc)
   )
 
+  .outdir <- file.path(
+    dir_main_variant,
+    thevariant,
+    "deg_merge"
+  )
+
+  if (!is.null(.celltype)) {
+    .outdir <- file.path(
+      dir_main_variant,
+      thevariant,
+      "deg_merge",
+      .celltype
+    )
+  }
+
+  dir.create(
+    .outdir,
+    showWarnings = FALSE,
+    recursive = TRUE
+  )
+
   export(
     markers_hetero_high_vs_low,
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/deg_merge/markers.{.prefix}.{thevariant}.qs" |>
-      glue::glue()
+    file.path(
+      .outdir,
+      "markers.{.prefix}.{thevariant}.qs" |>
+        glue::glue()
+    )
   )
 
   fn_de_plot(
@@ -322,12 +368,12 @@ fn_de_ <- function(
     .cutoff_log2fc = 0.25,
     .pct = 0.05
   ) -> p_hetero_high_vs_low
+  p_hetero_high_vs_low$p + .labs -> p_hetero_high_vs_low$p
 
   ggsave(
     filename = "markers.{.prefix}.{thevariant}.pdf" |> glue::glue(),
-    plot = p_hetero_high_vs_low$p + .labs,
-    path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/deg_merge" |>
-      glue::glue(),
+    plot = p_hetero_high_vs_low$p,
+    path = .outdir,
     device = "pdf",
     width = 10,
     height = 6
@@ -337,7 +383,8 @@ fn_de_ <- function(
 fn_go_ <- function(
   thevariant,
   p_hetero_high_vs_low,
-  .prefix
+  .prefix,
+  .celltype = NULL
 ) {
   # .prefix <- "hetero_high_vs_low"
 
@@ -345,11 +392,32 @@ fn_go_ <- function(
     p_hetero_high_vs_low$markers,
     thevariant
   ) -> p_go_hetero_high_vs_low
+  .outdir <- file.path(
+    dir_main_variant,
+    thevariant,
+    "go_merge"
+  )
+  if (!is.null(.celltype)) {
+    .outdir <- file.path(
+      dir_main_variant,
+      thevariant,
+      "go_merge",
+      .celltype
+    )
+  }
+  dir.create(
+    .outdir,
+    showWarnings = FALSE,
+    recursive = TRUE
+  )
 
   export(
     p_go_hetero_high_vs_low,
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/go_merge/markers.{.prefix}.{thevariant}.go.qs" |>
-      glue::glue()
+    file.path(
+      .outdir,
+      "markers.{.prefix}.{thevariant}.go.qs" |>
+        glue::glue()
+    )
   )
 
   tibble::tibble(
@@ -366,9 +434,13 @@ fn_go_ <- function(
             glue::glue()
           ggsave(
             filename = .filename,
-            plot = .p,
-            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/go_merge" |>
-              glue::glue(),
+            plot = .p +
+              labs(
+                title = glue::glue(
+                  "m.{thevariant} {ifelse(is.null(.celltype), '', .celltype)}"
+                )
+              ),
+            path = .outdir,
             device = "pdf",
             width = 10,
             height = 6
@@ -378,87 +450,169 @@ fn_go_ <- function(
     )
 }
 
+fn_load_sc <- function(thevariant) {
+  library(Seurat)
+  sc <- import(
+    file.path(
+      dir_main_variant,
+      thevariant,
+      "deg_merge",
+      glue::glue("sc_merge.sct.{thevariant}.qs")
+    )
+  )
+  sc
+}
+
+fn_variant_ <- function(
+  thevariant,
+  sc,
+  .celltype = NULL
+) {
+  # thevariant <- "3727T>C"
+
+  sc@meta.data |>
+    as.data.table() |>
+    dplyr::filter(cellvarianttype == "Heteroplasmy") |>
+    dplyr::pull(af) |>
+    median(na.rm = FALSE) -> median_af
+
+  # scales::label_number(accuracy = 0.01)(median_af)
+  hetero_label <- glue::glue(
+    "Heteroplasmy (median {scales::label_number(accuracy = 0.01)(median_af)})"
+  )
+
+  sc@meta.data |>
+    dplyr::mutate(
+      cellvarianttype2 = dplyr::case_when(
+        cellvarianttype == "Heteroplasmy" &
+          af >= median_af ~
+          glue::glue("{hetero_label} high"),
+        cellvarianttype == "Heteroplasmy" &
+          af < median_af ~
+          glue::glue("{hetero_label} low"),
+        TRUE ~ cellvarianttype
+      )
+    ) -> sc@meta.data
+
+  DefaultAssay(sc) <- "SCT"
+
+  sc@meta.data |>
+    dplyr::count(cellvarianttype2) |>
+    dplyr::arrange(cellvarianttype2) |>
+    tibble::deframe() -> n_cellvarianttype2
+
+  p_hetero_high_vs_low <- fn_de_(
+    thevariant = thevariant,
+    sc = sc,
+    .ident.1 = glue::glue("{hetero_label} high"),
+    .ident.2 = glue::glue("{hetero_label} low"),
+    .group.by = "cellvarianttype2",
+    .prefix = "hetero_high_vs_low",
+    .labs <- labs(
+      x = glue::glue(
+        "Fold change {hetero_label} High (n={
+          scales::label_comma()(n_cellvarianttype2[[1]])
+        }) vs Low (n={
+          scales::label_comma()(n_cellvarianttype2[[2]])
+        })"
+      ),
+      y = "FDR",
+      # title = "m.{thevariant}" |> glue::glue()
+      title = "Markers: {hetero_label} High vs Low (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
+        glue::glue()
+    ),
+    .celltype = .celltype
+  )
+
+  fn_go_(
+    thevariant = thevariant,
+    p_hetero_high_vs_low = p_hetero_high_vs_low,
+    .prefix = "hetero_high_vs_low",
+    .celltype = .celltype
+  )
+
+  p_hetero_vs_sufficient <- fn_de_(
+    thevariant = thevariant,
+    sc = sc,
+    .ident.1 = "Heteroplasmy",
+    .ident.2 = "Sufficient reads",
+    .group.by = "cellvarianttype",
+    .prefix = "hetero_vs_sufficient",
+    .labs <- labs(
+      x = "Fold change Heteroplasmy (n={
+          scales::label_comma()(n_cellvarianttype2[[1]] + n_cellvarianttype2[[2]])
+        }) vs Sufficient reads (n={
+          scales::label_comma()(n_cellvarianttype2[[5]])
+        })",
+      y = "FDR",
+      title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
+        glue::glue()
+    ),
+    .celltype = .celltype
+  )
+
+  fn_go_(
+    thevariant = thevariant,
+    p_hetero_high_vs_low = p_hetero_vs_sufficient,
+    .prefix = "hetero_vs_sufficient",
+    .celltype = .celltype
+  )
+}
+
+
+fn_variant_cell_ <- function(thevariant) {
+  library(Seurat)
+  sc <- fn_load_sc(thevariant = thevariant)
+
+  sc$predicted.celltype.l1 |> unique() -> celltypes
+
+  parallel::mclapply(
+    celltypes,
+    function(.celltype) {
+      sc_sub <- Seurat::subset(
+        sc,
+        subset = predicted.celltype.l1 == .celltype
+      )
+      fn_variant_(
+        thevariant = thevariant,
+        sc = sc_sub,
+        .celltype = .celltype
+      )
+    },
+    mc.cores = 10
+  )
+}
 # body --------------------------------------------------------------------
 
-thevariant <- "3727T>C"
-library(Seurat)
-sc <- import(
-  file.path(
-    dir_main_variant,
-    thevariant,
-    "deg_merge",
-    glue::glue("sc_merge.sct.{thevariant}.qs")
+#
+#
+# ? 3727T>C --------------------------------------------------------------------
+#
+#
+
+fn_variant_(
+  thevariant = "3727T>C",
+  sc = fn_load_sc(
+    thevariant = "3727T>C"
   )
 )
 
-sc@meta.data |>
-  as.data.table() |>
-  dplyr::filter(cellvarianttype == "Heteroplasmy") |>
-  dplyr::pull(af) |>
-  median(na.rm = FALSE) -> median_af
-
-scales::label_number(accuracy = 0.01)(median_af)
-hetero_label <- glue::glue(
-  "Heteroplasmy (median {scales::label_number(accuracy = 0.01)(median_af)})"
+fn_variant_cell_(
+  thevariant = "3727T>C"
 )
-
-sc@meta.data |>
-  dplyr::mutate(
-    cellvarianttype2 = dplyr::case_when(
-      cellvarianttype == "Heteroplasmy" &
-        af >= median_af ~
-        glue::glue("{hetero_label} high"),
-      cellvarianttype == "Heteroplasmy" &
-        af < median_af ~
-        glue::glue("{hetero_label} low"),
-      TRUE ~ cellvarianttype
-    )
-  ) -> sc@meta.data
-
-DefaultAssay(sc) <- "SCT"
-
-p_hetero_high_vs_low <- fn_de_(
-  thevariant = "3727T>C",
-  sc = sc,
-  .ident.1 = glue::glue("{hetero_label} high"),
-  .ident.2 = glue::glue("{hetero_label} low"),
-  .group.by = "cellvarianttype2",
-  .prefix = "hetero_high_vs_low",
-  .labs <- labs(
-    x = "Fold change {hetero_label} High vs Low" |> glue::glue(),
-    y = "FDR",
-    # title = "m.{thevariant}" |> glue::glue()
-    title = "Markers: {hetero_label} High vs Low (m.{thevariant})" |>
-      glue::glue()
+#
+#
+# ? 3728C>T --------------------------------------------------------------------
+#
+#
+fn_variant_(
+  thevariant = "3728C>T",
+  sc = fn_load_sc(
+    thevariant = "3728C>T"
   )
 )
-
-fn_go_(
-  thevariant = "3727T>C",
-  p_hetero_high_vs_low = p_hetero_high_vs_low,
-  .prefix = "hetero_high_vs_low"
-)
-
-
-p_hetero_vs_sufficient <- fn_de_(
-  thevariant = "3727T>C",
-  sc = sc,
-  .ident.1 = "Heteroplasmy",
-  .ident.2 = "Sufficient reads",
-  .group.by = "cellvarianttype",
-  .prefix = "hetero_vs_sufficient",
-  .labs <- labs(
-    x = "Fold change Heteroplasmy vs Sufficient reads",
-    y = "FDR",
-    title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant})" |>
-      glue::glue()
-  )
-)
-
-fn_go_(
-  thevariant = "3727T>C",
-  p_hetero_high_vs_low = p_hetero_vs_sufficient,
-  .prefix = "hetero_vs_sufficient"
+fn_variant_cell_(
+  thevariant = "3728C>T"
 )
 
 # footer ------------------------------------------------------------------
