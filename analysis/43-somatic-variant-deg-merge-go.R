@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2025-09-03 10:43:09
+# @DATE: 2025-09-03 20:11:27
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
@@ -42,15 +42,13 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # future: :plan(future: :multisession, workers = 10)
 
 # load data ---------------------------------------------------------------
-gseid_srrid_variant <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant.fst"
-)
+
 # load conn ---------------------------------------------------------------
+dir_main_variant <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants"
 
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
-
 fn_de_plot <- function(
   markers,
   .cutoff_pval = 0.05,
@@ -64,8 +62,8 @@ fn_de_plot <- function(
     ) |>
     dplyr::mutate(
       fdr = ifelse(
-        fdr > -log10(1e-100),
-        -log10(1e-100),
+        fdr > -log10(1e-300),
+        -log10(1e-300),
         fdr
       )
     ) |>
@@ -279,289 +277,189 @@ fn_variant_go <- function(markers, .variant) {
   )
 }
 
+fn_de_ <- function(
+  thevariant,
+  sc,
+  .ident.1,
+  .ident.2,
+  .group.by,
+  .prefix,
+  .labs
+) {
+  # .ident.1 <- glue::glue("{hetero_label} high")
+  # .ident.2 <- glue::glue("{hetero_label} low")
+  # .group.by <- "cellvarianttype2"
+  # .prefix <- "hetero_high_vs_low"
+  # .labs <- labs(
+  #   x = "Fold change {hetero_label} High vs Low" |> glue::glue(),
+  #   y = "FDR",
+  #   # title = "m.{thevariant}" |> glue::glue()
+  #   title = "Markers: {hetero_label} High vs Low (m.{thevariant})" |>
+  #     glue::glue()
+  # )
+
+  markers_hetero_high_vs_low <- Seurat::FindMarkers(
+    object = sc,
+    ident.1 = .ident.1,
+    ident.2 = .ident.2,
+    assay = "SCT",
+    slot = "data",
+    test.use = "wilcox",
+    group.by = .group.by,
+    latent.vars = "srrid",
+    features = Seurat::VariableFeatures(sc)
+  )
+
+  export(
+    markers_hetero_high_vs_low,
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/deg_merge/markers.{.prefix}.{thevariant}.qs" |>
+      glue::glue()
+  )
+
+  fn_de_plot(
+    markers_hetero_high_vs_low,
+    .cutoff_pval = 0.05,
+    .cutoff_log2fc = 0.25,
+    .pct = 0.05
+  ) -> p_hetero_high_vs_low
+
+  ggsave(
+    filename = "markers.{.prefix}.{thevariant}.pdf" |> glue::glue(),
+    plot = p_hetero_high_vs_low$p + .labs,
+    path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/deg_merge" |>
+      glue::glue(),
+    device = "pdf",
+    width = 10,
+    height = 6
+  )
+  p_hetero_high_vs_low
+}
+fn_go_ <- function(
+  thevariant,
+  p_hetero_high_vs_low,
+  .prefix
+) {
+  # .prefix <- "hetero_high_vs_low"
+
+  fn_variant_go(
+    p_hetero_high_vs_low$markers,
+    thevariant
+  ) -> p_go_hetero_high_vs_low
+
+  export(
+    p_go_hetero_high_vs_low,
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/go_merge/markers.{.prefix}.{thevariant}.go.qs" |>
+      glue::glue()
+  )
+
+  tibble::tibble(
+    pn = c("pos", "neg") |> rep(each = 3),
+    t = c("bp", "cc", "mf") |> rep(each = 2)
+  ) |>
+    dplyr::mutate(
+      saveimage = purrr::map2(
+        .x = pn,
+        .y = t,
+        .f = \(.x, .y) {
+          .p <- p_go_hetero_high_vs_low[[glue::glue("{.x}_{.y}_plot")]][[1]]
+          .filename <- "markers.{.prefix}.{thevariant}.go.{.x}_{.y}_plot.pdf" |>
+            glue::glue()
+          ggsave(
+            filename = .filename,
+            plot = .p,
+            path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{thevariant}/go_merge" |>
+              glue::glue(),
+            device = "pdf",
+            width = 10,
+            height = 6
+          )
+        }
+      )
+    )
+}
+
 # body --------------------------------------------------------------------
 
-gseid_srrid_variant |>
-  dplyr::filter(
-    variant %in% c("3727T>C", "3728C>T")
-  ) |>
-  dplyr::mutate(
-    sc_file = file.path(
-      "/home/liuc9/github/scMOCHA-data/data/",
-      gseid,
-      "final",
-      srrid,
-      "de",
-      "sc_azimuth.sct.qs"
-    )
-  ) |>
-  dplyr::mutate(
-    file_exists = file.exists(sc_file)
-  ) -> gseid_srrid_variant_sc
-
-
-#
-#
-# ? 3727T>C --------------------------------------------------------------------
-#
-#
+thevariant <- "3727T>C"
 library(Seurat)
-gseid_srrid_variant_sc |>
-  dplyr::filter(variant == "3727T>C") |>
-  dplyr::mutate(
-    load = parallel::mclapply(
-      sc_file,
-      function(f) {
-        .sc <- import(f)
-        .sc[["SCT"]]@scale.data <- matrix()
-        .sc
-      },
-      mc.cores = 10
-    )
-  ) -> gseid_srrid_variant_sc_filtered
-
-
-sc_list <- gseid_srrid_variant_sc_filtered |> dplyr::pull(load)
-
-lapply(
-  sc_list,
-  Seurat::VariableFeatures
-) |>
-  unlist() |>
-  unique() -> var_features
-
-sc_merge <- merge(
-  x = sc_list[[1]],
-  y = sc_list[2:length(sc_list)],
-  merge.data = FALSE # not merge the scale.data, for memory sake
-)
-
-Seurat::VariableFeatures(sc_merge) <- var_features
-
-DefaultAssay(sc_merge)
-Assays(sc_merge)
-Layers(sc_merge[["SCT"]])
-
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
-
-export(
-  sc_merge,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/sc_merge.sct.3727T>C.qs"
-)
-
-markers <- Seurat::FindMarkers(
-  object = sc_merge,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  assay = "SCT",
-  slot = "data",
-  test.use = "wilcox",
-  group.by = "cellvarianttype",
-  latent.vars = "srrid",
-  features = Seurat::VariableFeatures(sc_merge)
-)
-export(
-  markers,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/markers.hetero_vs_sufficient.3727T>C.qs"
-)
-
-import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/markers.hetero_vs_sufficient.3727T>C.qs"
-) |>
-  fn_de_plot(
-    .cutoff_pval = 0.05,
-    .cutoff_log2fc = 0.25,
-    .pct = 0.05
-  ) -> p_3727
-p_3727
-
-ggsave(
-  filename = "markers.hetero_vs_sufficient.3727T>C.pdf",
-  plot = p_3727$p +
-    ggtitle(
-      "Markers: Heteroplasmy vs Sufficient Reads (3727T>C)"
-    ),
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge",
-  device = "pdf",
-  width = 8,
-  height = 6
-)
-
-
-#
-#
-# ? 3727T>C GO --------------------------------------------------------------------
-#
-#
-
-fn_variant_go(
-  p_3727$markers,
-  "3727T>C"
-) -> p_3727_go
-
-p_3727_go
-
-export(
-  p_3727_go,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/go_merge/markers.hetero_vs_sufficient.3727T>C.go.qs"
-)
-
-tibble::tibble(
-  pn = c("pos", "neg") |> rep(each = 3),
-  t = c("bp", "cc", "mf") |> rep(each = 2)
-) |>
-  dplyr::mutate(
-    saveimage = purrr::map2(
-      .x = pn,
-      .y = t,
-      .f = \(.x, .y) {
-        .p <- p_3727_go[[glue::glue("{.x}_{.y}_plot")]][[1]]
-        .filename <- "markers.hetero_vs_sufficient.3727T>C.go.{.x}_{.y}_plot.pdf" |>
-          glue::glue()
-        ggsave(
-          filename = .filename,
-          plot = .p,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/go_merge",
-          device = "pdf",
-          width = 8,
-          height = 6
-        )
-      }
-    )
+sc <- import(
+  file.path(
+    dir_main_variant,
+    thevariant,
+    "deg_merge",
+    glue::glue("sc_merge.sct.{thevariant}.qs")
   )
-#
-#
-# ? 3728C>T --------------------------------------------------------------------
-#
-#
-gseid_srrid_variant_sc |>
-  dplyr::filter(variant == "3728C>T") |>
+)
+
+sc@meta.data |>
+  as.data.table() |>
+  dplyr::filter(cellvarianttype == "Heteroplasmy") |>
+  dplyr::pull(af) |>
+  median(na.rm = FALSE) -> median_af
+
+scales::label_number(accuracy = 0.01)(median_af)
+hetero_label <- glue::glue(
+  "Heteroplasmy (median {scales::label_number(accuracy = 0.01)(median_af)})"
+)
+
+sc@meta.data |>
   dplyr::mutate(
-    load = parallel::mclapply(
-      sc_file,
-      function(f) {
-        .sc <- import(f)
-        .sc[["SCT"]]@scale.data <- matrix()
-        .sc
-      },
-      mc.cores = 10,
+    cellvarianttype2 = dplyr::case_when(
+      cellvarianttype == "Heteroplasmy" &
+        af >= median_af ~
+        glue::glue("{hetero_label} high"),
+      cellvarianttype == "Heteroplasmy" &
+        af < median_af ~
+        glue::glue("{hetero_label} low"),
+      TRUE ~ cellvarianttype
     )
-  ) -> gseid_srrid_variant_sc_filtered
+  ) -> sc@meta.data
 
+DefaultAssay(sc) <- "SCT"
 
-sc_list <- gseid_srrid_variant_sc_filtered |> dplyr::pull(load)
-
-lapply(
-  sc_list,
-  Seurat::VariableFeatures
-) |>
-  unlist() |>
-  unique() -> var_features
-
-sc_merge <- merge(
-  x = sc_list[[1]],
-  y = sc_list[2:length(sc_list)],
-  merge.data = FALSE # not merge the scale.data, for memory sake
-)
-
-Seurat::VariableFeatures(sc_merge) <- var_features
-
-DefaultAssay(sc_merge)
-Assays(sc_merge)
-Layers(sc_merge[["SCT"]])
-
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
-
-export(
-  sc_merge,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/sc_merge.sct.3728C>T.qs"
-)
-
-markers <- Seurat::FindMarkers(
-  object = sc_merge,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  assay = "SCT",
-  slot = "data",
-  test.use = "wilcox",
-  group.by = "cellvarianttype",
-  latent.vars = "srrid",
-  features = Seurat::VariableFeatures(sc_merge)
-)
-export(
-  markers,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/markers.hetero_vs_sufficient.3728C>T.qs"
-)
-
-import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/markers.hetero_vs_sufficient.3728C>T.qs"
-) |>
-  fn_de_plot(
-    .cutoff_pval = 0.05,
-    .cutoff_log2fc = 0.25,
-    .pct = 0.05
-  ) -> p_3728
-p_3728
-
-ggsave(
-  filename = "markers.hetero_vs_sufficient.3728C>T.pdf",
-  plot = p_3728$p +
-    ggtitle(
-      "Markers: Heteroplasmy vs Sufficient Reads (3728C>T)"
-    ),
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge",
-  device = "pdf",
-  width = 8,
-  height = 6
-)
-
-#
-#
-# ? 3728C>T GO --------------------------------------------------------------------
-#
-#
-
-fn_variant_go(
-  p_3728$markers,
-  "3728C>T"
-) -> p_3728_go
-
-p_3728_go
-
-export(
-  p_3728_go,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/go_merge/markers.hetero_vs_sufficient.3728C>T.go.qs"
-)
-
-tibble::tibble(
-  pn = c("pos", "neg") |> rep(each = 3),
-  t = c("bp", "cc", "mf") |> rep(each = 2)
-) |>
-  dplyr::mutate(
-    saveimage = purrr::map2(
-      .x = pn,
-      .y = t,
-      .f = \(.x, .y) {
-        .p <- p_3728_go[[glue::glue("{.x}_{.y}_plot")]][[1]]
-        .filename <- "markers.hetero_vs_sufficient.3728C>T.go.{.x}_{.y}_plot.pdf" |>
-          glue::glue()
-        ggsave(
-          filename = .filename,
-          plot = .p,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/go_merge",
-          device = "pdf",
-          width = 8,
-          height = 6
-        )
-      }
-    )
+p_hetero_high_vs_low <- fn_de_(
+  thevariant = "3727T>C",
+  sc = sc,
+  .ident.1 = glue::glue("{hetero_label} high"),
+  .ident.2 = glue::glue("{hetero_label} low"),
+  .group.by = "cellvarianttype2",
+  .prefix = "hetero_high_vs_low",
+  .labs <- labs(
+    x = "Fold change {hetero_label} High vs Low" |> glue::glue(),
+    y = "FDR",
+    # title = "m.{thevariant}" |> glue::glue()
+    title = "Markers: {hetero_label} High vs Low (m.{thevariant})" |>
+      glue::glue()
   )
+)
+
+fn_go_(
+  thevariant = "3727T>C",
+  p_hetero_high_vs_low = p_hetero_high_vs_low,
+  .prefix = "hetero_high_vs_low"
+)
+
+
+p_hetero_vs_sufficient <- fn_de_(
+  thevariant = "3727T>C",
+  sc = sc,
+  .ident.1 = "Heteroplasmy",
+  .ident.2 = "Sufficient reads",
+  .group.by = "cellvarianttype",
+  .prefix = "hetero_vs_sufficient",
+  .labs <- labs(
+    x = "Fold change Heteroplasmy vs Sufficient reads",
+    y = "FDR",
+    title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant})" |>
+      glue::glue()
+  )
+)
+
+fn_go_(
+  thevariant = "3727T>C",
+  p_hetero_high_vs_low = p_hetero_vs_sufficient,
+  .prefix = "hetero_vs_sufficient"
+)
 
 # footer ------------------------------------------------------------------
 
