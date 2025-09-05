@@ -321,7 +321,6 @@ fn_de_ <- function(
   # )
   sc <- Seurat::PrepSCTFindMarkers(
     sc,
-    # features = Seurat::VariableFeatures(sc_merge)
   )
   markers_hetero_high_vs_low <- Seurat::FindMarkers(
     object = sc,
@@ -546,7 +545,8 @@ fn_variant_ <- function(
           scales::label_comma()(n_cellvarianttype2[[1]] + n_cellvarianttype2[[2]])
         }) vs Sufficient reads (n={
           scales::label_comma()(n_cellvarianttype2[[5]])
-        })",
+        })" |>
+        glue::glue(),
       y = "FDR",
       title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
         glue::glue()
