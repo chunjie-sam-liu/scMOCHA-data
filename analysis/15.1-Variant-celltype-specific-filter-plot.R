@@ -330,6 +330,132 @@ fn_plot_joy <- function(
     )
 }
 
+fn_plot_hist <- function(
+  thevariant,
+  thegseid,
+  thesrrid
+) {
+  tbl_all_hetero_af_cell |>
+    dplyr::filter(
+      # gseid == thegseid,
+      srrid == thesrrid,
+      variant == thevariant,
+      af > 0
+    ) |>
+    dplyr::collect() -> .d
+  # thevariant <- "7833T>C"
+  .variant <- .d$variant[1]
+  .gseid <- .d$gseid[1]
+  .srrid <- .d$srrid[1]
+
+  .d |>
+    dplyr::filter(af > 0) |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        levels = names(color_celltype)
+      )
+    ) -> forplot_
+
+  forplot_ |>
+    dplyr::count(celltype) |>
+    dplyr::mutate(
+      label = glue::glue(
+        "n={scales::label_comma()(n)}"
+      )
+    ) -> .forlabel
+
+  fn_xy_breaks_limits(forplot_$af, step = 0.2) -> .xbl
+  # fn_xy_breaks_limits(forplot_$celltype, step = 1) -> .ybl
+
+  forplot_ |>
+    ggplot(aes(
+      x = af,
+      # y = celltype,
+      fill = celltype
+    )) +
+    geom_histogram(binwidth = 0.1) +
+    scale_fill_manual(
+      values = color_celltype,
+    ) +
+    geom_text(
+      data = .forlabel,
+      aes(
+        x = 0.5,
+        y = Inf,
+        label = label
+      ),
+      vjust = 1.5
+    ) +
+    scale_y_continuous(
+      labels = scales::label_number(accuracy = 1),
+      expand = expansion(mult = c(0.01, 0.01)),
+    ) +
+    scale_x_continuous(
+      # limits = .xbl$limits,
+      breaks = seq(0, 1, 0.2),
+      labels = scales::label_number(accuracy = 0.1),
+      expand = expansion(add = c(0.01, 0.01)),
+    ) +
+    theme(
+      # text = element_text(family = "Times New Roman"),
+      legend.position = "none",
+      # axis.text.y = element_blank(),
+      axis.line = element_line(color = "black"),
+      strip.background = element_rect(
+        fill = "white",
+        color = "black"
+      ),
+      plot.title = element_text(
+        hjust = 0.5,
+        # size = 16
+      ),
+      panel.background = element_blank(),
+    ) +
+    ggh4x::facet_wrap2(
+      ~celltype,
+      nrow = 1,
+      # ncol = 8,
+      strip.position = "top",
+      strip = ggh4x::strip_themed(
+        background_x = ggh4x::elem_list_rect(
+          fill = color_celltype
+        ),
+        text_x = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        ),
+        by_layer_y = TRUE,
+      ),
+      scales = "free_y",
+    ) +
+    labs(
+      title = glue::glue("m.{.variant}({.gseid}-{.srrid})"),
+      x = glue::glue("m.{.variant} Heteroplasmy Level"),
+      y = "Cell Count"
+    )
+
+  # forplot_ |>
+  #   ggplot(aes(
+  #     x = af,
+  #     color = celltype
+  #   )) +
+  #   stat_ecdf(
+  #     geom = "step",
+  #     size = 1
+  #   ) +
+  #   scale_color_manual(
+  #     values = color_celltype,
+  #   )
+}
+
 fn_plot_joy_celltype_level2_level3 <- function(
   thevariant,
   thegseid,
@@ -441,15 +567,16 @@ fn_plot_joy_celltype_detail <- function(
 
   thevariant_celltype_df |>
     dplyr::mutate(
-      p = parallel::mcmapply(
+      # p = parallel::mcmapply(
+      p = mapply(
+        FUN = fn_plot_joy_celltype_level2_level3,
         thevariant = thevariant,
         thegseid = thegseid,
         thesrrid = thesrrid,
         thecelltype = thecelltype,
         thecelltype_prefix = thecelltype_prefix,
         thecelltype_level = thecelltype_level,
-        FUN = fn_plot_joy_celltype_level2_level3,
-        mc.cores = 5,
+        # mc.cores = 5,
         SIMPLIFY = FALSE
       )
     ) -> plot_thevariant_celltype_list
@@ -768,6 +895,116 @@ ggsave(
   limitsize = FALSE
 )
 
+
+#
+#
+# ? hist plot --------------------------------------------------------------------
+#
+#
+
+tbl_gseid_srrid_variant_celltype_ks_test |>
+  dplyr::filter(p.value < 0.05) |>
+  dplyr::mutate(
+    p = parallel::mcmapply(
+      .variant = variant,
+      .gseid = gseid,
+      .srrid = srrid,
+      FUN = function(.variant, .gseid, .srrid) {
+        fn_plot_hist(
+          thevariant = .variant,
+          thegseid = .gseid,
+          thesrrid = .srrid
+        ) -> p
+
+        .filename <- file.path(
+          "{.variant}_{.gseid}_{.srrid}_hist.pdf" |> glue::glue()
+        )
+        .outdir <- file.path(
+          plotdir,
+          "individual_hist",
+          .variant
+        )
+        dir.create(
+          .outdir,
+          recursive = TRUE,
+          showWarnings = FALSE
+        )
+        ggsave(
+          filename = .filename,
+          plot = p,
+          device = "pdf",
+          path = .outdir,
+          width = 15,
+          height = 5
+        )
+      },
+      mc.cores = 30,
+      SIMPLIFY = FALSE
+    )
+  )
+# thegseid <- "GSE235050"
+# DBI::dbListTables(conn = conn)
+# tbl_meta <- dplyr::tbl(conn, "meta")
+
+tbl_gseid_srrid_variant_celltype_ks_test |>
+  dplyr::filter(p.value < 0.05) |>
+  dplyr::mutate(
+    p = parallel::mcmapply(
+      .variant = variant,
+      .gseid = gseid,
+      .srrid = srrid,
+      FUN = function(.variant, .gseid, .srrid) {
+        fn_plot_joy_celltype_detail(
+          thevariant = .variant,
+          thegseid = .gseid,
+          thesrrid = .srrid
+        ) -> p
+
+        p |>
+          dplyr::pull(p) |>
+          wrap_plots(
+            ncol = 4
+          ) +
+          plot_layout(
+            guides = "collect",
+          ) -> pp
+
+        .filename <- file.path(
+          "{.variant}_{.gseid}_{.srrid}_hist_celllevel.pdf" |> glue::glue()
+        )
+        .outdir <- file.path(
+          plotdir,
+          "individual_hist",
+          .variant
+        )
+        dir.create(
+          .outdir,
+          recursive = TRUE,
+          showWarnings = FALSE
+        )
+        ggsave(
+          filename = .filename,
+          plot = pp,
+          device = "pdf",
+          path = .outdir,
+          width = 23,
+          height = 12,
+          limitsize = FALSE
+        )
+      },
+      mc.cores = 30,
+      SIMPLIFY = FALSE
+    )
+  )
+# tbl_meta |>
+#   dplyr::filter(gseid == thegseid) |>
+#   dplyr::collect()
+#
+#
+# ?  --------------------------------------------------------------------
+#
+#
+
 variant_2inl_1inm <- c(
   "3727T>C",
   "3728C>T",
@@ -792,6 +1029,7 @@ thevariants <- c(
   "3173G>A",
   "7833T>C",
   "3727T>C",
+  "3728C>T",
   "7159T>C",
   "2666T>C",
   "2193T>A",
@@ -946,7 +1184,7 @@ META <- import(
 
 thevariant <- "3727T>C"
 thegseid <- "GSE235050"
-thesrrid <- "GSM7493832"
+thesrrid <- "GSM7493833"
 
 tbl_gseid_srrid_variant_celltype_ks_test |>
   as.data.table() |>
@@ -998,6 +1236,17 @@ tbl_all_hetero_af_cell |>
     tbl_barcode,
     by = c("gseid", "srrid", "barcode", "celltype")
   ) -> tbl_thevariant_data
+
+
+#
+#
+# ? tbl_gseid_srrid_variant_celltype_ks_test  GSM7493833--------------------------------------------------------------------
+#
+#
+
+tbl_gseid_srrid_variant_celltype_ks_test |>
+  dplyr::filter(srrid == thesrrid) |>
+  print(n = Inf)
 
 # footer ------------------------------------------------------------------
 
