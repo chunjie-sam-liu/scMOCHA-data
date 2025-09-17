@@ -53,7 +53,7 @@ DBI::dbListTables(conn)
 
 dplyr::tbl(
   conn,
-  "gseid_srrid_variant"
+  "allvariants_cell"
 )
 
 conn_cov <- DBI::dbConnect(
