@@ -161,6 +161,114 @@ fn_de <- function(
   markers
 }
 
+
+fn_de_high_vs_low <- function(
+  thegseid,
+  thesrrid,
+  thevariant,
+  forplot_,
+  .vs = c(0.5, 0.5)
+) {
+  library(Seurat)
+  .dir <- file.path(
+    "/home/liuc9/github/scMOCHA-data/data/",
+    thegseid,
+    "final",
+    thesrrid
+  )
+  .dir_de <- file.path(
+    .dir,
+    "de"
+  )
+
+  sc_azimuth <- import(
+    file.path(
+      .dir_de,
+      "sc_azimuth.sct.qs"
+    )
+  )
+
+  sc_azimuth@meta.data |>
+    as.data.table() |>
+    dplyr::filter(cellvarianttype == "Heteroplasmy") |>
+    dplyr::pull(af) |>
+    quantile(probs = seq(0, 1, 0.05), na.rm = FALSE) -> .quant
+
+  .high <- .quant[glue::glue("{.vs[1] * 100}%")]
+  .low <- .quant[glue::glue("{.vs[2] * 100}%")]
+  # scales::label_number(accuracy = 0.01)(median_af)
+  .label_high <- glue::glue(
+    "High={scales::label_number(accuracy = 1)(.vs[1] * 100)}% AF={scales::label_number(accuracy = 0.01)(.high)}"
+  )
+  .label_low <- glue::glue(
+    "Low={scales::label_number(accuracy = 1)(.vs[2] * 100)}% AF={scales::label_number(accuracy = 0.01)(.low)}"
+  )
+  hetero_label <- glue::glue(
+    "Heteroplasmy ({.label_high}) vs ({.label_low})"
+  )
+
+  sc_azimuth@meta.data |>
+    dplyr::mutate(
+      cellvarianttype2 = dplyr::case_when(
+        cellvarianttype == "Heteroplasmy" &
+          af >= .high ~
+          glue::glue("{.label_high}"),
+        cellvarianttype == "Heteroplasmy" &
+          af < .low ~
+          glue::glue("{.label_low}"),
+        TRUE ~ as.character(cellvarianttype)
+      )
+    ) -> sc_azimuth@meta.data
+
+  sc_azimuth@meta.data |>
+    dplyr::count(cellvarianttype2) |>
+    dplyr::arrange(cellvarianttype2) |>
+    tibble::deframe() -> n_cellvarianttype2
+
+  markers <- Seurat::FindMarkers(
+    object = sc_azimuth,
+    ident.1 = glue::glue("{.label_high}"),
+    ident.2 = glue::glue("{.label_low}"),
+    assay = "SCT",
+    slot = "data",
+    test.use = "wilcox",
+    group.by = "cellvarianttype2"
+  )
+
+  export(
+    markers,
+    file = file.path(
+      .dir_de,
+      "sc_azimuth.markers.{hetero_label}.{thevariant}.qs" |>
+        glue::glue()
+    ),
+  )
+
+  rm(sc_azimuth)
+  gc()
+
+  .labs = labs(
+    x = glue::glue(
+      "Fold change Heteroplasmy ({.label_high} n={
+          scales::label_comma()(n_cellvarianttype2[.label_high])
+        }) vs Low ({.label_low} n={
+          scales::label_comma()(n_cellvarianttype2[.label_low])
+        })"
+    ),
+    y = "FDR",
+    # title = "m.{thevariant}" |> glue::glue()
+    title = "Markers: {hetero_label} (m.{thevariant})" |>
+      glue::glue()
+  )
+
+  list(
+    markers = markers,
+    .labs = .labs,
+    hetero_label = hetero_label
+  ) -> m
+  m
+}
+
 fn_de_plot <- function(
   markers,
   .cutoff_pval = 0.05,
@@ -223,46 +331,14 @@ fn_de_plot <- function(
     )
 }
 
+
 # body --------------------------------------------------------------------
-
-thevariant <- "3727T>C"
-thesrrid <- ""
-
-gseid_srrid_variant_hetero_plot_ratio |>
-  # dplyr::filter(variant == thevariant) |>
-  dplyr::filter(variant %in% c("3727T>C", "3728C>T")) |>
-  # dplyr::select(tidyselect::contains("ratio"))
-  dplyr::select(
-    gseid,
-    srrid,
-    variant,
-    forplot,
-    # tidyselect::contains("ratio")
-  ) -> filtered_data
-
-
-thevariant <- "3728C>T"
-thesrrid <- "GSM7080053"
-thegseid <- "GSE226602"
-forplot_ <- filtered_data$forplot[[1]]
-
-# filtered_data |>
-#   dplyr::filter(
-#     variant == thevariant,
-#     srrid == thesrrid
-#   ) |>
-#   dplyr::select(forplot) |>
-#   tidyr::unnest(cols = c(forplot)) -> variant_cell_barcode
 
 #
 #
 # ? plot --------------------------------------------------------------------
 #
 #
-
-filtered_data |>
-  tibble::rowid_to_column("id") |>
-  dplyr::filter(srrid == "GSM7080030")
 
 thegseid <- filtered_data$gseid[[20]]
 thesrrid <- filtered_data$srrid[[20]]
@@ -274,6 +350,10 @@ filtered_data |>
   dplyr::mutate(
     p = parallel::mcmapply(
       FUN = \(thegseid, thesrrid, thevariant, forplot_) {
+        # thegseid <- filtered_data$gseid[[1]]
+        # thesrrid <- filtered_data$srrid[[1]]
+        # thevariant <- filtered_data$variant[[1]]
+        # forplot_ <- filtered_data$forplot[[1]]
         tryCatch(
           expr = {
             fn_de_plot(
@@ -298,21 +378,11 @@ filtered_data |>
       forplot_ = forplot,
       SIMPLIFY = FALSE,
       USE.NAMES = FALSE,
-      mc.cores = 8
+      mc.cores = 20
     )
   ) |>
   dplyr::select(-forplot) -> filtered_data_plots
 
-
-filtered_data_plots |>
-  dplyr::mutate(
-    saveimage = parallel::mcmapply(
-      FUN = \(.x) {
-        message(.x)
-      },
-      .x = gseid
-    )
-  )
 
 filtered_data_plots |>
   dplyr::mutate(
@@ -350,6 +420,99 @@ filtered_data_plots |>
       SIMPLIFY = FALSE
     )
   )
+
+#
+#
+# ? plot hetero high vs low --------------------------------------------------------------------
+#
+#
+
+vss <- list(
+  c(0.5, 0.5),
+  c(0.6, 0.4),
+  c(0.7, 0.3),
+  c(0.8, 0.2),
+  c(0.9, 0.1)
+)
+
+
+vss |>
+  purrr::map(
+    .f = \(vs) {
+      filtered_data |>
+        dplyr::mutate(
+          p = parallel::mcmapply(
+            FUN = \(thegseid, thesrrid, thevariant, forplot_, vs) {
+              tryCatch(
+                expr = {
+                  m <- fn_de_high_vs_low(
+                    thegseid = thegseid,
+                    thesrrid = thesrrid,
+                    thevariant = thevariant,
+                    forplot_ = forplot_,
+                    .vs = vs
+                  )
+                  p <- fn_de_plot(
+                    markers = m$markers
+                  ) +
+                    m$.labs
+                  if (is.null(p)) {
+                    return(NULL)
+                  }
+                  .outdir <- file.path(
+                    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
+                    thevariant,
+                    "deg"
+                  )
+                  dir.create(
+                    .outdir,
+                    recursive = TRUE,
+                    showWarnings = FALSE
+                  )
+                  sanitize_filename <- function(x) {
+                    x %>%
+                      gsub(">", "GT", ., fixed = TRUE) %>%
+                      gsub("<", "LT", ., fixed = TRUE) %>%
+                      gsub("%", "pct", ., fixed = TRUE) %>%
+                      gsub("=", "-", ., fixed = TRUE) %>%
+                      gsub("[()]", "", .) %>%
+                      gsub("[[:space:]]+", "_", .) %>%
+                      trimws()
+                  }
+                  .outfilename <- "{thegseid}-{thesrrid}-m.{thevariant}.deg.{p$labels$title}.pdf" |>
+                    glue::glue() |>
+                    fs::path_sanitize() |>
+                    sanitize_filename()
+                  ggsave(
+                    path = .outdir,
+                    filename = .outfilename,
+                    plot = p,
+                    width = 6,
+                    height = 5
+                  )
+                },
+                error = \(e) {
+                  message(glue::glue(
+                    "{thegseid}-{thesrrid}-m.{thevariant} error"
+                  ))
+                  return(NULL)
+                }
+              )
+            },
+            thegseid = gseid,
+            thesrrid = srrid,
+            thevariant = variant,
+            forplot_ = forplot,
+            vs = list(vs),
+            SIMPLIFY = FALSE,
+            USE.NAMES = FALSE,
+            mc.cores = 20
+          )
+        ) |>
+        dplyr::select(-forplot) -> filtered_data_plots
+    }
+  ) -> m
+
 # footer------------------------------------------------------------------
 
 # future: :plan(future: :sequential)

@@ -233,8 +233,8 @@ srr_load |>
       .x = srrdir,
       .y = load,
       .f = function(srrdir, load) {
-        # srrdir <- srr_load$srrdir[577]
-        # load <- srr_load$load[[577]]
+        # srrdir <- srr_load$srrdir[[457]]
+        # load <- srr_load$load[[457]]
         if (all(class(load) == "try-error")) {
           import(
             path(
@@ -300,6 +300,18 @@ DBI::dbWriteTable(
   temporary = FALSE,
   overwrite = TRUE
 )
+
+# d <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.qs"
+# )
+# DBI::dbWriteTable(
+#   conn,
+#   "allvariants_cell",
+#   d,
+#   temporary = FALSE,
+#   overwrite = TRUE
+# )
+
 DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # ? don't run below --------------------------------------------------------------------

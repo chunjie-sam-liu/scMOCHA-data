@@ -298,6 +298,17 @@ fn_variant_go <- function(markers, .variant) {
   )
 }
 
+sanitize_filename <- function(x) {
+  x %>%
+    gsub(">", "GT", ., fixed = TRUE) %>%
+    gsub("<", "LT", ., fixed = TRUE) %>%
+    gsub("%", "pct", ., fixed = TRUE) %>%
+    gsub("=", "-", ., fixed = TRUE) %>%
+    gsub("[()]", "", .) %>%
+    gsub("[[:space:]]+", "_", .) %>%
+    trimws()
+}
+
 fn_de_ <- function(
   thevariant,
   sc,
@@ -373,7 +384,10 @@ fn_de_ <- function(
   p_hetero_high_vs_low$p + .labs -> p_hetero_high_vs_low$p
 
   ggsave(
-    filename = "markers.{.prefix}.{thevariant}.pdf" |> glue::glue(),
+    filename = "markers.{.prefix}.{thevariant}.pdf" |>
+      glue::glue() |>
+      fs::path_sanitize() |>
+      sanitize_filename(),
     plot = p_hetero_high_vs_low$p,
     path = .outdir,
     device = "pdf",
@@ -433,7 +447,9 @@ fn_go_ <- function(
         .f = \(.x, .y) {
           .p <- p_go_hetero_high_vs_low[[glue::glue("{.x}_{.y}_plot")]][[1]]
           .filename <- "markers.{.prefix}.{thevariant}.go.{.x}_{.y}_plot.pdf" |>
-            glue::glue()
+            glue::glue() |>
+            fs::path_sanitize() |>
+            sanitize_filename()
           ggsave(
             filename = .filename,
             plot = .p +
@@ -468,6 +484,7 @@ fn_load_sc <- function(thevariant) {
 fn_variant_ <- function(
   thevariant,
   sc,
+  .vs = c(0.5, 0.5),
   .celltype = NULL
 ) {
   # thevariant <- "3727T>C"
@@ -476,22 +493,31 @@ fn_variant_ <- function(
     as.data.table() |>
     dplyr::filter(cellvarianttype == "Heteroplasmy") |>
     dplyr::pull(af) |>
-    median(na.rm = FALSE) -> median_af
+    quantile(probs = seq(0, 1, 0.05), na.rm = FALSE) -> .quant
+
+  .high <- .quant[glue::glue("{.vs[1] * 100}%")]
+  .low <- .quant[glue::glue("{.vs[2] * 100}%")]
 
   # scales::label_number(accuracy = 0.01)(median_af)
+  .label_high <- glue::glue(
+    "High={scales::label_number(accuracy = 1)(.vs[1] * 100)}% AF={scales::label_number(accuracy = 0.01)(.high)}"
+  )
+  .label_low <- glue::glue(
+    "Low={scales::label_number(accuracy = 1)(.vs[2] * 100)}% AF={scales::label_number(accuracy = 0.01)(.low)}"
+  )
   hetero_label <- glue::glue(
-    "Heteroplasmy (median {scales::label_number(accuracy = 0.01)(median_af)})"
+    "Heteroplasmy ({.label_high}) vs ({.label_low})"
   )
 
   sc@meta.data |>
     dplyr::mutate(
       cellvarianttype2 = dplyr::case_when(
         cellvarianttype == "Heteroplasmy" &
-          af >= median_af ~
-          glue::glue("{hetero_label} high"),
+          af >= .high ~
+          glue::glue("{.label_high}"),
         cellvarianttype == "Heteroplasmy" &
-          af < median_af ~
-          glue::glue("{hetero_label} low"),
+          af < .low ~
+          glue::glue("{.label_low}"),
         TRUE ~ cellvarianttype
       )
     ) -> sc@meta.data
@@ -506,21 +532,21 @@ fn_variant_ <- function(
   p_hetero_high_vs_low <- fn_de_(
     thevariant = thevariant,
     sc = sc,
-    .ident.1 = glue::glue("{hetero_label} high"),
-    .ident.2 = glue::glue("{hetero_label} low"),
+    .ident.1 = glue::glue("{.label_high}"),
+    .ident.2 = glue::glue("{.label_low}"),
     .group.by = "cellvarianttype2",
-    .prefix = "hetero_high_vs_low",
-    .labs <- labs(
+    .prefix = hetero_label,
+    .labs = labs(
       x = glue::glue(
-        "Fold change {hetero_label} High (n={
-          scales::label_comma()(n_cellvarianttype2[[1]])
-        }) vs Low (n={
-          scales::label_comma()(n_cellvarianttype2[[2]])
+        "Fold change Heteroplasmy ({.label_high} n={
+          scales::label_comma()(n_cellvarianttype2[.label_high])
+        }) vs Low ({.label_low} n={
+          scales::label_comma()(n_cellvarianttype2[.label_low])
         })"
       ),
       y = "FDR",
       # title = "m.{thevariant}" |> glue::glue()
-      title = "Markers: {hetero_label} High vs Low (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
+      title = "Markers: {hetero_label} (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
         glue::glue()
     ),
     .celltype = .celltype
@@ -529,41 +555,43 @@ fn_variant_ <- function(
   fn_go_(
     thevariant = thevariant,
     p_hetero_high_vs_low = p_hetero_high_vs_low,
-    .prefix = "hetero_high_vs_low",
+    .prefix = hetero_label,
     .celltype = .celltype
   )
 
-  p_hetero_vs_sufficient <- fn_de_(
-    thevariant = thevariant,
-    sc = sc,
-    .ident.1 = "Heteroplasmy",
-    .ident.2 = "Sufficient reads",
-    .group.by = "cellvarianttype",
-    .prefix = "hetero_vs_sufficient",
-    .labs <- labs(
-      x = "Fold change Heteroplasmy (n={
-          scales::label_comma()(n_cellvarianttype2[[1]] + n_cellvarianttype2[[2]])
+  if (all(.vs == c(0.5, 0.5))) {
+    p_hetero_vs_sufficient <- fn_de_(
+      thevariant = thevariant,
+      sc = sc,
+      .ident.1 = "Heteroplasmy",
+      .ident.2 = "Sufficient reads",
+      .group.by = "cellvarianttype",
+      .prefix = "hetero_vs_sufficient",
+      .labs <- labs(
+        x = "Fold change Heteroplasmy (n={
+          scales::label_comma()(n_cellvarianttype2[.label_high] + n_cellvarianttype2[.label_low])
         }) vs Sufficient reads (n={
-          scales::label_comma()(n_cellvarianttype2[[5]])
+          scales::label_comma()(n_cellvarianttype2['Sufficient reads'])
         })" |>
-        glue::glue(),
-      y = "FDR",
-      title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
-        glue::glue()
-    ),
-    .celltype = .celltype
-  )
+          glue::glue(),
+        y = "FDR",
+        title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
+          glue::glue()
+      ),
+      .celltype = .celltype
+    )
 
-  fn_go_(
-    thevariant = thevariant,
-    p_hetero_high_vs_low = p_hetero_vs_sufficient,
-    .prefix = "hetero_vs_sufficient",
-    .celltype = .celltype
-  )
+    fn_go_(
+      thevariant = thevariant,
+      p_hetero_high_vs_low = p_hetero_vs_sufficient,
+      .prefix = "hetero_vs_sufficient",
+      .celltype = .celltype
+    )
+  }
 }
 
 
-fn_variant_cell_ <- function(thevariant, sc) {
+fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
   library(Seurat)
   sc$predicted.celltype.l1 |> unique() -> celltypes
 
@@ -577,6 +605,7 @@ fn_variant_cell_ <- function(thevariant, sc) {
       fn_variant_(
         thevariant = thevariant,
         sc = sc_sub,
+        .vs = .vs,
         .celltype = .celltype
       )
     },
@@ -594,15 +623,39 @@ library(Seurat)
 sc_3727 <- fn_load_sc(
   thevariant = "3727T>C"
 )
-fn_variant_(
-  thevariant = "3727T>C",
-  sc = sc_3727
-)
 
-fn_variant_cell_(
-  thevariant = "3727T>C",
-  sc = sc_3727
+vss_3727 <- list(
+  c(0.5, 0.5),
+  c(0.6, 0.4),
+  c(0.7, 0.3),
+  c(0.8, 0.2),
+  c(0.9, 0.1)
 )
+#  c(0.5, 0.5) -> .vs
+vss_3727 |>
+  purrr::map(
+    .f = \(.vs) {
+      fn_variant_(
+        thevariant = "3727T>C",
+        sc = sc_3727,
+        .vs = .vs,
+        .celltype = NULL
+      )
+    }
+  )
+
+vss_3727 |>
+  purrr::map(
+    .f = \(.vs) {
+      fn_variant_cell_(
+        thevariant = "3727T>C",
+        sc = sc_3727,
+        .vs = .vs
+      )
+    }
+  )
+
+
 #
 #
 # ? 3728C>T --------------------------------------------------------------------
@@ -611,15 +664,36 @@ fn_variant_cell_(
 sc_3728 <- fn_load_sc(
   thevariant = "3728C>T"
 )
-fn_variant_(
-  thevariant = "3728C>T",
-  sc = sc_3728
+
+vss_3728 <- list(
+  c(0.5, 0.5),
+  c(0.6, 0.4),
+  c(0.7, 0.3),
+  c(0.8, 0.2),
+  c(0.9, 0.1)
 )
 
-fn_variant_cell_(
-  thevariant = "3728C>T",
-  sc = sc_3728
-)
+vss_3728 |>
+  purrr::map(
+    .f = \(.vs) {
+      fn_variant_(
+        thevariant = "3728C>T",
+        sc = sc_3728,
+        .vs = .vs,
+        .celltype = NULL
+      )
+    }
+  )
+vss_3728 |>
+  purrr::map(
+    .f = \(.vs) {
+      fn_variant_cell_(
+        thevariant = "3728C>T",
+        sc = sc_3728,
+        .vs = .vs
+      )
+    }
+  )
 
 # footer ------------------------------------------------------------------
 
