@@ -17,7 +17,7 @@ library(data.table)
 # library(rlang)
 library(GetoptLong)
 library(logger)
-
+library(fs)
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean
@@ -138,18 +138,20 @@ fn_strandbias_sequential <- function(d) {
       TR = 0
     )) |>
     dplyr::mutate(
-      strandbias = mcmapply(
-        variant = variant,
-        variant_type = variant_type,
-        AF = AF,
-        AR = AR,
-        CF = CF,
-        CR = CR,
-        GF = GF,
-        GR = GR,
-        TF = TF,
-        TR = TR,
-        FUN = function(variant, variant_type, AF, AR, CF, CR, GF, GR, TF, TR) {
+      strandbias = purrr::pmap(
+        list(
+          variant = variant,
+          variant_type = variant_type,
+          AF = AF,
+          AR = AR,
+          CF = CF,
+          CR = CR,
+          GF = GF,
+          GR = GR,
+          TF = TF,
+          TR = TR
+        ),
+        function(variant, variant_type, AF, AR, CF, CR, GF, GR, TF, TR) {
           if (variant_type != "colorful") {
             return(
               tibble::tibble(
@@ -163,10 +165,6 @@ fn_strandbias_sequential <- function(d) {
               ref <- gsub("\\d*|>.*", "", variant)
               alt <- gsub(".*>", "", variant)
 
-              # rf <- ifelse(is.na(get(paste0(ref, "F"))), 0, get(paste0(ref, "F")))
-              # rr <- ifelse(is.na(get(paste0(ref, "R"))), 0, get(paste0(ref, "R")))
-              # af <- ifelse(is.na(get(paste0(alt, "F"))), 0, get(paste0(alt, "F")))
-              # ar <- ifelse(is.na(get(paste0(alt, "R"))), 0, get(paste0(alt, "R")))
               rf <- get(paste0(ref, "F"))
               rr <- get(paste0(ref, "R"))
               af <- get(paste0(alt, "F"))
@@ -208,20 +206,58 @@ srr |>
       srrdir,
       function(srrdir) {
         import(
-          file.path(
+          path(
             srrdir,
             "variant_info_from_heatmap.qs"
           )
         ) -> d
+        dd <- fn_strandbias_sequential(d)
         rm(d)
         gc()
-        fn_strandbias_sequential(d)
+        dd
       },
-      mc.cores = 20
+      mc.cores = 30
     )
   ) -> srr_load
 
+
 srr_load |>
+  dplyr::filter(
+    purrr::map_lgl(load, ~ all(class(.x) == "try-error"))
+  ) |>
+  nrow()
+
+srr_load |>
+  dplyr::mutate(
+    load = purrr::map2(
+      .x = srrdir,
+      .y = load,
+      .f = function(srrdir, load) {
+        # srrdir <- srr_load$srrdir[577]
+        # load <- srr_load$load[[577]]
+        if (all(class(load) == "try-error")) {
+          import(
+            path(
+              srrdir,
+              "variant_info_from_heatmap.qs"
+            )
+          ) -> d
+          dd <- fn_strandbias(d)
+          rm(d)
+          gc()
+          return(dd)
+        } else {
+          return(load)
+        }
+      }
+    )
+  ) -> srr_load_
+
+
+# srr_load |>
+#   dplyr::mutate
+
+srr_load_ |>
   dplyr::select(-srrdir) |>
   tidyr::unnest(cols = load) |>
   dplyr::rename(
