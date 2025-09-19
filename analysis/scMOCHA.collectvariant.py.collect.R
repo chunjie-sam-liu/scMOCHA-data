@@ -292,7 +292,6 @@ conn <- DBI::dbConnect(
     glue::glue()
 )
 DBI::dbListTables(conn)
-# DBI::dbRemoveTable(conn, "allvariants_cell")
 DBI::dbWriteTable(
   conn,
   "allvariants_cell_fishertest",
@@ -301,20 +300,94 @@ DBI::dbWriteTable(
   overwrite = TRUE
 )
 
-# d <- import(
-#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant_cell.qs"
-# )
-# DBI::dbWriteTable(
-#   conn,
-#   "allvariants_cell",
-#   d,
-#   temporary = FALSE,
-#   overwrite = TRUE
-# )
-
 DBI::dbDisconnect(conn, shutdown = TRUE)
 
-# ? don't run below --------------------------------------------------------------------
+#
+#
+# ? update variant_type --------------------------------------------------------------------
+#
+#
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1" |>
+    glue::glue()
+)
+
+allvariants_cell_fishertest <- dplyr::tbl(
+  conn,
+  "allvariants_cell_fishertest"
+) |>
+  data.table::as.data.table()
+
+allvariants_cell_fishertest |>
+  # head(2000000) |>
+  dplyr::mutate(
+    variant_type_fisher_test = parallel::mcmapply(
+      variant = variant,
+      variant_type = variant_type,
+      AFO = AFO,
+      ARE = ARE,
+      CFO = CFO,
+      CRE = CRE,
+      GFO = GFO,
+      GRE = GRE,
+      TFO = TFO,
+      TRE = TRE,
+      fisher_test_pvalue = fisher_test_pvalue,
+      alt_strand_ratio = alt_strand_ratio,
+      FUN = function(
+        variant,
+        variant_type,
+        AFO,
+        ARE,
+        CFO,
+        CRE,
+        GFO,
+        GRE,
+        TFO,
+        TRE,
+        fisher_test_pvalue,
+        alt_strand_ratio
+      ) {
+        if (variant_type != "colorful") {
+          return(variant_type)
+        }
+        ref <- gsub("\\d*|>.*", "", variant)
+        alt <- gsub(".*>", "", variant)
+
+        reff <- switch(ref, A = AFO, C = CFO, G = GFO, T = TFO)
+        refr <- switch(ref, A = ARE, C = CRE, G = GRE, T = TRE)
+        altf <- switch(alt, A = AFO, C = CFO, G = GFO, T = TFO)
+        altr <- switch(alt, A = ARE, C = CRE, G = GRE, T = TRE)
+
+        if (fisher_test_pvalue < 0.05) {
+          return("black")
+        } else {
+          if (alt_strand_ratio < 0.1 | alt_strand_ratio > 0.9) {
+            return("black")
+          } else {
+            if (altf >= 2 & altr >= 2) {
+              return("colorful")
+            } else {
+              return("black")
+            }
+          }
+        }
+      },
+      mc.cores = 50,
+      SIMPLIFY = FALSE
+    )
+  ) -> allvariants_cell_fishertest_varianttype
+
+
+DBI::dbWriteTable(
+  conn,
+  "allvariants_cell_fishertest",
+  allvariants_cell_fishertest_varianttype,
+  temporary = FALSE,
+  overwrite = TRUE
+)
+DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # footer ------------------------------------------------------------------
 

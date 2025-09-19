@@ -135,7 +135,7 @@ fn_cellvarianttype_ratio <- function(.x) {
 # fn_plot_cell_af_depth
 fn_plot_cell_af_depth <- function(thevariant, thesrrid) {
   #
-  forplot_ <- fn_plot_cell_af_depth_forplot(thevariant, thesrrid)
+  forplot_ <- fn_plot_cell_af_depth_forplot_fisher(thevariant, thesrrid)
   p_all <- fn_plot_cell_af_somatic_variant(forplot_)
   cellvarianttype <- fn_plot_cell_af_cellvarianttype(forplot_)
 
@@ -224,6 +224,147 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
     ) -> forplot
   forplot
 }
+
+fn_plot_cell_af_depth_forplot_fisher <- function(thevariant, thesrrid) {
+  source("analysis/00-colors.R")
+
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
+
+  dplyr::tbl(
+    conn_all_hetero_af,
+    # "allvariants_cell"
+    "allvariants_cell_fishertest"
+  ) |>
+    dplyr::filter(
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    dplyr::collect() -> d
+
+  ref <- gsub("\\d*|>.*", "", thevariant)
+  alt <- gsub(".*>", "", thevariant)
+
+  d |>
+    dplyr::select(
+      variant_type,
+      reff = !!sym(paste0(ref, "FO")),
+      refr = !!sym(paste0(ref, "RE")),
+      altf = !!sym(paste0(alt, "FO")),
+      altr = !!sym(paste0(alt, "RE")),
+      fisher_test_pvalue,
+      alt_strand_ratio
+    ) |>
+    dplyr::mutate(
+      variant_type2 = purrr::pmap_chr(
+        list(
+          variant_type,
+          reff,
+          rfr,
+          altf,
+          altr,
+          fisher_test_pvalue,
+          alt_strand_ratio
+        ),
+        \(
+          variant_type,
+          reff,
+          refr,
+          altf,
+          altr,
+          fisher_test_pvalue,
+          alt_strand_ratio
+        ) {
+          if (variant_type != "colorful") {
+            return(variant_type)
+          } else {
+            if (fisher_test_pvalue < 0.05) {
+              return("black")
+            } else {
+              if (alt_strand_ratio < 0.1 | alt_strand_ratio > 0.9) {
+                return("black")
+              } else {
+                if (altf >= 2 & altr >= 2) {
+                  return("colorful")
+                } else {
+                  return("black")
+                }
+              }
+            }
+          }
+        }
+      )
+    ) -> d_
+
+  d |>
+    dplyr::mutate(
+      variant_type = d_$variant_type2
+    ) |>
+    dplyr::mutate(
+      variant_type = dplyr::case_match(
+        variant_type,
+        "colorful" ~ "red",
+        "black" ~ "darkblue",
+        "white" ~ "white",
+        "grey" ~ "gray",
+        NA ~ "white"
+      )
+    ) |>
+    dplyr::mutate(
+      variant_type = factor(
+        variant_type,
+        levels = color_variantcell
+      )
+    ) |>
+    dplyr::arrange(
+      variant_type,
+      -af
+    ) -> forplot_
+
+  forplot_ |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = forplot_$barcode
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        names(color_celltype)
+      )
+    ) |>
+    dplyr::mutate(
+      af = ifelse(
+        af < 0.01,
+        NA_real_,
+        af
+      )
+    ) |>
+    # dplyr::mutate(
+    #   variant_type = as.character(variant_type),
+    # ) |>
+    dplyr::mutate(
+      depth = log2(depth + 1) # log2 transform to reduce skewness
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = colorcode[variant_type]
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = factor(
+        cellvarianttype,
+        levels = colorcode
+      )
+    ) -> forplot
+  forplot
+}
+
 fn_plot_cell_af_somatic_variant <- function(forplot_) {
   source("analysis/00-colors.R")
 
