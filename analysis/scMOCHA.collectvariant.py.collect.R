@@ -375,7 +375,7 @@ allvariants_cell_fishertest |>
         }
       },
       mc.cores = 50,
-      SIMPLIFY = FALSE
+      SIMPLIFY = TRUE
     )
   ) -> allvariants_cell_fishertest_varianttype
 
