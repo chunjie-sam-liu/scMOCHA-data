@@ -379,11 +379,17 @@ allvariants_cell_fishertest |>
     )
   ) -> allvariants_cell_fishertest_varianttype
 
-
+dplyr::tbl(
+  conn,
+  "allvariants_cell_fishertest"
+)
 DBI::dbWriteTable(
   conn,
   "allvariants_cell_fishertest",
-  allvariants_cell_fishertest_varianttype,
+  allvariants_cell_fishertest |>
+    dplyr::mutate(
+      variant_type_fisher_test = as.character(variant_type_fisher_test)
+    ),
   temporary = FALSE,
   overwrite = TRUE
 )

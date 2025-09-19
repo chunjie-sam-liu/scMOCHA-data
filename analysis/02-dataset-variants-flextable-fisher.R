@@ -56,7 +56,7 @@ gse_dataset_metadata_full <- import(
 
 
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
 )
 
 gse_dataset_metadata_full |>
@@ -113,6 +113,7 @@ gse_data |>
     nmut_variant = purrr::map(
       .x = somatic_variant,
       .f = \(.x) {
+        # .x <- a$somatic_variant[[1]]
         .x |>
           purrr::reduce(union) |>
           unique() |>
