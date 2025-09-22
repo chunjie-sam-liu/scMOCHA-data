@@ -192,7 +192,7 @@ all_variants |>
     variant_mean_af,
     by = "variant"
   ) -> variant_count
-
+variant_count |> dplyr::count(issomatic)
 
 {
   export(
