@@ -80,7 +80,7 @@ gse_data |>
     metrics,
     depth_read,
     depth,
-    somatic_variant
+    somatic_variant = somatic_variant_fisher
   ) |>
   dplyr::mutate(
     total_reads = purrr::map_dbl(
@@ -114,8 +114,7 @@ gse_data |>
       .x = somatic_variant,
       .f = \(.x) {
         # .x <- a$somatic_variant[[1]]
-        .x |>
-          purrr::reduce(union) |>
+        union(.x$haplo, .x$somatic) |>
           unique() |>
           length() -> .nmut
 
@@ -352,14 +351,14 @@ flextable::flextable(df) |>
 
 flextable::save_as_image(
   ft,
-  path = file.path(outdir, "gses_meta_read.svg"),
+  path = file.path(outdir, "gses_meta_read_fisher.svg"),
   width = 20,
   height = 7
 )
 
 flextable::save_as_pptx(
   ft,
-  path = file.path(outdir, "gses_meta_read.pptx")
+  path = file.path(outdir, "gses_meta_read_fisher.pptx")
 )
 
 # footer ------------------------------------------------------------------

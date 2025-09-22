@@ -19,6 +19,7 @@ gse_data <- import(
 gse_dataset_metadata_full <- import(
   "analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
+
 gse_data |>
   dplyr::select(
     gseid,
@@ -27,8 +28,8 @@ gse_data |>
     anno,
     hetero,
     haplo_variant,
-    haplo_violin = haplo_violin2,
-    somatic_variant,
+    haplo_violin = haplo_violin_fisher,
+    somatic_variant = somatic_variant_fisher,
     celltype_ratio,
     clusteraf,
     bulkaf
@@ -59,12 +60,13 @@ gse_data_haplo_variant |>
           ) -> .xx
         # .xx$variant -> heteroplasmic_variant
 
-        .y |>
-          dplyr::filter(variant %in% .xx$variant) |>
-          dplyr::filter(variant_type_fisher_test == "colorful") |>
-          dplyr::count(variant) |>
-          dplyr::filter(n >= 3) |>
-          dplyr::pull(variant) -> heteroplasmic_variant
+        # .y |>
+        #   dplyr::filter(variant %in% .xx$variant) |>
+        #   dplyr::filter(variant_type_fisher_test == "colorful") |>
+        #   dplyr::count(variant) |>
+        #   dplyr::filter(n >= 3) |>
+        #   dplyr::pull(variant)
+        .xx$variant -> heteroplasmic_variant
 
         c(.x$high_af, .x$haplo) |> unique() -> homoplasmic_variant
         .x$heteroplasmic_variant <- heteroplasmic_variant

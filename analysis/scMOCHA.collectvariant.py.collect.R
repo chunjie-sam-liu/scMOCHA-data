@@ -395,6 +395,13 @@ DBI::dbWriteTable(
 )
 DBI::dbDisconnect(conn, shutdown = TRUE)
 
+# DBI::dbListTables(conn)
+# dplyr::tbl(conn, "allvariants_cell_fishertest") |>
+#   dplyr::filter(srrid == "GSM7080053") |>
+#   dplyr::filter(variant == "3173G>A") |>
+#   dplyr::collect() |>
+#   dplyr::filter(variant_type == "colorful") |>
+#   dplyr::filter(AFO > 2 & ARE > 2)
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)

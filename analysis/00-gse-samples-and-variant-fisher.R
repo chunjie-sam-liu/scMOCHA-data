@@ -355,7 +355,8 @@ tibble::tibble(
                 .somatic_variant$strand_bias <- setdiff(
                   unique(c(
                     .somatic_variant$somatic,
-                    .somatic_variant$haplo
+                    .somatic_variant$haplo,
+                    .somatic_variant$high_af
                   )),
                   .real_variants
                 )
@@ -367,12 +368,16 @@ tibble::tibble(
                   .somatic_variant$haplo,
                   .real_variants
                 )
+                .somatic_variant$high_af <- intersect(
+                  .somatic_variant$high_af,
+                  .real_variants
+                )
 
                 tibble::tibble(
                   haplo_violin_fisher = list(.hv),
+                  somatic_variant_fisher = list(.somatic_variant),
                   clusteraf = list(.hetero),
                   bulkaf = list(.bulkaf),
-                  somatic_variant_fisher = list(.somatic_variant)
                 )
               },
               mc.cores = 30,
