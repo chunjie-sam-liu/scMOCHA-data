@@ -344,15 +344,29 @@ tibble::tibble(
                   dplyr::count(variant) |>
                   dplyr::filter(n >= 3) |>
                   dplyr::filter(
-                    variant %in% .somatic_variant$somatic
+                    variant %in%
+                      unique(c(
+                        .somatic_variant$somatic,
+                        .somatic_variant$haplo
+                      ))
                   ) |>
-                  dplyr::pull(variant) -> .somatic_variant_
+                  dplyr::pull(variant) -> .real_variants
 
                 .somatic_variant$strand_bias <- setdiff(
-                  .somatic_variant$somatic,
-                  .somatic_variant_
+                  unique(c(
+                    .somatic_variant$somatic,
+                    .somatic_variant$haplo
+                  )),
+                  .real_variants
                 )
-                .somatic_variant$somatic <- .somatic_variant_
+                .somatic_variant$somatic <- intersect(
+                  .somatic_variant$somatic,
+                  .real_variants
+                )
+                .somatic_variant$haplo <- intersect(
+                  .somatic_variant$haplo,
+                  .real_variants
+                )
 
                 tibble::tibble(
                   haplo_violin_fisher = list(.hv),
