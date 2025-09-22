@@ -475,6 +475,34 @@ DBI::dbWriteTable(
   temporary = FALSE
 )
 
+gse_data |>
+  dplyr::select(gseid, srrid, clusteraf) |>
+  tidyr::unnest(cols = clusteraf) |>
+  dplyr::rename(barcode = celltype, af = clusteraf) |>
+  dplyr::select(gseid, srrid, barcode, variant, af) -> gse_data_clusteraf
+DBI::dbWriteTable(
+  conn,
+  "all_hetero_af_cluster_fisher",
+  gse_data_clusteraf,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+
+gse_data |>
+  dplyr::select(gseid, srrid, bulkaf) |>
+  tidyr::unnest(cols = bulkaf) |>
+  dplyr::mutate(celltype = "bulk") |>
+  dplyr::rename(barcode = celltype, af = bulkaf) |>
+  dplyr::select(gseid, srrid, barcode, variant, af) -> gse_data_bulkaf
+
+DBI::dbWriteTable(
+  conn,
+  "all_hetero_af_bulk_fisher",
+  gse_data_bulkaf,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+DBI::dbListTables(conn)
 DBI::dbDisconnect(conn, shutdown = TRUE)
 
 # python / home / liuc9 / github / scMOCHA - data / stats / stats / barcode_celltype.py

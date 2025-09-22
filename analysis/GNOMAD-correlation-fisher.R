@@ -51,19 +51,21 @@ conn <- DBI::dbConnect(
 )
 
 DBI::dbListTables(conn)
-tbl_allvariants <- dplyr::tbl(conn, "allvariants")
+tbl_allvariants <- dplyr::tbl(conn, "allvariants_fisher")
 
 tbl_all_hetero_af_bulk <- dplyr::tbl(
   conn,
-  "all_hetero_af_bulk"
+  "all_hetero_af_bulk_fisher"
 )
+DBI::dbListTables(conn)
 
 tbl_gseid_srrid_variant <- dplyr::tbl(
   conn,
-  "gseid_srrid_variant"
+  "gseid_srrid_variant_fisher"
 )
+
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
 )
 
 tbl_gseid_srrid_variant |>
@@ -171,7 +173,7 @@ p_homo_corr_gnomad
 ggsave(
   filename = file.path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/gnomad",
-    "homoplasmic_variant_correlates_with_gnomad.pdf"
+    "homoplasmic_variant_correlates_with_gnomad-fisher.pdf"
   ),
   plot = p_homo_corr_gnomad,
   width = 6,
@@ -258,7 +260,7 @@ p_hete_corr_gnomad
 ggsave(
   filename = file.path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/gnomad",
-    "heteroplasmic_variant_correlates_with_gnomad.pdf"
+    "heteroplasmic_variant_correlates_with_gnomad-fisher.pdf"
   ),
   plot = p_hete_corr_gnomad,
   width = 6,
@@ -326,6 +328,13 @@ gseid_srrid_variant_hetero |>
     )
   ) -> gseid_srrid_variant_hetero_gnomad
 
+sum(
+  gseid_srrid_variant_hetero_gnomad$gnomad_gt_0.1 >= 0.1
+) -> n_gnomad_gt_0.1
+sum(
+  gseid_srrid_variant_hetero_gnomad$gnomad_lt_0.1 < 0.1
+) -> n_gnomad_lt_0.1
+
 gseid_srrid_variant_hetero_gnomad |>
   dplyr::mutate(
     innoncoding = grepl(
@@ -334,13 +343,13 @@ gseid_srrid_variant_hetero_gnomad |>
     )
   ) |>
   dplyr::mutate(
-    ingnomad = gnomad_gt_0.1 / gnomad_lt_0.1 > 1
+    ingnomad = gnomad_gt_0.1 #/ gnomad_lt_0.1 > 1
   ) |>
   dplyr::mutate(
     variant_type = ifelse(
       ingnomad,
-      "Psudo-bulk AF >= 0.1 (n=42)",
-      "Psudo-bulk AF < 0.1 (n=453)"
+      "Psudo-bulk AF >= 0.1 (n={n_gnomad_gt_0.1})" |> glue::glue(),
+      "Psudo-bulk AF < 0.1 (n={n_gnomad_lt_0.1})" |> glue::glue()
     )
   ) |>
   dplyr::mutate(
@@ -353,7 +362,7 @@ gseid_srrid_variant_hetero_gnomad |>
   dplyr::mutate(
     variant_type = ifelse(
       (!innoncoding) & ingnomad,
-      "Psudo-bulk AF >= 0.1 & coding(n=28)",
+      "Psudo-bulk AF >= 0.1 & coding(n=40)",
       variant_type
     )
   ) -> forplot
@@ -440,7 +449,7 @@ forplot |>
 ggsave(
   filename = file.path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heteroplasmic/gnomad",
-    "heteroplasmic_variant_correlates_with_gnomad_newcutoff.pdf"
+    "heteroplasmic_variant_correlates_with_gnomad_newcutoff-fisher.pdf"
   ),
   plot = p_hete_corr_gnomad_newcutoff,
   width = 6,

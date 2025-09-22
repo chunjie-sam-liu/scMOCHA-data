@@ -102,6 +102,47 @@ export(
   format = "qs",
 )
 
+# gse_data_variant_heteroplasmic <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_variant_heteroplasmic_fisher.qs"
+# )
+
+gse_data_variant_heteroplasmic |>
+  dplyr::select(gseid, srrid, heteroplasmic) |>
+  dplyr::mutate(
+    a = purrr::map_chr(
+      heteroplasmic,
+      \(.x) {
+        # tibble::tibble(
+        #   hetero = .x$heteroplasmic_variant |>
+        #     jsonlite::toJSON(
+        #       auto_unbox = TRUE,
+        #       null = "null"
+        #     ),
+        #   homo = .x$homoplasmic_variant |>
+        #     jsonlite::toJSON(
+        #       auto_unbox = TRUE,
+        #       null = "null"
+        #     )
+        # )
+        .x |> jsonlite::toJSON()
+      }
+    )
+  ) |>
+  dplyr::select(
+    gseid,
+    srrid,
+    variant_alltype = a
+  ) -> gseid_srrid_variant_fisher
+
+
+DBI::dbWriteTable(
+  conn,
+  "gseid_srrid_variant_fisher",
+  gseid_srrid_variant_fisher,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+# DBI::dbListTables(conn)
 
 gse_data_variant_heteroplasmic$heteroplasmic |>
   purrr::map(
