@@ -20,6 +20,7 @@ gse_dataset_metadata_full <- import(
   "analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
+
 gse_data |>
   dplyr::select(
     gseid,
@@ -27,7 +28,7 @@ gse_data |>
     chemistry,
     anno,
     hetero,
-    haplo_variant,
+    haplo_variant = haplo_variant_fisher,
     haplo_violin = haplo_violin_fisher,
     somatic_variant = somatic_variant_fisher,
     celltype_ratio,
@@ -39,6 +40,7 @@ gse_data |>
     by = c("srrid" = "srrid")
   ) |>
   dplyr::arrange(disease, Chemistry) -> gse_data_haplo_variant
+
 
 gse_data_haplo_variant |>
   dplyr::mutate(
@@ -145,6 +147,14 @@ gse_data_variant_heteroplasmic |>
 
 gse_data_haplo_variant |>
   dplyr::select(gseid, srrid, chemistry, haplo_variant) |>
+  dplyr::filter(
+    purrr::map_lgl(
+      haplo_variant,
+      .f = \(.x) {
+        nrow(.x) > 0
+      }
+    )
+  ) |>
   tidyr::unnest(cols = haplo_variant) -> all_variants
 
 all_variants |>
@@ -221,3 +231,18 @@ variant_count |> dplyr::count(issomatic)
     )
   )
 }
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+)
+DBI::dbListTables(conn)
+dplyr::tbl(conn, "allvariants")
+variant_count
+DBI::dbWriteTable(
+  conn,
+  "allvariants_fisher",
+  variant_count,
+  overwrite = TRUE
+)
+DBI::dbDisconnect(conn, shutdown = TRUE)

@@ -183,7 +183,7 @@ conn <- DBI::dbConnect(
   duckdb::duckdb(),
   dbdir = "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1" |>
     glue::glue(),
-  read_only = TRUE
+  # read_only = TRUE
 )
 tbl_allvariants_cell_fishertest <- dplyr::tbl(
   conn,
@@ -218,10 +218,17 @@ tibble::tibble(
           dplyr::mutate(
             haplo_violin2 = parallel::mcmapply(
               .srrid = srrid,
+              .haplo_variant = haplo_variant,
               .haplo_violin = haplo_violin,
               .somatic_variant = somatic_variant,
-              FUN = function(.srrid, .haplo_violin, .somatic_variant) {
+              FUN = function(
+                .srrid,
+                .haplo_variant,
+                .haplo_violin,
+                .somatic_variant
+              ) {
                 # .srrid <- .anno$srrid[[1]]
+                # .haplo_variant <- .anno$haplo_variant[[1]]
                 # .haplo_violin <- .anno$haplo_violin[[1]]
                 # .somatic_variant <- .anno$somatic_variant[[1]]
 
@@ -372,8 +379,13 @@ tibble::tibble(
                   .somatic_variant$high_af,
                   .real_variants
                 )
+                .haplo_variant |>
+                  dplyr::filter(
+                    variant %in% .real_variants
+                  ) -> .haplo_variant_real
 
                 tibble::tibble(
+                  haplo_variant_fisher = list(.haplo_variant_real),
                   haplo_violin_fisher = list(.hv),
                   somatic_variant_fisher = list(.somatic_variant),
                   clusteraf = list(.hetero),
@@ -435,5 +447,34 @@ gse_data_loaded |>
   #     file.path(outdir, "gse_srrid_srrdir.rds")
   #   )
 }
+
+
+gse_data |>
+  dplyr::mutate_if(
+    dplyr::where(is.list),
+    ~ {
+      parallel::mclapply(
+        X = .x,
+        FUN = \(.xx) {
+          jsonlite::toJSON(.xx, auto_unbox = TRUE, null = "null")
+        },
+        mc.cores = 20
+      )
+    }
+  ) -> gse_data_json
+
+
+DBI::dbListTables(conn)
+
+
+DBI::dbWriteTable(
+  conn,
+  "gse_data_fisher",
+  gse_data_json,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+
 DBI::dbDisconnect(conn, shutdown = TRUE)
+
 # python / home / liuc9 / github / scMOCHA - data / stats / stats / barcode_celltype.py
