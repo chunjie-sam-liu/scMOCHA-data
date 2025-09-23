@@ -59,6 +59,13 @@ gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
 )
 
+gse_data_variant_heteroplasmic <- import(file.path(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+  "gse_data_variant_heteroplasmic_fisher.qs"
+)) |>
+  dplyr::select(gseid, srrid, n_heteroplasmic, n_homoplasmic)
+
+
 gse_dataset_metadata_full |>
   dplyr::group_by(gseid) |>
   dplyr::summarise(
@@ -81,6 +88,10 @@ gse_data |>
     depth_read,
     depth,
     somatic_variant = somatic_variant_fisher
+  ) |>
+  dplyr::left_join(
+    gse_data_variant_heteroplasmic,
+    by = c("gseid", "srrid")
   ) |>
   dplyr::mutate(
     total_reads = purrr::map_dbl(
@@ -110,24 +121,32 @@ gse_data |>
         mean(.x$depth, na.rm = T)
       }
     ),
-    nmut_variant = purrr::map(
-      .x = somatic_variant,
-      .f = \(.x) {
+  ) |>
+  dplyr::mutate(
+    nmut_variant = purrr::map2(
+      # .x = somatic_variant,
+      .x = n_heteroplasmic,
+      .y = n_homoplasmic,
+      .f = \(.x, .y) {
         # .x <- a$somatic_variant[[1]]
-        union(.x$haplo, .x$somatic) |>
-          unique() |>
-          length() -> .nmut
-
-        .x |>
-          purrr::map_int(length) |>
-          tibble::enframe() |>
-          tidyr::spread(key = name, value = value) -> .xx
-        names(.xx) <- glue::glue("nmut_{names(.xx)}")
-        .xx |>
-          tibble::add_column(
-            nmut = .nmut,
-            .before = 1
-          )
+        # union(.x$haplo, .x$somatic) |>
+        #   unique() |>
+        #   length() -> .nmut
+        # .x |>
+        #   purrr::map_int(length) |>
+        #   tibble::enframe() |>
+        #   tidyr::spread(key = name, value = value) -> .xx
+        # names(.xx) <- glue::glue("nmut_{names(.xx)}")
+        # .xx |>
+        #   tibble::add_column(
+        #     nmut = .nmut,
+        #     .before = 1
+        #   )
+        tibble::tibble(
+          nmut = sum(.x, .y, na.rm = T),
+          nmut_somatic = .x,
+          nmut_haplo = .y,
+        )
       }
     )
   ) |>
@@ -348,7 +367,7 @@ flextable::flextable(df) |>
     j = c(14),
     width = 2
   ) -> ft
-
+ft
 flextable::save_as_image(
   ft,
   path = file.path(outdir, "gses_meta_read_fisher.svg"),
