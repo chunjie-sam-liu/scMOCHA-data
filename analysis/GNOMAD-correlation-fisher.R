@@ -196,10 +196,10 @@ ggsave(
 
 tbl_allvariants |>
   dplyr::filter(issomatic == "heteroplasmic") |>
-  dplyr::group_by(Position) |>
-  dplyr::filter(dplyr::n() == 1) |>
+  # dplyr::group_by(Position) |>
+  # dplyr::filter(dplyr::n() == 1) |>
   as.data.table() |>
-  dplyr::ungroup() |>
+  # dplyr::ungroup() |>
   dplyr::mutate(
     freq = n / n_individuals,
     `Gnomad Frequency` = `Gnomad Frequency` / 100
@@ -400,9 +400,14 @@ fn_xy_breaks_limits(
 
 
 forplot |>
+  tidyr::replace_na(
+    list(
+      `Gnomad Frequency` = 0
+    )
+  ) |>
   dplyr::filter(ingnomad) |>
   dplyr::arrange(-freq) |>
-  head(5) -> forlabel
+  head(10) -> forlabel
 
 
 forplot |>
