@@ -47,7 +47,8 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  read_only = TRUE
 )
 
 DBI::dbListTables(conn)
@@ -343,13 +344,22 @@ gseid_srrid_variant_hetero_gnomad |>
     )
   ) |>
   dplyr::mutate(
-    ingnomad = gnomad_gt_0.1 #/ gnomad_lt_0.1 > 1
-  ) |>
+    ingnomad = gnomad_gt_0.1 / gnomad_lt_0.1 > 1
+  ) -> gseid_srrid_variant_hetero_gnomad_
+
+gseid_srrid_variant_hetero_gnomad_$ingnomad |> sum()
+sum(
+  gseid_srrid_variant_hetero_gnomad_$ingnomad &
+    !gseid_srrid_variant_hetero_gnomad_$innoncoding
+)
+gseid_srrid_variant_hetero_gnomad_ |>
   dplyr::mutate(
     variant_type = ifelse(
       ingnomad,
-      "Psudo-bulk AF >= 0.1 (n={n_gnomad_gt_0.1})" |> glue::glue(),
-      "Psudo-bulk AF < 0.1 (n={n_gnomad_lt_0.1})" |> glue::glue()
+      "Psudo-bulk AF >= 0.1 (n={sum(gseid_srrid_variant_hetero_gnomad_$ingnomad)})" |>
+        glue::glue(),
+      "Psudo-bulk AF < 0.1 (n={sum(!gseid_srrid_variant_hetero_gnomad_$ingnomad)})" |>
+        glue::glue()
     )
   ) |>
   dplyr::mutate(
@@ -386,6 +396,11 @@ forplot |>
   head(5) -> forlabel
 
 forplot |>
+  tidyr::replace_na(
+    list(
+      `Gnomad Frequency` = 0
+    )
+  ) |>
   ggplot(aes(
     x = `freq`,
     y = `Gnomad Frequency`,
@@ -443,7 +458,18 @@ forplot |>
       color = "black",
       linewidth = 0.5
     ),
-    legend.position = c(0.5, 0.6)
+    legend.position = c(0.3, 0.6)
+  ) +
+  annotate(
+    "text",
+    x = 0.1,
+    y = 0.05,
+    label = glue::glue(
+      "R = 0.0226\np = 0.8"
+    ),
+    hjust = 0,
+    size = 4,
+    color = "black"
   ) -> p_hete_corr_gnomad_newcutoff
 
 ggsave(
