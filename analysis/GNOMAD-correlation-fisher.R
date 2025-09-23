@@ -65,9 +65,11 @@ tbl_gseid_srrid_variant <- dplyr::tbl(
   "gseid_srrid_variant_fisher"
 )
 
-gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
-)
+# gse_data <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
+# )
+n_individuals <- 577
+
 
 tbl_gseid_srrid_variant |>
   dplyr::collect() |>
@@ -106,7 +108,7 @@ tbl_allvariants |>
   as.data.table() |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    freq = n / nrow(gse_data),
+    freq = n / n_individuals,
     `Gnomad Frequency` = `Gnomad Frequency` / 100
   ) -> homo_variants
 
@@ -122,6 +124,11 @@ fn_xy_breaks_limits(
 ) -> ybl_homo
 
 homo_variants |>
+  tidyr::replace_na(
+    list(
+      `Gnomad Frequency` = 0
+    )
+  ) |>
   ggpubr::ggscatter(
     x = "freq",
     y = "Gnomad Frequency",
@@ -194,9 +201,10 @@ tbl_allvariants |>
   as.data.table() |>
   dplyr::ungroup() |>
   dplyr::mutate(
-    freq = n / nrow(gse_data),
+    freq = n / n_individuals,
     `Gnomad Frequency` = `Gnomad Frequency` / 100
   ) -> hete_variants
+
 
 fn_xy_breaks_limits(
   hete_variants$freq,
@@ -210,6 +218,11 @@ fn_xy_breaks_limits(
 ) -> ybl_hete
 
 hete_variants |>
+  tidyr::replace_na(
+    list(
+      `Gnomad Frequency` = 0
+    )
+  ) |>
   ggpubr::ggscatter(
     x = "freq",
     y = "Gnomad Frequency",
@@ -329,13 +342,6 @@ gseid_srrid_variant_hetero |>
     )
   ) -> gseid_srrid_variant_hetero_gnomad
 
-sum(
-  gseid_srrid_variant_hetero_gnomad$gnomad_gt_0.1 >= 0.1
-) -> n_gnomad_gt_0.1
-sum(
-  gseid_srrid_variant_hetero_gnomad$gnomad_lt_0.1 < 0.1
-) -> n_gnomad_lt_0.1
-
 gseid_srrid_variant_hetero_gnomad |>
   dplyr::mutate(
     innoncoding = grepl(
@@ -352,27 +358,30 @@ sum(
   gseid_srrid_variant_hetero_gnomad_$ingnomad &
     !gseid_srrid_variant_hetero_gnomad_$innoncoding
 )
+
 gseid_srrid_variant_hetero_gnomad_ |>
   dplyr::mutate(
     variant_type = ifelse(
       ingnomad,
-      "Psudo-bulk AF >= 0.1 (n={sum(gseid_srrid_variant_hetero_gnomad_$ingnomad)})" |>
+      "Psudo-bulk AF >= 0.1 (n={sum(ingnomad)})" |>
         glue::glue(),
-      "Psudo-bulk AF < 0.1 (n={sum(!gseid_srrid_variant_hetero_gnomad_$ingnomad)})" |>
+      "Psudo-bulk AF < 0.1 (n={sum(!ingnomad)})" |>
         glue::glue()
     )
   ) |>
   dplyr::mutate(
     variant_type = ifelse(
       innoncoding & ingnomad,
-      "Psudo-bulk AF >= 0.1 & noncoding(n=14)",
+      "Psudo-bulk AF >= 0.1 & noncoding (n={sum(ingnomad & innoncoding)})" |>
+        glue::glue(),
       variant_type
     )
   ) |>
   dplyr::mutate(
     variant_type = ifelse(
       (!innoncoding) & ingnomad,
-      "Psudo-bulk AF >= 0.1 & coding(n=40)",
+      "Psudo-bulk AF >= 0.1 & coding (n={sum(ingnomad & !innoncoding)})" |>
+        glue::glue(),
       variant_type
     )
   ) -> forplot
@@ -394,6 +403,7 @@ forplot |>
   dplyr::filter(ingnomad) |>
   dplyr::arrange(-freq) |>
   head(5) -> forlabel
+
 
 forplot |>
   tidyr::replace_na(
@@ -465,7 +475,7 @@ forplot |>
     x = 0.1,
     y = 0.05,
     label = glue::glue(
-      "R = 0.0226\np = 0.8"
+      "R = -0.0104\np = 0.98"
     ),
     hjust = 0,
     size = 4,
@@ -488,3 +498,6 @@ ggsave(
 # future: :plan(future: :sequential)
 
 # save image --------------------------------------------------------------
+gseid_srrid_variant_hetero_gnomad |>
+  dplyr::filter(variant == "1670A>G") |>
+  dplyr::glimpse()
