@@ -12,6 +12,26 @@ variants_tobe_excluded <- c(
   regions_rare_heteroplasmic_variants
 )
 
+# 3. tRNA p9 and RNA editing position
+.editing_pos <- c(
+  585,
+  1610,
+  3238,
+  4271,
+  5520,
+  7526,
+  8303, # tRNA p9
+  9999,
+  10413,
+  12146,
+  12274,
+  14734,
+  15896, # tRNA p9
+  295,
+  2617,
+  13710 # RNA editing
+)
+
 gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_fisher.qs"
 )
