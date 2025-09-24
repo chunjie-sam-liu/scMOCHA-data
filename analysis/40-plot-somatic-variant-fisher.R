@@ -135,7 +135,7 @@ fn_cellvarianttype_ratio <- function(.x) {
 # fn_plot_cell_af_depth
 fn_plot_cell_af_depth <- function(thevariant, thesrrid) {
   #
-  forplot_ <- fn_plot_cell_af_depth_forplot(thevariant, thesrrid)
+  forplot_ <- fn_plot_cell_af_depth_forplot_fisher(thevariant, thesrrid)
   p_all <- fn_plot_cell_af_somatic_variant(forplot_)
   cellvarianttype <- fn_plot_cell_af_cellvarianttype(forplot_)
 
@@ -419,93 +419,6 @@ fn_plot_cell_af_somatic_variant <- function(forplot_) {
   fn_plot_cell_af_somatic_variant_depth(forplot, thetheme) -> p_depth
   fn_plot_cell_af_somatic_variant_cell(forplot, thetheme) -> p_variant_cells
   fn_plot_cell_af_somatic_variant_celltype(forplot, thetheme) -> p_celltype
-
-  .gseid <- unique(forplot$gseid)
-  .srrid <- unique(forplot$srrid)
-  .variant <- unique(forplot$variant)
-
-  wrap_plots(
-    p_af,
-    plot_spacer(),
-    p_depth,
-    plot_spacer(),
-    p_variant_cells,
-    plot_spacer(),
-    p_celltype,
-    ncol = 1,
-    heights = c(15, -1.05, 15, -1.05, 10, -1.05, 10),
-    guides = "collect"
-  ) +
-    plot_annotation(
-      title = glue::glue(
-        "Variant {.variant} in {.gseid}-{.srrid}"
-      ),
-      theme = theme(
-        plot.title = element_text(
-          hjust = 0.5,
-          size = 16,
-          face = "bold"
-        )
-      )
-    ) -> p_all
-
-  p_all
-}
-
-fn_plot_cell_af_somatic_variant_fisher <- function(forplot_) {
-  source("analysis/00-colors.R")
-
-  colorcode <- setNames(names(color_variantcell), color_variantcell)
-  thetheme <- theme(
-    panel.background = element_blank(),
-    panel.grid = element_blank(),
-    axis.ticks = element_blank(),
-    axis.text = element_blank(),
-    axis.title.x = element_blank(),
-    plot.margin = margin(t = 0, b = 0, unit = "cm"),
-  )
-
-  forplot_ |>
-    dplyr::mutate(
-      barcode = factor(
-        barcode,
-        levels = forplot_$barcode
-      )
-    ) |>
-    dplyr::mutate(
-      celltype = gsub(
-        "_",
-        " ",
-        celltype
-      )
-    ) |>
-    dplyr::mutate(
-      celltype = factor(
-        celltype,
-        names(color_celltype)
-      )
-    ) |>
-    dplyr::mutate(
-      af = ifelse(
-        af < 0.01,
-        NA_real_,
-        af
-      )
-    ) |>
-    dplyr::mutate(
-      cellvarianttype = colorcode[variant_type]
-    ) |>
-    dplyr::mutate(
-      cellvarianttype = factor(
-        cellvarianttype,
-        levels = colorcode
-      )
-    ) -> forplot
-
-  fn_plot_cell_af_somatic_variant_af(forplot, thetheme) -> p_af
-  fn_plot_cell_af_somatic_variant_depth(forplot, thetheme) -> p_depth
-  fn_plot_cell_af_somatic_variant_cell(forplot, thetheme) -> p_variant_cells
-  fn_plot_cell_af_somatic_variant_celltype(forplot, thetheme) -> p_celltype
   fn_plot_cell_af_somatic_variant_forwardreverse(forplot, thetheme) -> p_fr
 
   .gseid <- unique(forplot$gseid)
@@ -542,25 +455,7 @@ fn_plot_cell_af_somatic_variant_fisher <- function(forplot_) {
   p_all
 }
 
-fn_plot_cell_af_somatic_variant_celltype <- function(forplot, thetheme) {
-  forplot |>
-    ggplot(aes(
-      x = barcode,
-      y = 1,
-      fill = celltype
-    )) +
-    geom_col() +
-    scale_fill_manual(
-      name = "Cell Type",
-      values = color_celltype,
-    ) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
-    thetheme +
-    # theme(panel.background = element_rect(color = "red")) +
-    labs(
-      y = "Cell Type",
-    )
-}
+
 fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {
   fn_xy_breaks_limits(forplot$af, step = 0.2) -> .ybl
 
@@ -655,7 +550,6 @@ fn_plot_cell_af_somatic_variant_depth <- function(forplot, thetheme) {
       y = "Log2(Depth + 1)",
     )
 }
-
 fn_plot_cell_af_somatic_variant_cell <- function(forplot, thetheme) {
   forplot |>
     dplyr::mutate(
@@ -684,6 +578,95 @@ fn_plot_cell_af_somatic_variant_cell <- function(forplot, thetheme) {
     thetheme +
     labs(
       y = "Variant cells",
+    )
+}
+fn_plot_cell_af_somatic_variant_celltype <- function(forplot, thetheme) {
+  forplot |>
+    ggplot(aes(
+      x = barcode,
+      y = 1,
+      fill = celltype
+    )) +
+    geom_col() +
+    scale_fill_manual(
+      name = "Cell Type",
+      values = color_celltype,
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
+    thetheme +
+    # theme(panel.background = element_rect(color = "red")) +
+    labs(
+      y = "Cell Type",
+    )
+}
+fn_plot_cell_af_somatic_variant_forwardreverse <- function(forplot, thetheme) {
+  thevariant <- unique(forplot$variant)
+  ref <- gsub("\\d*|>.*", "", thevariant)
+  alt <- gsub(".*>", "", thevariant)
+
+  forplot |>
+    dplyr::select(
+      barcode,
+      reff = !!sym(paste0(ref, "FO")),
+      refr = !!sym(paste0(ref, "RE")),
+      altf = !!sym(paste0(alt, "FO")),
+      altr = !!sym(paste0(alt, "RE")),
+    ) |>
+    tidyr::pivot_longer(
+      cols = -barcode,
+      names_to = "type",
+      values_to = "count"
+    ) |>
+    dplyr::group_by(barcode) |>
+    dplyr::mutate(
+      ratio = count / sum(count)
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      type = factor(
+        type,
+        levels = c("reff", "altf", "refr", "altr") |> rev()
+      )
+    ) -> forplot_fr
+  # ggsci::pal_aaas()(10) |> color()
+  color_rf <- c(
+    "reff" = "#631879FF",
+    "altf" = "#631879FF" |> clr_lighten(shift = 0.5),
+    "refr" = "gold",
+    "altr" = "gold" |> clr_lighten(shift = 0.5)
+  ) |>
+    color()
+
+  forplot_fr |>
+    ggplot(aes(
+      x = barcode,
+      y = ratio,
+      fill = type
+    )) +
+    geom_col() +
+    scale_fill_manual(
+      name = "Read type",
+      values = color_rf,
+      labels = c(
+        "reff" = paste0(ref, " Forward"),
+        "refr" = paste0(ref, " Reverse"),
+        "altf" = paste0(alt, " Forward"),
+        "altr" = paste0(alt, " Reverse")
+      )
+    ) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0)), ) +
+    theme(
+      panel.background = element_blank(),
+      panel.grid = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+      plot.margin = margin(t = 0, b = 0, unit = "cm"),
+    ) +
+    # theme(panel.background = element_rect(color = "red")) +
+    labs(
+      y = "Forward/Reverse Ratio",
     )
 }
 
@@ -1188,7 +1171,7 @@ fn_plot_variant_ratio_swarm <- function(.d, rank_srrid) {
 
 # body --------------------------------------------------------------------
 thevariant <- "3173G>A"
-thesrrid <- "GSM7493843"
+thesrrid <- "GSM7080053"
 thevariants <- c(
   "3173G>A",
   "3176A>T",
@@ -1196,9 +1179,8 @@ thevariants <- c(
   "3727T>C",
   "3728C>T"
 )
-
+fn_plot_cell_af_depth(thevariant, thesrrid) -> p_test
 gseid_srrid_variant_hetero |>
-  # head(20) |>
   dplyr::filter(variant %in% thevariants) |>
   dplyr::mutate(
     p = parallel::mcmapply(
