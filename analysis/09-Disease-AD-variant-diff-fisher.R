@@ -544,10 +544,41 @@ conn <- DBI::dbConnect(
     glue::glue()
 )
 DBI::dbListTables(conn)
+tbl_allvariants_fisher <- dplyr::tbl(
+  conn,
+  "allvariants_fisher"
+)
 tbl_allvariants_cell_fishertest <- dplyr::tbl(
   conn,
   "allvariants_cell_fishertest"
 )
+
+tbl_allvariants_cell_fishertest |>
+  dplyr::filter(variant_type_fisher_test == "colorful") |>
+  # dplyr::count(srrid, variant) |>
+  dplyr::left_join(
+    tbl_allvariants_fisher,
+    by = "variant"
+  ) |>
+  dplyr::filter(issomatic == "heteroplasmic") |>
+  dplyr::count(srrid, variant) |>
+  data.table::as.data.table() |>
+  dplyr::arrange(-n) -> d
+
+
+d |>
+  dplyr::group_by(variant) |>
+  dplyr::summarise(
+    nsamples = dplyr::n(),
+    num_mean_cells = mean(n),
+    num_median_cells = median(n),
+  ) |>
+  dplyr::arrange(-nsamples) |>
+  dplyr::filter(nsamples >= 10, num_median_cells >= 10) |>
+  dplyr::left_join(
+    tbl_allvariants_fisher |> as.data.table(),
+    by = "variant"
+  )
 
 # variant_sc_af <- import(
 #   file.path(
