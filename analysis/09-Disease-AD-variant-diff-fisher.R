@@ -78,13 +78,6 @@ gse_data |>
   dplyr::rename(
     barcode = celltype,
     af = clusteraf
-  ) |>
-  dplyr::select(
-    gseid,
-    srrid,
-    barcode,
-    variant,
-    af
   ) -> all_hetero_af_cluster
 
 # all_hetero_af_bulk <- import(
@@ -105,11 +98,7 @@ gse_data |>
     af = bulkaf
   ) |>
   dplyr::select(
-    gseid,
-    srrid,
-    barcode,
-    variant,
-    af
+    dplyr::all_of(colnames(all_hetero_af_cluster))
   ) -> all_hetero_af_bulk
 
 all_hetero_af_cluster |>
@@ -195,6 +184,7 @@ admeta_sc5p_variant_type |>
 
 
 admeta_sc5p_variant_type_af |>
+  # dplyr::filter(variant_type_fisher_test == "colorful") |>
   dplyr::group_by(
     variant,
     barcode
@@ -548,50 +538,146 @@ ggsave(
 
 
 # ! single cell level --------------------------------------------------------------------
-variant_sc_af <- import(
-  file.path(
-    cleandatadir,
-    "all_hetero_af.cell.fst"
-  )
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  dbdir = "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1" |>
+    glue::glue()
+)
+DBI::dbListTables(conn)
+tbl_allvariants_cell_fishertest <- dplyr::tbl(
+  conn,
+  "allvariants_cell_fishertest"
 )
 
+tbl_allvariants_cell_fishertest
+# variant_sc_af <- import(
+#   file.path(
+#     cleandatadir,
+#     "all_hetero_af.cell.fst"
+#   )
+# )
+
+variant_sc_af <- tbl_allvariants_cell_fishertest |>
+  as.data.table()
+
 variant_sc_af |>
-  dplyr::select(gseid, srrid, barcode, dplyr::all_of(topvariants)) |>
+  # dplyr::select(gseid, srrid, barcode, dplyr::all_of(topvariants)) |>
   dplyr::filter(srrid %in% forplot_$srrid) |>
-  tidyr::pivot_longer(
-    cols = -c(gseid, srrid, barcode),
-    names_to = "variant",
-    values_to = "af"
-  ) |>
+  # tidyr::pivot_longer(
+  #   cols = -c(gseid, srrid, barcode),
+  #   names_to = "variant",
+  #   values_to = "af"
+  # ) |>
   dplyr::left_join(
     admeta_sc5p,
     by = c("gseid", "srrid")
   ) -> topvariant_sc_af_meta
 
-BARCODES <- import(
-  file.path(
-    cleandatadir,
-    "barcode_celltype.fst"
-  )
-) |>
-  dplyr::filter(
-    barcode %in% unique(topvariant_sc_af_meta$barcode)
-  )
-
+# BARCODES <- import(
+#   file.path(
+#     cleandatadir,
+#     "barcode_celltype.fst"
+#   )
+# ) |>
+#   dplyr::filter(
+#     barcode %in% unique(topvariant_sc_af_meta$barcode)
+#   )
 
 topvariant_sc_af_meta |>
   dplyr::left_join(
-    BARCODES,
-    by = c("gseid", "srrid", "barcode")
+    all_variant,
+    by = "variant"
   ) |>
-  dplyr::mutate(
-    celltype = gsub(celltype, pattern = "_", replacement = " "),
+  dplyr::filter(
+    issomatic == "heteroplasmic"
   ) |>
-  dplyr::mutate(
-    celltype = factor(celltype, levels = names(color_celltype)),
+  dplyr::filter(
+    variant_type_fisher_test == "colorful",
+  ) |>
+  tidyr::nest(
+    .by = c(variant, celltype)
   ) -> forplot_sc
+forplot_sc |>
+  dplyr::mutate(
+    t = parallel::mcmapply(
+      FUN = \(.x) {
+        # .x <- a$data[[1]]
+        .x |>
+          dplyr::count(disease) |>
+          tidyr::pivot_wider(
+            names_from = disease,
+            values_from = n
+          ) -> .xx
+        tryCatch(
+          expr = {
+            t.test(
+              af ~ disease,
+              data = .x,
+              var.equal = TRUE
+            ) |>
+              broom::tidy() |>
+              dplyr::select(
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
+              ) |>
+              dplyr::bind_cols(
+                .xx
+              )
+          },
+          error = function(e) {
+            message("Error: ", conditionMessage(e))
+            return(NULL)
+          }
+        )
+      },
+      data,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
+    )
+  ) -> admeta_sc5p_variant_type_af_ttest_cell
+
+admeta_sc5p_variant_type_af_ttest_cell |>
+  dplyr::select(-data) |>
+  tidyr::unnest(cols = t) |>
+  dplyr::filter(p.value < 0.05) |>
+  dplyr::mutate(
+    plog10p = -log10(p.value),
+    est = abs(estimate),
+  ) |>
+  dplyr::mutate(
+    rank = plog10p * est,
+  ) |>
+  dplyr::arrange(
+    desc(rank)
+  ) -> admeta_sc5p_variant_type_af_ttest_rank_cell
+
+
+admeta_sc5p_variant_type_af_ttest_rank_cell |>
+  dplyr::filter(estimate > 0.03) |>
+  dplyr::arrange(variant) -> top5_variant_cell
+
+# topvariant_sc_af_meta |>
+#   dplyr::left_join(
+#     BARCODES,
+#     by = c("gseid", "srrid", "barcode")
+#   ) |>
+#   dplyr::mutate(
+#     celltype = gsub(celltype, pattern = "_", replacement = " "),
+#   ) |>
+#   dplyr::mutate(
+#     celltype = factor(celltype, levels = names(color_celltype)),
+#   ) -> forplot_sc
 
 forplot_sc |>
+  tidyr::unnest(cols = data) |>
+  dplyr::filter(variant %in% top5_variant_cell$variant) |>
+  dplyr::group_by(variant, celltype, disease) |>
+  dplyr::filter(dplyr::n() >= 2) |>
+  dplyr::ungroup() |>
   ggplot(aes(x = disease)) +
   ggh4x::facet_grid2(
     variant ~ celltype,

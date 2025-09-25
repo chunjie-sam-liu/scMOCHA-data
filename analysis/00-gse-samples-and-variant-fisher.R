@@ -341,10 +341,10 @@ tibble::tibble(
 
                         tibble::tibble(
                           clusteraf = .alt_reads / .total_reads,
-                          rf = rf,
-                          rr = rr,
-                          af = af,
-                          ar = ar,
+                          reff = rf,
+                          refr = rr,
+                          altf = af,
+                          altr = ar,
                           total_reads = .total_reads,
                           fisher_test_pvalue = result$p.value,
                           alt_strand_ratio = strand_ratio,
@@ -355,10 +355,10 @@ tibble::tibble(
                           return(
                             tibble::tibble(
                               clusteraf = NA_real_,
-                              rf = NA_integer_,
-                              rr = NA_integer_,
-                              af = NA_integer_,
-                              ar = NA_integer_,
+                              reff = NA_integer_,
+                              refr = NA_integer_,
+                              altf = NA_integer_,
+                              altr = NA_integer_,
                               total_reads = NA_integer_,
                               fisher_test_pvalue = NA_real_,
                               alt_strand_ratio = NA_real_,
@@ -445,11 +445,11 @@ tibble::tibble(
                         )
 
                         tibble::tibble(
-                          clusteraf = .alt_reads / .total_reads,
-                          rf = rf,
-                          rr = rr,
-                          af = af,
-                          ar = ar,
+                          bulkaf = .alt_reads / .total_reads,
+                          reff = rf,
+                          refr = rr,
+                          altf = af,
+                          altr = ar,
                           total_reads = .total_reads,
                           fisher_test_pvalue = result$p.value,
                           alt_strand_ratio = strand_ratio,
@@ -459,11 +459,11 @@ tibble::tibble(
                         if (.total_reads == 0) {
                           return(
                             tibble::tibble(
-                              clusteraf = NA_real_,
-                              rf = NA_integer_,
-                              rr = NA_integer_,
-                              af = NA_integer_,
-                              ar = NA_integer_,
+                              bulkaf = NA_real_,
+                              reff = NA_integer_,
+                              refr = NA_integer_,
+                              altf = NA_integer_,
+                              altr = NA_integer_,
                               total_reads = NA_integer_,
                               fisher_test_pvalue = NA_real_,
                               alt_strand_ratio = NA_real_,
@@ -611,8 +611,8 @@ DBI::dbWriteTable(
 gse_data |>
   dplyr::select(gseid, srrid, clusteraf) |>
   tidyr::unnest(cols = clusteraf) |>
-  dplyr::rename(barcode = celltype, af = clusteraf) |>
-  dplyr::select(gseid, srrid, barcode, variant, af) -> gse_data_clusteraf
+  dplyr::rename(barcode = celltype, af = clusteraf) -> gse_data_clusteraf
+
 DBI::dbWriteTable(
   conn,
   "all_hetero_af_cluster_fisher",
@@ -625,8 +625,7 @@ gse_data |>
   dplyr::select(gseid, srrid, bulkaf) |>
   tidyr::unnest(cols = bulkaf) |>
   dplyr::mutate(celltype = "bulk") |>
-  dplyr::rename(barcode = celltype, af = bulkaf) |>
-  dplyr::select(gseid, srrid, barcode, variant, af) -> gse_data_bulkaf
+  dplyr::rename(barcode = celltype, af = bulkaf) -> gse_data_bulkaf
 
 DBI::dbWriteTable(
   conn,
