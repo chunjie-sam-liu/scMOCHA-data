@@ -276,12 +276,12 @@ tibble::tibble(
                     .by = c(variant, celltype, ref, alt)
                   ) |>
                   dplyr::mutate(
-                    clusteraf = purrr::pmap_dbl(
+                    clusteraf = purrr::pmap(
                       .l = list(reads, ref, alt),
                       .f = function(reads, ref, alt) {
-                        # reads <- .tt_$reads[[1]]
-                        # ref <- .tt_$ref[[1]]
-                        # alt <- .tt_$alt[[1]]
+                        # reads <- a$reads[[46]]
+                        # ref <- a$ref[[46]]
+                        # alt <- a$alt[[46]]
 
                         .total_reads <- sum(reads$depth, na.rm = TRUE)
                         .alt_reads <- sum(
@@ -298,15 +298,81 @@ tibble::tibble(
                           ),
                           na.rm = TRUE
                         )
+                        af <- sum(
+                          c(
+                            reads[[paste0(alt, "FO")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        ar <- sum(
+                          c(
+                            reads[[paste0(alt, "RE")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        rf <- sum(
+                          c(
+                            reads[[paste0(ref, "FO")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        rr <- sum(
+                          c(
+                            reads[[paste0(ref, "RE")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        table <- matrix(c(rf, rr, af, ar), nrow = 2, byrow = T)
+                        colnames(table) <- c("Forward", "Reverse")
+                        rownames(table) <- c("Ref", "Alt")
+                        result <- fisher.test(table)
+                        strand_ratio <- max(af, ar) / (af + ar)
+
+                        .colorful <- dplyr::case_when(
+                          .total_reads == 0 ~ "white",
+                          .total_reads < 10 ~ "grey",
+                          .alt_reads < 3 ~ "black",
+                          .alt_reads / .total_reads < 0.05 ~ "black",
+                          !is.na(result$p.value) & result$p.value < 0.05 ~
+                            "black",
+                          !is.na(strand_ratio) & strand_ratio > 0.9 ~ "black",
+                          TRUE ~ "colorful"
+                        )
+
+                        tibble::tibble(
+                          clusteraf = .alt_reads / .total_reads,
+                          rf = rf,
+                          rr = rr,
+                          af = af,
+                          ar = ar,
+                          total_reads = .total_reads,
+                          fisher_test_pvalue = result$p.value,
+                          alt_strand_ratio = strand_ratio,
+                          variant_type_fisher_test = .colorful
+                        ) -> .res
+
                         if (.total_reads == 0) {
-                          return(NA_real_)
+                          return(
+                            tibble::tibble(
+                              clusteraf = NA_real_,
+                              rf = NA_integer_,
+                              rr = NA_integer_,
+                              af = NA_integer_,
+                              ar = NA_integer_,
+                              total_reads = NA_integer_,
+                              fisher_test_pvalue = NA_real_,
+                              alt_strand_ratio = NA_real_,
+                              variant_type_fisher_test = NA_character_
+                            )
+                          )
                         } else {
-                          return(.alt_reads / .total_reads)
+                          return(.res)
                         }
                       }
                     )
                   ) |>
-                  dplyr::select(variant, celltype, clusteraf) -> .hetero
+                  dplyr::select(variant, celltype, clusteraf) |>
+                  tidyr::unnest(cols = clusteraf) -> .clusteraf
 
                 .tt_ |>
                   dplyr::select(-celltype) |>
@@ -315,7 +381,7 @@ tibble::tibble(
                     .by = c(variant, ref, alt)
                   ) |>
                   dplyr::mutate(
-                    bulkaf = purrr::pmap_dbl(
+                    bulkaf = purrr::pmap(
                       .l = list(reads, ref, alt),
                       .f = function(reads, ref, alt) {
                         # reads <- a$reads[[1]]
@@ -336,15 +402,82 @@ tibble::tibble(
                           ),
                           na.rm = TRUE
                         )
+                        af <- sum(
+                          c(
+                            reads[[paste0(alt, "FO")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        ar <- sum(
+                          c(
+                            reads[[paste0(alt, "RE")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        rf <- sum(
+                          c(
+                            reads[[paste0(ref, "FO")]]
+                          ),
+                          na.rm = TRUE
+                        )
+                        rr <- sum(
+                          c(
+                            reads[[paste0(ref, "RE")]]
+                          ),
+                          na.rm = TRUE
+                        )
+
+                        table <- matrix(c(rf, rr, af, ar), nrow = 2, byrow = T)
+                        colnames(table) <- c("Forward", "Reverse")
+                        rownames(table) <- c("Ref", "Alt")
+                        result <- fisher.test(table)
+                        strand_ratio <- max(af, ar) / (af + ar)
+
+                        .colorful <- dplyr::case_when(
+                          .total_reads == 0 ~ "white",
+                          .total_reads < 10 ~ "grey",
+                          .alt_reads < 3 ~ "black",
+                          .alt_reads / .total_reads < 0.05 ~ "black",
+                          !is.na(result$p.value) & result$p.value < 0.05 ~
+                            "black",
+                          !is.na(strand_ratio) & strand_ratio > 0.9 ~ "black",
+                          TRUE ~ "colorful"
+                        )
+
+                        tibble::tibble(
+                          clusteraf = .alt_reads / .total_reads,
+                          rf = rf,
+                          rr = rr,
+                          af = af,
+                          ar = ar,
+                          total_reads = .total_reads,
+                          fisher_test_pvalue = result$p.value,
+                          alt_strand_ratio = strand_ratio,
+                          variant_type_fisher_test = .colorful
+                        ) -> .res
+
                         if (.total_reads == 0) {
-                          return(NA_real_)
+                          return(
+                            tibble::tibble(
+                              clusteraf = NA_real_,
+                              rf = NA_integer_,
+                              rr = NA_integer_,
+                              af = NA_integer_,
+                              ar = NA_integer_,
+                              total_reads = NA_integer_,
+                              fisher_test_pvalue = NA_real_,
+                              alt_strand_ratio = NA_real_,
+                              variant_type_fisher_test = NA_character_
+                            )
+                          )
                         } else {
-                          return(.alt_reads / .total_reads)
+                          return(.res)
                         }
                       }
                     )
                   ) |>
-                  dplyr::select(variant, bulkaf) -> .bulkaf
+                  dplyr::select(variant, bulkaf) |>
+                  tidyr::unnest(cols = bulkaf) -> .bulkaf
 
                 .hv |>
                   dplyr::filter(variant_type_fisher_test == "colorful") |>
@@ -388,7 +521,7 @@ tibble::tibble(
                   haplo_variant_fisher = list(.haplo_variant_real),
                   haplo_violin_fisher = list(.hv),
                   somatic_variant_fisher = list(.somatic_variant),
-                  clusteraf = list(.hetero),
+                  clusteraf = list(.clusteraf),
                   bulkaf = list(.bulkaf),
                 )
               },
