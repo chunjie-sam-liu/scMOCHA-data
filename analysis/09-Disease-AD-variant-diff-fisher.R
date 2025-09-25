@@ -549,7 +549,6 @@ tbl_allvariants_cell_fishertest <- dplyr::tbl(
   "allvariants_cell_fishertest"
 )
 
-tbl_allvariants_cell_fishertest
 # variant_sc_af <- import(
 #   file.path(
 #     cleandatadir,
