@@ -1221,7 +1221,7 @@ gseid_srrid_variant_hetero |>
         FUN = \(.gseid, .srrid, .variant, .p) {
           .filename = "{.variant}_{.gseid}_{.srrid}.pdf" |> glue::glue()
           .dir <- glue::glue(
-            "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.variant}/somatic_plot_fisher"
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/{.variant}/somatic_plot"
           )
           if (dir.exists(.dir) == FALSE) {
             dir.create(.dir, recursive = TRUE)
