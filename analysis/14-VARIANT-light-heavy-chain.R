@@ -356,6 +356,16 @@ wrap_plots(
   guides = "collect"
 ) -> p_heavy_light
 
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heavy-light"
+ggsave(
+  path = outdir,
+  filename = "heavy_light_variants.pdf",
+  plot = p_heavy_light,
+  width = 11,
+  height = 5,
+  dpi = 300
+)
+
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)
