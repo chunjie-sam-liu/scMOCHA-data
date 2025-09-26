@@ -92,6 +92,10 @@ fn_strandbias <- function(d) {
               rr <- get(paste0(ref, "R"))
               af <- get(paste0(alt, "F"))
               ar <- get(paste0(alt, "R"))
+              # rf <- 170
+              # rr <- 1315
+              # af <- 7
+              # ar <- 499
 
               table <- matrix(c(rf, rr, af, ar), nrow = 2, byrow = T)
               colnames(table) <- c("Forward", "Reverse")

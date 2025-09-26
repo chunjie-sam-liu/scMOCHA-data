@@ -487,8 +487,8 @@ vss |>
                     path = .outdir,
                     filename = .outfilename,
                     plot = p,
-                    width = 6,
-                    height = 5
+                    width = 10,
+                    height = 10
                   )
                 },
                 error = \(e) {
