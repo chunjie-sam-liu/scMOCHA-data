@@ -50,59 +50,21 @@ gseid_srrid_variant_hetero_plot_ratio <- import(
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
-fn_de <- function(
-  thegseid,
-  thesrrid,
-  thevariant,
-  forplot_
-) {
-  library(Seurat)
-  .dir <- file.path(
-    "/home/liuc9/github/scMOCHA-data/data/",
-    thegseid,
-    "final",
-    thesrrid
-  )
-  .dir_de <- file.path(
-    .dir,
-    "de"
-  )
-  if (
-    file.exists(
-      file.path(
-        .dir_de,
-        "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
-          glue::glue()
-      )
-    )
-  ) {
-    markers <- import(
-      file.path(
-        .dir_de,
-        "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
-          glue::glue()
-      )
-    )
-    return(markers)
-  }
 
-  sc <- import(
-    file.path(
-      .dir,
-      "sc_azimuth.rds.gz"
-    )
-  )
-  sc_azimuth <- sc$sc_azimuth
-  rm(sc)
+fn_load_sc_and_sct <- function(.filepath, thegseid, thesrrid, forplot_) {
+  .sc <- import(.filepath)
+  sc_azimuth <- .sc$sc_azimuth
+  rm(.sc)
   gc()
-
   sc_azimuth@meta.data |>
     tibble::rownames_to_column("barcode") |>
     as.data.table() |>
     dplyr::left_join(
       forplot_ |>
         as.data.table() |>
-        dplyr::mutate(barcode = as.character(barcode)),
+        dplyr::mutate(
+          barcode = as.character(barcode)
+        ),
     ) |>
     dplyr::mutate(
       barcode_new = glue::glue("{thegseid}-{thesrrid}-{barcode}")
@@ -125,40 +87,77 @@ fn_de <- function(
   )
   DefaultAssay(sc_azimuth) <- "SCT"
 
-  dir.create(
-    .dir_de,
-    showWarnings = FALSE,
-    recursive = TRUE
-  )
-
   sc_azimuth[["SCT"]]@scale.data <- matrix()
+  sc_azimuth
+}
 
-  export(
-    sc_azimuth,
-    file = file.path(.dir_de, "sc_azimuth.sct.qs")
+
+fn_sct <- function(
+  thegseid,
+  thesrrid,
+  thevariant,
+  forplot_
+) {
+  library(Seurat)
+  .dir <- path(
+    "/home/liuc9/github/scMOCHA-data/data/",
+    thegseid,
+    "final",
+    thesrrid
+  )
+  .dir_de <- path(
+    .dir,
+    "de"
   )
 
-  markers <- Seurat::FindMarkers(
-    object = sc_azimuth,
-    ident.1 = "Heteroplasmy",
-    ident.2 = "Sufficient reads",
-    test.use = "wilcox",
-    group.by = "cellvarianttype"
+  dir_create(.dir_de)
+
+  .sct_filepath <- path(
+    .dir_de,
+    "sc_azimuth.sct.qs"
   )
 
-  export(
-    markers,
-    file = file.path(
-      .dir_de,
-      "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
-        glue::glue()
-    ),
-  )
+  sc_azimuth <- if (file_exists(.sct_filepath)) {
+    log_fatal("{.sct_filepath} exists, skip!" |> glue::glue())
+    return(NULL)
+  } else {
+    sc_azimuth <- fn_load_sc_and_sct(
+      .filepath = path(
+        .dir,
+        "sc_azimuth.rds.gz"
+      ),
+      thegseid = thegseid,
+      thesrrid = thesrrid,
+      forplot_ = forplot_
+    )
+    export(
+      sc_azimuth,
+      file = .sct_filepath
+    )
+    sc_azimuth
+  }
 
-  rm(sc_azimuth)
-  gc()
+  # markers <- Seurat::FindMarkers(
+  #   object = sc_azimuth,
+  #   ident.1 = "Heteroplasmy",
+  #   ident.2 = "Sufficient reads",
+  #   test.use = "wilcox",
+  #   group.by = "cellvarianttype"
+  # )
 
-  markers
+  # export(
+  #   markers,
+  #   file = file.path(
+  #     .dir_de,
+  #     "sc_azimuth.markers.hetero_vs_sufficient.{thevariant}.qs" |>
+  #       glue::glue()
+  #   ),
+  # )
+
+  # rm(sc_azimuth)
+  # gc()
+
+  # markers
 }
 
 
@@ -334,16 +333,75 @@ fn_de_plot <- function(
 
 # body --------------------------------------------------------------------
 
+thevariant <- "3727T>C"
+thesrrid <- ""
+
+gseid_srrid_variant_hetero_plot_ratio |>
+  # dplyr::filter(variant == thevariant) |>
+  # dplyr::filter(variant %in% c("3727T>C", "3728C>T")) |>
+  # dplyr::select(tidyselect::contains("ratio"))
+  dplyr::select(
+    gseid,
+    srrid,
+    variant,
+    forplot,
+    # tidyselect::contains("ratio")
+  ) -> filtered_data
+
+
+# thevariant <- "3728C>T"
+# thesrrid <- "GSM7080053"
+# thegseid <- "GSE226602"
+# forplot_ <- filtered_data$forplot[[1]]
+
+# filtered_data |>
+#   dplyr::filter(
+#     variant == thevariant,
+#     srrid == thesrrid
+#   ) |>
+#   dplyr::select(forplot) |>
+#   tidyr::unnest(cols = c(forplot)) -> variant_cell_barcode
+
 #
+#
+# ? save sct --------------------------------------------------------------------
+#
+#
+
+filtered_data |>
+  # head(6) |>
+  dplyr::mutate(
+    p = parallel::mcmapply(
+      FUN = \(thegseid, thesrrid, thevariant, forplot_) {
+        tryCatch(
+          expr = {
+            fn_sct(
+              thegseid = thegseid,
+              thesrrid = thesrrid,
+              thevariant = thevariant,
+              forplot_ = forplot_
+            )
+          },
+          error = \(e) {
+            message(glue::glue("{thegseid}-{thesrrid}-m.{thevariant} error"))
+            return(NULL)
+          }
+        )
+      },
+      thegseid = gseid,
+      thesrrid = srrid,
+      thevariant = variant,
+      forplot_ = forplot,
+      SIMPLIFY = FALSE,
+      mc.cores = 20
+    )
+  ) -> filtered_data_sct
+#
+
 #
 # ? plot --------------------------------------------------------------------
 #
 #
-
-thegseid <- filtered_data$gseid[[20]]
-thesrrid <- filtered_data$srrid[[20]]
-thevariant <- filtered_data$variant[[20]]
-forplot_ <- filtered_data$forplot[[20]]
 
 filtered_data |>
   # head(6) |>
