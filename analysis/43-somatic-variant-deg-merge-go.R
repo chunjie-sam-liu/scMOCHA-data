@@ -345,26 +345,23 @@ fn_de_ <- function(
     features = Seurat::VariableFeatures(sc)
   )
 
-  .outdir <- file.path(
+  .outdir <- path(
     dir_main_variant,
     thevariant,
-    "deg_merge"
+    "deg_merge_new"
   )
+  # dir_create(.outdir)
 
   if (!is.null(.celltype)) {
-    .outdir <- file.path(
+    .outdir <- path(
       dir_main_variant,
       thevariant,
-      "deg_merge",
+      "deg_merge_new",
       .celltype
     )
+    # dir_create(.outdir)
   }
-
-  dir.create(
-    .outdir,
-    showWarnings = FALSE,
-    recursive = TRUE
-  )
+  dir_create(.outdir)
 
   export(
     markers_hetero_high_vs_low,
@@ -411,13 +408,13 @@ fn_go_ <- function(
   .outdir <- file.path(
     dir_main_variant,
     thevariant,
-    "go_merge"
+    "go_merge_new"
   )
   if (!is.null(.celltype)) {
     .outdir <- file.path(
       dir_main_variant,
       thevariant,
-      "go_merge",
+      "go_merge_new",
       .celltype
     )
   }
@@ -490,6 +487,47 @@ fn_variant_ <- function(
   # thevariant <- "3727T>C"
 
   sc@meta.data |>
+    dplyr::count(cellvarianttype) |>
+    dplyr::arrange(cellvarianttype) |>
+    tibble::deframe() -> n_cellvarianttype
+
+  if (all(.vs == c("Heteroplasmy", "Sufficient reads"))) {
+    p_hetero_vs_sufficient <- fn_de_(
+      thevariant = thevariant,
+      sc = sc,
+      .ident.1 = "Heteroplasmy",
+      .ident.2 = "Sufficient reads",
+      .group.by = "cellvarianttype",
+      .prefix = "hetero_vs_sufficient",
+      .labs <- labs(
+        x = "Fold change Heteroplasmy (n={
+          scales::label_comma()(n_cellvarianttype['Heteroplasmy'])
+        }) vs Sufficient reads (n={
+          scales::label_comma()(n_cellvarianttype['Sufficient reads'])
+        })" |>
+          glue::glue(),
+        y = "FDR",
+        title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.na(.celltype), '', .celltype)}" |>
+          glue::glue()
+      ),
+      .celltype = .celltype
+    )
+
+    fn_go_(
+      thevariant = thevariant,
+      p_hetero_high_vs_low = p_hetero_vs_sufficient,
+      .prefix = "hetero_vs_sufficient",
+      .celltype = .celltype
+    )
+    log_fatal(
+      "Skip further analysis for {thevariant} with {.vs[1]} and {.vs[2]}",
+      thevariant = thevariant,
+      .vs = .vs
+    )
+    return(invisible(NULL))
+  }
+
+  sc@meta.data |>
     as.data.table() |>
     dplyr::filter(cellvarianttype == "Heteroplasmy") |>
     dplyr::pull(af) |>
@@ -558,36 +596,6 @@ fn_variant_ <- function(
     .prefix = hetero_label,
     .celltype = .celltype
   )
-
-  if (all(.vs == c(0.5, 0.5))) {
-    p_hetero_vs_sufficient <- fn_de_(
-      thevariant = thevariant,
-      sc = sc,
-      .ident.1 = "Heteroplasmy",
-      .ident.2 = "Sufficient reads",
-      .group.by = "cellvarianttype",
-      .prefix = "hetero_vs_sufficient",
-      .labs <- labs(
-        x = "Fold change Heteroplasmy (n={
-          scales::label_comma()(n_cellvarianttype2[.label_high] + n_cellvarianttype2[.label_low])
-        }) vs Sufficient reads (n={
-          scales::label_comma()(n_cellvarianttype2['Sufficient reads'])
-        })" |>
-          glue::glue(),
-        y = "FDR",
-        title = "Markers: Heteroplasmy vs Sufficient Reads (m.{thevariant}) {ifelse(is.null(.celltype), '', .celltype)}" |>
-          glue::glue()
-      ),
-      .celltype = .celltype
-    )
-
-    fn_go_(
-      thevariant = thevariant,
-      p_hetero_high_vs_low = p_hetero_vs_sufficient,
-      .prefix = "hetero_vs_sufficient",
-      .celltype = .celltype
-    )
-  }
 }
 
 
@@ -625,29 +633,29 @@ sc_3727 <- fn_load_sc(
 )
 
 
-subset(
-  sc_3727,
-  srrid == "GSM7493833" &
-    cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
-) -> sc_3727_ind
+# subset(
+#   sc_3727,
+#   srrid == "GSM7493833" &
+#     cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
+# ) -> sc_3727_ind
 
+# sc_3727_ind@meta.data |> head()
 
-sc_3727_ind@meta.data |> head()
-
-VlnPlot(
-  sc_3727_ind,
-  features = "MT-ND1",
-  group.by = "celltype",
-  split.by = "cellvarianttype",
-) +
-  ggpubr::stat_compare_means(
-    method = "wilcox.test",
-    label = "p.signif",
-    comparisons = list(c("Heteroplasmy", "Sufficient reads")),
-    hide.ns = TRUE
-  )
+# VlnPlot(
+#   sc_3727_ind,
+#   features = "MT-ND1",
+#   group.by = "celltype",
+#   split.by = "cellvarianttype",
+# ) +
+#   ggpubr::stat_compare_means(
+#     method = "wilcox.test",
+#     label = "p.signif",
+#     comparisons = list(c("Heteroplasmy", "Sufficient reads")),
+#     hide.ns = TRUE
+#   )
 
 vss_3727 <- list(
+  c("Heteroplasmy", "Sufficient reads"),
   c(0.5, 0.5),
   c(0.6, 0.4),
   c(0.7, 0.3),
@@ -689,6 +697,7 @@ sc_3728 <- fn_load_sc(
 )
 
 vss_3728 <- list(
+  c("Heteroplasmy", "Sufficient reads"),
   c(0.5, 0.5),
   c(0.6, 0.4),
   c(0.7, 0.3),
