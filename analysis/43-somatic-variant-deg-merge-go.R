@@ -330,20 +330,7 @@ fn_de_ <- function(
   #   title = "Markers: {hetero_label} High vs Low (m.{thevariant})" |>
   #     glue::glue()
   # )
-  sc <- Seurat::PrepSCTFindMarkers(
-    sc,
-  )
-  markers_hetero_high_vs_low <- Seurat::FindMarkers(
-    object = sc,
-    ident.1 = .ident.1,
-    ident.2 = .ident.2,
-    assay = "SCT",
-    slot = "data",
-    test.use = "wilcox",
-    group.by = .group.by,
-    latent.vars = "srrid",
-    features = Seurat::VariableFeatures(sc)
-  )
+  meta.data <- sc@meta.data
 
   .outdir <- path(
     dir_main_variant,
@@ -362,6 +349,44 @@ fn_de_ <- function(
     # dir_create(.outdir)
   }
   dir_create(.outdir)
+  path_sc_prepsctfindmarker <- path(
+    .outdir,
+    glue::glue(
+      "sc_prepsctfindmarker.{thevariant}.{ifelse(is.null(.celltype), 'all', .celltype)}_.qs"
+    )
+  )
+  if (file_exists(path_sc_prepsctfindmarker)) {
+    log_fatal(
+      "Load existing {path_sc_prepsctfindmarker}"
+    )
+    sc <- import(path_sc_prepsctfindmarker)
+  } else {
+    DefaultAssay(sc) <- "SCT"
+    sc <- Seurat::PrepSCTFindMarkers(
+      sc,
+    )
+    export(
+      sc,
+      path_sc_prepsctfindmarker
+    )
+  }
+  sc@meta.data <- meta.data
+
+  # sc <- Seurat::PrepSCTFindMarkers(
+  #   sc,
+  # )
+
+  markers_hetero_high_vs_low <- Seurat::FindMarkers(
+    object = sc,
+    ident.1 = .ident.1,
+    ident.2 = .ident.2,
+    assay = "SCT",
+    slot = "data",
+    test.use = "wilcox",
+    group.by = .group.by,
+    latent.vars = "srrid",
+    features = Seurat::VariableFeatures(sc)
+  )
 
   export(
     markers_hetero_high_vs_low,
@@ -633,27 +658,6 @@ sc_3727 <- fn_load_sc(
 )
 
 
-# subset(
-#   sc_3727,
-#   srrid == "GSM7493833" &
-#     cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
-# ) -> sc_3727_ind
-
-# sc_3727_ind@meta.data |> head()
-
-# VlnPlot(
-#   sc_3727_ind,
-#   features = "MT-ND1",
-#   group.by = "celltype",
-#   split.by = "cellvarianttype",
-# ) +
-#   ggpubr::stat_compare_means(
-#     method = "wilcox.test",
-#     label = "p.signif",
-#     comparisons = list(c("Heteroplasmy", "Sufficient reads")),
-#     hide.ns = TRUE
-#   )
-
 vss_3727 <- list(
   c("Heteroplasmy", "Sufficient reads"),
   c(0.5, 0.5),
@@ -663,17 +667,29 @@ vss_3727 <- list(
   c(0.9, 0.1)
 )
 #  c(0.5, 0.5) -> .vs
-vss_3727 |>
-  purrr::map(
-    .f = \(.vs) {
-      fn_variant_(
-        thevariant = "3727T>C",
-        sc = sc_3727,
-        .vs = .vs,
-        .celltype = NULL
-      )
-    }
-  )
+# vss_3727 |>
+#   purrr::map(
+#     .f = \(.vs) {
+#       fn_variant_(
+#         thevariant = "3727T>C",
+#         sc = sc_3727,
+#         .vs = .vs,
+#         .celltype = NULL
+#       )
+#     }
+#   )
+parallel::mclapply(
+  vss_3727,
+  function(.vs) {
+    fn_variant_(
+      thevariant = "3727T>C",
+      sc = sc_3727,
+      .vs = .vs,
+      .celltype = NULL
+    )
+  },
+  mc.cores = length(vss_3727)
+)
 
 vss_3727 |>
   purrr::map(
@@ -686,6 +702,17 @@ vss_3727 |>
     }
   )
 
+# parallel::mclapply(
+#   vss_3727,
+#   function(.vs) {
+#     fn_variant_cell_(
+#       thevariant = "3727T>C",
+#       sc = sc_3727,
+#       .vs = .vs
+#     )
+#   },
+#   mc.cores = length(vss_3727)
+# )
 
 #
 #
@@ -705,17 +732,31 @@ vss_3728 <- list(
   c(0.9, 0.1)
 )
 
-vss_3728 |>
-  purrr::map(
-    .f = \(.vs) {
-      fn_variant_(
-        thevariant = "3728C>T",
-        sc = sc_3728,
-        .vs = .vs,
-        .celltype = NULL
-      )
-    }
-  )
+# vss_3728 |>
+#   purrr::map(
+#     .f = \(.vs) {
+#       fn_variant_(
+#         thevariant = "3728C>T",
+#         sc = sc_3728,
+#         .vs = .vs,
+#         .celltype = NULL
+#       )
+#     }
+#   )
+
+parallel::mclapply(
+  vss_3728,
+  function(.vs) {
+    fn_variant_(
+      thevariant = "3728C>T",
+      sc = sc_3728,
+      .vs = .vs,
+      .celltype = NULL
+    )
+  },
+  mc.cores = length(vss_3728)
+)
+
 vss_3728 |>
   purrr::map(
     .f = \(.vs) {
@@ -726,6 +767,18 @@ vss_3728 |>
       )
     }
   )
+
+# parallel::mclapply(
+#   vss_3728,
+#   function(.vs) {
+#     fn_variant_cell_(
+#       thevariant = "3728C>T",
+#       sc = sc_3728,
+#       .vs = .vs
+#     )
+#   },
+#   mc.cores = length(vss_3728)
+# )
 
 # footer ------------------------------------------------------------------
 
