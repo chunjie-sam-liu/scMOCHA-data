@@ -324,6 +324,10 @@ fn_plot_bar <- function(.d) {
     theme(
       axis.title.x = element_blank(),
       plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1
+      ),
     ) +
     labs(
       y = "Proportion"
@@ -335,10 +339,19 @@ v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
 v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
 
 fn_variant_L_H_strand(v_homo_hete) |> fn_plot_bar()
-fn_plot_bar(fn_variant_L_H_strand(v_hete)) +
-  labs(title = "495 Heteroplasmic variants") -> p_hete
+fn_variant_L_H_strand(v_homo_hete) |> dplyr::count(variant_six) |> fn_plot_pie()
+fn_plot_bar(
+  fn_variant_L_H_strand(
+    v_hete
+  )
+) +
+  labs(title = "495 Heteroplasmic variants")
+p_hete
 
-fn_plot_bar(fn_variant_L_H_strand(v_homo)) +
+fn_plot_bar(fn_variant_L_H_strand(
+  v_homo |>
+    dplyr::filter(af > 0.1)
+)) +
   labs(title = "1049 Homoplasmic variants") -> p_homo
 
 fn_plot_bar(fn_variant_L_H_strand(v_homo_hete)) +
