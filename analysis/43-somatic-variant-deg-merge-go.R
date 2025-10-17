@@ -780,6 +780,71 @@ vss_3728 |>
 #   mc.cores = length(vss_3728)
 # )
 
+#
+#
+# ? 4175G>A --------------------------------------------------------------------
+#
+#
+sc_4175 <- fn_load_sc(
+  thevariant = "4175G>A"
+)
+
+vss_4175 <- list(
+  c("Heteroplasmy", "Sufficient reads"),
+  c(0.5, 0.5),
+  c(0.6, 0.4),
+  c(0.7, 0.3),
+  c(0.8, 0.2),
+  c(0.9, 0.1)
+)
+
+# vss_4175 |>
+#   purrr::map(
+#     .f = \(.vs) {
+#       fn_variant_(
+#         thevariant = "4175G>A",
+#         sc = sc_4175,
+#         .vs = .vs,
+#         .celltype = NULL
+#       )
+#     }
+#   )
+
+parallel::mclapply(
+  vss_4175,
+  function(.vs) {
+    fn_variant_(
+      thevariant = "4175G>A",
+      sc = sc_4175,
+      .vs = .vs,
+      .celltype = NULL
+    )
+  },
+  mc.cores = length(vss_4175)
+)
+
+vss_4175 |>
+  purrr::map(
+    .f = \(.vs) {
+      fn_variant_cell_(
+        thevariant = "4175G>A",
+        sc = sc_4175,
+        .vs = .vs
+      )
+    }
+  )
+
+# parallel::mclapply(
+#   vss_3728,
+#   function(.vs) {
+#     fn_variant_cell_(
+#       thevariant = "3728C>T",
+#       sc = sc_3728,
+#       .vs = .vs
+#     )
+#   },
+#   mc.cores = length(vss_3728)
+# )
 # footer ------------------------------------------------------------------
 
 # future: :plan(future: :sequential)

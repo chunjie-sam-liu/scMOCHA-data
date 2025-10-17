@@ -1187,6 +1187,7 @@ fn_plot_variant_ratio_swarm <- function(.d, rank_srrid) {
 }
 
 # body --------------------------------------------------------------------
+
 thevariant <- "3173G>A"
 thesrrid <- "GSM7493843"
 thevariants <- c(
@@ -1194,9 +1195,21 @@ thevariants <- c(
   "3176A>T",
   "3178T>A",
   "3727T>C",
-  "3728C>T"
+  "3728C>T",
+  "13271T>C",
+  "14063T>C",
+  "14831G>A",
+  "1643A>G",
+  "3667T>G",
+  "4175G>A",
+  "5513G>A",
+  "7065G>A",
+  "9025G>A",
+  "9237G>A"
 )
 
+
+# thevariants <- c(thevariants, disease_variant$variant) |> unique()
 gseid_srrid_variant_hetero |>
   # head(20) |>
   dplyr::filter(variant %in% thevariants) |>
