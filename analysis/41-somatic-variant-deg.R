@@ -552,6 +552,10 @@ filtered_data |>
       FUN = \(thegseid, thesrrid, thevariant, forplot_) {
         tryCatch(
           expr = {
+            # thegseid <- filtered_data$gseid[[363]]
+            # thesrrid <- filtered_data$srrid[[363]]
+            # thevariant <- filtered_data$variant[[363]]
+            # forplot_ <- filtered_data$forplot[[363]]
             fn_sct(
               thegseid = thegseid,
               thesrrid = thesrrid,
@@ -677,98 +681,96 @@ filtered_data_new |>
     )
   ) -> filtered_data_plots
 
-
 #
 #
 # ? plot hetero high vs low --------------------------------------------------------------------
 #
 #
 
-vss <- list(
-  c(0.5, 0.5),
-  c(0.6, 0.4),
-  c(0.7, 0.3),
-  c(0.8, 0.2),
-  c(0.9, 0.1)
-)
+# vss <- list(
+#   c(0.5, 0.5),
+#   c(0.6, 0.4),
+#   c(0.7, 0.3),
+#   c(0.8, 0.2),
+#   c(0.9, 0.1)
+# )
 
-
-vss |>
-  purrr::map(
-    .f = \(vs) {
-      filtered_data |>
-        dplyr::mutate(
-          p = parallel::mcmapply(
-            FUN = \(thegseid, thesrrid, thevariant, forplot_, vs) {
-              tryCatch(
-                expr = {
-                  m <- fn_de_high_vs_low(
-                    thegseid = thegseid,
-                    thesrrid = thesrrid,
-                    thevariant = thevariant,
-                    forplot_ = forplot_,
-                    .vs = vs
-                  )
-                  p <- fn_de_plot(
-                    markers = m$markers
-                  ) +
-                    m$.labs
-                  if (is.null(p)) {
-                    return(NULL)
-                  }
-                  .outdir <- file.path(
-                    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
-                    thevariant,
-                    "deg"
-                  )
-                  dir.create(
-                    .outdir,
-                    recursive = TRUE,
-                    showWarnings = FALSE
-                  )
-                  sanitize_filename <- function(x) {
-                    x %>%
-                      gsub(">", "GT", ., fixed = TRUE) %>%
-                      gsub("<", "LT", ., fixed = TRUE) %>%
-                      gsub("%", "pct", ., fixed = TRUE) %>%
-                      gsub("=", "-", ., fixed = TRUE) %>%
-                      gsub("[()]", "", .) %>%
-                      gsub("[[:space:]]+", "_", .) %>%
-                      trimws()
-                  }
-                  .outfilename <- "{thegseid}-{thesrrid}-m.{thevariant}.deg.{p$labels$title}.pdf" |>
-                    glue::glue() |>
-                    fs::path_sanitize() |>
-                    sanitize_filename()
-                  ggsave(
-                    path = .outdir,
-                    filename = .outfilename,
-                    plot = p,
-                    width = 10,
-                    height = 10
-                  )
-                },
-                error = \(e) {
-                  message(glue::glue(
-                    "{thegseid}-{thesrrid}-m.{thevariant} error"
-                  ))
-                  return(NULL)
-                }
-              )
-            },
-            thegseid = gseid,
-            thesrrid = srrid,
-            thevariant = variant,
-            forplot_ = forplot,
-            vs = list(vs),
-            SIMPLIFY = FALSE,
-            USE.NAMES = FALSE,
-            mc.cores = 20
-          )
-        ) |>
-        dplyr::select(-forplot) -> filtered_data_plots
-    }
-  ) -> m
+# vss |>
+#   purrr::map(
+#     .f = \(vs) {
+#       filtered_data |>
+#         dplyr::mutate(
+#           p = parallel::mcmapply(
+#             FUN = \(thegseid, thesrrid, thevariant, forplot_, vs) {
+#               tryCatch(
+#                 expr = {
+#                   m <- fn_de_high_vs_low(
+#                     thegseid = thegseid,
+#                     thesrrid = thesrrid,
+#                     thevariant = thevariant,
+#                     forplot_ = forplot_,
+#                     .vs = vs
+#                   )
+#                   p <- fn_de_plot(
+#                     markers = m$markers
+#                   ) +
+#                     m$.labs
+#                   if (is.null(p)) {
+#                     return(NULL)
+#                   }
+#                   .outdir <- file.path(
+#                     "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants",
+#                     thevariant,
+#                     "deg"
+#                   )
+#                   dir.create(
+#                     .outdir,
+#                     recursive = TRUE,
+#                     showWarnings = FALSE
+#                   )
+#                   sanitize_filename <- function(x) {
+#                     x %>%
+#                       gsub(">", "GT", ., fixed = TRUE) %>%
+#                       gsub("<", "LT", ., fixed = TRUE) %>%
+#                       gsub("%", "pct", ., fixed = TRUE) %>%
+#                       gsub("=", "-", ., fixed = TRUE) %>%
+#                       gsub("[()]", "", .) %>%
+#                       gsub("[[:space:]]+", "_", .) %>%
+#                       trimws()
+#                   }
+#                   .outfilename <- "{thegseid}-{thesrrid}-m.{thevariant}.deg.{p$labels$title}.pdf" |>
+#                     glue::glue() |>
+#                     fs::path_sanitize() |>
+#                     sanitize_filename()
+#                   ggsave(
+#                     path = .outdir,
+#                     filename = .outfilename,
+#                     plot = p,
+#                     width = 10,
+#                     height = 10
+#                   )
+#                 },
+#                 error = \(e) {
+#                   message(glue::glue(
+#                     "{thegseid}-{thesrrid}-m.{thevariant} error"
+#                   ))
+#                   return(NULL)
+#                 }
+#               )
+#             },
+#             thegseid = gseid,
+#             thesrrid = srrid,
+#             thevariant = variant,
+#             forplot_ = forplot,
+#             vs = list(vs),
+#             SIMPLIFY = FALSE,
+#             USE.NAMES = FALSE,
+#             mc.cores = 20
+#           )
+#         ) |>
+#         dplyr::select(-forplot) -> filtered_data_plots
+#     }
+#   ) -> m
 
 # footer------------------------------------------------------------------
 

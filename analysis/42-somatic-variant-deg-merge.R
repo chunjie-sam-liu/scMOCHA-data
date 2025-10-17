@@ -42,9 +42,16 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # future: :plan(future: :multisession, workers = 10)
 
 # load data ---------------------------------------------------------------
-gseid_srrid_variant <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant.fst"
+# gseid_srrid_variant <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant.fst"
+# )
+gseid_srrid_variant_hetero_plot_ratio <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_hetero_plot_ratio.qs"
 )
+
+gseid_srrid_variant_hetero_plot_ratio |>
+  dplyr::select(gseid, srrid, variant) -> gseid_srrid_variant
+
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
@@ -280,10 +287,27 @@ fn_variant_go <- function(markers, .variant) {
 }
 
 # body --------------------------------------------------------------------
+thevariants <- c(
+  "3173G>A",
+  "3176A>T",
+  "3178T>A",
+  "3727T>C",
+  "3728C>T",
+  "13271T>C",
+  "14063T>C",
+  "14831G>A",
+  "1643A>G",
+  "3667T>G",
+  "4175G>A",
+  "5513G>A",
+  "7065G>A",
+  "9025G>A",
+  "9237G>A"
+)
 
 gseid_srrid_variant |>
   dplyr::filter(
-    variant %in% c("3727T>C", "3728C>T")
+    variant %in% thevariants
   ) |>
   dplyr::mutate(
     sc_file = file.path(
@@ -299,6 +323,65 @@ gseid_srrid_variant |>
     file_exists = file.exists(sc_file)
   ) -> gseid_srrid_variant_sc
 
+
+gseid_srrid_variant_sc |>
+  tidyr::nest(.by = "variant") |>
+  dplyr::mutate(
+    data_merge = purrr::map2(
+      .x = data,
+      .y = variant,
+      .f = function(df, thevariant) {
+        library(Seurat)
+        sc_list <- df |> dplyr::pull(sc_file)
+
+        parallel::mclapply(
+          sc_list,
+          function(f) {
+            .sc <- import(f)
+            .sc[["SCT"]]@scale.data <- matrix()
+            .sc
+          },
+          mc.cores = 10
+        ) -> sc_list_loaded
+
+        parallel::mclapply(
+          sc_list_loaded,
+          Seurat::VariableFeatures,
+          mc.cores = 10
+        ) |>
+          unlist() |>
+          unique() -> var_features
+
+        sc_merge <- merge(
+          x = sc_list_loaded[[1]],
+          y = sc_list_loaded[2:length(sc_list_loaded)],
+          merge.data = FALSE # not merge the scale.data, for memory sake
+        )
+
+        Seurat::VariableFeatures(sc_merge) <- var_features
+
+        export(
+          sc_merge,
+          paste0(
+            "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+            thevariant,
+            "/deg_merge/sc_merge.sct.",
+            thevariant,
+            ".qs"
+          )
+        )
+
+        sc_merge
+      }
+    )
+  ) -> gseid_srrid_variant_sc_merged
+
+
+#
+#
+# ! don't run below --------------------------------------------------------------------
+#
+#
 
 #
 #
@@ -348,93 +431,6 @@ export(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/sc_merge.sct.3727T>C.qs"
 )
 
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
-
-
-markers <- Seurat::FindMarkers(
-  object = sc_merge,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  assay = "SCT",
-  slot = "data",
-  test.use = "wilcox",
-  group.by = "cellvarianttype",
-  latent.vars = "srrid",
-  features = Seurat::VariableFeatures(sc_merge)
-)
-export(
-  markers,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/markers.hetero_vs_sufficient.3727T>C.qs"
-)
-
-import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge/markers.hetero_vs_sufficient.3727T>C.qs"
-) |>
-  fn_de_plot(
-    .cutoff_pval = 0.05,
-    .cutoff_log2fc = 0.25,
-    .pct = 0.05
-  ) -> p_3727
-p_3727
-
-ggsave(
-  filename = "markers.hetero_vs_sufficient.3727T>C.pdf",
-  plot = p_3727$p +
-    ggtitle(
-      "Markers: Heteroplasmy vs Sufficient Reads (3727T>C)"
-    ),
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/deg_merge",
-  device = "pdf",
-  width = 8,
-  height = 6
-)
-
-
-#
-#
-# ? 3727T>C GO --------------------------------------------------------------------
-#
-#
-
-fn_variant_go(
-  p_3727$markers,
-  "3727T>C"
-) -> p_3727_go
-
-p_3727_go
-
-export(
-  p_3727_go,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/go_merge/markers.hetero_vs_sufficient.3727T>C.go.qs"
-)
-
-tibble::tibble(
-  pn = c("pos", "neg") |> rep(each = 3),
-  t = c("bp", "cc", "mf") |> rep(each = 2)
-) |>
-  dplyr::mutate(
-    saveimage = purrr::map2(
-      .x = pn,
-      .y = t,
-      .f = \(.x, .y) {
-        .p <- p_3727_go[[glue::glue("{.x}_{.y}_plot")]][[1]]
-        .filename <- "markers.hetero_vs_sufficient.3727T>C.go.{.x}_{.y}_plot.pdf" |>
-          glue::glue()
-        ggsave(
-          filename = .filename,
-          plot = .p,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C/go_merge",
-          device = "pdf",
-          width = 8,
-          height = 6
-        )
-      }
-    )
-  )
-#
 #
 # ? 3728C>T --------------------------------------------------------------------
 #
@@ -484,91 +480,6 @@ export(
   sc_merge,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/sc_merge.sct.3728C>T.qs"
 )
-
-sc_merge <- Seurat::PrepSCTFindMarkers(
-  sc_merge,
-  # features = Seurat::VariableFeatures(sc_merge)
-)
-
-markers <- Seurat::FindMarkers(
-  object = sc_merge,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  assay = "SCT",
-  slot = "data",
-  test.use = "wilcox",
-  group.by = "cellvarianttype",
-  latent.vars = "srrid",
-  features = Seurat::VariableFeatures(sc_merge)
-)
-export(
-  markers,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/markers.hetero_vs_sufficient.3728C>T.qs"
-)
-
-import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge/markers.hetero_vs_sufficient.3728C>T.qs"
-) |>
-  fn_de_plot(
-    .cutoff_pval = 0.05,
-    .cutoff_log2fc = 0.25,
-    .pct = 0.05
-  ) -> p_3728
-p_3728
-
-ggsave(
-  filename = "markers.hetero_vs_sufficient.3728C>T.pdf",
-  plot = p_3728$p +
-    ggtitle(
-      "Markers: Heteroplasmy vs Sufficient Reads (3728C>T)"
-    ),
-  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/deg_merge",
-  device = "pdf",
-  width = 8,
-  height = 6
-)
-
-#
-#
-# ? 3728C>T GO --------------------------------------------------------------------
-#
-#
-
-fn_variant_go(
-  p_3728$markers,
-  "3728C>T"
-) -> p_3728_go
-
-p_3728_go
-
-export(
-  p_3728_go,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/go_merge/markers.hetero_vs_sufficient.3728C>T.go.qs"
-)
-
-tibble::tibble(
-  pn = c("pos", "neg") |> rep(each = 3),
-  t = c("bp", "cc", "mf") |> rep(each = 2)
-) |>
-  dplyr::mutate(
-    saveimage = purrr::map2(
-      .x = pn,
-      .y = t,
-      .f = \(.x, .y) {
-        .p <- p_3728_go[[glue::glue("{.x}_{.y}_plot")]][[1]]
-        .filename <- "markers.hetero_vs_sufficient.3728C>T.go.{.x}_{.y}_plot.pdf" |>
-          glue::glue()
-        ggsave(
-          filename = .filename,
-          plot = .p,
-          path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3728C>T/go_merge",
-          device = "pdf",
-          width = 8,
-          height = 6
-        )
-      }
-    )
-  )
 
 # footer ------------------------------------------------------------------
 
