@@ -360,15 +360,25 @@ gseid_srrid_variant_sc |>
 
         Seurat::VariableFeatures(sc_merge) <- var_features
 
+        .outdir <- path(
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+          thevariant,
+          "/deg_merge/"
+        )
+        dir_create(.outdir)
         export(
           sc_merge,
-          paste0(
-            "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
-            thevariant,
-            "/deg_merge/sc_merge.sct.",
-            thevariant,
-            ".qs"
+          path(
+            .outdir,
+            glue::glue("sc_merge.sct.{thevariant}.qs")
           )
+          # paste0(
+          #   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+          #   thevariant,
+          #   "/deg_merge/sc_merge.sct.",
+          #   thevariant,
+          #   ".qs"
+          # )
         )
 
         sc_merge
