@@ -351,12 +351,18 @@ gseid_srrid_variant_sc |>
         ) |>
           unlist() |>
           unique() -> var_features
-
-        sc_merge <- merge(
-          x = sc_list_loaded[[1]],
-          y = sc_list_loaded[2:length(sc_list_loaded)],
-          merge.data = FALSE # not merge the scale.data, for memory sake
-        )
+        if (length(sc_list_loaded) < 2) {
+          stop(glue::glue(
+            "Less than 2 sc objects for variant {thevariant}, cannot merge."
+          ))
+          sc_merge <- sc_list_loaded[[1]]
+        } else {
+          sc_merge <- merge(
+            x = sc_list_loaded[[1]],
+            y = sc_list_loaded[2:length(sc_list_loaded)],
+            merge.data = FALSE # not merge the scale.data, for memory sake
+          )
+        }
 
         Seurat::VariableFeatures(sc_merge) <- var_features
 
