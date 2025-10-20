@@ -392,9 +392,15 @@ gseid_srrid_variant_sc |>
     )
   ) -> gseid_srrid_variant_sc_merged
 
-
+export(
+  gseid_srrid_variant_sc_merged,
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_sc_merged.qs"
+)
 #
 #
+# ! don't run below --------------------------------------------------------------------
+# ! don't run below --------------------------------------------------------------------
+# ! don't run below --------------------------------------------------------------------
 # ! don't run below --------------------------------------------------------------------
 #
 #
