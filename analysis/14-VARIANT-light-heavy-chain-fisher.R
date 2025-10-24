@@ -53,6 +53,13 @@ conn <- DBI::dbConnect(
 
 DBI::dbListTables(conn)
 tbl_allvariants <- dplyr::tbl(conn, "allvariants")
+tbl_allvariants_fisher <- dplyr::tbl(
+  conn,
+  "allvariants_fisher"
+)
+
+tbl_allvariants_fisher |>
+  data.table::as.data.table()
 
 tbl_all_hetero_af_bulk <- dplyr::tbl(
   conn,

@@ -44,22 +44,6 @@
   "python-envs.defaultPackageManager": "ms-python.python:conda",
   "python-envs.pythonProjects": [],
   "chat.agent.enabled": true,
-  "chat.tools.terminal.autoApprove": {
-    // Auto-approve terminal commands
-    "/^Remove-Item\\b/i": false, // Don't auto-approve Remove-Item
-    "mkdir": true,
-    "ls": true,
-    "cd": true,
-    "pwd": true,
-    "cp": true,
-    "mv": true,
-    "rm": false, // Don't auto-approve rm
-    "rmdir": false, // Don't auto-approve rmdir
-    "/^git (status|show)\\b/": true,
-    "conda": true,
-    "python": true,
-    "timeout": true
-  },
   "dbcode.connections": [
     {
       "connectionId": "NqZcZoWzpvaeT7EQqBoB2",
