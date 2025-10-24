@@ -460,7 +460,7 @@ fn_go_ <- function(
 
   tibble::tibble(
     pn = c("pos", "neg") |> rep(each = 3),
-    t = c("bp", "cc", "mf") |> rep(each = 2)
+    t = c("bp", "cc", "mf") |> rep(times = 2)
   ) |>
     dplyr::mutate(
       saveimage = purrr::map2(
