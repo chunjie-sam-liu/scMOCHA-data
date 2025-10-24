@@ -338,21 +338,18 @@ fn_plot_bar <- function(.d) {
 v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
 v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
 
-fn_variant_L_H_strand(v_homo_hete) |> fn_plot_bar()
+# fn_variant_L_H_strand(v_homo_hete) |> fn_plot_bar()
 fn_variant_L_H_strand(v_homo_hete) |>
   dplyr::count(variant_six) |>
   fn_plot_pie()
 
-
 fn_plot_bar(fn_variant_L_H_strand(
-  v_hete |>
-    dplyr::filter(af > 0.1)
+  v_hete
 )) +
   labs(title = "495 Heteroplasmic variants") -> p_hete
 
 fn_plot_bar(fn_variant_L_H_strand(
-  v_homo |>
-    dplyr::filter(af > 0.1)
+  v_homo
 )) +
   labs(title = "1049 Homoplasmic variants") -> p_homo
 
@@ -378,6 +375,127 @@ ggsave(
   plot = p_heavy_light,
   width = 11,
   height = 5,
+  dpi = 300
+)
+
+
+#
+#
+# ? pie plot --------------------------------------------------------------------
+#
+#
+
+fn_variant_L_H_strand(v_homo_hete) |>
+  dplyr::count(
+    deamination_ros,
+    variant_six
+  ) |>
+  dplyr::mutate(
+    variant = dplyr::recode(
+      variant_six,
+      "C>A" = "C:G>A:T",
+      "C>G" = "C:G>G:C",
+      "C>T" = "C:G>T:A",
+      "T>A" = "T:A>A:T",
+      "T>C" = "T:A>C:G",
+      "T>G" = "T:A>G:C"
+    )
+  ) |>
+  dplyr::mutate(
+    variant = factor(
+      variant,
+      levels = c(
+        "T:A>C:G",
+        "C:G>T:A",
+        "C:G>A:T",
+        "C:G>G:C",
+        "T:A>G:C",
+        "T:A>A:T"
+      )
+    )
+  ) |>
+  dplyr::arrange(
+    variant
+  ) |>
+  dplyr::mutate(
+    pick_color = c(
+      "#29833C",
+      "#5BB446",
+      "#F28107",
+      "#FFB10A",
+      "#01467B",
+      "#25648C"
+    )
+  ) -> for_pieplot
+
+
+for_pieplot |>
+  # dplyr::select(group = 1, n) |>
+  # dplyr::arrange(-n) |>
+  dplyr::mutate(group = variant) |>
+  dplyr::mutate(csum = rev(cumsum(rev(n)))) %>%
+  dplyr::mutate(pos = n / 2 + dplyr::lead(csum, 1)) %>%
+  dplyr::mutate(pos = dplyr::if_else(is.na(pos), n / 2, pos)) %>%
+  dplyr::mutate(percentage = n / sum(n)) |>
+  dplyr::mutate(
+    group = factor(group, levels = group),
+    pick_color = factor(pick_color, levels = pick_color)
+  ) -> .dd
+
+.dd |>
+  ggplot(aes(
+    x = "",
+    y = n,
+  )) +
+  geom_bar(
+    aes(fill = group),
+    stat = "identity",
+    width = 1,
+    color = "white",
+    # show.legend = TRUE
+  ) +
+  # scale_fill_identity() +
+  scale_fill_manual(
+    name = "Base substitution",
+    values = levels(.dd$pick_color)
+  ) +
+  ggrepel::geom_label_repel(
+    aes(
+      y = pos,
+      # label = glue::glue("{group}\n{n} ({scales::percent(percentage)})"),
+      label = glue::glue("{scales::percent(percentage)}"),
+      color = group,
+    ),
+    size = 6,
+    # nudge_x = 1,
+    # nudge_y = 0,
+    show.legend = FALSE,
+    max.overlaps = Inf,
+  ) +
+  # .scalecolor +
+  # scale_color_identity() +
+  scale_color_manual(
+    name = NULL,
+    values = levels(.dd$pick_color)
+  ) +
+  coord_polar(theta = "y", start = 0) +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      hjust = 0.5,
+      size = 22,
+    ),
+    legend.position = "right"
+  ) -> pie_plot
+pie_plot
+
+outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heavy-light"
+ggsave(
+  path = outdir,
+  filename = "heavy_light_variants_pie.pdf",
+  plot = pie_plot,
+  width = 8,
+  height = 6,
   dpi = 300
 )
 

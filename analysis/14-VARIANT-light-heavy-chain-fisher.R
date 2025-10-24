@@ -53,13 +53,13 @@ conn <- DBI::dbConnect(
 
 DBI::dbListTables(conn)
 tbl_allvariants <- dplyr::tbl(conn, "allvariants")
-tbl_allvariants_fisher <- dplyr::tbl(
+tbl_allvariants <- dplyr::tbl(
   conn,
   "allvariants_fisher"
 )
 
-tbl_allvariants_fisher |>
-  data.table::as.data.table()
+# tbl_allvariants_fisher |>
+#   data.table::as.data.table() |> dplyr::count(issomatic)
 
 tbl_all_hetero_af_bulk <- dplyr::tbl(
   conn,
@@ -69,7 +69,7 @@ DBI::dbListTables(conn)
 
 tbl_gseid_srrid_variant <- dplyr::tbl(
   conn,
-  "gseid_srrid_variant"
+  "gseid_srrid_variant_fisher"
 )
 
 tbl_gseid_srrid_variant |>
@@ -94,10 +94,10 @@ tbl_gseid_srrid_variant |>
   dplyr::select(-variant_alltype) |>
   tidyr::unnest(cols = c(a)) -> gseid_srrid_variant_hetero
 
-all_variant_ <- import(
-  file.path(cleandatadir, "all_variant.qs")
-)
-
+# all_variant_ <- import(
+#   file.path(cleandatadir, "all_variant.qs")
+# )
+all_variant_ <- tbl_allvariants |> as.data.table()
 dplyr::left_join(
   gseid_srrid_variant_hetero,
   all_variant_,
@@ -345,21 +345,19 @@ fn_plot_bar <- function(.d) {
 v_hete_L_H_strand <- fn_variant_L_H_strand(v_hete)
 v_homo_hete_L_H_strand <- fn_variant_L_H_strand(v_homo_hete)
 
-fn_variant_L_H_strand(v_homo_hete) |> fn_plot_bar()
+# fn_variant_L_H_strand(v_homo_hete) |> fn_plot_bar()
 fn_variant_L_H_strand(v_homo_hete) |>
   dplyr::count(variant_six) |>
   fn_plot_pie()
 
 
 fn_plot_bar(fn_variant_L_H_strand(
-  v_hete |>
-    dplyr::filter(af > 0.1)
+  v_hete
 )) +
   labs(title = "495 Heteroplasmic variants") -> p_hete
 
 fn_plot_bar(fn_variant_L_H_strand(
-  v_homo |>
-    dplyr::filter(af > 0.1)
+  v_homo
 )) +
   labs(title = "1049 Homoplasmic variants") -> p_homo
 
@@ -377,11 +375,12 @@ wrap_plots(
   widths = c(15, -1.05, 15, -1.05, 10),
   guides = "collect"
 ) -> p_heavy_light
+p_heavy_light
 
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-heavy-light"
 ggsave(
   path = outdir,
-  filename = "heavy_light_variants.pdf",
+  filename = "heavy_light_variants-fisher.pdf",
   plot = p_heavy_light,
   width = 11,
   height = 5,
