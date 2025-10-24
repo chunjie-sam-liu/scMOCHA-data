@@ -859,7 +859,7 @@ vss_4175 |>
 
 #
 #
-# ? GSM7493833 --------------------------------------------------------------------
+# ? GSM7493833 GSM7493836 --------------------------------------------------------------------
 #
 #
 
@@ -870,11 +870,11 @@ library(dplyr)
 
 # 1. Differential test for MT-ND1 between Heteroplasmy and Sufficient reads
 sc_3727 <- fn_load_sc(
-  thevariant = "3727T>C"
+  thevariant = "4175G>A"
 )
 subset(
   sc_3727,
-  srrid == "GSM7493833" &
+  srrid == "GSM7493836" &
     cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
 ) -> sc_3727_ind
 
@@ -923,10 +923,16 @@ ggplot(
     label = "p.signif"
   ) +
   scale_x_discrete(
-    limits = c("Heteroplasmy", "Sufficient reads") |> rev(),
-    labels = c("m.3727C", "m.3727T") |> rev()
+    limits = c("Heteroplasmy", "Sufficient reads"),
+    labels = c("m.4175G", "m.4175A")
   ) +
-  ggsci::scale_fill_aaas() +
+  # ggsci::scale_fill_aaas(direction = 1) +
+  scale_fill_manual(
+    values = c(
+      "Heteroplasmy" = "#E20000",
+      "Sufficient reads" = "#393E86"
+    )
+  ) +
   theme_bw() +
   ylab("MT-ND1 expression") +
   xlab("Variant type") +
@@ -936,13 +942,13 @@ ggplot(
     axis.title.x = element_blank()
   ) +
   labs(
-    title = "MT-ND1 expression in cells with m.3727T vs m.3727C (GSM7493833)"
+    title = "MT-ND1 expression in cells with m.4175G vs m.4175A (GSM7493836)"
   ) -> p
 p
-poutdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C"
+poutdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A"
 
 ggsave(
-  filename = "MT-ND1.expression.m.3727T_vs_m.3727C.GSM7493833.pdf",
+  filename = "MT-ND1.expression.m.4175G_vs_m.4175A.GSM7493836.pdf",
   plot = p,
   path = poutdir,
   device = "pdf",
@@ -970,9 +976,9 @@ ggscatterstats(
   data = forplot,
   x = af,
   y = `MT-ND1`,
-  xlab = "Variant Allele Frequency (VAF) of m.3727T>C",
+  xlab = "Variant Allele Frequency (VAF) of m.4175G>A",
   ylab = "MT-ND1 expression",
-  title = "Correlation between VAF and MT-ND1 expression (GSM7493833)",
+  title = "Correlation between VAF and MT-ND1 expression (GSM7493836)",
   xfill = "#CC79A7",
   yfill = "#009E73",
   marginal = TRUE,
@@ -983,7 +989,7 @@ ggscatterstats(
 ) -> p_cor
 
 ggsave(
-  filename = "MT-ND1.expression_vs_VAF.m.3727T>C.GSM7493833.pdf",
+  filename = "MT-ND1.expression_vs_VAF.m.4175G>A.GSM7493836.pdf",
   plot = p_cor,
   path = poutdir,
   device = "pdf",
