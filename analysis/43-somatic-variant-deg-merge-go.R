@@ -355,22 +355,25 @@ fn_de_ <- function(
       "sc_prepsctfindmarker.{thevariant}.{ifelse(is.null(.celltype), 'all', .celltype)}_.qs"
     )
   )
-  if (file_exists(path_sc_prepsctfindmarker)) {
-    log_fatal(
-      "Load existing {path_sc_prepsctfindmarker}"
-    )
-    sc <- import(path_sc_prepsctfindmarker)
-  } else {
-    DefaultAssay(sc) <- "SCT"
-    sc <- Seurat::PrepSCTFindMarkers(
-      sc,
-    )
-    export(
-      sc,
-      path_sc_prepsctfindmarker
-    )
-  }
+  # if (file_exists(path_sc_prepsctfindmarker)) {
+  #   log_fatal(
+  #     "Load existing {path_sc_prepsctfindmarker}"
+  #   )
+  #   sc <- import(path_sc_prepsctfindmarker)
+  # } else {
+  sc <- Seurat::PrepSCTFindMarkers(
+    sc,
+  )
+
   sc@meta.data <- meta.data
+  sc[["SCT"]]@SCTModel.list <- list(sc[["SCT"]]@SCTModel.list[[1]])
+  sc <- Seurat::PrepSCTFindMarkers(sc)
+
+  export(
+    sc,
+    path_sc_prepsctfindmarker
+  )
+  # }
 
   # sc <- Seurat::PrepSCTFindMarkers(
   #   sc,
@@ -655,7 +658,8 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
 library(Seurat)
 sc_3727 <- fn_load_sc(
   thevariant = "3727T>C"
-)
+) |>
+  Seurat::PrepSCTFindMarkers()
 
 
 vss_3727 <- list(
@@ -721,7 +725,8 @@ vss_3727 |>
 #
 sc_3728 <- fn_load_sc(
   thevariant = "3728C>T"
-)
+) |>
+  Seurat::PrepSCTFindMarkers()
 
 vss_3728 <- list(
   c("Heteroplasmy", "Sufficient reads"),
@@ -833,6 +838,7 @@ vss_4175 |>
       )
     }
   )
+
 
 # parallel::mclapply(
 #   vss_3728,
