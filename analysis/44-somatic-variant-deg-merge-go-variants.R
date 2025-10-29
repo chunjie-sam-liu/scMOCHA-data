@@ -650,82 +650,24 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
 }
 # body --------------------------------------------------------------------
 
-#
-#
-# ? 3727T>C --------------------------------------------------------------------
-#
-#
-library(Seurat)
-sc_3727 <- fn_load_sc(
-  thevariant = "3727T>C"
+thevariants <- c(
+  "3173G>A",
+  "3176A>T",
+  "3178T>A",
+  "3727T>C",
+  "3728C>T",
+  "13271T>C",
+  "14063T>C",
+  "14831G>A",
+  "1643A>G",
+  "3667T>G",
+  "4175G>A",
+  "5513G>A",
+  "7065G>A",
+  "9025G>A",
+  "9237G>A"
 )
-
-vss_3727 <- list(
-  c("Heteroplasmy", "Sufficient reads"),
-  c(0.5, 0.5),
-  c(0.6, 0.4),
-  c(0.7, 0.3),
-  c(0.8, 0.2),
-  c(0.9, 0.1)
-)
-#  c(0.5, 0.5) -> .vs
-# vss_3727 |>
-#   purrr::map(
-#     .f = \(.vs) {
-#       fn_variant_(
-#         thevariant = "3727T>C",
-#         sc = sc_3727,
-#         .vs = .vs,
-#         .celltype = NULL
-#       )
-#     }
-#   )
-parallel::mclapply(
-  vss_3727,
-  function(.vs) {
-    fn_variant_(
-      thevariant = "3727T>C",
-      sc = sc_3727,
-      .vs = .vs,
-      .celltype = NULL
-    )
-  },
-  mc.cores = length(vss_3727)
-)
-
-vss_3727 |>
-  purrr::map(
-    .f = \(.vs) {
-      fn_variant_cell_(
-        thevariant = "3727T>C",
-        sc = sc_3727,
-        .vs = .vs
-      )
-    }
-  )
-
-# parallel::mclapply(
-#   vss_3727,
-#   function(.vs) {
-#     fn_variant_cell_(
-#       thevariant = "3727T>C",
-#       sc = sc_3727,
-#       .vs = .vs
-#     )
-#   },
-#   mc.cores = length(vss_3727)
-# )
-
-#
-#
-# ? 3728C>T --------------------------------------------------------------------
-#
-#
-sc_3728 <- fn_load_sc(
-  thevariant = "3728C>T"
-)
-
-vss_3728 <- list(
+vss <- list(
   c("Heteroplasmy", "Sufficient reads"),
   c(0.5, 0.5),
   c(0.6, 0.4),
@@ -734,431 +676,37 @@ vss_3728 <- list(
   c(0.9, 0.1)
 )
 
-# vss_3728 |>
-#   purrr::map(
-#     .f = \(.vs) {
-#       fn_variant_(
-#         thevariant = "3728C>T",
-#         sc = sc_3728,
-#         .vs = .vs,
-#         .celltype = NULL
-#       )
-#     }
-#   )
 
-parallel::mclapply(
-  vss_3728,
-  function(.vs) {
-    fn_variant_(
-      thevariant = "3728C>T",
-      sc = sc_3728,
-      .vs = .vs,
-      .celltype = NULL
-    )
-  },
-  mc.cores = length(vss_3728)
-)
+#
+#
+# ? run below --------------------------------------------------------------------
+#
+#
 
-vss_3728 |>
+thevariants |>
   purrr::map(
-    .f = \(.vs) {
-      fn_variant_cell_(
-        thevariant = "3728C>T",
-        sc = sc_3728,
-        .vs = .vs
+    .f = \(.thevariant) {
+      parallel::mclapply(
+        vss,
+        function(.vs) {
+          fn_variant_(
+            thevariant = .thevariant,
+            sc = sc_3727,
+            .vs = .vs,
+            .celltype = NULL
+          )
+        },
+        mc.cores = length(vss)
+      )
+      purrr::map(
+        vss,
+        .f = \(.vs) {
+          fn_variant_cell_(
+            thevariant = .thevariant,
+            sc = sc_3727,
+            .vs = .vs
+          )
+        }
       )
     }
   )
-
-# parallel::mclapply(
-#   vss_3728,
-#   function(.vs) {
-#     fn_variant_cell_(
-#       thevariant = "3728C>T",
-#       sc = sc_3728,
-#       .vs = .vs
-#     )
-#   },
-#   mc.cores = length(vss_3728)
-# )
-
-#
-#
-# ? 4175G>A --------------------------------------------------------------------
-#
-#
-sc_4175 <- fn_load_sc(
-  thevariant = "4175G>A"
-)
-
-vss_4175 <- list(
-  c("Heteroplasmy", "Sufficient reads"),
-  c(0.5, 0.5),
-  c(0.6, 0.4),
-  c(0.7, 0.3),
-  c(0.8, 0.2),
-  c(0.9, 0.1)
-)
-
-# vss_4175 |>
-#   purrr::map(
-#     .f = \(.vs) {
-#       fn_variant_(
-#         thevariant = "4175G>A",
-#         sc = sc_4175,
-#         .vs = .vs,
-#         .celltype = NULL
-#       )
-#     }
-#   )
-
-parallel::mclapply(
-  vss_4175,
-  function(.vs) {
-    fn_variant_(
-      thevariant = "4175G>A",
-      sc = sc_4175,
-      .vs = .vs,
-      .celltype = NULL
-    )
-  },
-  mc.cores = length(vss_4175)
-)
-
-vss_4175 |>
-  purrr::map(
-    .f = \(.vs) {
-      fn_variant_cell_(
-        thevariant = "4175G>A",
-        sc = sc_4175,
-        .vs = .vs
-      )
-    }
-  )
-
-
-# parallel::mclapply(
-#   vss_3728,
-#   function(.vs) {
-#     fn_variant_cell_(
-#       thevariant = "3728C>T",
-#       sc = sc_3728,
-#       .vs = .vs
-#     )
-#   },
-#   mc.cores = length(vss_3728)
-# )
-# footer ------------------------------------------------------------------
-
-# future: :plan(future: :sequential)
-
-# save image --------------------------------------------------------------
-
-# ! don't run below --------------------------------------------------------------------
-# ! don't run below --------------------------------------------------------------------
-# ! don't run below --------------------------------------------------------------------
-# ! don't run below --------------------------------------------------------------------
-#
-
-#
-#
-# ? GSM7493833 GSM7493836 --------------------------------------------------------------------
-#
-#
-
-library(Seurat)
-library(ggplot2)
-library(ggpubr)
-library(dplyr)
-
-# 1. Differential test for MT-ND1 between Heteroplasmy and Sufficient reads
-sc_3727 <- fn_load_sc(
-  thevariant = "4175G>A"
-)
-subset(
-  sc_3727,
-  srrid == "GSM7493836" &
-    cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
-) -> sc_3727_ind
-
-
-DefaultAssay(sc_3727_ind) <- "SCT"
-sc_3727_ind <- Seurat::PrepSCTFindMarkers(
-  sc_3727_ind,
-)
-Idents(sc_3727_ind) <- "cellvarianttype"
-deg <- FindMarkers(
-  sc_3727_ind,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  features = "MT-ND1"
-)
-deg
-
-# Check logFC and p-values
-deg["MT-ND1", c("avg_log2FC", "p_val", "p_val_adj")]
-
-# 2. Extract expression and metadata for plotting
-plot_df <- FetchData(
-  sc_3727_ind,
-  vars = c("MT-ND1", "celltype", "cellvarianttype"),
-  slot = "data"
-)
-plot_df$cellvarianttype <- factor(
-  plot_df$cellvarianttype,
-  levels = c("Heteroplasmy", "Sufficient reads")
-)
-
-
-# 3B. Facet by cell type: one small panel per cell type
-ggplot(
-  plot_df,
-  aes(x = cellvarianttype, y = `MT-ND1`, fill = cellvarianttype)
-) +
-  geom_violin(trim = TRUE) +
-  geom_boxplot(width = 0.1) +
-  facet_wrap(~celltype, scales = "free_x") +
-  ggpubr::stat_compare_means(
-    comparisons = list(c("Heteroplasmy", "Sufficient reads")),
-    method = "wilcox.test",
-    label.y = 30,
-    # hide.ns = TRUE,
-    label = "p.signif"
-  ) +
-  scale_x_discrete(
-    limits = c("Heteroplasmy", "Sufficient reads"),
-    labels = c("m.4175G", "m.4175A")
-  ) +
-  # ggsci::scale_fill_aaas(direction = 1) +
-  scale_fill_manual(
-    values = c(
-      "Heteroplasmy" = "#E20000",
-      "Sufficient reads" = "#393E86"
-    )
-  ) +
-  theme_bw() +
-  ylab("MT-ND1 expression") +
-  xlab("Variant type") +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-    axis.title.x = element_blank()
-  ) +
-  labs(
-    title = "MT-ND1 expression in cells with m.4175G vs m.4175A (GSM7493836)"
-  ) -> p
-p
-poutdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A"
-
-ggsave(
-  filename = "MT-ND1.expression.m.4175G_vs_m.4175A.GSM7493836.pdf",
-  plot = p,
-  path = poutdir,
-  device = "pdf",
-  width = 9,
-  height = 6
-)
-sc_3727_ind@meta.data |> dplyr::select(barcode, af)
-plot_df |>
-  tibble::rownames_to_column("barcode") |>
-  as.data.table() -> a
-sc_3727_ind@meta.data |>
-  dplyr::select(-barcode) |>
-  dplyr::mutate(barcode = colnames(sc_3727_ind)) |>
-  dplyr::select(barcode, af) |>
-  as.data.table() -> b
-dplyr::left_join(
-  a,
-  b,
-  by = "barcode"
-) |>
-  dplyr::filter(!is.na(af)) -> forplot
-
-library(ggstatsplot)
-ggscatterstats(
-  data = forplot,
-  x = af,
-  y = `MT-ND1`,
-  xlab = "Variant Allele Frequency (VAF) of m.4175G>A",
-  ylab = "MT-ND1 expression",
-  title = "Correlation between VAF and MT-ND1 expression (GSM7493836)",
-  xfill = "#CC79A7",
-  yfill = "#009E73",
-  marginal = TRUE,
-  point.args = list(alpha = 0.7, size = 3),
-  smooth.line.args = list(color = "red", linewidth = 1, method = "lm"),
-  bf.message = FALSE,
-  caption = "Each point represents a single dataset"
-) -> p_cor
-
-ggsave(
-  filename = "MT-ND1.expression_vs_VAF.m.4175G>A.GSM7493836.pdf",
-  plot = p_cor,
-  path = poutdir,
-  device = "pdf",
-  width = 8,
-  height = 6
-)
-
-#
-#
-# ? GSM7493835 --------------------------------------------------------------------
-#
-#
-
-subset(
-  sc_3727,
-  srrid == "GSM7493835" &
-    cellvarianttype %in% c("Heteroplasmy", "Sufficient reads")
-) -> sc_3727_ind
-
-
-DefaultAssay(sc_3727_ind) <- "SCT"
-sc_3727_ind <- Seurat::PrepSCTFindMarkers(
-  sc_3727_ind,
-)
-Idents(sc_3727_ind) <- "cellvarianttype"
-deg <- FindMarkers(
-  sc_3727_ind,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  features = "MT-ND1"
-)
-deg
-
-# Check logFC and p-values
-deg["MT-ND1", c("avg_log2FC", "p_val", "p_val_adj")]
-
-# 2. Extract expression and metadata for plotting
-plot_df <- FetchData(
-  sc_3727_ind,
-  vars = c("MT-ND1", "celltype", "cellvarianttype"),
-  slot = "data"
-)
-plot_df$cellvarianttype <- factor(
-  plot_df$cellvarianttype,
-  levels = c("Heteroplasmy", "Sufficient reads")
-)
-
-
-# 3B. Facet by cell type: one small panel per cell type
-ggplot(
-  plot_df,
-  aes(x = cellvarianttype, y = `MT-ND1`, fill = cellvarianttype)
-) +
-  geom_violin(trim = TRUE) +
-  geom_boxplot(width = 0.1) +
-  facet_wrap(~celltype, scales = "free_x") +
-  ggpubr::stat_compare_means(
-    comparisons = list(c("Heteroplasmy", "Sufficient reads")),
-    method = "wilcox.test",
-    label.y = 30,
-    # hide.ns = TRUE,
-    label = "p.signif"
-  ) +
-  scale_x_discrete(
-    limits = c("Heteroplasmy", "Sufficient reads") |> rev(),
-    labels = c("m.3727C", "m.3727T") |> rev()
-  ) +
-  ggsci::scale_fill_aaas() +
-  theme_bw() +
-  ylab("MT-ND1 expression") +
-  xlab("Variant type") +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-    axis.title.x = element_blank()
-  ) +
-  labs(
-    title = "MT-ND1 expression in cells with m.3727T vs m.3727C (GSM7493835)"
-  ) -> p
-p
-poutdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C"
-
-ggsave(
-  filename = "MT-ND1.expression.m.3727T_vs_m.3727C.GSM7493835.pdf",
-  plot = p,
-  path = poutdir,
-  device = "pdf",
-  width = 9,
-  height = 6
-)
-
-
-#
-#
-# ? don't run below --------------------------------------------------------------------
-#
-#
-
-# 1. Differential test for MT-ND1 between Heteroplasmy and Sufficient reads
-
-DefaultAssay(sc_3727) <- "SCT"
-sc_3727 <- Seurat::PrepSCTFindMarkers(
-  sc_3727,
-)
-Idents(sc_3727) <- "cellvarianttype"
-deg <- FindMarkers(
-  sc_3727,
-  ident.1 = "Heteroplasmy",
-  ident.2 = "Sufficient reads",
-  features = "MT-ND1"
-)
-deg
-
-# Check logFC and p-values
-deg["MT-ND1", c("avg_log2FC", "p_val", "p_val_adj")]
-
-# 2. Extract expression and metadata for plotting
-plot_df <- FetchData(
-  sc_3727,
-  vars = c("MT-ND1", "celltype", "cellvarianttype"),
-  slot = "data"
-)
-plot_df$cellvarianttype <- factor(
-  plot_df$cellvarianttype,
-  levels = c("Heteroplasmy", "Sufficient reads")
-)
-
-
-# 3B. Facet by cell type: one small panel per cell type
-ggplot(
-  plot_df,
-  aes(x = cellvarianttype, y = `MT-ND1`, fill = cellvarianttype)
-) +
-  geom_violin(trim = TRUE) +
-  geom_boxplot(width = 0.1) +
-  facet_wrap(~celltype, scales = "free_x") +
-  ggpubr::stat_compare_means(
-    comparisons = list(c("Heteroplasmy", "Sufficient reads")),
-    method = "wilcox.test",
-    label.y = 30,
-    # hide.ns = TRUE,
-    label = "p.signif"
-  ) +
-  scale_x_discrete(
-    limits = c("Heteroplasmy", "Sufficient reads") |> rev(),
-    labels = c("m.3727C", "m.3727T") |> rev()
-  ) +
-  ggsci::scale_fill_aaas() +
-  theme_bw() +
-  ylab("MT-ND1 expression") +
-  xlab("Variant type") +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
-    axis.title.x = element_blank()
-  ) +
-  labs(
-    title = "MT-ND1 expression in cells with m.3727T vs m.3727C (GSM7493833)"
-  ) -> p
-
-poutdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/3727T>C"
-ggsave(
-  filename = "MT-ND1.expression.m.3727T_vs_m.3727C.GSM7493833.pdf",
-  plot = p,
-  path = poutdir,
-  device = "pdf",
-  width = 9,
-  height = 6
-)
