@@ -190,6 +190,29 @@ tbl_allvariants_cell_fishertest <- dplyr::tbl(
   "allvariants_cell_fishertest"
 )
 
+tbl_allvariants_cell <- dplyr::tbl(
+  conn,
+  "allvariants_cell"
+)
+
+tbl_allvariants_cell_fishertest |>
+  dplyr::select(
+    -c(dplyr::contains("fisher"), "alt_strand_ratio")
+  ) |>
+  as.data.table() -> tbl_allvariants_cell_fishertest_cleaned
+
+DBI::dbWriteTable(
+  conn,
+  "allvariants_cell_covered",
+  tbl_allvariants_cell_fishertest_cleaned,
+  overwrite = TRUE,
+  temporary = FALSE
+)
+
+# DBI::dbListTables(conn)
+
+tbl_allvariants_cell_fishertest |> dplyr::count()
+tbl_allvariants_cell
 
 tibble::tibble(
   gseid = gseids
