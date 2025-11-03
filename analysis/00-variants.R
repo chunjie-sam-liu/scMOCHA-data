@@ -19,6 +19,7 @@ gse_data <- import(
 gse_dataset_metadata_full <- import(
   "analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
+
 gse_data |>
   dplyr::select(
     gseid,
@@ -29,7 +30,9 @@ gse_data |>
     haplo_variant,
     haplo_violin,
     somatic_variant,
-    celltype_ratio
+    celltype_ratio,
+    clusteraf,
+    bulkaf
   ) |>
   dplyr::left_join(
     gse_dataset_metadata_full |> dplyr::select(-gseid),
@@ -104,17 +107,25 @@ gse_data_variant_heteroplasmic$heteroplasmic |>
   ) -> homoplasmic_variant
 
 
+# gse_data_variant_heteroplasmic |>
+#   dplyr::select(srrid, hetero) |>
+#   tidyr::unnest(cols = hetero) |>
+#   dplyr::group_by(srrid, variant) |>
+#   dplyr::summarise(
+#     af = mean(af, na.rm = TRUE),
+#   ) |>
+#   dplyr::ungroup() |>
+#   dplyr::group_by(variant) |>
+#   dplyr::summarise(
+#     af = mean(af, na.rm = TRUE),
+#   ) -> variant_mean_af
+
 gse_data_variant_heteroplasmic |>
-  dplyr::select(srrid, hetero) |>
-  tidyr::unnest(cols = hetero) |>
-  dplyr::group_by(srrid, variant) |>
-  dplyr::summarise(
-    af = mean(af, na.rm = TRUE),
-  ) |>
-  dplyr::ungroup() |>
+  dplyr::select(srrid, bulkaf) |>
+  tidyr::unnest(cols = bulkaf) |>
   dplyr::group_by(variant) |>
   dplyr::summarise(
-    af = mean(af, na.rm = TRUE),
+    af = mean(bulkaf, na.rm = TRUE),
   ) -> variant_mean_af
 
 gse_data_haplo_variant |>
