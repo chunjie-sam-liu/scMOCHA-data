@@ -150,15 +150,16 @@ library(Rsamtools)
 # ? bam --------------------------------------------------------------------
 #
 #
-bam <- "/mnt/isilon/u01_project/large-scale/ting/raw/GSE233304/Running_results/GSM8244396/MT_cluster.bam"
+bam <- "/mnt/isilon/u01_project/large-scale/ting/raw/GSE235050/cromwell-executions/scMOCHABatch/66a50c5e-b7f0-4d1c-9c2f-9dec97c3a7f7/call-scMOCHA/shard-0/sub.scMOCHA/bf8e6c39-e9e6-4a4c-828e-af5935932eaf/call-call_mt_variants/execution/cell/temp/barcoded_bams/barcodes.1.sort.bam"
 
-which <- GRanges("MT", IRanges(3173, 3173))
+# which <- GRanges("MT", IRanges(3173, 3173))
 what <- c("qname", "flag", "rname", "strand", "pos", "qwidth", "mapq", "cigar", "seq", "qual")
-tags <- c("NH", "HI", "AS", "nM", "RE", "CR", "CY", "CB", "UR", "UY", "UB", "CJ", "RG")
-param <- ScanBamParam(which = which, tag = tags, what = scanBamWhat())
-reads <- scanBam(bam, param = param)[[1]]
+tags <- c("NH", "HI", "AS", "nM", "RE", "CR", "CY", "CB", "UR", "UY", "UB", "MU")
+param <- ScanBamParam( tag = tags, what = scanBamWhat())
+reads <- scanBam(bam, param = param)
 
-reads |>
+library(Rsamtools)
+reads[[1]] |>
   as.data.frame() |>
   as.data.table() ->reads_dt
 target_pos <- 3173
