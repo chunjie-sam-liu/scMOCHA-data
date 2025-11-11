@@ -525,6 +525,7 @@ gseid_srrid_variant_hetero_plot_ratio |>
     # tidyselect::contains("ratio")
   ) -> filtered_data
 
+filtered_data |> dplyr::count(variant) |> dplyr::arrange(variant)
 
 # thevariant <- "3728C>T"
 # thesrrid <- "GSM7080053"

@@ -686,12 +686,13 @@ vss <- list(
 thevariants |>
   purrr::map(
     .f = \(.thevariant) {
+      sc <- fn_load_sc(.thevariant)
       parallel::mclapply(
         vss,
         function(.vs) {
           fn_variant_(
             thevariant = .thevariant,
-            sc = sc_3727,
+            sc = sc,
             .vs = .vs,
             .celltype = NULL
           )
@@ -703,7 +704,7 @@ thevariants |>
         .f = \(.vs) {
           fn_variant_cell_(
             thevariant = .thevariant,
-            sc = sc_3727,
+            sc = sc,
             .vs = .vs
           )
         }
