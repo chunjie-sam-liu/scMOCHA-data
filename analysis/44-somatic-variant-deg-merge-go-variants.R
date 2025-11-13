@@ -89,9 +89,9 @@ fn_de_plot <- function(
       )
     ) -> forplot
 
-  # forplot |>
-  #   dplyr::count(color) |>
-  #   print()
+  forplot |>
+    dplyr::count(color) |>
+    print()
 
   forplot |>
     dplyr::count(color) |>
@@ -132,10 +132,14 @@ fn_de_plot <- function(
       y = "FDR",
       subtitle = glue::glue(
         "Up:{
-          scales::label_comma()(n_color[[3]])
+          scales::label_comma()(
+          ifelse(is.na(n_color['red']), 0, n_color['red'])
+        )
         }, down: {
-          scales::label_comma()(n_color[[1]])
-        };(Cutoff: FDR<{.cutoff_pval}, log2FC>{.cutoff_log2fc}, Pct>{.pct})"
+          scales::label_comma()(
+          ifelse(is.na(n_color['blue']), 0, n_color['blue'])
+        )
+        }; (Cutoff: FDR<{.cutoff_pval}, log2FC>{.cutoff_log2fc}, Pct>{.pct})"
       )
     ) +
     theme(
@@ -172,6 +176,23 @@ fn_go_enrich <- function(cancer_sgene, ont = c("BP", "CC", "MF")) {
 }
 
 fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
+  if (is.null(.go) || nrow(.go) == 0) {
+    p <- ggplot() +
+      theme_void() +
+      labs(
+        title = "No significant GO terms found"
+      ) +
+      theme(
+        plot.title = element_text(
+          hjust = 0.5,
+          face = "bold",
+          color = "black",
+          size = 16
+        )
+      )
+    return(p)
+  }
+
   .ont <- match.arg(.ont)
 
   base_fill <- c("BP" = "#AE1700", "CC" = "#DF8F44FF", "MF" = "#00A1D5FF")
@@ -255,42 +276,42 @@ fn_variant_go <- function(markers, .variant) {
     neg_mf = list(.neg_mf),
     pos_bp_plot = list(
       fn_plot_go(.pos_bp, 20, "BP") +
-        labs(title = .variant) +
+        labs(title = "{.variant} POS BP" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
     ),
     pos_cc_plot = list(
       fn_plot_go(.pos_cc, 20, "CC") +
-        labs(title = .variant) +
+        labs(title = "{.variant} POS CC" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
     ),
     pos_mf_plot = list(
       fn_plot_go(.pos_mf, 20, "MF") +
-        labs(title = .variant) +
+        labs(title = "{.variant} POS MF" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
     ),
     neg_bp_plot = list(
       fn_plot_go(.neg_bp, 20, "BP") +
-        labs(title = .variant) +
+        labs(title = "{.variant} NEG BP" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
     ),
     neg_cc_plot = list(
       fn_plot_go(.neg_cc, 20, "CC") +
-        labs(title = .variant) +
+        labs(title = "{.variant} NEG CC" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
     ),
     neg_mf_plot = list(
       fn_plot_go(.neg_mf, 20, "MF") +
-        labs(title = .variant) +
+        labs(title = "{.variant} NEG MF" |> glue::glue()) +
         theme(
           plot.title = element_text(size = 20)
         )
@@ -433,6 +454,7 @@ fn_go_ <- function(
     p_hetero_high_vs_low$markers,
     thevariant
   ) -> p_go_hetero_high_vs_low
+
   .outdir <- file.path(
     dir_main_variant,
     thevariant,
@@ -523,9 +545,9 @@ fn_variant_ <- function(
     tibble::deframe() -> n_cellvarianttype
 
   if (all(.vs == c("Heteroplasmy", "Sufficient reads"))) {
-    log_info("Special case for Heteroplasmy vs Sufficient reads")
+    log_info("Special case for {thevariant} Heteroplasmy vs Sufficient reads")
     log_info(
-      "Start DE for Heteroplasmy vs Sufficient reads"
+      "Start DE for  {thevariant} Heteroplasmy vs Sufficient reads"
     )
     p_hetero_vs_sufficient <- fn_de_(
       thevariant = thevariant,
@@ -548,7 +570,7 @@ fn_variant_ <- function(
       .celltype = .celltype
     )
 
-    log_info("GO enrichment for Heteroplasmy vs Sufficient reads")
+    log_info("GO enrichment for {thevariant} Heteroplasmy vs Sufficient reads")
     fn_go_(
       thevariant = thevariant,
       p_hetero_high_vs_low = p_hetero_vs_sufficient,
@@ -602,7 +624,7 @@ fn_variant_ <- function(
     tibble::deframe() -> n_cellvarianttype2
 
   log_info(
-    "Start DE for Heteroplasmy high {.label_high} vs low {.label_low}"
+    "Start DE for Heteroplasmy {thevariant}  high {.label_high} vs low {.label_low}"
   )
 
   p_hetero_high_vs_low <- fn_de_(
@@ -629,7 +651,7 @@ fn_variant_ <- function(
   )
 
   log_info(
-    "GO enrichment for Heteroplasmy high {.label_high} vs low {.label_low}"
+    "GO enrichment for  {thevariant} Heteroplasmy high {.label_high} vs low {.label_low}"
   )
   fn_go_(
     thevariant = thevariant,
@@ -641,7 +663,6 @@ fn_variant_ <- function(
     "Finished analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
   )
 }
-
 
 fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
   library(Seurat)

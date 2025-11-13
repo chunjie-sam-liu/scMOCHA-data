@@ -132,10 +132,14 @@ fn_de_plot <- function(
       y = "FDR",
       subtitle = glue::glue(
         "Up:{
-          scales::label_comma()(n_color[[3]])
+          scales::label_comma()(
+          ifelse(is.na(n_color['red']), 0, n_color['red'])
+        )
         }, down: {
-          scales::label_comma()(n_color[[1]])
-        };(Cutoff: FDR<{.cutoff_pval}, log2FC>{.cutoff_log2fc}, Pct>{.pct})"
+          scales::label_comma()(
+          ifelse(is.na(n_color['blue']), 0, n_color['blue'])
+        )
+        }; (Cutoff: FDR<{.cutoff_pval}, log2FC>{.cutoff_log2fc}, Pct>{.pct})"
       )
     ) +
     theme(
