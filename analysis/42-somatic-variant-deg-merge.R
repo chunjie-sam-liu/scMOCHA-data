@@ -327,15 +327,36 @@ gseid_srrid_variant |>
 
 gseid_srrid_variant_sc |>
   tidyr::nest(.by = "variant") |>
+  dplyr::filter(!variant %in% c("3176A>T", "3173G>A", "3178T>A", "3728C>T")) |> # these three variants already merged before
   dplyr::mutate(
     data_merge = purrr::map2(
       .x = data,
       .y = variant,
       .f = function(df, thevariant) {
-        # df <- a$data[[2]]
-        # thevariant <- a$variant[[2]]
+        # df <- a$data[[5]]
+        # thevariant <- a$variant[[5]]
         library(Seurat)
         sc_list <- df |> dplyr::pull(sc_file)
+
+        .outdir <- path(
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+          thevariant,
+          "/deg_merge/"
+        )
+        dir_create(.outdir)
+
+        sc_merge_path <- path(
+          .outdir,
+          glue::glue("sc_merge.sct.{thevariant}.qs")
+        )
+
+        if (file_exists(sc_merge_path)) {
+          glue::glue(
+            "sc merge file for variant {thevariant} already exists, skip merging."
+          ) |>
+            log_info()
+          return(1)
+        }
 
         parallel::mclapply(
           sc_list,
@@ -395,39 +416,28 @@ gseid_srrid_variant_sc |>
             sc_list_loaded
           ) # not merge the scale.data, for memory sake
         }
+        rm(sc_list_loaded)
+        gc()
 
         Seurat::VariableFeatures(sc_merge) <- var_features
 
-        .outdir <- path(
-          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
-          thevariant,
-          "/deg_merge/"
-        )
-        dir_create(.outdir)
         export(
           sc_merge,
-          path(
-            .outdir,
-            glue::glue("sc_merge.sct.{thevariant}.qs")
-          )
-          # paste0(
-          #   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
-          #   thevariant,
-          #   "/deg_merge/sc_merge.sct.",
-          #   thevariant,
-          #   ".qs"
-          # )
+          sc_merge_path
         )
 
-        sc_merge
+        # sc_merge
+        rm(sc_merge)
+        gc()
+        1
       }
     )
   ) -> gseid_srrid_variant_sc_merged
 
-export(
-  gseid_srrid_variant_sc_merged,
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_sc_merged.qs"
-)
+# export(
+#   gseid_srrid_variant_sc_merged,
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_sc_merged.qs"
+# )
 #
 #
 # ! don't run below --------------------------------------------------------------------
