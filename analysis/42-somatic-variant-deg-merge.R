@@ -327,7 +327,9 @@ gseid_srrid_variant |>
 
 gseid_srrid_variant_sc |>
   tidyr::nest(.by = "variant") |>
-  dplyr::filter(!variant %in% c("3176A>T", "3173G>A", "3178T>A", "3728C>T")) |> # these three variants already merged before
+  dplyr::filter(
+    !variant %in% c("3176A>T", "3173G>A", "3178T>A", "3728C>T", "3727T>C")
+  ) |> # these three variants already merged before
   dplyr::mutate(
     data_merge = purrr::map2(
       .x = data,
@@ -354,7 +356,7 @@ gseid_srrid_variant_sc |>
           glue::glue(
             "sc merge file for variant {thevariant} already exists, skip merging."
           ) |>
-            log_info()
+            log_debug()
           return(1)
         }
 

@@ -513,6 +513,9 @@ fn_variant_ <- function(
   .celltype = NULL
 ) {
   # thevariant <- "3727T>C"
+  log_info(
+    "Start analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
+  )
 
   sc@meta.data |>
     dplyr::count(cellvarianttype) |>
@@ -520,6 +523,10 @@ fn_variant_ <- function(
     tibble::deframe() -> n_cellvarianttype
 
   if (all(.vs == c("Heteroplasmy", "Sufficient reads"))) {
+    log_info("Special case for Heteroplasmy vs Sufficient reads")
+    log_info(
+      "Start DE for Heteroplasmy vs Sufficient reads"
+    )
     p_hetero_vs_sufficient <- fn_de_(
       thevariant = thevariant,
       sc = sc,
@@ -541,16 +548,15 @@ fn_variant_ <- function(
       .celltype = .celltype
     )
 
+    log_info("GO enrichment for Heteroplasmy vs Sufficient reads")
     fn_go_(
       thevariant = thevariant,
       p_hetero_high_vs_low = p_hetero_vs_sufficient,
       .prefix = "hetero_vs_sufficient",
       .celltype = .celltype
     )
-    log_fatal(
-      "Skip further analysis for {thevariant} with {.vs[1]} and {.vs[2]}",
-      thevariant = thevariant,
-      .vs = .vs
+    log_success(
+      "Finished analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
     )
     return(invisible(NULL))
   }
@@ -595,6 +601,10 @@ fn_variant_ <- function(
     dplyr::arrange(cellvarianttype2) |>
     tibble::deframe() -> n_cellvarianttype2
 
+  log_info(
+    "Start DE for Heteroplasmy high {.label_high} vs low {.label_low}"
+  )
+
   p_hetero_high_vs_low <- fn_de_(
     thevariant = thevariant,
     sc = sc,
@@ -618,11 +628,17 @@ fn_variant_ <- function(
     .celltype = .celltype
   )
 
+  log_info(
+    "GO enrichment for Heteroplasmy high {.label_high} vs low {.label_low}"
+  )
   fn_go_(
     thevariant = thevariant,
     p_hetero_high_vs_low = p_hetero_high_vs_low,
     .prefix = hetero_label,
     .celltype = .celltype
+  )
+  log_success(
+    "Finished analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
   )
 }
 
@@ -631,6 +647,10 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
   library(Seurat)
   sc$predicted.celltype.l1 |> unique() -> celltypes
 
+  log_info(
+    "Start celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
+  )
+
   parallel::mclapply(
     celltypes,
     function(.celltype) {
@@ -638,14 +658,23 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
         sc,
         subset = predicted.celltype.l1 == .celltype
       )
+      log_info(
+        "Start celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]} in {.celltype}"
+      )
       fn_variant_(
         thevariant = thevariant,
         sc = sc_sub,
         .vs = .vs,
         .celltype = .celltype
       )
+      log_success(
+        "Finished celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]} in {.celltype}"
+      )
     },
     mc.cores = length(celltypes)
+  )
+  log_success(
+    "Finished celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
   )
 }
 # body --------------------------------------------------------------------
@@ -684,6 +713,9 @@ vss <- list(
 #
 
 thevariants |>
+  setdiff(
+    c("3176A>T", "3173G>A", "3178T>A", "3728C>T", "3727T>C")
+  ) |> # these three variants already merged before
   purrr::map(
     .f = \(.thevariant) {
       sc <- fn_load_sc(.thevariant)
