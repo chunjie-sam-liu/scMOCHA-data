@@ -359,17 +359,41 @@ gseid_srrid_variant_sc |>
           unlist() |>
           unique() -> var_features
 
+        fn_merge_with_progress <- function(sc_list_loaded, ...) {
+          n <- length(sc_list_loaded)
+          out <- sc_list_loaded[[1]]
+          cli::cli_progress_bar(
+            "Merging Seurat objects",
+            total = n - 1,
+            format = "{cli::pb_bar} {cli::pb_percent} ({cli::pb_current}/{cli::pb_total})"
+          )
+          for (i in 2:n) {
+            cli::cli_progress_update()
+            out <- merge(
+              out,
+              sc_list_loaded[[i]],
+              merge.data = FALSE,
+              ...
+            )
+          }
+          cli::cli_progress_done()
+          return(out)
+        }
+
         if (length(sc_list_loaded) < 2) {
           glue::glue(
             "Less than 2 sc objects for variant {thevariant}, cannot merge."
           )
           sc_merge <- sc_list_loaded[[1]]
         } else {
-          sc_merge <- merge(
-            x = sc_list_loaded[[1]],
-            y = sc_list_loaded[2:length(sc_list_loaded)],
-            merge.data = FALSE # not merge the scale.data, for memory sake
-          )
+          # sc_merge <- merge(
+          #   x = sc_list_loaded[[1]],
+          #   y = sc_list_loaded[2:length(sc_list_loaded)],
+          #   merge.data = FALSE # not merge the scale.data, for memory sake
+          # )
+          sc_merge <- fn_merge_with_progress(
+            sc_list_loaded
+          ) # not merge the scale.data, for memory sake
         }
 
         Seurat::VariableFeatures(sc_merge) <- var_features
