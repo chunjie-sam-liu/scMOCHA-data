@@ -332,6 +332,8 @@ gseid_srrid_variant_sc |>
       .x = data,
       .y = variant,
       .f = function(df, thevariant) {
+        # df <- a$data[[2]]
+        # thevariant <- a$variant[[2]]
         library(Seurat)
         sc_list <- df |> dplyr::pull(sc_file)
 
@@ -345,6 +347,10 @@ gseid_srrid_variant_sc |>
           mc.cores = 10
         ) -> sc_list_loaded
 
+        log_fatal(
+          "Loaded {length(sc_list_loaded)} sc objects for variant {thevariant}"
+        )
+
         parallel::mclapply(
           sc_list_loaded,
           Seurat::VariableFeatures,
@@ -352,6 +358,7 @@ gseid_srrid_variant_sc |>
         ) |>
           unlist() |>
           unique() -> var_features
+
         if (length(sc_list_loaded) < 2) {
           glue::glue(
             "Less than 2 sc objects for variant {thevariant}, cannot merge."
