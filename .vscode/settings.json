@@ -39,6 +39,9 @@
     "**/.venv/": true
   },
   "python.terminal.activateEnvironment": true,
+  // Enable VS Code Terminal Shell Integration to improve command detection in this workspace.
+  // You can move this to User settings if you prefer enabling it globally.
+  "terminal.integrated.shellIntegration.enabled": true,
   "python.defaultInterpreterPath": "/home/liuc9/tools/anaconda3/envs/renv/bin/python",
   "python-envs.defaultEnvManager": "ms-python.python:conda",
   "python-envs.defaultPackageManager": "ms-python.python:conda",
