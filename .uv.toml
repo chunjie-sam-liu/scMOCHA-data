@@ -1,0 +1,5 @@
+[tool.uv]
+python = "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python"
+no_virtualenv = true
+no_project = true
+no_workspace = true
