@@ -522,6 +522,17 @@ fn_variant_kegg <- function(thevariant) {
       )
     ) |>
     dplyr::mutate(
+      filename = fs::path_file(marker_path)
+    ) |>
+    dplyr::mutate(
+      filename = gsub(
+        pattern = "markers.|.qs|.{thevariant}" |> glue::glue(),
+        replacement = "",
+        x = filename
+      )
+    ) |>
+    # dplyr::select(filename) |>
+    dplyr::mutate(
       markers = parallel::mclapply(
         X = marker_path,
         FUN = function(.path) {
@@ -556,8 +567,16 @@ fn_variant_kegg <- function(thevariant) {
       "kegg_enrich.{thevariant}.qs" |> glue::glue()
     )
   )
+
+  fs::file_delete(
+    dir_ls(
+      outdir,
+      regexp = ".pdf$"
+    )
+  )
+
   .df_variant_res |>
-    dplyr::select(celltype, kegg) |>
+    dplyr::select(celltype, filename, kegg) |>
     dplyr::mutate(
       plot = parallel::mcmapply(
         FUN = function(.kegg) {
@@ -604,12 +623,25 @@ fn_variant_kegg <- function(thevariant) {
       "kegg_enrich_plots.{thevariant}.qs" |> glue::glue()
     )
   )
+  sanitize_filename <- function(x) {
+    x |>
+      gsub(">", "GT", x = _, fixed = TRUE) |>
+      gsub("<", "LT", x = _, fixed = TRUE) |>
+      gsub("%", "pct", x = _, fixed = TRUE) |>
+      gsub("=", "-", x = _, fixed = TRUE) |>
+      gsub("[()]", "", x = _) |>
+      gsub("[[:space:]]+", "_", x = _) |>
+      trimws()
+  }
 
   .df_variant_plots |>
     dplyr::mutate(
       ggsave_path = fs::path(
         outdir,
-        "kegg_enrich_plot_{celltype}.{thevariant}.pdf" |> glue::glue()
+        "kegg_enrich_plot.{celltype}.{filename}.{thevariant}.pdf" |>
+          glue::glue() |>
+          fs::path_sanitize() |>
+          sanitize_filename()
       )
     ) |>
     dplyr::mutate(
@@ -627,7 +659,7 @@ fn_variant_kegg <- function(thevariant) {
         mc.cores = nrow(.df_variant_plots),
         SIMPLIFY = FALSE
       )
-    )
+    ) -> m
 }
 
 # body --------------------------------------------------------------------
