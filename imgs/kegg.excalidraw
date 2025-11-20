@@ -1,0 +1,267 @@
+{
+  "type": "excalidraw",
+  "version": 2,
+  "source": "https://excalidraw.com",
+  "elements": [
+    {
+      "id": "mut1",
+      "type": "rectangle",
+      "x": 100,
+      "y": -50,
+      "width": 300,
+      "height": 80,
+      "strokeColor": "#1565c0",
+      "backgroundColor": "transparent",
+      "fillStyle": "hachure",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "cornerRadius": 20,
+      "seed": 123,
+      "text": "MT-ND1 m.4175G>A (G131S)\nPathogenic mtDNA variant",
+      "fontSize": 20,
+      "verticalAlign": "middle"
+    },
+
+    {
+      "id": "arrow_mut_c1",
+      "type": "arrow",
+      "x": 250,
+      "y": 35,
+      "width": 0,
+      "height": 60,
+      "strokeColor": "#000000",
+      "strokeWidth": 2,
+      "roughness": 1,
+      "points": [
+        [0, 0],
+        [0, 60]
+      ],
+      "seed": 124
+    },
+
+    {
+      "id": "c1",
+      "type": "rectangle",
+      "x": 40,
+      "y": 100,
+      "width": 300,
+      "height": 70,
+      "strokeColor": "#1e88e5",
+      "cornerRadius": 18,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "Complex I impairment\n↓ Proton pumping & electron flow",
+      "fontSize": 18,
+      "seed": 200
+    },
+
+    {
+      "id": "c2",
+      "type": "rectangle",
+      "x": 390,
+      "y": 100,
+      "width": 300,
+      "height": 70,
+      "strokeColor": "#1e88e5",
+      "cornerRadius": 18,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "↓ Membrane potential (ΔΨm)",
+      "fontSize": 18,
+      "seed": 210
+    },
+
+    {
+      "id": "c3",
+      "type": "rectangle",
+      "x": 40,
+      "y": 200,
+      "width": 300,
+      "height": 70,
+      "strokeColor": "#1e88e5",
+      "cornerRadius": 18,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "↓ ATP production\n↓ OXPHOS efficiency",
+      "fontSize": 18,
+      "seed": 220
+    },
+
+    {
+      "id": "c4",
+      "type": "rectangle",
+      "x": 390,
+      "y": 200,
+      "width": 300,
+      "height": 90,
+      "strokeColor": "#1e88e5",
+      "cornerRadius": 18,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "Altered ROS homeostasis\n↑ mtROS (uncontrolled)\n↓ NADPH oxidase–derived ROS",
+      "fontSize": 18,
+      "seed": 230
+    },
+
+    {
+      "id": "arrow_c1_c2",
+      "type": "arrow",
+      "x": 340,
+      "y": 135,
+      "width": 50,
+      "height": 0,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [50, 0]
+      ],
+      "strokeWidth": 2,
+      "seed": 240
+    },
+    {
+      "id": "arrow_c1_c3",
+      "type": "arrow",
+      "x": 190,
+      "y": 170,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 30]
+      ],
+      "strokeWidth": 2,
+      "seed": 241
+    },
+    {
+      "id": "arrow_c2_c4",
+      "type": "arrow",
+      "x": 540,
+      "y": 170,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 30]
+      ],
+      "strokeWidth": 2,
+      "seed": 242
+    },
+
+    {
+      "id": "immune1",
+      "type": "rectangle",
+      "x": 10,
+      "y": 330,
+      "width": 350,
+      "height": 180,
+      "strokeColor": "#ef6c00",
+      "cornerRadius": 20,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "Innate immune effector functions ↓\n• ↓ Phagosome formation/maturation\n• ↓ Lysosome acidification\n• ↓ Efferocytosis\n• ↓ Osteoclast differentiation",
+      "fontSize": 18,
+      "seed": 300
+    },
+
+    {
+      "id": "immune2",
+      "type": "rectangle",
+      "x": 400,
+      "y": 330,
+      "width": 350,
+      "height": 180,
+      "strokeColor": "#ef6c00",
+      "cornerRadius": 20,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "Inflammatory signaling ↓\n• ↓ IL-17 / NF-κB / MAPK activation\n• ↓ Cytokine production\n• ↓ Th17 / macrophage activity\n• Altered NK / T / B cell signaling",
+      "fontSize": 18,
+      "seed": 310
+    },
+
+    {
+      "id": "arrow_c3_i1",
+      "type": "arrow",
+      "x": 190,
+      "y": 270,
+      "width": 0,
+      "height": 60,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 60]
+      ],
+      "strokeWidth": 2,
+      "seed": 320
+    },
+    {
+      "id": "arrow_c4_i2",
+      "type": "arrow",
+      "x": 540,
+      "y": 290,
+      "width": 0,
+      "height": 40,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 40]
+      ],
+      "strokeWidth": 2,
+      "seed": 321
+    },
+
+    {
+      "id": "kegg",
+      "type": "rectangle",
+      "x": 150,
+      "y": 540,
+      "width": 500,
+      "height": 120,
+      "strokeColor": "#616161",
+      "cornerRadius": 15,
+      "strokeWidth": 2,
+      "roughness": 1,
+      "text": "KEGG pathways with negative NES\n• Osteoclast differentiation\n• Phagosome / Lysosome\n• IL-17 signaling\n• RA / Legionellosis / TB / Pertussis\n• Ferroptosis, COVID-19, etc.",
+      "fontSize": 18,
+      "seed": 400
+    },
+
+    {
+      "id": "arrow_i1_kegg",
+      "type": "arrow",
+      "x": 260,
+      "y": 510,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 30]
+      ],
+      "strokeWidth": 2,
+      "seed": 410
+    },
+    {
+      "id": "arrow_i2_kegg",
+      "type": "arrow",
+      "x": 600,
+      "y": 510,
+      "width": 0,
+      "height": 30,
+      "strokeColor": "#000",
+      "points": [
+        [0, 0],
+        [0, 30]
+      ],
+      "strokeWidth": 2,
+      "seed": 411
+    }
+  ],
+  "appState": {
+    "viewBackgroundColor": "#ffffff",
+    "currentItemStrokeColor": "#000000",
+    "currentItemBackgroundColor": "transparent"
+  }
+}

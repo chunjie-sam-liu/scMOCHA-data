@@ -46,25 +46,25 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # load data ---------------------------------------------------------------
 dir_main_variant <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants"
 
-msig_df <- msigdbr::msigdbr(species = "Homo sapiens") |> as.data.table()
-msigdbr::msigdbr_species()
-msigdbr::msigdbr_collections()
-msig_df |>
-  dplyr::mutate(gs_name = glue::glue("{gs_collection}#{gs_name}")) |>
-  dplyr::select(
-    gs_name,
-    gs_collection,
-    gs_subcollection,
-    gs_collection_name,
-    gene_symbol
-  ) |>
-  dplyr::select(gs_name, gene_symbol) -> msig_df_s
+# msig_df <- msigdbr::msigdbr(species = "Homo sapiens") |> as.data.table()
 
+# msigdbr::msigdbr_species()
+# msigdbr::msigdbr_collections()
+# msig_df |>
+#   dplyr::mutate(gs_name = glue::glue("{gs_collection}#{gs_name}")) |>
+#   dplyr::select(
+#     gs_name,
+#     gs_collection,
+#     gs_subcollection,
+#     gs_collection_name,
+#     gene_symbol
+#   ) |>
+#   dplyr::select(gs_name, gene_symbol) -> msig_df_s
 
-msig_df |>
-  dplyr::filter(
-    grepl("OXPHOS", gs_collection_name, ignore.case = TRUE)
-  )
+# msig_df |>
+#   dplyr::filter(
+#     grepl("OXPHOS", gs_collection_name, ignore.case = TRUE)
+#   )
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
@@ -276,13 +276,7 @@ fn_kegg <- function(
     as.data.table()
 }
 
-fn_gseGO <- function(.markers) {
-  # fn_markers_update(markers = markers) -> .markers
-  .markers |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> geneList
-
+fn_gseGO <- function(geneList) {
   .onts <- c("BP", "CC", "MF")
   parallel::mclapply(
     X = .onts,
@@ -295,127 +289,77 @@ fn_gseGO <- function(.markers) {
         verbose = FALSE,
       )
     },
-    mc.cores = 3
+    mc.cores = length(.onts)
   ) -> .gsego_list
   names(.gsego_list) <- .onts
-  list(
-    geneList = geneList,
-    gsego = .gsego_list
-  )
+  .gsego_list
 }
 
-fn_gseKEGG <- function(.markers) {
-  .markers |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> geneList
-
+fn_gseKEGG <- function(geneList) {
   clusterProfiler::gseKEGG(
     geneList = geneList,
     organism = "hsa",
     verbose = FALSE
   ) -> .gsekegg
-  list(
-    geneList = geneList,
-    gsekegg = .gsekegg
-  )
 }
 
-fn_gseWP <- function(.markers) {
-  .markers |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> geneList
-
+fn_gseWP <- function(geneList) {
   clusterProfiler::gseWP(
     geneList = geneList,
     organism = "Homo sapiens",
   )
-  list(
-    geneList = geneList,
-    gsewp = .gsewp
-  )
 }
 
-fn_gsePathway <- function(.markers) {
-  .markers |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> geneList
+fn_gsePathway <- function(geneList) {
   ReactomePA::gsePathway(
     geneList = geneList,
     pvalueCutoff = 0.2,
     pAdjustMethod = "BH",
     verbose = FALSE
   ) -> .gsepathway
-  list(
-    geneList = geneList,
-    gsepathway = .gsepathway
-  )
 }
 
+fn_enrichGO <- function(gene, geneList) {
+  .onts <- c("BP", "CC", "MF")
+  parallel::mclapply(
+    X = .onts,
+    FUN = function(.ont) {
+      clusterProfiler::enrichGO(
+        gene = names(gene),
+        universe = names(geneList),
+        OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+        keyType = "ENTREZID",
+        ont = .ont,
+        pvalueCutoff = 0.05
+      )
+    },
+    mc.cores = length(.onts)
+  ) -> .gsego_list
+  names(.gsego_list) <- .onts
+  .gsego_list
+}
 
-fn_enrichKEGG <- function(.markers) {
-  .markers |>
-    dplyr::filter(color != "grey") |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> gene
-
+fn_enrichKEGG <- function(gene) {
   clusterProfiler::enrichKEGG(
     gene = names(gene),
     organism = "hsa"
   ) -> .enrichkegg
-  list(
-    gene = gene,
-    enrichkegg = .enrichkegg
-  )
 }
 
-fn_enrichWP <- function(.markers) {
-  .markers |>
-    dplyr::filter(color != "grey") |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> gene
-
+fn_enrichWP <- function(gene) {
   clusterProfiler::enrichWP(
     gene = names(gene),
     organism = "Homo sapiens"
   ) -> .enrichwp
-
-  list(
-    gene = gene,
-    enrichwp = .enrichwp
-  )
 }
 
-fn_enrichPathway <- function(.markers) {
-  .markers |>
-    dplyr::filter(color != "grey") |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> gene
-
+fn_enrichPathway <- function(gene) {
   ReactomePA::enrichPathway(
     gene = names(gene),
     readable = TRUE
   ) -> .enrichpathway
-  list(
-    gene = gene,
-    enrichpathway = .enrichpathway
-  )
 }
 
-ek <- fn_enrichKEGG(.markers = fn_markers_update(markers = markers))
-clusterProfiler::browseKEGG(ek$enrichkegg, "hsa04010")
-# library(pathview)
-# hsa04210 <- pathview::pathview(
-#   gene.data = geneList,
-#   pathway.id = "hsa04210",
-#   species = "hsa",
-#   limit = list(gene = max(abs(geneList)), cpd = 1)
-# )
 
 fn_markers_update <- function(
   markers,
@@ -465,21 +409,234 @@ fn_markers_update <- function(
     )
 }
 
+fn_enrich <- function(markers) {
+  ls_gses <- list(
+    fn_gseGO,
+    fn_gseKEGG,
+    fn_gseWP,
+    fn_gsePathway
+  )
+  ls_enrich <- list(
+    fn_enrichKEGG,
+    fn_enrichWP,
+    fn_enrichPathway
+  )
+
+  markers |>
+    dplyr::select(ENTREZID, avg_log2FC) |>
+    dplyr::arrange(-avg_log2FC) |>
+    tibble::deframe() -> geneList
+
+  markers |>
+    dplyr::filter(color != "grey") |>
+    dplyr::select(ENTREZID, avg_log2FC) |>
+    dplyr::arrange(-avg_log2FC) |>
+    tibble::deframe() -> gene
+
+  tibble::tibble(
+    fn = c(ls_gses, ls_enrich),
+    type = c(
+      rep("gse", length(ls_gses)),
+      rep("enrich", length(ls_enrich))
+    ),
+    name = c(
+      "gseGO",
+      "gseKEGG",
+      "gseWP",
+      "gsePathway",
+      "enrichKEGG",
+      "enrichWP",
+      "enrichPathway"
+    ),
+    gene = c(
+      rep(list(geneList), length(ls_gses)),
+      rep(list(gene), length(ls_enrich))
+    )
+  ) -> .df
+
+  .df |>
+    dplyr::mutate(
+      res = parallel::mcmapply(
+        FUN = function(.fn, .gene) {
+          tryCatch(
+            expr = {
+              .fn(.gene)
+            },
+            error = function(e) {
+              log_info(glue::glue("Error in {.fn}: {e$message}"))
+              return(NULL)
+            }
+          )
+        },
+        .fn = fn,
+        .gene = gene,
+        mc.cores = nrow(.df),
+        SIMPLIFY = FALSE
+      )
+    ) -> .df_res
+
+  list(
+    df_res = .df_res,
+    geneList = geneList,
+    gene = gene
+  )
+}
+
+fn_enrich_kegg_only <- function(markers) {
+  markers |>
+    dplyr::select(ENTREZID, avg_log2FC) |>
+    dplyr::arrange(-avg_log2FC) |>
+    tibble::deframe() -> geneList
+
+  fn_gseKEGG(geneList) -> gse_kegg
+
+  gse_kegg
+}
+
+fn_variant_kegg <- function(thevariant) {
+  variant_dir <- fs::path(
+    dir_main_variant,
+    thevariant
+  )
+
+  base_dir <- fs::path(
+    variant_dir,
+    "deg_merge_new"
+  )
+  markers_list <- dir_ls(
+    path = base_dir,
+    recurse = TRUE,
+    regexp = "markers.*{thevariant}.qs" |> glue::glue()
+  )
+  tibble::tibble(
+    marker_path = markers_list
+  ) |>
+    dplyr::mutate(
+      celltype = fs::path_dir(marker_path) |> fs::path_file()
+    ) |>
+    dplyr::mutate(
+      celltype = ifelse(
+        celltype == "deg_merge_new",
+        "all_cells",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      markers = parallel::mclapply(
+        X = marker_path,
+        FUN = function(.path) {
+          import(.path) |>
+            fn_markers_update()
+        },
+        mc.cores = length(marker_path)
+      )
+    ) -> .df_variant
+
+  .df_variant |>
+    dplyr::mutate(
+      kegg = parallel::mcmapply(
+        FUN = function(.markers) {
+          fn_enrich_kegg_only(markers = .markers)
+        },
+        .markers = markers,
+        mc.cores = nrow(.df_variant),
+        SIMPLIFY = FALSE
+      )
+    ) -> .df_variant_res
+  outdir <- fs::path(
+    variant_dir,
+    "kegg"
+  )
+  dir_create(outdir)
+
+  export(
+    .df_variant_res,
+    fs::path(
+      outdir,
+      "kegg_enrich.{thevariant}.qs" |> glue::glue()
+    )
+  )
+  .df_variant_res |>
+    dplyr::select(celltype, kegg) |>
+    dplyr::mutate(
+      plot = parallel::mcmapply(
+        FUN = function(.kegg) {
+          as.data.table(.kegg) |>
+            dplyr::filter(p.adjust < 0.05) |>
+            dplyr::mutate(FDR = -log10(qvalue)) |>
+            dplyr::mutate(
+              y = glue::glue("{ID}_{Description}")
+            ) -> .kegg_filtered
+
+          .kegg_filtered |>
+            ggplot(aes(
+              x = NES,
+              y = reorder(y, NES),
+              size = FDR,
+              color = NES
+            )) +
+            geom_point() +
+            scale_color_gradient2(
+              low = "blue",
+              mid = "white",
+              high = "red"
+            ) +
+            theme(
+              panel.background = element_rect(fill = NA),
+              panel.grid = element_blank(),
+              axis.line.x = element_line(color = "black"),
+              axis.text.x = element_text(color = "black"),
+              axis.title.y = element_blank(),
+              axis.line.y = element_line(color = "black"),
+              legend.position = "right"
+            )
+        },
+        .kegg = kegg,
+        mc.cores = nrow(.df_variant_res),
+        SIMPLIFY = FALSE
+      )
+    ) -> .df_variant_plots
+
+  export(
+    .df_variant_plots,
+    fs::path(
+      outdir,
+      "kegg_enrich_plots.{thevariant}.qs" |> glue::glue()
+    )
+  )
+
+  .df_variant_plots |>
+    dplyr::mutate(
+      ggsave_path = fs::path(
+        outdir,
+        "kegg_enrich_plot_{celltype}.{thevariant}.pdf" |> glue::glue()
+      )
+    ) |>
+    dplyr::mutate(
+      a = parallel::mcmapply(
+        FUN = function(.plot, .ggsave_path) {
+          ggsave(
+            filename = .ggsave_path,
+            plot = .plot,
+            width = 8,
+            height = 6
+          )
+        },
+        .plot = plot,
+        .ggsave_path = ggsave_path,
+        mc.cores = nrow(.df_variant_plots),
+        SIMPLIFY = FALSE
+      )
+    )
+}
+
 # body --------------------------------------------------------------------
 thevariant <- "4175G>A"
-markers <- import(
-  fs::path(
-    dir_main_variant,
-    thevariant,
-    "deg_merge_new",
-    "markers.hetero_vs_sufficient.{thevariant}.qs" |> glue::glue()
-  )
-)
 
 
-dplyr::filter(
-  ID == "hsa00190"
-)
+fn_variant_kegg(thevariant = "4175G>A")
+fn_variant_kegg(thevariant = "9025G>A")
+fn_variant_kegg(thevariant = "13271T>C")
 
 # footer ------------------------------------------------------------------
 
