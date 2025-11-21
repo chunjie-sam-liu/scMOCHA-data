@@ -417,7 +417,7 @@ fn_enrich_all <- function(markers) {
     fn_gsePathway
   )
   ls_enrich <- list(
-    fn_enrichGO,
+    # fn_enrichGO,
     fn_enrichKEGG,
     fn_enrichWP,
     fn_enrichPathway
@@ -445,7 +445,7 @@ fn_enrich_all <- function(markers) {
       "gseKEGG",
       "gseWP",
       "gsePathway",
-      "enrichGO",
+      # "enrichGO",
       "enrichKEGG",
       "enrichWP",
       "enrichPathway"
