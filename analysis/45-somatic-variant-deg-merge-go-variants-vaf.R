@@ -357,7 +357,7 @@ fn_de_ <- function(
   .outdir <- path(
     dir_main_variant,
     thevariant,
-    .tmpdir,
+    .tmpdir
   )
   # dir_create(.outdir)
 
@@ -688,8 +688,8 @@ fn_variant_vaf_ <- function(
     dplyr::pull(af) |>
     quantile(probs = seq(0, 1, 0.05), na.rm = FALSE) -> .quant
 
-  .high <- 0.4
-  .low <- 0.4
+  .high <- .vs
+  .low <- .vs
 
   # scales::label_number(accuracy = 0.01)(median_af)
   .label_high <- glue::glue(
@@ -872,7 +872,7 @@ vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
 #
 #
 
-.thevariant <- "4175G>A"
+thevariant <- "4175G>A"
 thevariants |>
   purrr::map(
     .f = \(thevariant) {
