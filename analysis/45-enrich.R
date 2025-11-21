@@ -493,6 +493,17 @@ fn_enrich_kegg_only <- function(markers) {
   gse_kegg
 }
 
+sanitize_filename <- function(x) {
+  x |>
+    gsub(">", "GT", x = _, fixed = TRUE) |>
+    gsub("<", "LT", x = _, fixed = TRUE) |>
+    gsub("%", "pct", x = _, fixed = TRUE) |>
+    gsub("=", "-", x = _, fixed = TRUE) |>
+    gsub("[()]", "", x = _) |>
+    gsub("[[:space:]]+", "_", x = _) |>
+    trimws()
+}
+
 fn_variant_kegg <- function(thevariant) {
   variant_dir <- fs::path(
     dir_main_variant,
@@ -576,7 +587,7 @@ fn_variant_kegg <- function(thevariant) {
   )
 
   .df_variant_res |>
-    dplyr::select(celltype, filename, kegg) |>
+    # dplyr::select(celltype, filename, kegg) |>
     dplyr::mutate(
       plot = parallel::mcmapply(
         FUN = function(.kegg) {
@@ -669,6 +680,63 @@ thevariant <- "4175G>A"
 fn_variant_kegg(thevariant = "4175G>A")
 fn_variant_kegg(thevariant = "9025G>A")
 fn_variant_kegg(thevariant = "13271T>C")
+
+m <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A/kegg/kegg_enrich.4175G>A.qs"
+)
+
+m |> dplyr::filter(celltype == "all_cells") -> mm
+mm$plot[[1]]
+
+library(clusterProfiler)
+mm
+
+gseaplot2(
+  mm$kegg[[1]],
+  geneSetID = "hsa00190",
+  title = "Oxidative phosphorylation"
+) -> p_Oxidative_phosphorylation
+
+ggsave(
+  filename = "Oxidative_phosphorylation.all_cells.{mm$filename[[1]]}.pdf" |>
+    glue::glue() |>
+    fs::path_sanitize() |>
+    sanitize_filename(),
+  plot = p_Oxidative_phosphorylation,
+  path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A/kegg/",
+  width = 6,
+  height = 4
+)
+
+
+mm$markers[[1]] |>
+  dplyr::select(ENTREZID, avg_log2FC) |>
+  dplyr::arrange(-avg_log2FC) |>
+  tibble::deframe() -> geneList
+library(pathview)
+pathview::pathview(
+  gene.data = geneList,
+  pathway.id = "hsa00190",
+  species = "hsa",
+  limit = list(gene = max(abs(geneList)), cpd = 1),
+  out.suffix = "4175G>A_Oxidative_phosphorylation",
+  kegg.native = TRUE
+)
+
+mm$kegg[[1]] |> as.data.table() |> dplyr::filter(ID == "hsa00190")
+
+mm$markers[[1]] |>
+  dplyr::filter(color != "grey") |>
+  dplyr::select(ENTREZID, avg_log2FC) |>
+  dplyr::arrange(-avg_log2FC) |>
+  tibble::deframe() -> gene
+
+fn_enrichKEGG(gene) -> kk
+
+browseKEGG(
+  kk,
+  pathID = "hsa00190"
+)
 
 # footer ------------------------------------------------------------------
 
