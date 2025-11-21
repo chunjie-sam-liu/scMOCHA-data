@@ -506,7 +506,7 @@ sanitize_filename <- function(x) {
     trimws()
 }
 
-fn_variant_kegg <- function(thevariant) {
+fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
   variant_dir <- fs::path(
     dir_main_variant,
     thevariant
@@ -514,7 +514,7 @@ fn_variant_kegg <- function(thevariant) {
 
   base_dir <- fs::path(
     variant_dir,
-    "deg_merge_new"
+    tmpdir
   )
   markers_list <- dir_ls(
     path = base_dir,
@@ -529,7 +529,7 @@ fn_variant_kegg <- function(thevariant) {
     ) |>
     dplyr::mutate(
       celltype = ifelse(
-        celltype == "deg_merge_new",
+        celltype == tmpdir,
         "all_cells",
         celltype
       )
@@ -567,19 +567,20 @@ fn_variant_kegg <- function(thevariant) {
         SIMPLIFY = FALSE
       )
     ) -> .df_variant_res
+
   outdir <- fs::path(
     variant_dir,
-    "kegg"
+    gsub("deg", "kegg", tmpdir)
   )
   dir_create(outdir)
 
-  export(
-    .df_variant_res,
-    fs::path(
-      outdir,
-      "kegg_enrich.{thevariant}.qs" |> glue::glue()
-    )
-  )
+  # export(
+  #   .df_variant_res,
+  #   fs::path(
+  #     outdir,
+  #     "kegg_enrich.{thevariant}.qs" |> glue::glue()
+  #   )
+  # )
 
   fs::file_delete(
     dir_ls(
@@ -682,6 +683,9 @@ thevariant <- "4175G>A"
 fn_variant_kegg(thevariant = "4175G>A")
 fn_variant_kegg(thevariant = "9025G>A")
 fn_variant_kegg(thevariant = "13271T>C")
+
+
+vaf_kegg <- fn_variant_kegg(thevariant = "4175G>A", tmpdir = "deg_merge_vaf")
 
 m <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A/kegg/kegg_enrich.4175G>A.qs"
