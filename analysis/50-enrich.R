@@ -681,21 +681,119 @@ thevariant <- "4175G>A"
 
 
 fn_variant_kegg(thevariant = "4175G>A")
-fn_variant_kegg(thevariant = "9025G>A")
-fn_variant_kegg(thevariant = "13271T>C")
-
+# fn_variant_kegg(thevariant = "9025G>A")
+# fn_variant_kegg(thevariant = "13271T>C")
 
 vaf_kegg <- fn_variant_kegg(thevariant = "4175G>A", tmpdir = "deg_merge_vaf")
 
+
+kegg_url <- "https://www.kegg.jp/kegg-bin/show_pathway"
+
+
+vaf_kegg |>
+  dplyr::select(celltype, filename, kegg) |>
+  dplyr::mutate(
+    a = parallel::mclapply(
+      X = kegg,
+      FUN = function(.kegg) {
+        if (class(.kegg)[1] == "try-error" | is.null(.kegg)) {
+          return(NULL)
+        }
+
+        as.data.table(.kegg) -> .kegg_dt
+        if (nrow(.kegg_dt) == 0) {
+          return(NULL)
+        }
+        .kegg_dt |>
+          dplyr::filter(p.adjust < 0.05) -> .kegg_filtered
+
+        .kegg_filtered |>
+          dplyr::mutate(
+            KEGG_URL = glue::glue("{kegg_url}?{ID}/{core_enrichment}")
+          ) |>
+          dplyr::mutate(
+            Symbol = purrr::map_chr(
+              .x = core_enrichment,
+              .f = function(.genes) {
+                .genes_split <- strsplit(.genes, "/")[[1]]
+                clusterProfiler::bitr(
+                  geneID = .genes_split,
+                  fromType = "ENTREZID",
+                  toType = "SYMBOL",
+                  OrgDb = org.Hs.eg.db::org.Hs.eg.db
+                ) |>
+                  dplyr::pull(SYMBOL) |>
+                  paste(collapse = "/")
+              }
+            )
+          ) -> .d
+
+        .d
+      },
+      mc.cores = nrow(vaf_kegg)
+    )
+  ) -> vaf_kegg_enrich_details
+
+source("analysis/00-colors.R")
+
+color_celltype
+
+vaf_kegg_enrich_details |>
+  dplyr::select(-kegg) |>
+  tidyr::unnest(cols = a, keep_empty = TRUE) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype,
+      levels = c("all_cells", names(color_celltype))
+    )
+  ) |>
+  dplyr::select(
+    celltype,
+    compare = filename,
+    kegg_id = ID,
+    description = Description,
+    nes = NES,
+    pvalue = pvalue,
+    p.adjust,
+    KEGG_URL,
+    Symbol,
+    core_enrichment,
+    setSize,
+    rank,
+    leading_edge
+  ) |>
+  dplyr::arrange(celltype, compare, p.adjust) |>
+  dplyr::mutate(
+    kegg_id = writexl::xl_hyperlink(
+      url = KEGG_URL,
+      name = kegg_id
+    )
+  ) -> vaf_kegg_enrich_details_final
+
+writexl::write_xlsx(
+  vaf_kegg_enrich_details_final,
+  path = fs::path(
+    dir_main_variant,
+    "4175G>A",
+    "kegg_merge_vaf",
+    "kegg_enrich_details.4175G>A.vaf.xlsx"
+  )
+)
+#
+#
+# ? don't run below --------------------------------------------------------------------
+#
+#
+
 m <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A/kegg/kegg_enrich.4175G>A.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/4175G>A/kegg_merge_new/kegg_enrich_plots.4175G>A.qs"
 )
 
 m |> dplyr::filter(celltype == "all_cells") -> mm
 mm$plot[[1]]
 
 library(clusterProfiler)
-mm
+library(enrichplot)
 
 gseaplot2(
   mm$kegg[[1]],
