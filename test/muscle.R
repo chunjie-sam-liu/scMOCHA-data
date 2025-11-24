@@ -1,9 +1,7 @@
-conn_all_hetero_af <- DBI::dbConnect(
-  duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
-)
-DBI::dbListTables(conn_all_hetero_af)
+rdsfile <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/Muscle/GSE143704/out/GSE143704.scmocha.out.rds.gz"
 
+
+d <- import(rdsfile)
 
 variants_disease_df <- data.frame(
   short = c(
@@ -168,14 +166,17 @@ variants_disease_new_df <- data.frame(
   dplyr::mutate(short = gsub("m\\.", "", Variant))
 
 
-mt_nd1_ <- c("3460G>A", "3697G>A", "3634A>G", "3380G>A")
-disease_variant <- c(
-  variants_disease_df$short,
-  variants_disease_new_df$short
-)
-
-dplyr::tbl(
-  conn_all_hetero_af,
-  "allvariants"
-) |>
-  dplyr::filter(variant %in% disease_variant)
+d |>
+  dplyr::select(srrid, anno) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::filter(Disease != "") |>
+  dplyr::mutate(
+    variant = glue::glue("{Position}{Ref}>{Alt}")
+  ) |>
+  dplyr::filter(
+    variant %in%
+      c(
+        variants_disease_df$short,
+        variants_disease_new_df$short
+      )
+  )
