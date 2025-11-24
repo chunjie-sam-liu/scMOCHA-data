@@ -190,60 +190,102 @@ tbl_allvariants |>
   ) -> tbl_allvariants_sel
 
 
-tbl_allvariants_sel |>
-  # head(20) |>
-  dplyr::mutate(
-    altsum = parallel::mcmapply(
-      FUN = function(variant, AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE) {
-        .refalt <- strsplit(
-          x = gsub("\\d+", "", variant),
-          split = ">"
-        )[[1]]
-        .ref <- .refalt[1]
-        .alt <- .refalt[2]
-        .altcount <- sum(
-          c(get(paste0(.alt, "FO")), get(paste0(.alt, "RE"))),
-          na.rm = TRUE
-        )
-        .refcount <- sum(
-          c(get(paste0(.ref, "FO")), get(paste0(.ref, "RE"))),
-          na.rm = TRUE
-        )
-        .sumcount <- sum(
-          c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE),
-          na.rm = TRUE
-        )
-        tibble::tibble(
-          altcount = .altcount,
-          refcount = .refcount,
-          sumcount = .sumcount
-        )
-      },
-      variant,
-      AFO,
-      ARE,
-      CFO,
-      CRE,
-      GFO,
-      GRE,
-      TFO,
-      TRE,
-      mc.cores = 20,
-      SIMPLIFY = FALSE
-    ),
-  ) |>
-  # dplyr::select(
-  #   -c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE)
-  # ) |>
-  tidyr::unnest(cols = altsum) -> tbl_allvariants_sumdepth
+# tbl_allvariants_sel |>
+#   # head(20) |>
+#   dplyr::mutate(
+#     altsum = parallel::mcmapply(
+#       FUN = function(variant, AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE) {
+#         .refalt <- strsplit(
+#           x = gsub("\\d+", "", variant),
+#           split = ">"
+#         )[[1]]
+#         .ref <- .refalt[1]
+#         .alt <- .refalt[2]
+#         .altcount <- sum(
+#           c(get(paste0(.alt, "FO")), get(paste0(.alt, "RE"))),
+#           na.rm = TRUE
+#         )
+#         .refcount <- sum(
+#           c(get(paste0(.ref, "FO")), get(paste0(.ref, "RE"))),
+#           na.rm = TRUE
+#         )
+#         .sumcount <- sum(
+#           c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE),
+#           na.rm = TRUE
+#         )
+#         tibble::tibble(
+#           altcount = .altcount,
+#           refcount = .refcount,
+#           sumcount = .sumcount
+#         )
+#       },
+#       variant,
+#       AFO,
+#       ARE,
+#       CFO,
+#       CRE,
+#       GFO,
+#       GRE,
+#       TFO,
+#       TRE,
+#       mc.cores = 20,
+#       SIMPLIFY = FALSE
+#     ),
+#   ) |>
+#   # dplyr::select(
+#   #   -c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE)
+#   # ) |>
+#   tidyr::unnest(cols = altsum) -> tbl_allvariants_sumdepth
 
+tbl_allvariants_sel
+{
+  refalt <- gsub("\\d+", "", tbl_allvariants_sel$variant)
+  ref <- sub(">(.*)$", "", refalt)
+  alt <- sub("^(.*)>", "", refalt)
+
+  ref_fo <- paste0(ref, "FO")
+  ref_re <- paste0(ref, "RE")
+  alt_fo <- paste0(alt, "FO")
+  alt_re <- paste0(alt, "RE")
+
+  cnt_cols <- c("AFO", "ARE", "CFO", "CRE", "GFO", "GRE", "TFO", "TRE")
+  cnt_mat <- as.matrix(tbl_allvariants_sel[, ..cnt_cols])
+
+  col_index_map <- setNames(seq_along(cnt_cols), cnt_cols)
+  n <- nrow(cnt_mat)
+  row_idx <- seq_len(n)
+
+  alt_fo_idx <- col_index_map[alt_fo]
+  alt_re_idx <- col_index_map[alt_re]
+  ref_fo_idx <- col_index_map[ref_fo]
+  ref_re_idx <- col_index_map[ref_re]
+
+  # ---- Compute counts (true vectorized) ----
+  altcount <- cnt_mat[cbind(row_idx, alt_fo_idx)] +
+    cnt_mat[cbind(row_idx, alt_re_idx)]
+
+  refcount <- cnt_mat[cbind(row_idx, ref_fo_idx)] +
+    cnt_mat[cbind(row_idx, ref_re_idx)]
+
+  sumcount <- rowSums(cnt_mat, na.rm = TRUE)
+
+  tbl_allvariants_sel |>
+    dplyr::mutate(
+      altcount = altcount,
+      refcount = refcount,
+      sumcount = sumcount
+    ) -> tbl_allvariants_sumdepth
+}
 DBI::dbListTables(conn_all_hetero_af)
 
 DBI::dbWriteTable(
   conn_all_hetero_af,
-  "allvariants_af_bulk",
+  "allvariants_altdepth_cell",
   tbl_allvariants_sumdepth,
   overwrite = TRUE,
   append = FALSE,
   temporary = FALSE
 )
+
+
+DBI::dbListTables(conn_all_hetero_af)
