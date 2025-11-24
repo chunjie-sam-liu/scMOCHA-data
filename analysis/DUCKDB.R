@@ -167,7 +167,10 @@ DBI::dbListTables(conn_all_hetero_af)
 dplyr::tbl(
   conn_all_hetero_af,
   "all_hetero_altdepth_cell"
-)
+) |>
+  dplyr::select(variant) |>
+  dplyr::distinct() |>
+  as.data.table()
 
 dplyr::tbl(
   conn_all_hetero_af,
@@ -184,4 +187,63 @@ tbl_allvariants |>
       variant_in_cell_cluster,
       pos
     )
-  )
+  ) -> tbl_allvariants_sel
+
+
+tbl_allvariants_sel |>
+  # head(20) |>
+  dplyr::mutate(
+    altsum = parallel::mcmapply(
+      FUN = function(variant, AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE) {
+        .refalt <- strsplit(
+          x = gsub("\\d+", "", variant),
+          split = ">"
+        )[[1]]
+        .ref <- .refalt[1]
+        .alt <- .refalt[2]
+        .altcount <- sum(
+          c(get(paste0(.alt, "FO")), get(paste0(.alt, "RE"))),
+          na.rm = TRUE
+        )
+        .refcount <- sum(
+          c(get(paste0(.ref, "FO")), get(paste0(.ref, "RE"))),
+          na.rm = TRUE
+        )
+        .sumcount <- sum(
+          c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE),
+          na.rm = TRUE
+        )
+        tibble::tibble(
+          altcount = .altcount,
+          refcount = .refcount,
+          sumcount = .sumcount
+        )
+      },
+      variant,
+      AFO,
+      ARE,
+      CFO,
+      CRE,
+      GFO,
+      GRE,
+      TFO,
+      TRE,
+      mc.cores = 20,
+      SIMPLIFY = FALSE
+    ),
+  ) |>
+  # dplyr::select(
+  #   -c(AFO, ARE, CFO, CRE, GFO, GRE, TFO, TRE)
+  # ) |>
+  tidyr::unnest(cols = altsum) -> tbl_allvariants_sumdepth
+
+DBI::dbListTables(conn_all_hetero_af)
+
+DBI::dbWriteTable(
+  conn_all_hetero_af,
+  "allvariants_af_bulk",
+  tbl_allvariants_sumdepth,
+  overwrite = TRUE,
+  append = FALSE,
+  temporary = FALSE
+)
