@@ -66,18 +66,34 @@ tbl_allvariants <- conn_all_hetero_af |>
 tbl_gseid_srrid_variant <- conn_all_hetero_af |>
   dplyr::tbl("gseid_srrid_variant")
 
-tbl_gseid_srrid_variant |>
+conn_all_hetero_af |>
+  dplyr::tbl("gseid_srrid_variant")
+
+tbl_gseid_srrid_variant
+
+gseid_srrid_variant |>
   dplyr::collect() |>
   dplyr::mutate(
     a = purrr::map(
       .x = variant_alltype,
       ~ {
-        jsonlite::fromJSON(.x) |>
-          purrr::pluck("heteroplasmic_variant") -> .v
-        if (length(.v) == 0) {
+        # a$variant_alltype[[1]] -> .x
+        jsonlite::fromJSON(.x) -> .j
+        purrr::pluck(.j, "heteroplasmic_variant") |> unlist() -> .v_hete
+        purrr::pluck(.j, "homoplasmic_variant") |> unlist() -> .v_homo
+
+        tibble::tibble(
+          variant = c(.v_hete, .v_homo),
+          variant_type = c(
+            rep("heteroplasmic", length(.v_hete)),
+            rep("homoplasmic", length(.v_homo))
+          )
+        ) -> .d
+
+        if (length(.v_hete) == 0 & length(.v_homo) == 0) {
           return(NULL)
         } else {
-          return(tibble::tibble(variant = .v))
+          return(.d)
         }
       }
     )
@@ -1209,6 +1225,8 @@ thevariants <- c(
 )
 
 
+thevariants <- c("10398A>G")
+thevariant <- "10398A>G"
 # thevariants <- c(thevariants, disease_variant$variant) |> unique()
 gseid_srrid_variant_hetero |>
   # head(20) |>

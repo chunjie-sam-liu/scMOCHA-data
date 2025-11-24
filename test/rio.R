@@ -344,6 +344,25 @@ DBI::dbListTables(conn)
 gse_data_variant_heteroplasmic |>
   dplyr::select(gseid, srrid, heteroplasmic) |>
   dplyr::mutate(
+    a = purrr::map(
+      .x = heteroplasmic,
+      .f = \(.x) {
+        .x |>
+          tibble::enframe() |>
+          tidyr::unnest(cols = value)
+      }
+    )
+  ) |>
+  dplyr::select(-heteroplasmic) |>
+  tidyr::unnest(cols = c(a)) -> m
+
+m |>
+  dplyr::filter(value == "10398A>G") |>
+  dplyr::filter(name == "homoplasmic_variant") -> mm
+
+gse_data_variant_heteroplasmic |>
+  dplyr::select(gseid, srrid, heteroplasmic) |>
+  dplyr::mutate(
     a = purrr::map_chr(
       heteroplasmic,
       \(.x) {
@@ -378,6 +397,61 @@ DBI::dbWriteTable(
 )
 DBI::dbListTables(conn)
 
+# gseid_srrid_variant |>
+#   dplyr::mutate(
+#     a = purrr::map(
+#       .x = variant_alltype,
+#       .f = \(.x) {
+#         jsonlite::fromJSON(.x) |>
+#           tibble::enframe() |>
+#           dplyr::filter(
+#             purrr::map_lgl(
+#               .x = value,
+#               .f = function(.x) {
+#                 length(.x) != 0
+#               }
+#             )
+#           ) |>
+#           tidyr::unnest(cols = value)
+#       }
+#     )
+#   ) |>
+#   dplyr::select(-variant_alltype) |>
+#   tidyr::unnest(cols = a) |>
+#   dplyr::filter(value == "10398A>G") |>
+#   dplyr::count(name)
+
+gseid_srrid_variant |>
+  dplyr::mutate(
+    a = purrr::map(
+      .x = variant_alltype,
+      ~ {
+        # a$variant_alltype[[1]] -> .x
+        jsonlite::fromJSON(.x) -> .j
+        purrr::pluck(.j, "heteroplasmic_variant") |> unlist() -> .v_hete
+        purrr::pluck(.j, "homoplasmic_variant") |> unlist() -> .v_homo
+
+        tibble::tibble(
+          variant = c(.v_hete, .v_homo),
+          variant_type = c(
+            rep("heteroplasmic", length(.v_hete)),
+            rep("homoplasmic", length(.v_homo))
+          )
+        ) -> .d
+
+        if (length(.v_hete) == 0 & length(.v_homo) == 0) {
+          return(NULL)
+        } else {
+          return(.d)
+        }
+      }
+    )
+  ) |>
+  dplyr::select(-variant_alltype) |>
+  tidyr::unnest(cols = c(a)) |>
+  dplyr::filter(variant == thevariant) -> mn
+
+mm |> dplyr::filter(!srrid %in% mn$srrid)
 
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 dbdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/db"
