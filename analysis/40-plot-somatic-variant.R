@@ -69,9 +69,8 @@ tbl_gseid_srrid_variant <- conn_all_hetero_af |>
 conn_all_hetero_af |>
   dplyr::tbl("gseid_srrid_variant")
 
-tbl_gseid_srrid_variant
 
-gseid_srrid_variant |>
+tbl_gseid_srrid_variant |>
   dplyr::collect() |>
   dplyr::mutate(
     a = purrr::map(
@@ -1294,6 +1293,9 @@ variant_individuals |>
       variant,
       gse_srr,
       ~ {
+        # .x <- variant_individuals$variant[[1]]
+        # .y <- variant_individuals$gse_srr[[1]]
+
         .y |> dplyr::mutate(variant = .x) -> .d
         fn_plot_hetero_pseudo_bulk(.d) -> .p
         .p

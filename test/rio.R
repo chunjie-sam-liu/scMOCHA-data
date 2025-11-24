@@ -635,6 +635,11 @@ DBI::dbWriteTable(
 # "
 # )
 
+dplyr::tbl(conn_all_hetero_af, "all_hetero_af_bulk") |>
+  dplyr::select(variant) |>
+  dplyr::distinct() |>
+  as.data.table()
+
 DBI::dbListTables(conn_all_hetero_af)
 all_hetero_af_bulk <- import(
   "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/all_hetero_af.bulk.fst"
