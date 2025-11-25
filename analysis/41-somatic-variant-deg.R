@@ -50,6 +50,93 @@ gseid_srrid_variant_hetero_plot_ratio <- import(
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
+#' Very important function
+#' @example fn_plot_cell_af_depth_forplot("10398A>G", "GSM5494107")
+fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
+  conn <- DBI::dbConnect(
+    duckdb::duckdb(),
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+    read_only = TRUE
+  )
+  source("analysis/00-colors.R")
+
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
+
+  dplyr::tbl(
+    conn,
+    "allvariants_cell"
+  ) |>
+    dplyr::filter(
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    dplyr::collect() |>
+    dplyr::mutate(
+      variant_type = dplyr::case_match(
+        variant_type,
+        "colorful" ~ "red",
+        "black" ~ "darkblue",
+        "white" ~ "white",
+        "grey" ~ "gray",
+        NA ~ "white"
+      )
+    ) |>
+    dplyr::mutate(
+      variant_type = factor(
+        variant_type,
+        levels = color_variantcell
+      )
+    ) |>
+    dplyr::arrange(
+      variant_type,
+      -af
+    ) -> forplot_
+
+  forplot_ |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = forplot_$barcode
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        names(color_celltype)
+      )
+    ) |>
+    dplyr::mutate(
+      af = ifelse(
+        af < 0.01,
+        NA_real_,
+        af
+      )
+    ) |>
+    # dplyr::mutate(
+    #   variant_type = as.character(variant_type),
+    # ) |>
+    dplyr::mutate(
+      depth = log2(depth + 1) # log2 transform to reduce skewness
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = colorcode[variant_type]
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = factor(
+        cellvarianttype,
+        levels = colorcode
+      )
+    ) -> forplot
+  DBI::dbDisconnect(conn, shutdown = TRUE)
+  forplot
+}
 
 fn_load_sc_and_sct <- function(.filepath, thegseid, thesrrid, forplot_) {
   .sc <- import(.filepath)
@@ -59,13 +146,13 @@ fn_load_sc_and_sct <- function(.filepath, thegseid, thesrrid, forplot_) {
   sc_azimuth@meta.data |>
     tibble::rownames_to_column("barcode") |>
     as.data.table() |>
-    dplyr::left_join(
-      forplot_ |>
-        as.data.table() |>
-        dplyr::mutate(
-          barcode = as.character(barcode)
-        ),
-    ) |>
+    # dplyr::left_join(
+    #   forplot_ |>
+    #     as.data.table() |>
+    #     dplyr::mutate(
+    #       barcode = as.character(barcode)
+    #     ),
+    # ) |>
     dplyr::mutate(
       barcode_new = glue::glue("{thegseid}-{thesrrid}-{barcode}")
     ) |>
@@ -182,6 +269,10 @@ fn_de <- function(
     "markers"
   )
   dir_create(.dir_markers)
+  forplot_ <- fn_plot_cell_af_depth_forplot(
+    thevariant = thevariant,
+    thesrrid = thesrrid
+  )
 
   .sct_filepath <- path(
     .dir_de,
@@ -195,6 +286,17 @@ fn_de <- function(
         subset = predicted.celltype.l1 == .celltype
       )
   }
+  sc_azimuth@meta.data |>
+    as.data.table() |>
+    dplyr::left_join(
+      forplot_ |>
+        as.data.table() |>
+        dplyr::mutate(
+          barcode = as.character(barcode)
+        ),
+    ) |>
+    as.data.frame() -> .d_merge
+  sc_azimuth@meta.data <- .d_merge
 
   sc_azimuth@meta.data |>
     dplyr::count(cellvarianttype) |>
@@ -553,10 +655,10 @@ filtered_data |>
       FUN = \(thegseid, thesrrid, thevariant, forplot_) {
         tryCatch(
           expr = {
-            # thegseid <- filtered_data$gseid[[363]]
-            # thesrrid <- filtered_data$srrid[[363]]
-            # thevariant <- filtered_data$variant[[363]]
-            # forplot_ <- filtered_data$forplot[[363]]
+            # thegseid <- filtered_data$gseid[[1]]
+            # thesrrid <- filtered_data$srrid[[1]]
+            # thevariant <- filtered_data$variant[[1]]
+            # forplot_ <- filtered_data$forplot[[1]]
             fn_sct(
               thegseid = thegseid,
               thesrrid = thesrrid,
@@ -631,8 +733,8 @@ filtered_data_new |>
         # thegseid <- filtered_data_new$gseid[[1]]
         # thesrrid <- filtered_data_new$srrid[[1]]
         # thevariant <- filtered_data_new$variant[[1]]
-        # celltype <- filtered_data_new$celltype[[1]]
-        # vs <- filtered_data_new$vs[[1]]
+        # .celltype <- filtered_data_new$celltype[[1]]
+        # .vs <- filtered_data_new$vs[[1]]
 
         tryCatch(
           expr = {
