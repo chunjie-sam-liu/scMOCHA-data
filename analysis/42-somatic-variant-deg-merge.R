@@ -287,6 +287,95 @@ fn_variant_go <- function(markers, .variant) {
   )
 }
 
+#' Very important function
+#' @example fn_plot_cell_af_depth_forplot("10398A>G", "GSM5494107")
+fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
+  conn <- DBI::dbConnect(
+    duckdb::duckdb(),
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+    read_only = TRUE
+  )
+  source("analysis/00-colors.R")
+
+  colorcode <- setNames(names(color_variantcell), color_variantcell)
+
+  dplyr::tbl(
+    conn,
+    "allvariants_cell"
+  ) |>
+    dplyr::filter(
+      srrid == thesrrid,
+      variant == thevariant
+    ) |>
+    dplyr::collect() |>
+    dplyr::mutate(
+      variant_type = dplyr::case_match(
+        variant_type,
+        "colorful" ~ "red",
+        "black" ~ "darkblue",
+        "white" ~ "white",
+        "grey" ~ "gray",
+        NA ~ "white"
+      )
+    ) |>
+    dplyr::mutate(
+      variant_type = factor(
+        variant_type,
+        levels = color_variantcell
+      )
+    ) |>
+    dplyr::arrange(
+      variant_type,
+      -af
+    ) -> forplot_
+
+  forplot_ |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = forplot_$barcode
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = gsub(
+        "_",
+        " ",
+        celltype
+      )
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        names(color_celltype)
+      )
+    ) |>
+    dplyr::mutate(
+      af = ifelse(
+        af < 0.01,
+        NA_real_,
+        af
+      )
+    ) |>
+    # dplyr::mutate(
+    #   variant_type = as.character(variant_type),
+    # ) |>
+    dplyr::mutate(
+      depth = log2(depth + 1) # log2 transform to reduce skewness
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = colorcode[variant_type]
+    ) |>
+    dplyr::mutate(
+      cellvarianttype = factor(
+        cellvarianttype,
+        levels = colorcode
+      )
+    ) -> forplot
+  DBI::dbDisconnect(conn, shutdown = TRUE)
+  forplot
+}
+
+
 # body --------------------------------------------------------------------
 thevariants <- c(
   "3173G>A",
@@ -303,7 +392,8 @@ thevariants <- c(
   "5513G>A",
   "7065G>A",
   "9025G>A",
-  "9237G>A"
+  "9237G>A",
+  "10398A>G"
 )
 
 gseid_srrid_variant |>
@@ -327,9 +417,9 @@ gseid_srrid_variant |>
 
 gseid_srrid_variant_sc |>
   tidyr::nest(.by = "variant") |>
-  dplyr::filter(
-    !variant %in% c("3176A>T", "3173G>A", "3178T>A", "3728C>T", "3727T>C")
-  ) |> # these three variants already merged before
+  # dplyr::filter(
+  #   !variant %in% c("3176A>T", "3173G>A", "3178T>A", "3728C>T", "3727T>C")
+  # ) |>
   dplyr::mutate(
     data_merge = purrr::map2(
       .x = data,
@@ -352,13 +442,33 @@ gseid_srrid_variant_sc |>
           glue::glue("sc_merge.sct.{thevariant}.qs")
         )
 
-        if (file_exists(sc_merge_path)) {
-          glue::glue(
-            "sc merge file for variant {thevariant} already exists, skip merging."
+        # if (file_exists(sc_merge_path)) {
+        #   glue::glue(
+        #     "sc merge file for variant {thevariant} already exists, skip merging."
+        #   ) |>
+        #     log_debug()
+        #   return(1)
+        # }
+
+        parallel::mclapply(
+          X = df$srrid,
+          FUN = function(thesrrid) {
+            fn_plot_cell_af_depth_forplot(
+              thevariant = thevariant,
+              thesrrid = thesrrid
+            )
+          },
+          mc.cores = 10
+        ) |>
+          dplyr::bind_rows() |>
+          dplyr::mutate(
+            barcode_new = glue::glue("{gseid}-{srrid}-{barcode}")
           ) |>
-            log_debug()
-          return(1)
-        }
+          as.data.table() -> forplot_list
+        # forplot_ <- fn_plot_cell_af_depth_forplot(
+        #   thevariant = thevariant,
+        #   thesrrid = thesrrid
+        # )
 
         parallel::mclapply(
           sc_list,
@@ -408,6 +518,20 @@ gseid_srrid_variant_sc |>
             "Less than 2 sc objects for variant {thevariant}, cannot merge."
           )
           sc_merge <- sc_list_loaded[[1]]
+          sc_merge@meta.data |>
+            tibble::rownames_to_column("barcode_new") |>
+            as.data.table() |>
+            dplyr::left_join(
+              forplot_list |>
+                dplyr::select(
+                  -c(barcode, celltype)
+                ),
+              by = "barcode_new"
+            ) |>
+            as.data.frame() |>
+            tibble::column_to_rownames("barcode_new") -> .d_merge
+
+          sc_merge@meta.data <- .d_merge
         } else {
           # sc_merge <- merge(
           #   x = sc_list_loaded[[1]],
@@ -417,6 +541,21 @@ gseid_srrid_variant_sc |>
           sc_merge <- fn_merge_with_progress(
             sc_list_loaded
           ) # not merge the scale.data, for memory sake
+
+          sc_merge@meta.data |>
+            tibble::rownames_to_column("barcode_new") |>
+            as.data.table() |>
+            dplyr::left_join(
+              forplot_list |>
+                dplyr::select(
+                  -c(barcode, celltype)
+                ),
+              by = "barcode_new"
+            ) |>
+            as.data.frame() |>
+            tibble::column_to_rownames("barcode_new") -> .d_merge
+
+          sc_merge@meta.data <- .d_merge
         }
         rm(sc_list_loaded)
         gc()

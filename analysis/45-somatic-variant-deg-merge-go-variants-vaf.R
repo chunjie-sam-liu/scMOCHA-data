@@ -853,7 +853,8 @@ thevariants <- c(
   "5513G>A",
   "7065G>A",
   "9025G>A",
-  "9237G>A"
+  "9237G>A",
+  "10398A>G"
 )
 vss <- list(
   c("Heteroplasmy", "Sufficient reads"),
