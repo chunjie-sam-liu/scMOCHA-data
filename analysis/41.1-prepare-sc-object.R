@@ -51,7 +51,7 @@ conn_all_hetero_af <- DBI::dbConnect(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
 )
 DBI::dbListTables(conn_all_hetero_af)
-DBI::dbDisconnect(conn_all_hetero_af)
+# DBI::dbDisconnect(conn_all_hetero_af)
 gseid_srrid_srrdir <- dplyr::tbl(
   conn_all_hetero_af,
   "gseid_srrid_srrdir"
@@ -69,13 +69,13 @@ fn_load_sc_and_sct <- function(.filepath, thegseid, thesrrid, ...) {
   sc_azimuth@meta.data |>
     tibble::rownames_to_column("barcode") |>
     as.data.table() |>
-    dplyr::left_join(
-      forplot_ |>
-        as.data.table() |>
-        dplyr::mutate(
-          barcode = as.character(barcode)
-        ),
-    ) |>
+    # dplyr::left_join(
+    #   forplot_ |>
+    #     as.data.table() |>
+    #     dplyr::mutate(
+    #       barcode = as.character(barcode)
+    #     ),
+    # ) |>
     dplyr::mutate(
       barcode_new = glue::glue("{thegseid}-{thesrrid}-{barcode}")
     ) |>
@@ -130,6 +130,7 @@ fn_sct <- function(
 
   sc_azimuth <- if (file_exists(.sct_filepath)) {
     log_fatal("{.sct_filepath} exists, skip!" |> glue::glue())
+    file_delete(.sct_filepath)
     return(NULL)
   } else {
     sc_azimuth <- fn_load_sc_and_sct(
