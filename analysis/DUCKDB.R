@@ -289,3 +289,4 @@ DBI::dbWriteTable(
 
 
 DBI::dbListTables(conn_all_hetero_af)
+DBI::dbDisconnect(conn_all_hetero_af, shutdown = TRUE)
