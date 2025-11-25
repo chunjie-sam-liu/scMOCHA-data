@@ -130,8 +130,8 @@ fn_sct <- function(
 
   sc_azimuth <- if (file_exists(.sct_filepath)) {
     log_fatal("{.sct_filepath} exists, skip!" |> glue::glue())
-    file_delete(.sct_filepath)
-    return(NULL)
+    # file_delete(.sct_filepath)
+    return(1)
   } else {
     sc_azimuth <- fn_load_sc_and_sct(
       .filepath = path(
@@ -145,7 +145,9 @@ fn_sct <- function(
       sc_azimuth,
       file = .sct_filepath
     )
-    sc_azimuth
+    rm(sc_azimuth)
+    gc()
+    1
   }
 }
 
@@ -161,7 +163,7 @@ gseid_srrid_srrdir |>
       SIMPLIFY = FALSE,
       mc.cores = 20
     )
-  )
+  ) -> gseid_srrid_srrdir_sct
 
 # footer ------------------------------------------------------------------
 
