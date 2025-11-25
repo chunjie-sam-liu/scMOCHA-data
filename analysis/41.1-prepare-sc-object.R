@@ -158,6 +158,7 @@ gseid_srrid_srrdir |>
       FUN = fn_sct,
       thegseid = gseid,
       thesrrid = srrid,
+      SIMPLIFY = FALSE,
       mc.cores = 20
     )
   )
