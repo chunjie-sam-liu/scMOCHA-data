@@ -287,22 +287,25 @@ fn_variant_go <- function(markers, .variant) {
   )
 }
 
+
+conn <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  read_only = TRUE
+)
+dplyr::tbl(
+  conn,
+  "allvariants_cell"
+) -> tbl_allvariants_cell
+
 #' Very important function
 #' @example fn_plot_cell_af_depth_forplot("10398A>G", "GSM5494107")
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
-    read_only = TRUE
-  )
   source("analysis/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
-  dplyr::tbl(
-    conn,
-    "allvariants_cell"
-  ) |>
+  tbl_allvariants_cell |>
     dplyr::filter(
       srrid == thesrrid,
       variant == thevariant
@@ -371,8 +374,163 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
         levels = colorcode
       )
     ) -> forplot
-  DBI::dbDisconnect(conn, shutdown = TRUE)
   forplot
+}
+
+fn_merge_sc_list_variant <- function(df, thevariant) {
+  # df <- a$data[[5]]
+  # thevariant <- a$variant[[5]]
+  library(Seurat)
+  log_info("Merging sc objects for variant {thevariant}")
+  sc_list <- df |> dplyr::pull(sc_file)
+
+  .outdir <- path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+    thevariant,
+    "/deg_merge/"
+  )
+  dir_create(.outdir)
+
+  sc_merge_path <- path(
+    .outdir,
+    glue::glue("sc_merge.sct.{thevariant}.qs")
+  )
+
+  # if (file_exists(sc_merge_path)) {
+  #   glue::glue(
+  #     "sc merge file for variant {thevariant} already exists, skip merging."
+  #   ) |>
+  #     log_debug()
+  #   return(1)
+  # }
+  log_info("loading forplot for variant {thevariant}")
+  parallel::mclapply(
+    X = df$srrid,
+    FUN = function(thesrrid) {
+      fn_plot_cell_af_depth_forplot(
+        thevariant = thevariant,
+        thesrrid = thesrrid
+      )
+    },
+    mc.cores = 10
+  ) |>
+    dplyr::bind_rows() |>
+    dplyr::mutate(
+      barcode_new = glue::glue("{gseid}-{srrid}-{barcode}")
+    ) |>
+    as.data.table() -> forplot_list
+  # forplot_ <- fn_plot_cell_af_depth_forplot(
+  #   thevariant = thevariant,
+  #   thesrrid = thesrrid
+  # )
+  log_info("Loading sc objects for variant {thevariant}")
+  parallel::mclapply(
+    sc_list,
+    function(f) {
+      .sc <- import(f)
+      .sc[["SCT"]]@scale.data <- matrix()
+      .sc
+    },
+    mc.cores = 10
+  ) -> sc_list_loaded
+
+  log_fatal(
+    "Loaded {length(sc_list_loaded)} sc objects for variant {thevariant}"
+  )
+
+  parallel::mclapply(
+    sc_list_loaded,
+    Seurat::VariableFeatures,
+    mc.cores = 10
+  ) |>
+    unlist() |>
+    unique() -> var_features
+
+  fn_merge_with_progress <- function(sc_list_loaded, ...) {
+    n <- length(sc_list_loaded)
+    out <- sc_list_loaded[[1]]
+    cli::cli_progress_bar(
+      "Merging Seurat objects",
+      total = n - 1,
+      format = "{cli::pb_bar} {cli::pb_percent} ({cli::pb_current}/{cli::pb_total})"
+    )
+    for (i in 2:n) {
+      cli::cli_progress_update()
+      out <- merge(
+        out,
+        sc_list_loaded[[i]],
+        merge.data = FALSE,
+        ...
+      )
+    }
+    cli::cli_progress_done()
+    return(out)
+  }
+
+  log_info("Merging sc objects for variant {thevariant}")
+
+  if (length(sc_list_loaded) < 2) {
+    glue::glue(
+      "Less than 2 sc objects for variant {thevariant}, cannot merge."
+    )
+    sc_merge <- sc_list_loaded[[1]]
+    sc_merge@meta.data |>
+      tibble::rownames_to_column("barcode_new") |>
+      as.data.table() |>
+      dplyr::left_join(
+        forplot_list |>
+          dplyr::select(
+            -c(barcode, celltype)
+          ),
+        by = "barcode_new"
+      ) |>
+      as.data.frame() |>
+      tibble::column_to_rownames("barcode_new") -> .d_merge
+
+    sc_merge@meta.data <- .d_merge
+  } else {
+    # sc_merge <- merge(
+    #   x = sc_list_loaded[[1]],
+    #   y = sc_list_loaded[2:length(sc_list_loaded)],
+    #   merge.data = FALSE # not merge the scale.data, for memory sake
+    # )
+    sc_merge <- fn_merge_with_progress(
+      sc_list_loaded
+    ) # not merge the scale.data, for memory sake
+
+    sc_merge@meta.data |>
+      tibble::rownames_to_column("barcode_new") |>
+      as.data.table() |>
+      dplyr::left_join(
+        forplot_list |>
+          dplyr::select(
+            -c(barcode, celltype)
+          ),
+        by = "barcode_new"
+      ) |>
+      as.data.frame() |>
+      tibble::column_to_rownames("barcode_new") -> .d_merge
+
+    sc_merge@meta.data <- .d_merge
+  }
+  log_success(
+    "Merged sc object for variant {thevariant} with {ncol(sc_merge)} cells."
+  )
+  rm(sc_list_loaded)
+  gc()
+
+  Seurat::VariableFeatures(sc_merge) <- var_features
+
+  log_info("Exporting merged sc object for variant {thevariant}")
+  export(
+    sc_merge,
+    sc_merge_path
+  )
+
+  # sc_merge
+  rm(sc_merge)
+  gc()
+  1
 }
 
 
@@ -414,6 +572,7 @@ gseid_srrid_variant |>
     file_exists = file.exists(sc_file)
   ) -> gseid_srrid_variant_sc
 
+gseid_srrid_variant_sc |> dplyr::count(variant)
 
 gseid_srrid_variant_sc |>
   tidyr::nest(.by = "variant") |>
@@ -424,156 +583,102 @@ gseid_srrid_variant_sc |>
     data_merge = purrr::map2(
       .x = data,
       .y = variant,
-      .f = function(df, thevariant) {
-        # df <- a$data[[5]]
-        # thevariant <- a$variant[[5]]
-        library(Seurat)
-        sc_list <- df |> dplyr::pull(sc_file)
-
-        .outdir <- path(
-          "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
-          thevariant,
-          "/deg_merge/"
-        )
-        dir_create(.outdir)
-
-        sc_merge_path <- path(
-          .outdir,
-          glue::glue("sc_merge.sct.{thevariant}.qs")
-        )
-
-        # if (file_exists(sc_merge_path)) {
-        #   glue::glue(
-        #     "sc merge file for variant {thevariant} already exists, skip merging."
-        #   ) |>
-        #     log_debug()
-        #   return(1)
-        # }
-
-        parallel::mclapply(
-          X = df$srrid,
-          FUN = function(thesrrid) {
-            fn_plot_cell_af_depth_forplot(
-              thevariant = thevariant,
-              thesrrid = thesrrid
-            )
-          },
-          mc.cores = 10
-        ) |>
-          dplyr::bind_rows() |>
-          dplyr::mutate(
-            barcode_new = glue::glue("{gseid}-{srrid}-{barcode}")
-          ) |>
-          as.data.table() -> forplot_list
-        # forplot_ <- fn_plot_cell_af_depth_forplot(
-        #   thevariant = thevariant,
-        #   thesrrid = thesrrid
-        # )
-
-        parallel::mclapply(
-          sc_list,
-          function(f) {
-            .sc <- import(f)
-            .sc[["SCT"]]@scale.data <- matrix()
-            .sc
-          },
-          mc.cores = 10
-        ) -> sc_list_loaded
-
-        log_fatal(
-          "Loaded {length(sc_list_loaded)} sc objects for variant {thevariant}"
-        )
-
-        parallel::mclapply(
-          sc_list_loaded,
-          Seurat::VariableFeatures,
-          mc.cores = 10
-        ) |>
-          unlist() |>
-          unique() -> var_features
-
-        fn_merge_with_progress <- function(sc_list_loaded, ...) {
-          n <- length(sc_list_loaded)
-          out <- sc_list_loaded[[1]]
-          cli::cli_progress_bar(
-            "Merging Seurat objects",
-            total = n - 1,
-            format = "{cli::pb_bar} {cli::pb_percent} ({cli::pb_current}/{cli::pb_total})"
-          )
-          for (i in 2:n) {
-            cli::cli_progress_update()
-            out <- merge(
-              out,
-              sc_list_loaded[[i]],
-              merge.data = FALSE,
-              ...
-            )
-          }
-          cli::cli_progress_done()
-          return(out)
-        }
-
-        if (length(sc_list_loaded) < 2) {
-          glue::glue(
-            "Less than 2 sc objects for variant {thevariant}, cannot merge."
-          )
-          sc_merge <- sc_list_loaded[[1]]
-          sc_merge@meta.data |>
-            tibble::rownames_to_column("barcode_new") |>
-            as.data.table() |>
-            dplyr::left_join(
-              forplot_list |>
-                dplyr::select(
-                  -c(barcode, celltype)
-                ),
-              by = "barcode_new"
-            ) |>
-            as.data.frame() |>
-            tibble::column_to_rownames("barcode_new") -> .d_merge
-
-          sc_merge@meta.data <- .d_merge
-        } else {
-          # sc_merge <- merge(
-          #   x = sc_list_loaded[[1]],
-          #   y = sc_list_loaded[2:length(sc_list_loaded)],
-          #   merge.data = FALSE # not merge the scale.data, for memory sake
-          # )
-          sc_merge <- fn_merge_with_progress(
-            sc_list_loaded
-          ) # not merge the scale.data, for memory sake
-
-          sc_merge@meta.data |>
-            tibble::rownames_to_column("barcode_new") |>
-            as.data.table() |>
-            dplyr::left_join(
-              forplot_list |>
-                dplyr::select(
-                  -c(barcode, celltype)
-                ),
-              by = "barcode_new"
-            ) |>
-            as.data.frame() |>
-            tibble::column_to_rownames("barcode_new") -> .d_merge
-
-          sc_merge@meta.data <- .d_merge
-        }
-        rm(sc_list_loaded)
-        gc()
-
-        Seurat::VariableFeatures(sc_merge) <- var_features
-
-        export(
-          sc_merge,
-          sc_merge_path
-        )
-
-        # sc_merge
-        rm(sc_merge)
-        gc()
-        1
-      }
+      .f = fn_merge_sc_list_variant
     )
   ) -> gseid_srrid_variant_sc_merged
+
+
+#
+#
+# ? check merge file --------------------------------------------------------------------
+#
+#
+
+gseid_srrid_variant_sc |>
+  dplyr::select(variant) |>
+  dplyr::distinct() |>
+  dplyr::mutate(
+    variant_dir = path(
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/",
+      variant,
+      "/deg_merge/"
+    )
+  ) |>
+  dplyr::mutate(
+    merge_sct = path(
+      variant_dir,
+      glue::glue("sc_merge.sct.{variant}.qs")
+    )
+  ) |>
+  dplyr::mutate(
+    file_exists = file_exists(merge_sct)
+  ) -> gseid_srrid_variant_sc_merged_check
+
+gseid_srrid_variant_sc_merged_check |>
+  dplyr::filter(!variant %in% c("3173G>A", "3176A>T")) |>
+  # head(2) |>
+  dplyr::mutate(
+    variant_load = parallel::mcmapply(
+      FUN = \(merge_sct) {
+        # merge_sct <- gseid_srrid_variant_sc_merged_check$merge_sct[[1]]
+        log_info("Start processing {merge_sct}")
+        if (!file_exists(merge_sct)) {
+          return(NULL)
+        } else {
+          log_info("Importing merged sc for {merge_sct}")
+          .sc <- import(merge_sct)
+          .variant <- .sc$variant |>
+            unique() |>
+            na.omit() |>
+            as.character()
+          rm(.sc)
+          gc()
+          return(.variant)
+        }
+      },
+      merge_sct,
+      mc.cores = 10,
+      SIMPLIFY = FALSE
+    )
+  ) -> gseid_srrid_variant_sc_merged_check_load
+
+
+gseid_srrid_variant_sc_merged_check_load |>
+  dplyr::mutate(
+    thesamevariant = purrr::map2_lgl(
+      .x = variant,
+      .y = variant_load,
+      .f = \(v1, v2) {
+        # v1 <- gseid_srrid_variant_sc_merged_check_load$variant[[1]]
+        # v2 <- gseid_srrid_variant_sc_merged_check_load$variant_load[[1]]
+        if (is.null(v2)) {
+          return(FALSE)
+        }
+        if (all(v1 == v2)) {
+          return(TRUE)
+        } else {
+          return(FALSE)
+        }
+      }
+    )
+  ) |>
+  dplyr::filter(
+    !thesamevariant
+  ) -> gseid_srrid_variant_sc_merged_check_load_issue
+
+gseid_srrid_variant_sc |>
+  tidyr::nest(.by = "variant") |>
+  dplyr::filter(
+    variant %in% gseid_srrid_variant_sc_merged_check_load_issue$variant
+  ) |>
+  dplyr::mutate(
+    data_merge = purrr::map2(
+      .x = data,
+      .y = variant,
+      .f = fn_merge_sc_list_variant
+    )
+  ) -> gseid_srrid_variant_sc_merged_fixed
+
 
 # export(
 #   gseid_srrid_variant_sc_merged,
