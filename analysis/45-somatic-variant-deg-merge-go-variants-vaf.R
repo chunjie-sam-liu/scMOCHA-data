@@ -8,18 +8,21 @@
 
 # Library -----------------------------------------------------------------
 
-suppressPackageStartupMessages(library(magrittr))
-library(ggplot2)
-library(patchwork)
-library(prismatic)
-library(paletteer)
-library(data.table)
-#library(rlang)
-library(glue)
-library(parallel)
-library(GetoptLong)
-library(logger)
-library(scales)
+load_pkg(
+  ggplot2,
+  patchwork,
+  prismatic,
+  paletteer,
+  data.table,
+  glue,
+  parallel,
+  GetoptLong,
+  scales,
+  fs,
+  jutils,
+  logger
+)
+
 
 # args --------------------------------------------------------------------
 
@@ -319,16 +322,6 @@ fn_variant_go <- function(markers, .variant) {
   )
 }
 
-sanitize_filename <- function(x) {
-  x %>%
-    gsub(">", "GT", ., fixed = TRUE) %>%
-    gsub("<", "LT", ., fixed = TRUE) %>%
-    gsub("%", "pct", ., fixed = TRUE) %>%
-    gsub("=", "-", ., fixed = TRUE) %>%
-    gsub("[()]", "", .) %>%
-    gsub("[[:space:]]+", "_", .) %>%
-    trimws()
-}
 
 fn_de_ <- function(
   thevariant,
@@ -614,7 +607,7 @@ fn_variant_ <- function(
         cellvarianttype == "Heteroplasmy" &
           af < .low ~
           glue::glue("{.label_low}"),
-        TRUE ~ cellvarianttype
+        TRUE ~ as.character(cellvarianttype)
       )
     ) -> sc@meta.data
 
@@ -713,7 +706,7 @@ fn_variant_vaf_ <- function(
         cellvarianttype == "Heteroplasmy" &
           af < .low ~
           glue::glue("{.label_low}"),
-        TRUE ~ cellvarianttype
+        TRUE ~ as.character(cellvarianttype)
       )
     ) -> sc@meta.data
 
@@ -874,11 +867,16 @@ vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
 #
 
 thevariant <- "4175G>A"
+
 thevariants |>
   purrr::map(
     .f = \(thevariant) {
-      sc <- fn_load_sc(thevariant)
+      log_info("Processing variant {thevariant}")
 
+      sc <- fn_load_sc(thevariant)
+      log_success("Loaded sc for variant {thevariant}")
+
+      log_info("Running variant analysis for {thevariant} with vss")
       parallel::mclapply(
         vaf_cutoff,
         function(.vs) {
@@ -891,6 +889,7 @@ thevariants |>
         },
         mc.cores = length(vaf_cutoff)
       )
+      log_success("Finished variant analysis for {thevariant} with vss")
 
       purrr::map(
         vaf_cutoff,
@@ -903,4 +902,4 @@ thevariants |>
         }
       )
     }
-  )
+  ) -> res_all_variants
