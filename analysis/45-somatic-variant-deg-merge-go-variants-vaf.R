@@ -868,6 +868,13 @@ vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
 
 thevariant <- "4175G>A"
 
+# thevariants <- c(
+#   "4175G>A",
+#   "9025G>A",
+#   "10398A>G",
+#   "13271T>C"
+# )
+
 thevariants |>
   purrr::map(
     .f = \(thevariant) {

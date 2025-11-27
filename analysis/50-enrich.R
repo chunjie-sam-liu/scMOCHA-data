@@ -8,19 +8,20 @@
 
 # Library -----------------------------------------------------------------
 
-suppressPackageStartupMessages(library(magrittr))
-library(ggplot2)
-library(patchwork)
-library(prismatic)
-library(paletteer)
-library(data.table)
-#library(rlang)
-library(glue)
-library(parallel)
-library(GetoptLong)
-library(logger)
-library(scales)
-library(fs)
+load_pkg(
+  ggplot2,
+  patchwork,
+  prismatic,
+  paletteer,
+  data.table,
+  glue,
+  parallel,
+  GetoptLong,
+  scales,
+  fs,
+  jutils,
+  logger
+)
 
 # args --------------------------------------------------------------------
 
