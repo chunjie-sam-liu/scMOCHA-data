@@ -1,0 +1,744 @@
+#!/usr/bin/env Rscript
+# Metainfo ----------------------------------------------------------------
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2025-11-29 23:01:04
+# @DESCRIPTION: this script is used for ...
+
+# Library -----------------------------------------------------------------
+
+load_pkg(
+  ggplot2,
+  patchwork,
+  prismatic,
+  paletteer,
+  data.table,
+  glue,
+  parallel,
+  GetoptLong,
+  scales,
+  fs,
+  jutils,
+  logger
+)
+
+# args --------------------------------------------------------------------
+
+# s: string, i: integer, f: float, !: boolean, @: array, %: list
+GetoptLong.options(help_style = "two-column")
+VERSION = "v0.0.1"
+
+# default: default value specified here.
+
+verbose = TRUE
+# gseid = "GSE233844" # no default gseid, current gseid is for testing
+basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+
+GetoptLong(
+  "gseid=s",
+  "GSE ID",
+  "basedir=s",
+  "GSE base directory",
+  "verbose!",
+  "print messages"
+)
+
+# header ------------------------------------------------------------------
+
+# load data ---------------------------------------------------------------
+datadir <- path(basedir, gseid)
+finaldir <- path(datadir, "final")
+outdir <- path(datadir, "out")
+dir_create(outdir)
+
+srrid_list <- readr::read_lines(
+  file = path(
+    datadir,
+    "{gseid}.srrid.list" |> glue::glue()
+  )
+)
+
+# Technical positions -------------------------------------------------------
+POS_RNA_EDITING = c(
+  585,
+  1610,
+  3238,
+  4271,
+  5520,
+  7526,
+  8303, # tRNA p9
+  9999,
+  10413,
+  12146,
+  12274,
+  14734,
+  15896, # tRNA p9
+  295,
+  2617,
+  13710 # RNA editing
+)
+
+
+POS_MISSALIGNMENT_ERROR = c(
+  66:71,
+  300:316,
+  513:525,
+  3106:3107,
+  12418:12425,
+  16182:16194
+)
+
+CUTOFF_NOTRELIABLE = 10 # Cells less than this
+CUTOFF_MIN_CELLS = 10
+CUTOFF_MIN_READS = 10
+
+# Biological excluding
+ETHNICITY = TRUE
+HOMOPLASMIC_N_CELLTYPE = 7
+CUTOFF_HOMOPLASMIC = 0.95
+CUTOFF_HETEROPLASMIC = 0.05
+
+# load conn ---------------------------------------------------------------
+
+# src ---------------------------------------------------------------------
+
+# function ----------------------------------------------------------------
+fn_cell_cluster_bulk_af <- function(.srrdir) {
+  .cellaf <- import(
+    path(.srrdir, "variant_info_from_heatmap.qs")
+  ) |>
+    dplyr::mutate(
+      ref = gsub("\\d+|>.*", "", variant),
+      alt = gsub("\\d+.*>", "", variant)
+    )
+
+  .cellaf |>
+    dplyr::select(
+      -c(af, variant_type, variant_in_cell_cluster)
+    ) -> .tt_
+
+  .tt_ |>
+    tidyr::nest(
+      .key = "reads",
+      .by = c(variant, celltype, ref, alt)
+    ) |>
+    dplyr::mutate(
+      clusteraf = purrr::pmap(
+        .l = list(reads, ref, alt),
+        .f = function(reads, ref, alt) {
+          .total_reads <- sum(reads$depth, na.rm = TRUE)
+          .alt_reads <- sum(
+            c(
+              reads[[paste0(alt, "F")]],
+              reads[[paste0(alt, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          .ref_reads <- sum(
+            c(
+              reads[[paste0(ref, "F")]],
+              reads[[paste0(ref, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          af <- sum(
+            c(
+              reads[[paste0(alt, "F")]]
+            ),
+            na.rm = TRUE
+          )
+          ar <- sum(
+            c(
+              reads[[paste0(alt, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          rf <- sum(
+            c(
+              reads[[paste0(ref, "F")]]
+            ),
+            na.rm = TRUE
+          )
+          rr <- sum(
+            c(
+              reads[[paste0(ref, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          tibble::tibble(
+            clusteraf = .alt_reads / .total_reads,
+            reff = rf,
+            refr = rr,
+            altf = af,
+            altr = ar,
+            total_reads = .total_reads,
+          ) -> .res
+
+          if (.total_reads == 0) {
+            return(
+              tibble::tibble(
+                clusteraf = NA_real_,
+                reff = NA_integer_,
+                refr = NA_integer_,
+                altf = NA_integer_,
+                altr = NA_integer_,
+                total_reads = NA_integer_
+              )
+            )
+          } else {
+            return(.res)
+          }
+        }
+      )
+    ) |>
+    dplyr::select(variant, celltype, clusteraf) |>
+    tidyr::unnest(cols = clusteraf) -> .clusteraf
+
+  .tt_ |>
+    tidyr::nest(
+      .key = "reads",
+      .by = c(variant, ref, alt)
+    ) |>
+    dplyr::mutate(
+      bulkaf = purrr::pmap(
+        .l = list(reads, ref, alt),
+        .f = function(reads, ref, alt) {
+          # reads <- a$reads[[1]]
+          # ref <- a$ref[[1]]
+          # alt <- a$alt[[1]]
+          .total_reads <- sum(reads$depth, na.rm = TRUE)
+          .alt_reads <- sum(
+            c(
+              reads[[paste0(alt, "F")]],
+              reads[[paste0(alt, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          .ref_reads <- sum(
+            c(
+              reads[[paste0(ref, "F")]],
+              reads[[paste0(ref, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          af <- sum(
+            c(
+              reads[[paste0(alt, "F")]]
+            ),
+            na.rm = TRUE
+          )
+          ar <- sum(
+            c(
+              reads[[paste0(alt, "R")]]
+            ),
+            na.rm = TRUE
+          )
+          rf <- sum(
+            c(
+              reads[[paste0(ref, "F")]]
+            ),
+            na.rm = TRUE
+          )
+          rr <- sum(
+            c(
+              reads[[paste0(ref, "R")]]
+            ),
+            na.rm = TRUE
+          )
+
+          tibble::tibble(
+            bulkaf = .alt_reads / .total_reads,
+            reff = rf,
+            refr = rr,
+            altf = af,
+            altr = ar,
+            total_reads = .total_reads,
+          ) -> .res
+
+          if (.total_reads == 0) {
+            return(
+              tibble::tibble(
+                bulkaf = NA_real_,
+                reff = NA_integer_,
+                refr = NA_integer_,
+                altf = NA_integer_,
+                altr = NA_integer_,
+                total_reads = NA_integer_
+              )
+            )
+          } else {
+            return(.res)
+          }
+        }
+      )
+    ) |>
+    dplyr::select(variant, bulkaf) |>
+    tidyr::unnest(cols = bulkaf) -> .bulkaf
+
+  list(
+    cellaf = .cellaf,
+    clusteraf = .clusteraf,
+    bulkaf = .bulkaf
+  )
+}
+
+fn_depth_all <- function(.srrdir) {
+  .depth_read <- data.table::fread(
+    path(.srrdir, "possorted_genome_bam.MT.depth"),
+    col.names = c("chrom", "pos", "depth")
+  )
+  .depth_cell <- data.table::fread(
+    path(.srrdir, "cell.coverage.txt.gz"),
+    col.names = c("pos", "barcode", "depth")
+  )
+  .barcode_celltype <- data.table::fread(
+    path(.srrdir, "barcode_cluster.tsv"),
+    col.names = c("barcode", "tag", "celltype")
+  )
+  .depth_cluster <- .depth_cell |>
+    dplyr::left_join(
+      .barcode_celltype |> dplyr::select(-tag),
+      by = "barcode"
+    ) |>
+    dplyr::group_by(pos, celltype) |>
+    dplyr::summarise(
+      depth = sum(depth, na.rm = T)
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::filter(!is.na(celltype)) |>
+    dplyr::arrange(celltype, pos)
+  .depth <- .depth_cluster |>
+    dplyr::group_by(pos) |>
+    dplyr::summarise(
+      depth = sum(depth, na.rm = T)
+    )
+  list(
+    depth_read = .depth_read,
+    depth_cluster = .depth_cluster,
+    depth = .depth
+  )
+}
+
+fn_n_cell <- function(.cellaf) {
+  # .cellaf <- af_list$cellaf
+  .cellaf |>
+    dplyr::filter(af >= CUTOFF_HETEROPLASMIC) |>
+    dplyr::filter(depth >= CUTOFF_MIN_READS) |>
+    dplyr::count(variant) |>
+    dplyr::filter(n < CUTOFF_NOTRELIABLE) |>
+    dplyr::pull(variant)
+}
+
+fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
+  # .haplo_variant_remain
+  # .clusteraf <- af_list$clusteraf
+
+  .clusteraf |>
+    dplyr::filter(
+      variant %in% .haplo_variant_remain$variant
+    ) |>
+    dplyr::filter(total_reads >= CUTOFF_MIN_READS) -> .clusteraf_remain
+
+  .clusteraf_remain |>
+    dplyr::count(
+      variant,
+      name = "n_celltypes_have_reads"
+    ) -> .clusteraf_remain_reads
+
+  .clusteraf_remain |>
+    dplyr::select(variant, celltype, clusteraf) |>
+    dplyr::mutate(
+      ishighaf = clusteraf > CUTOFF_HOMOPLASMIC
+    ) |>
+    dplyr::count(variant, ishighaf, name = "n_celltypes_have_highaf") |>
+    dplyr::filter(ishighaf) |>
+    dplyr::left_join(
+      .clusteraf_remain_reads,
+      by = "variant"
+    ) |>
+    dplyr::filter(
+      n_celltypes_have_highaf >= n_celltypes_have_reads
+    ) |>
+    # dplyr::filter(n >= HOMOPLASMIC_N_CELLTYPE) |>
+    dplyr::pull(variant) -> .homo_variant
+  .hete_variant <- setdiff(.haplo_variant_remain$variant, .homo_variant)
+
+  list(
+    homo_variant = .homo_variant,
+    hete_variant = .hete_variant
+  )
+}
+
+fn_somatic <- function(hete, .cellaf) {
+  .cellaf |>
+    dplyr::filter(
+      variant %in% hete
+    ) |>
+    dplyr::filter(depth >= CUTOFF_MIN_READS) |>
+    dplyr::select(
+      variant,
+      barcode,
+      af,
+      depth,
+      variant_type,
+      celltype
+    ) -> .hete
+
+  .hete |>
+    dplyr::count(variant, celltype, variant_type) |>
+    dplyr::filter(
+      n >= CUTOFF_MIN_CELLS
+    ) |>
+    dplyr::count(variant, variant_type) |>
+    tidyr::pivot_wider(
+      names_from = variant_type,
+      values_from = n,
+      names_prefix = "n_"
+    ) |>
+    dplyr::filter(!is.na(n_black)) |>
+    dplyr::mutate(
+      n_cells_have_variant = n_colorful,
+      n_cells_have_reads = n_black,
+    ) |>
+    dplyr::filter(
+      n_colorful < n_black
+    ) -> .dd
+  .dd$variant
+}
+
+fn_variant_classification <- function(.srrdir, .haplo_variant, af_list) {
+  # don't use raw variant_somatic.rds file, recompute here
+  # .somatic <- import(
+  #   path(.srrdir, "variant_somatic.rds")
+  # )
+  excluding_pos <- .haplo_variant |>
+    dplyr::filter(
+      Position %in%
+        c(
+          POS_MISSALIGNMENT_ERROR
+        )
+    ) |>
+    dplyr::pull(variant)
+
+  editing <- .haplo_variant |>
+    dplyr::filter(
+      Position %in% POS_RNA_EDITING
+    ) |>
+    dplyr::pull(variant)
+
+  n_cells <- fn_n_cell(af_list$cellaf)
+
+  .haplo_variant_remain <- .haplo_variant |>
+    dplyr::filter(
+      !variant %in% c(excluding_pos, editing, n_cells)
+    )
+
+  haplo <- .haplo_variant_remain |>
+    dplyr::filter(Haplogroup != "") |>
+    dplyr::pull(variant)
+
+  homo_hete <- fn_homo_hete(.haplo_variant_remain, af_list$clusteraf)
+
+  homo <- homo_hete$homo_variant
+  hete <- homo_hete$hete_variant
+  somatic <- fn_somatic(hete, af_list$cellaf)
+
+  list(
+    homo = homo,
+    hete = hete,
+    somatic = somatic,
+    haplo = haplo,
+    n_cells = n_cells,
+    editing = editing,
+    excluding_pos = excluding_pos
+  )
+}
+# body --------------------------------------------------------------------
+
+#
+#
+# scmocha.out --------------------------------------------------------------------
+#
+#
+
+tibble::tibble(
+  srrid = srrid_list
+) |>
+  dplyr::mutate(
+    srrdir = path(finaldir, srrid)
+  ) |>
+  dplyr::mutate(
+    dir_exists = dir_exists(srrdir)
+  ) -> srr_out
+
+
+srr_out |>
+  dplyr::mutate(
+    cell_stats = parallel::mclapply(
+      X = srrdir,
+      FUN = purrr::safely(\(.srrdir) {
+        log_info(
+          "Start processing {gseid} - {srrid}",
+          srrid = basename(.srrdir),
+          gseid = basename(dirname(dirname(.srrdir)))
+        )
+        # .srrdir <- srr_out$srrdir[[1]]
+        if (!dir_exists(.srrdir)) {
+          return(NULL)
+        }
+
+        .chemistry <- import(
+          path(.srrdir, "chemistry.csv")
+        ) |>
+          dplyr::pull(name)
+
+        .metrics <- import(
+          path(.srrdir, "metrics_summary.csv")
+        ) |>
+          purrr::map_dfr(~ as.numeric(gsub("[,%]", "", .x)))
+
+        .cs <- import(
+          path(.srrdir, "qc_cell_stats.xlsx")
+        )
+
+        .celltype_ratio <- import(
+          path(.srrdir, "celltype_ratio.tsv")
+        )
+
+        depth_list <- fn_depth_all(.srrdir)
+
+        .cva <- import(
+          ifelse(
+            file_exists(path(.srrdir, "variant_annotation.tsv")),
+            path(.srrdir, "variant_annotation.tsv"),
+            path(.srrdir, "cell_variant_annotation.tsv")
+          )
+        ) |>
+          dplyr::mutate(
+            variant = glue::glue("{Position}{Ref}>{Alt}")
+          )
+
+        .hetero <- import(
+          path(.srrdir, "cluster.cell_heteroplasmic_df.tsv.gz")
+        ) |>
+          dplyr::rename(celltype = V1) |>
+          tidyr::gather(-celltype, key = variant, value = af) |>
+          dplyr::filter(variant %in% .cva$variant)
+
+        .cov <- depth_list$depth_cluster |>
+          dplyr::filter(pos %in% .cva$Position)
+
+        .haplo_variant <- import(
+          path(.srrdir, "violin_haplo_variant.csv")
+        )
+
+        .haplo_violin <- import(
+          path(.srrdir, "violin_haplo_forplot.csv")
+        )
+
+        af_list <- fn_cell_cluster_bulk_af(.srrdir)
+
+        .somatic <- fn_variant_classification(
+          .srrdir,
+          .haplo_variant,
+          af_list
+        )
+
+        log_success(
+          "Finished processing {gseid} - {srrid}",
+          srrid = basename(.srrdir),
+          gseid = basename(dirname(dirname(.srrdir)))
+        )
+
+        data.table::data.table(
+          chemistry = .chemistry,
+          metrics = list(.metrics),
+          cell_stats = list(.cs),
+          depth_read = list(depth_list$depth_read),
+          depth_cluster = list(depth_list$depth_cluster),
+          depth = list(depth_list$depth),
+          celltype_ratio = list(.celltype_ratio),
+          anno = list(.cva),
+          hetero = list(.hetero),
+          coverage = list(.cov),
+          haplo_variant = list(.haplo_variant),
+          haplo_violin = list(.haplo_violin),
+          somatic_variant = list(.somatic),
+          cellaf = list(af_list$cellaf),
+          clusteraf = list(af_list$clusteraf),
+          bulkaf = list(af_list$bulkaf)
+        )
+      }),
+      mc.cores = 20
+    )
+  ) |>
+  dplyr::mutate(
+    cell_stats = purrr::map(cell_stats, "result")
+  ) |>
+  tidyr::unnest(cols = cell_stats) |>
+  as.data.table() -> srr_out_cell_stats
+
+log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.qs" |> glue::glue())
+
+export(
+  srr_out_cell_stats,
+  path(
+    outdir,
+    "{gseid}.scmocha.out.qs" |> glue::glue()
+  )
+)
+
+#
+#
+# variant --------------------------------------------------------------------
+#
+#
+
+# srr_out_cell_stats -> variant
+srr_out_cell_stats |>
+  dplyr::mutate(
+    total_reads = purrr::map_dbl(
+      .x = metrics,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        .x$`Number of Reads`
+      }
+    ),
+    depth_read_mean = purrr::map_dbl(
+      .x = depth_read,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    ),
+    depth_mean = purrr::map_dbl(
+      .x = depth,
+      .f = \(.x) {
+        if (is.null(.x)) {
+          return(NA_real_)
+        }
+        mean(.x$depth, na.rm = T)
+      }
+    )
+  ) |>
+  dplyr::mutate(
+    nmut = purrr::map_int(
+      .x = somatic_variant,
+      .f = \(.x) {
+        # if (is.null(.x)) {
+        #   return(NA_integer_)
+        # }
+        # nrow(.x)
+        length(c(.x$homo, .x$hete))
+      }
+    ),
+    nmut_variant = purrr::map(
+      .x = somatic_variant,
+      .f = \(.x) {
+        .x |>
+          purrr::map_int(length) |>
+          tibble::enframe() |>
+          tidyr::spread(key = name, value = value) -> .xx
+        names(.xx) <- glue::glue("nmut_{names(.xx)}")
+        .xx
+      }
+    )
+  ) |>
+  # tidyr::unnest(cols = nmut_variant)
+  dplyr::mutate(
+    haplogroup = purrr::map2(
+      .x = anno,
+      .y = srrid,
+      .f = \(.x, .y) {
+        log_info(gseid, " ", .y)
+        if (is.null(.x)) {
+          return(
+            tibble::tibble(
+              Haplogroup = NA_character_,
+              Verbose_haplogroup = NA_character_
+            )
+          )
+        }
+        .x |>
+          dplyr::select(Haplogroup, Verbose_haplogroup) |>
+          dplyr::filter(!is.na(Haplogroup)) |>
+          dplyr::filter(Haplogroup != "") |>
+          dplyr::distinct() |>
+          dplyr::mutate_all(.funs = as.character) -> .xx
+
+        if (nrow(.xx) == 0) {
+          tibble::tibble(
+            Haplogroup = NA_character_,
+            Verbose_haplogroup = NA_character_
+          )
+        } else {
+          .xx
+        }
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = haplogroup) |>
+  # dplyr::inner_join(
+  #   pheno, by = "srrid"
+  # ) |>
+  tidyr::unnest(
+    cols = cell_stats
+  ) |>
+  dplyr::mutate(
+    ratio = round(
+      `number of cells after filtering` / `estimated number of cells`,
+      2
+    )
+  ) -> metadata_anno
+
+
+metadata_anno |>
+  tidyr::unnest(cols = nmut_variant) |>
+  dplyr::select(
+    srrid,
+    Chemistry = chemistry,
+    Haplogroup = Haplogroup,
+    `# of variants` = nmut,
+    `# of homoplasmic variants` = nmut_homo,
+    `# of heteroplasmic variants` = nmut_hete,
+    `# of somatic variants` = nmut_somatic,
+    `Median UMI/cell` = `median UMI counts per cell`,
+    `Median genes/cell` = `median genes per cell`,
+    `# of cells` = `estimated number of cells`,
+    `# cells after filter` = `number of cells after filtering`,
+    # `Cell ratio` = ratio,
+    `Total reads` = total_reads,
+    `Depth read mean` = depth_read_mean,
+    `Depth mean` = depth_mean
+  ) -> metadata_clean
+
+metadata_clean |>
+  writexl::write_xlsx(
+    path = path(
+      outdir,
+      "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
+    )
+  )
+log_success(
+  "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx"
+)
+
+export(
+  x = metadata_clean,
+  file = path(
+    outdir,
+    "{gseid}.cell_ratio_and_variant_clean.csv" |> glue::glue()
+  )
+)
+
+log_success(
+  "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv"
+)
+
+# footer ------------------------------------------------------------------
+
+# save image --------------------------------------------------------------

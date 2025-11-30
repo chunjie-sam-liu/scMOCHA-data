@@ -42,7 +42,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -51,7 +50,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
@@ -59,17 +57,19 @@ log_layout(layout_glue_colors)
 # gseid <- "WT"
 # gseid <- "GSE226602"
 
-
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 finaldir <- file.path(
-  datadir, "final"
+  datadir,
+  "final"
 )
 
 outdir <- file.path(
-  datadir, "out"
+  datadir,
+  "out"
 )
 dir.create(outdir, showWarnings = F, recursive = T)
 
@@ -89,8 +89,7 @@ tibble::tibble(
   ) |>
   dplyr::mutate(
     dir_exists = dir.exists(srrdir)
-  ) ->
-srr_out
+  ) -> srr_out
 
 srr_out |>
   dplyr::mutate(
@@ -144,13 +143,11 @@ srr_out |>
           )
         )
 
-
         .cva |>
           dplyr::mutate(
             v = glue::glue("{Position}{Ref}>{Alt}")
           ) |>
-          dplyr::pull(v) ->
-        .v
+          dplyr::pull(v) -> .v
 
         .cva$Position -> .pos
 
@@ -198,8 +195,7 @@ srr_out |>
   dplyr::mutate(
     cell_stats = purrr::map(cell_stats, "result")
   ) |>
-  tidyr::unnest(cols = cell_stats) ->
-srr_out_cell_stats
+  tidyr::unnest(cols = cell_stats) -> srr_out_cell_stats
 
 log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.rds" |> glue::glue())
 readr::write_rds(
@@ -259,8 +255,7 @@ srr_out_cell_stats |>
         .x |>
           purrr::map_int(length) |>
           tibble::enframe() |>
-          tidyr::spread(key = name, value = value) ->
-        .xx
+          tidyr::spread(key = name, value = value) -> .xx
         names(.xx) <- glue::glue("nmut_{names(.xx)}")
         .xx
       }
@@ -286,8 +281,7 @@ srr_out_cell_stats |>
           dplyr::filter(!is.na(Haplogroup)) |>
           dplyr::filter(Haplogroup != "") |>
           dplyr::distinct() |>
-          dplyr::mutate_all(.funs = as.character) ->
-        .xx
+          dplyr::mutate_all(.funs = as.character) -> .xx
 
         if (nrow(.xx) == 0) {
           tibble::tibble(
@@ -308,10 +302,11 @@ srr_out_cell_stats |>
     cols = cell_stats
   ) |>
   dplyr::mutate(
-    ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
-  ) ->
-metadata_anno
-
+    ratio = round(
+      `number of cells after filtering` / `estimated number of cells`,
+      2
+    )
+  ) -> metadata_anno
 
 
 metadata_anno |>
@@ -330,8 +325,7 @@ metadata_anno |>
     `Total reads` = total_reads,
     `Depth read mean` = depth_read_mean,
     `Depth mean` = depth_mean
-  ) ->
-metadata_clean
+  ) -> metadata_clean
 
 metadata_clean |>
   writexl::write_xlsx(
@@ -340,7 +334,9 @@ metadata_clean |>
       "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
     )
   )
-log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx")
+log_success(
+  "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx"
+)
 
 data.table::fwrite(
   x = metadata_clean,
@@ -350,10 +346,10 @@ data.table::fwrite(
   )
 )
 
-log_success("save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv")
+log_success(
+  "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv"
+)
 # plot cell estimates -----------------------------------------------------
-
-
 
 # footer ------------------------------------------------------------------
 

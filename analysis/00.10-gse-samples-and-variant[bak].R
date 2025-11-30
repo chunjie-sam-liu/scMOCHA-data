@@ -36,10 +36,7 @@
 # ) ->
 # cj_only
 
-
-
 # ! # clean data --------------------------------------------------------------------
-
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
@@ -171,11 +168,20 @@ GSE163668_pooled <- c(
   "GSM4995429", # Pooled 10X GEX libraries for Patients 17, 20, and 21
   "GSM4995430" # Pooled 10X GEX libraries for Patients 50 and 51
 )
-
+# update new pooled samples to be excluded
+GSE162117_pooled <- c(
+  "GSM4933450",
+  "GSM4933442",
+  "GSM4933449",
+  "GSM4933446",
+  "GSM4933445",
+  "GSM4933448"
+)
 
 gseids_tobe_excluded <- c(
   gseids_not_pbmc,
-  gseids_cellline
+  gseids_cellline,
+  "GSE162117", # Pooled samples
 )
 gsmids_tobe_excluded <- c(
   GSE143353_colon,
@@ -194,7 +200,8 @@ gse_dataset_metadata_full <- readr::read_rds(
   ) |>
   dplyr::mutate(
     disease = dplyr::case_when(
-      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+      disease %in%
+        c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
       TRUE ~ "Other"
     )
   ) |>
@@ -232,7 +239,6 @@ gse_dataset_metadata_full <- readr::read_rds(
 }
 
 
-
 tibble::tibble(
   gseid = gseids
 ) |>
@@ -243,17 +249,25 @@ tibble::tibble(
     anno = parallel::mclapply(
       X = gseid,
       FUN = function(.gseid) {
-        log_info("Loading {.gseid}... ({which(gseids == .gseid)}/{length(gseids)})")
-        .anno <- readr::read_rds(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
+        log_info(
+          "Loading {.gseid}... ({which(gseids == .gseid)}/{length(gseids)})"
         )
-        log_success("Loaded {.gseid}! ({which(gseids == .gseid)}/{length(gseids)})")
+        .anno <- readr::read_rds(
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.scmocha.out.rds.gz")
+          )
+        )
+        log_success(
+          "Loaded {.gseid}! ({which(gseids == .gseid)}/{length(gseids)})"
+        )
         return(.anno)
       },
       mc.cores = 10
     )
-  ) ->
-gse_data_loaded
+  ) -> gse_data_loaded
 
 gse_data_loaded |>
   tidyr::unnest(cols = anno) |>
@@ -265,8 +279,7 @@ gse_data_loaded |>
       chemistry,
       levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
     )
-  ) ->
-gse_data
+  ) -> gse_data
 
 # save gse_data
 {
@@ -297,6 +310,5 @@ gse_data
       file.path(outdir, "gse_srrid_srrdir.rds")
     )
 }
-
 
 # python / home / liuc9 / github / scMOCHA - data / stats / stats / barcode_celltype.py
