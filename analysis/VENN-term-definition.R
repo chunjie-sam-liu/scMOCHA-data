@@ -75,8 +75,9 @@ DBI::dbListTables(conn)
 
 # body --------------------------------------------------------------------
 gse_data |>
-  dplyr::select(gseid, srrid, anno) |>
-  tidyr::unnest(cols = c(anno)) |>
+  dplyr::select(gseid, srrid, anno, bulkaf) |>
+  tidyr::unnest(cols = c(anno)) -> dt_gse_anno_all
+dt_gse_anno_all |>
   dplyr::mutate(variant = glue::glue("{Position}{Ref}>{Alt}")) |>
   dplyr::select(variant, Haplogroup) |>
   dplyr::distinct() |>
@@ -84,6 +85,11 @@ gse_data |>
   dplyr::filter(!is.na(Haplogroup)) |>
   tidyr::nest(.by = variant) -> dt_gse_anno
 
+
+dt_gse_anno_all |>
+  dplyr::filter(Position == 7428) |>
+  tidyr::unnest(cols = c(bulkaf)) |>
+  dplyr::filter(variant == "7428G>A")
 
 tbl_meta <- dplyr::tbl(conn, "meta")
 
@@ -162,6 +168,8 @@ plot(
 dt_allvariants_ |>
   dplyr::filter(ish)
 
+dt_allvariants_ |> dplyr::count(issomatic)
+
 dt_allvariants_ |>
   dplyr::mutate(
     highaf = ifelse(af > .95, TRUE, FALSE),
@@ -180,12 +188,23 @@ dt_allvariants_ |>
       FALSE
     )
   ) |>
-  dplyr::select(
+  dplyr::mutate(
     Ethnicity = ishaplo,
     Homoplasmic = is_homo,
     Heteroplasmic = is_hete,
     Somatic = isrealsomatic
   ) -> dt_allvariants_euler
+
+dt_allvariants_euler |>
+  dplyr::filter(
+    Heteroplasmic & !Ethnicity
+  ) |>
+  dplyr::filter(issomatic == "homoplasmic")
+
+
+dt_allvariants_euler |>
+  dplyr::filter(Heteroplasmic) |>
+  dplyr::filter(!Ethnicity)
 
 plot(
   euler(
