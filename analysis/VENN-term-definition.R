@@ -86,6 +86,21 @@ dt_gse_anno_all |>
   tidyr::nest(.by = variant) -> dt_gse_anno
 
 
+dt_allvariants |>
+  dplyr::filter(issomatic == "multiple") |>
+  dplyr::select(variant, Position, issomatic) |>
+  dplyr::left_join(
+    dt_gse_anno_all,
+    by = "Position"
+  ) |>
+  dplyr::rename(vv = variant) |>
+  tidyr::unnest(cols = c(bulkaf)) |>
+  dplyr::filter(vv == variant) |>
+  dplyr::select(Position, vv, gseid, srrid, bulkaf) |>
+  dplyr::filter()
+
+dt_gse_anno_all
+
 dt_gse_anno_all |>
   dplyr::filter(Position == 7428) |>
   tidyr::unnest(cols = c(bulkaf)) |>
