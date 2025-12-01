@@ -43,49 +43,6 @@ foundation_out <- path(basedir, "scfoundation/out")
 outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz")
 
 
-# Technical positions -------------------------------------------------------
-POS_RNA_EDITING = c(
-  585,
-  1610,
-  3238,
-  4271,
-  5520,
-  7526,
-  8303, # tRNA p9
-  9999,
-  10413,
-  12146,
-  12274,
-  14734,
-  15896, # tRNA p9
-  295,
-  2617,
-  13710 # RNA editing
-)
-
-CUTOFF_NOTRELIABLE = 10 # Cells less than this
-
-POS_MISSALIGNMENT_ERROR = c(
-  66:71,
-  300:316,
-  513:525,
-  3106:3107,
-  12418:12425,
-  16182:16194
-)
-
-
-#
-#
-# # Biological excluding  --------------------------------------------------------------------
-#
-#
-
-ETHNICITY = TRUE
-CUTOFF_HOMOPLASMIC = 0.95
-CUTOFF_HETEROPLASMIC = 0.05
-
-
 #
 #
 # Publications --------------------------------------------------------------------
@@ -373,13 +330,6 @@ tibble::tibble(
   dplyr::filter(
     !gseid %in% gseids_tobe_excluded
   ) |>
-
-  tibble::tibble(
-    gseid = gseids
-  ) |>
-  dplyr::filter(
-    !gseid %in% gseids_tobe_excluded
-  ) |>
   dplyr::mutate(
     anno = parallel::mclapply(
       X = gseid,
@@ -392,7 +342,7 @@ tibble::tibble(
             basedir,
             .gseid,
             "out",
-            glue::glue("{.gseid}.scmocha.out.rds.gz")
+            glue::glue("{.gseid}.scmocha.out.qs")
           )
         )
         log_success(
@@ -403,6 +353,50 @@ tibble::tibble(
       mc.cores = 10
     )
   ) -> gse_data_loaded
+
+
+gse_data_loaded |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::filter(
+    !srrid %in% gsmids_tobe_excluded
+  ) |>
+  dplyr::mutate(
+    chemistry = factor(
+      chemistry,
+      levels = c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
+    )
+  ) -> gse_data
+
+
+# save gse_data
+{
+  outdir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+  # data.table::fwrite(
+  #   gse_data,
+  #   file.path(outdir, "gse_data.csv"),
+  #   sep = ",",
+  # )
+  export(
+    gse_data,
+    path(outdir, "gse_data.rds")
+  )
+  export(
+    gse_data,
+    path(outdir, "gse_data.qs")
+  )
+  gse_data |>
+    dplyr::select(1, 2, 3) |>
+    export(
+      path(outdir, "gse_srrid_srrdir.csv"),
+      format = "both",
+      sep = ",",
+    )
+  gse_data |>
+    dplyr::select(1, 2, 3) |>
+    export(
+      file.path(outdir, "gse_srrid_srrdir.rds")
+    )
+}
 
 # footer ------------------------------------------------------------------
 
