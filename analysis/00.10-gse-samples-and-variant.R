@@ -372,28 +372,50 @@ gse_data_loaded |>
   #   file.path(outdir, "gse_data.csv"),
   #   sep = ",",
   # )
+  cli_alert_info("Exporting gse_data.rds very slow")
+  cli_alert_info("Only export once.")
+  # export(
+  #   gse_data,
+  #   path(outdir, "gse_data.rds")
+  # )
+
+  cli_h1("Save gse_data.qs")
+  cli_h2("Save raw gse_data.raw.qs which include all columns")
   export(
     gse_data,
-    path(outdir, "gse_data.rds")
+    path(outdir, "gse_data.raw.qs"),
+    preset = "fast"
   )
+  cli_h2("Save gse_data.qs which include main columns")
   export(
-    gse_data,
-    path(outdir, "gse_data.qs")
+    gse_data |> dplyr::select(-c(cellaf, clusteraf, bulkaf)),
+    path(outdir, "gse_data.qs"),
+    preset = "fast"
   )
+  cli_h2("Save gse_data.af.qs which include all af columns")
+  export(
+    gse_data |> dplyr::select(gseid, srrid, cellaf, clusteraf, bulkaf),
+    path(outdir, "gse_data.af.qs"),
+    preset = "fast"
+  )
+
+  cli_rule("Save gse_srrid_srrdir.csv and .rds")
+
   gse_data |>
     dplyr::select(1, 2, 3) |>
     export(
       path(outdir, "gse_srrid_srrdir.csv"),
       format = "both",
-      sep = ",",
     )
   gse_data |>
     dplyr::select(1, 2, 3) |>
     export(
-      file.path(outdir, "gse_srrid_srrdir.rds")
+      path(outdir, "gse_srrid_srrdir.rds")
     )
 }
 
+
+cli_text(cli:::lorem_ipsum())
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------

@@ -49,8 +49,10 @@ outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 #     sex_pred = sex
 #   )
 
+qread()
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs",
+  nthreads = 4
 ) |>
   # dplyr::left_join(
   #   sex_pred,

@@ -40,3 +40,32 @@ log_success("Logger is configured.")
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
+m <- "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.qs"
+
+
+d <- import(
+  m,
+  nthreads = 8
+)
+
+export(
+  d,
+  file = "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.qs",
+)
+
+
+export(
+  d,
+  file = "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.new.qs",
+  preset = "fast",
+  nthreads = 4,
+)
+
+a1 <- import(
+  "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.qs",
+  nthreads = 4
+)
+a2 <- import(
+  "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.new.qs",
+  nthreads = 4
+)
