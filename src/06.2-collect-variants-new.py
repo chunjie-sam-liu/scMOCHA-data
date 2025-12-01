@@ -44,5 +44,5 @@ def process_row(row):
     )
 
 
-with ProcessPoolExecutor(max_workers=20) as executor:
+with ProcessPoolExecutor(max_workers=1) as executor:
     executor.map(process_row, SRRHEAD.iter_rows(named=True))

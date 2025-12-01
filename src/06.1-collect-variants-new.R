@@ -31,7 +31,7 @@ VERSION = "v0.0.1"
 # default: default value specified here.
 
 verbose = TRUE
-gseid = "GSE233844" # no default gseid, current gseid is for testing
+# gseid = "GSE226602" # no default gseid, current gseid is for testing
 basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 GetoptLong(

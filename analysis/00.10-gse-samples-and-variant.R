@@ -318,6 +318,7 @@ gse_dataset_metadata_full <- import(
   )
 }
 
+gse_dataset_metadata_full |> dplyr::count(gseid) |> dplyr::arrange(-n)
 #
 #
 # GSE anno data --------------------------------------------------------------------
@@ -354,6 +355,7 @@ tibble::tibble(
     )
   ) -> gse_data_loaded
 
+gse_data_loaded |> dplyr::filter(gseid == "GSE226602")
 
 gse_data_loaded |>
   tidyr::unnest(cols = anno) |>
