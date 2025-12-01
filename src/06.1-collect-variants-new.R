@@ -18,7 +18,7 @@ VERSION = "v0.0.1"
 # default: default value specified here.
 
 verbose = TRUE
-# gseid = "GSE226602" # no default gseid, current gseid is for testing
+# gseid = "GSE175499" # no default gseid, current gseid is for testing
 basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 GetoptLong(
@@ -522,6 +522,8 @@ tibble::tibble(
     dir_exists = dir_exists(srrdir)
   ) -> srr_out
 
+srr_out |> tibble::rowid_to_column() |> dplyr::filter(!dir_exists)
+
 
 srr_out |>
   dplyr::mutate(
@@ -628,6 +630,11 @@ srr_out |>
   ) |>
   tidyr::unnest(cols = cell_stats) |>
   as.data.table() -> srr_out_cell_stats
+
+if (nrow(srr_out_cell_stats) == 0) {
+  log_warn("{gseid} has no valid srrid processed, exiting now." |> glue::glue())
+  quit(save = "no", status = 0)
+}
 
 log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.qs" |> glue::glue())
 
