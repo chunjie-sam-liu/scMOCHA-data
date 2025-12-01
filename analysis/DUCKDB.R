@@ -18,6 +18,40 @@ dplyr::tbl(
   "all_hetero_af_bulk"
 )
 
+DBI::dbListTables(conn_all_hetero_af)
+
+dplyr::tbl(
+  conn_all_hetero_af,
+  "gseid_srrid_srrdir"
+) |>
+  as.data.table() |>
+  dplyr::filter(!srrid %in% gse_data$srrid) |>
+  dplyr::filter(!gseid %in% gseids_tobe_excluded) |>
+  dplyr::mutate(
+    srrdir = path(srrdir)
+  ) |>
+  dplyr::mutate(
+    dir_exists = fs::file_exists(srrdir)
+  ) -> tbl_gseid_srrid_srrdir_check
+
+dplyr::tbl(
+  conn_all_hetero_af,
+  "gse_data"
+) |>
+  dplyr::filter() |>
+  dplyr::select(gseid, srrid, srrdir, dir_exists) |>
+  as.data.table() |>
+  dplyr::filter(dir_exists) |>
+  dplyr::filter(srrid %in% tbl_gseid_srrid_srrdir_check$srrid)
+
+dplyr::tbl(
+  conn_all_hetero_af,
+  "gseid_srrid_srrdir"
+) |>
+  as.data.table() |>
+  dplyr::filter(!srrid %in% gse_dataset_metadata_full$srrid) |>
+  dplyr::filter(!gseid %in% gseids_tobe_excluded)
+
 dplyr::tbl(
   conn_all_hetero_af,
   "allvariants_cell"

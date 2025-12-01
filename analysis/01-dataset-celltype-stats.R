@@ -6,19 +6,9 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
-suppressPackageStartupMessages(library(magrittr))
-library(ggplot2)
-library(patchwork)
-library(prismatic)
-library(paletteer)
-library(data.table)
-# library(rlang)
-library(GetoptLong)
-library(logger)
+load_pkg(jutils)
 
 # args --------------------------------------------------------------------
 
@@ -47,29 +37,28 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
-  dplyr::select(
-    srrid,
-    sex_pred = sex
-  )
+# sex_pred <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+# ) |>
+#   dplyr::select(
+#     srrid,
+#     sex_pred = sex
+#   )
 
 gse_dataset_metadata_full <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 ) |>
-  dplyr::left_join(
-    sex_pred,
-    by = "srrid"
-  ) |>
+  # dplyr::left_join(
+  #   sex_pred,
+  #   by = "srrid"
+  # ) |>
   dplyr::mutate(
-    Gender = sex_pred
+    Gender = SEXPRED
   )
-
-
 
 
 # thegseid <- "GSE168453"
@@ -77,13 +66,20 @@ gse_dataset_metadata_full <- import(
 gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
-
-
+# m |> dplyr::filter(srrid %in% c("GSM5335510", "GSM5335512"))
+# gse_dataset_metadata_full |> dplyr::filter(!srrid %in% gse_data$srrid)
 # body --------------------------------------------------------------------
 
 gse_data |>
-  dplyr::select(gseid, srrid, chemistry, anno, hetero, haplo_violin, somatic_variant) ->
-for_hetero
+  dplyr::select(
+    gseid,
+    srrid,
+    chemistry,
+    anno,
+    hetero,
+    haplo_violin,
+    somatic_variant
+  ) -> for_hetero
 
 
 gse_data |>
@@ -91,8 +87,7 @@ gse_data |>
   dplyr::left_join(
     gse_dataset_metadata_full |> dplyr::select(srrid, Chemistry, disease),
     by = c("srrid" = "srrid")
-  ) ->
-gse_data_haplo_variant
+  ) -> gse_data_haplo_variant
 
 # ! cell type ratio --------------------------------------------------------------------
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
@@ -134,8 +129,7 @@ gse_data_haplo_variant |>
       # )
       levels = names(color_celltype)
     )
-  ) ->
-for_celltype_ratio_plot
+  ) -> for_celltype_ratio_plot
 
 for_celltype_ratio_plot |>
   dplyr::group_by(srrid, disease) |>
@@ -147,8 +141,7 @@ for_celltype_ratio_plot |>
       .f = \(.data) {
         .data |>
           dplyr::filter(celltype == "B") |>
-          dplyr::pull(ratio) ->
-        .b_ratio
+          dplyr::pull(ratio) -> .b_ratio
         if (length(.b_ratio) == 0) {
           return(0)
         } else {
@@ -159,11 +152,9 @@ for_celltype_ratio_plot |>
   ) |>
   dplyr::ungroup() |>
   dplyr::arrange(disease, -b_ratio) |>
-  dplyr::select(-data) ->
-rank_srrid
+  dplyr::select(-data) -> rank_srrid
 
 # ggsci::pal_nejm()(5) |> color()
-
 
 # disease_colors <- c(
 #   "Alzheimer's Disease" = "#BC3C29FF",
@@ -219,8 +210,7 @@ rank_srrid |>
     axis.ticks = element_blank(),
     legend.position = "right",
     plot.margin = margin(t = 0, b = 0, unit = "cm")
-  ) ->
-p_tile_disease
+  ) -> p_tile_disease
 
 # chemistry_colors <- c(
 #   "SC5P-PE" = "#440154FF",
@@ -266,8 +256,7 @@ rank_srrid |>
     axis.ticks = element_blank(),
     legend.position = "right",
     plot.margin = margin(t = 0, b = 0, unit = "cm")
-  ) ->
-p_tile_chemistry
+  ) -> p_tile_chemistry
 
 # RColorBrewer::brewer.pal(8, "Set2") |> color()
 # gender_colors <- c(
@@ -313,8 +302,7 @@ rank_srrid |>
     axis.ticks = element_blank(),
     legend.position = "right",
     plot.margin = margin(t = 0, b = 0, unit = "cm")
-  ) ->
-p_tile_gender
+  ) -> p_tile_gender
 
 rank_srrid |>
   dplyr::mutate(
@@ -354,8 +342,7 @@ rank_srrid |>
     axis.ticks = element_blank(),
     legend.position = "right",
     plot.margin = margin(t = 0, b = 0, unit = "cm")
-  ) ->
-p_tile_age
+  ) -> p_tile_age
 
 # celltype_colors <- c(
 #   "B" = "#66C2A5FF",
@@ -417,8 +404,7 @@ for_celltype_ratio_plot |>
     ),
     axis.text.y = element_text(color = "black"),
   ) +
-  labs(y = "Cell type ratio") ->
-p_celltype_ratio
+  labs(y = "Cell type ratio") -> p_celltype_ratio
 
 
 for_celltype_ratio_plot |>
@@ -467,8 +453,7 @@ for_celltype_ratio_plot |>
     ),
     axis.text.y = element_text(color = "black"),
   ) +
-  labs(y = "# of cell") ->
-p_celltype_count
+  labs(y = "# of cell") -> p_celltype_count
 
 {
   wrap_plots(
@@ -481,8 +466,7 @@ p_celltype_count
     ncol = 1,
     heights = c(15, 15, 1, 1, 1, -1),
     guides = "collect"
-  ) ->
-  p_collect
+  ) -> p_collect
   p_collect
 }
 
@@ -495,7 +479,6 @@ ggsave(
   height = 12,
   dpi = 300
 )
-
 
 # footer ------------------------------------------------------------------
 

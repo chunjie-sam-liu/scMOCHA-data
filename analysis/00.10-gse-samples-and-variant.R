@@ -247,8 +247,6 @@ gsmids_tobe_excluded <- c(
 #
 #
 
-gse_dataset_metadata_full
-
 gse_dataset_metadata_full <- import(
   path(foundation_out, "gse_dataset_metadata_full.rds")
 ) |>
@@ -291,7 +289,9 @@ gse_dataset_metadata_full <- import(
   dplyr::left_join(
     SEXPRED,
     by = "srrid"
-  )
+  ) |>
+  as.data.table()
+
 
 # save gse_dataset_metadata_full ----------------------------------------------------------
 {
@@ -305,27 +305,33 @@ gse_dataset_metadata_full <- import(
     gse_dataset_metadata_full,
     path(outdir_clean, "gse_dataset_metadata_full.qs"),
   )
+
+  export(
+    gse_dataset_metadata_full,
+    path(outdir_clean, "gse_dataset_metadata_full.rds"),
+  )
 }
 
-gse_dataset_metadata_full |> dplyr::count(gseid) |> dplyr::arrange(-n)
+
 #
 #
 # GSE anno data --------------------------------------------------------------------
 #
 #
 
-tibble::tibble(
-  gseid = gseids
-) |>
-  dplyr::filter(
-    !gseid %in% gseids_tobe_excluded
-  ) |>
+gse_dataset_metadata_full |>
+  dplyr::select(gseid) |>
+  dplyr::distinct() -> clean_gseids_df
+
+clean_gseids_df$gseid |> unique() -> clean_gseids
+
+clean_gseids_df |>
   dplyr::mutate(
     anno = parallel::mclapply(
       X = gseid,
       FUN = function(.gseid) {
         log_info(
-          "Loading {.gseid}... ({which(gseids == .gseid)}/{length(gseids)})"
+          "Loading {.gseid}... ({which(clean_gseids == .gseid)}/{length(clean_gseids)})"
         )
         .anno <- import(
           path(
@@ -336,7 +342,7 @@ tibble::tibble(
           )
         )
         log_success(
-          "Loaded {.gseid}! ({which(gseids == .gseid)}/{length(gseids)})"
+          "Loaded {.gseid}! ({which(clean_gseids == .gseid)}/{length(clean_gseids)})"
         )
         return(.anno)
       },
@@ -344,7 +350,6 @@ tibble::tibble(
     )
   ) -> gse_data_loaded
 
-gse_data_loaded |> dplyr::filter(gseid == "GSE226602")
 
 gse_data_loaded |>
   tidyr::unnest(cols = anno) |>

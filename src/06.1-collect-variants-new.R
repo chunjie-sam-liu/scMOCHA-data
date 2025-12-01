@@ -519,7 +519,7 @@ tibble::tibble(
     srrdir = path(finaldir, srrid)
   ) |>
   dplyr::mutate(
-    dir_exists = dir_exists(srrdir)
+    dir_exists = file_exists(srrdir)
   ) -> srr_out
 
 srr_out |> tibble::rowid_to_column() |> dplyr::filter(!dir_exists)
@@ -536,7 +536,7 @@ srr_out |>
           gseid = basename(dirname(dirname(.srrdir)))
         )
         # .srrdir <- srr_out$srrdir[[4]]
-        if (!dir_exists(.srrdir)) {
+        if (!file_exists(.srrdir)) {
           return(NULL)
         }
 
