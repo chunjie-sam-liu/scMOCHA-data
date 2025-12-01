@@ -321,6 +321,29 @@ DBI::dbWriteTable(
   temporary = FALSE
 )
 
+conn_all_hetero_af <- DBI::dbConnect(
+  duckdb::duckdb(),
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+)
+packageVersion("duckdb")
+
 
 DBI::dbListTables(conn_all_hetero_af)
+dplyr::tbl(
+  conn_all_hetero_af,
+  "allvariants_cell_covered"
+)
+
+# gse_data |>
+#   dplyr::select(gseid, srrid, cellaf) |>
+#   tidyr::unnest(cols = cellaf) -> tbl_gse_data_cellaf
+
+# DBI::dbWriteTable(
+#   conn_all_hetero_af,
+#   "gse_data_cellaf",
+#   tbl_gse_data_cellaf,
+#   overwrite = TRUE,
+#   append = FALSE,
+#   temporary = FALSE
+# )
 DBI::dbDisconnect(conn_all_hetero_af, shutdown = TRUE)
