@@ -8,20 +8,7 @@
 
 # Library -----------------------------------------------------------------
 
-load_pkg(
-  ggplot2,
-  patchwork,
-  prismatic,
-  paletteer,
-  data.table,
-  glue,
-  parallel,
-  GetoptLong,
-  scales,
-  fs,
-  jutils,
-  logger
-)
+load_pkg(jutils)
 
 
 # args --------------------------------------------------------------------

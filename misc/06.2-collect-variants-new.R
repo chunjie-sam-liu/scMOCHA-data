@@ -1,19 +1,17 @@
 d <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
 
-
+basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 d |>
-  dplyr::select(gseid, srrdir) |>
-  dplyr::mutate(gsedir = dirname(dirname(dirname(srrdir)))) |>
-  dplyr::select(gseid, gsedir) |>
+  dplyr::select(gseid) |>
   dplyr::distinct() |>
   dplyr::mutate(
-    newrun = path(
-      gsedir,
+    anno = path(
+      basedir,
       gseid,
-      "final",
       "out",
       "{gseid}.scmocha.out.qs" |> glue::glue()
     )
-  )
+  ) |>
+  dplyr::filter(!file.exists(anno))

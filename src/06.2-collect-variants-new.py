@@ -35,10 +35,10 @@ def process_row(row):
     ]
     # print(f"Processing {gseid} in {basedir} ...")
     print(" ".join(cmd_arr))
-    try:
-        subprocess.run(cmd_arr)
-    except Exception as e:
-        print(f"Error processing {gseid}: {e}")
+    # try:
+    #     subprocess.run(cmd_arr)
+    # except Exception as e:
+    #     print(f"Error processing {gseid}: {e}")
 
 
 with ProcessPoolExecutor(max_workers=5) as executor:
