@@ -18,16 +18,20 @@ SRR_FILENAME = Path(
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 )
 SRR = pl.read_csv(SRR_FILENAME)
-SRRHEAD = SRR
+SRRHEAD = (
+    SRR.with_columns(
+        pl.col("srrdir")
+        .map_elements(lambda x: str(Path(x).parent.parent.parent))
+        .alias("gsedir")
+    )
+    .select(["gseid", "gsedir"])
+    .unique()
+)
 
 
 def process_row(row):
     gseid = row["gseid"]
-    # srrid = row["srrid"]
-    srrdir = Path(row["srrdir"])
-    # Change to srrdir and run the R script
-    # os.chdir(srrdir)
-    basedir = srrdir.parent.parent.parent
+    gsedir = row["gsedir"]
     subprocess.run(
         [
             "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/Rscript",
@@ -35,7 +39,7 @@ def process_row(row):
             "-g",
             gseid,
             "-b",
-            str(basedir),
+            gsedir,
         ]
     )
 

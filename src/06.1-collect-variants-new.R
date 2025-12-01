@@ -31,7 +31,7 @@ VERSION = "v0.0.1"
 # default: default value specified here.
 
 verbose = TRUE
-# gseid = "GSE233844" # no default gseid, current gseid is for testing
+gseid = "GSE233844" # no default gseid, current gseid is for testing
 basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 GetoptLong(
@@ -394,7 +394,15 @@ fn_somatic <- function(hete, .cellaf) {
       names_from = variant_type,
       values_from = n,
       names_prefix = "n_"
-    ) |>
+    ) -> .hete_d
+  .n_colnames <- length(intersect(
+    c("n_black", "n_colorful"),
+    colnames(.hete_d)
+  ))
+  if (.n_colnames != 2) {
+    return(character())
+  }
+  .hete_d |>
     dplyr::filter(!is.na(n_black)) |>
     dplyr::mutate(
       n_cells_have_variant = n_colorful,
