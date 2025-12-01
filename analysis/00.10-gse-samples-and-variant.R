@@ -386,16 +386,29 @@ gse_data_loaded |>
     path(outdir, "gse_data.raw.qs"),
     preset = "fast"
   )
-  cli_h2("Save gse_data.qs which include main columns")
   export(
-    gse_data |> dplyr::select(-c(cellaf, clusteraf, bulkaf)),
+    gse_data |> dplyr::select(-c(cellaf)),
     path(outdir, "gse_data.qs"),
     preset = "fast"
   )
-  cli_h2("Save gse_data.af.qs which include all af columns")
+  # export(
+  #   gse_data |> dplyr::select(gseid, srrid, cellaf, clusteraf, bulkaf),
+  #   path(outdir, "gse_data.af.qs"),
+  #   preset = "fast"
+  # )
   export(
-    gse_data |> dplyr::select(gseid, srrid, cellaf, clusteraf, bulkaf),
-    path(outdir, "gse_data.af.qs"),
+    gse_data |> dplyr::select(gseid, srrid, cellaf),
+    path(outdir, "gse_data.cellaf.qs"),
+    preset = "fast"
+  )
+  export(
+    gse_data |> dplyr::select(gseid, srrid, clusteraf),
+    path(outdir, "gse_data.clusteraf.qs"),
+    preset = "fast"
+  )
+  export(
+    gse_data |> dplyr::select(gseid, srrid, bulkaf),
+    path(outdir, "gse_data.bulkaf.qs"),
     preset = "fast"
   )
 
