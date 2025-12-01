@@ -15,34 +15,31 @@ from pathlib import Path
 import polars as pl
 
 SRR_FILENAME = Path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
+    "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/gse_dataset_metadata_full.csv"
 )
-SRR = pl.read_csv(SRR_FILENAME)
-SRRHEAD = (
-    SRR.with_columns(
-        pl.col("srrdir")
-        .map_elements(lambda x: str(Path(x).parent.parent.parent))
-        .alias("gsedir")
-    )
-    .select(["gseid", "gsedir"])
-    .unique()
-)
+SRR = pl.read_csv(SRR_FILENAME, ignore_errors=True)
+SRRHEAD = SRR.select(["gseid"]).unique()
+basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 
 def process_row(row):
     gseid = row["gseid"]
-    gsedir = row["gsedir"]
-    subprocess.run(
-        [
-            "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/Rscript",
-            "/home/liuc9/github/scMOCHA-data/src/06.1-collect-variants-new.R",
-            "-g",
-            gseid,
-            "-b",
-            gsedir,
-        ]
-    )
+    # gsedir = row["gsedir"]
+    cmd_arr = [
+        "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/Rscript",
+        "/home/liuc9/github/scMOCHA-data/src/06.1-collect-variants-new.R",
+        "-g",
+        gseid,
+        "-b",
+        basedir,
+    ]
+    # print(f"Processing {gseid} in {basedir} ...")
+    print(" ".join(cmd_arr))
+    try:
+        subprocess.run(cmd_arr)
+    except Exception as e:
+        print(f"Error processing {gseid}: {e}")
 
 
-with ProcessPoolExecutor(max_workers=1) as executor:
+with ProcessPoolExecutor(max_workers=5) as executor:
     executor.map(process_row, SRRHEAD.iter_rows(named=True))

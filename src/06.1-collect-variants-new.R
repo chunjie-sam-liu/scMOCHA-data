@@ -43,6 +43,9 @@ GetoptLong(
   "print messages"
 )
 
+
+logger::log_threshold(logger::TRACE)
+logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
@@ -103,6 +106,7 @@ CUTOFF_HETEROPLASMIC = 0.05
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
+
 fn_cell_cluster_bulk_af <- function(.srrdir) {
   .cellaf <- import(
     path(.srrdir, "variant_info_from_heatmap.qs")
@@ -337,7 +341,8 @@ fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
     dplyr::filter(
       variant %in% .haplo_variant_remain$variant
     ) |>
-    dplyr::filter(total_reads >= CUTOFF_MIN_READS) -> .clusteraf_remain
+    dplyr::filter(total_reads >= CUTOFF_MIN_READS) |>
+    dplyr::select(variant, celltype, clusteraf) -> .clusteraf_remain
 
   .clusteraf_remain |>
     dplyr::count(
@@ -345,21 +350,40 @@ fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
       name = "n_celltypes_have_reads"
     ) -> .clusteraf_remain_reads
 
+  # .clusteraf_remain |> dplyr::filter(variant == "7584T>G")
+
+  .clusteraf_remain |>
+    dplyr::group_by(variant) |>
+    dplyr::summarise(
+      mean_clusteraf = mean(clusteraf, na.rm = TRUE)
+    ) -> .clusteraf_remain_mean
+
   .clusteraf_remain |>
     dplyr::select(variant, celltype, clusteraf) |>
     dplyr::mutate(
       ishighaf = clusteraf > CUTOFF_HOMOPLASMIC
     ) |>
-    dplyr::count(variant, ishighaf, name = "n_celltypes_have_highaf") |>
     dplyr::filter(ishighaf) |>
+    dplyr::count(variant, ishighaf, name = "n_celltypes_have_highaf") |>
     dplyr::left_join(
       .clusteraf_remain_reads,
       by = "variant"
     ) |>
+    dplyr::left_join(
+      .clusteraf_remain_mean,
+      by = "variant"
+    ) -> .clusteraf_remain_homo_test
+
+  # .clusteraf_remain_homo_test |>
+  #   dplyr::filter(
+  #     n_celltypes_have_highaf < n_celltypes_have_reads
+  #   )
+
+  .clusteraf_remain_homo_test |>
     dplyr::filter(
-      n_celltypes_have_highaf >= n_celltypes_have_reads
+      n_celltypes_have_highaf >= n_celltypes_have_reads |
+        mean_clusteraf >= CUTOFF_HOMOPLASMIC
     ) |>
-    # dplyr::filter(n >= HOMOPLASMIC_N_CELLTYPE) |>
     dplyr::pull(variant) -> .homo_variant
   .hete_variant <- setdiff(.haplo_variant_remain$variant, .homo_variant)
 
@@ -384,33 +408,64 @@ fn_somatic <- function(hete, .cellaf) {
       celltype
     ) -> .hete
 
+  # .hete |>
+  #   dplyr::filter(variant == "3548T>G") |>
+  #   dplyr::count(variant, celltype, variant_type) |>
+  #   tidyr::pivot_wider(
+  #     names_from = variant_type,
+  #     values_from = n
+  #   )
+
   .hete |>
-    dplyr::count(variant, celltype, variant_type) |>
-    dplyr::filter(
-      n >= CUTOFF_MIN_CELLS
-    ) |>
-    dplyr::count(variant, variant_type) |>
+    dplyr::count(variant, celltype, variant_type) -> .hete_n_cells
+
+  .hete_n_cells |>
     tidyr::pivot_wider(
       names_from = variant_type,
-      values_from = n,
-      names_prefix = "n_"
-    ) -> .hete_d
+      values_from = n
+    ) -> .hete_n_cells_wide
+
   .n_colnames <- length(intersect(
-    c("n_black", "n_colorful"),
-    colnames(.hete_d)
+    c("black", "colorful"),
+    colnames(.hete_n_cells_wide)
   ))
   if (.n_colnames != 2) {
     return(character())
   }
-  .hete_d |>
-    dplyr::filter(!is.na(n_black)) |>
+
+  .hete_n_cells_wide |>
+    tidyr::nest(
+      .key = "data",
+      .by = variant
+    ) |>
     dplyr::mutate(
-      n_cells_have_variant = n_colorful,
-      n_cells_have_reads = n_black,
+      n = purrr::map(
+        .x = data,
+        .f = \(.x) {
+          data.table(
+            n_cells_have_reads = sum(
+              .x$black >= CUTOFF_MIN_CELLS,
+              na.rm = TRUE
+            ),
+            n_cells_have_variant = sum(
+              .x$colorful >= 2,
+              na.rm = TRUE
+            )
+          )
+        }
+      )
+    ) |>
+    tidyr::unnest(cols = n) -> .hete_d
+
+  .hete_d |>
+    dplyr::filter(
+      n_cells_have_variant > 0,
+      n_cells_have_reads > 0
     ) |>
     dplyr::filter(
-      n_colorful < n_black
+      n_cells_have_reads - n_cells_have_variant > 1
     ) -> .dd
+  # .dd$data[[4]]
   .dd$variant
 }
 
@@ -461,6 +516,7 @@ fn_variant_classification <- function(.srrdir, .haplo_variant, af_list) {
     excluding_pos = excluding_pos
   )
 }
+
 # body --------------------------------------------------------------------
 
 #
@@ -490,7 +546,7 @@ srr_out |>
           srrid = basename(.srrdir),
           gseid = basename(dirname(dirname(.srrdir)))
         )
-        # .srrdir <- srr_out$srrdir[[1]]
+        # .srrdir <- srr_out$srrdir[[4]]
         if (!dir_exists(.srrdir)) {
           return(NULL)
         }
@@ -731,6 +787,7 @@ metadata_clean |>
       "{gseid}.cell_ratio_and_variant_clean.xlsx" |> glue::glue()
     )
   )
+
 log_success(
   "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.xlsx"
 )
@@ -746,6 +803,8 @@ export(
 log_success(
   "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv"
 )
+
+log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.qs" |> glue::glue())
 
 # footer ------------------------------------------------------------------
 
