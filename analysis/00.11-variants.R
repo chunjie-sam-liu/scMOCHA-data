@@ -1,17 +1,33 @@
-regions_missalignment_error <- c(
-  66:71,
-  300:316,
-  513:525,
-  3106:3107,
-  12418:12425,
-  16182:16194
-)
-regions_rare_heteroplasmic_variants <- c(499, 538, 545, 10953, 12684)
-variants_tobe_excluded <- c(
-  regions_missalignment_error,
-  regions_rare_heteroplasmic_variants
-)
+#!/usr/bin/env Rscript
+# Metainfo ----------------------------------------------------------------
+# @AUTHOR: Chun-Jie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2025-12-02 14:09:56
+# @DESCRIPTION: this script is used for ...
 
+# Library -----------------------------------------------------------------
+
+load_pkg(jutils)
+
+# args --------------------------------------------------------------------
+
+# s: string, i: integer, f: float, !: boolean, @: array, %: list
+GetoptLong.options(help_style = "two-column")
+VERSION = "v0.0.1"
+
+# default: default value specified here.
+
+verbose = TRUE
+
+GetoptLong("verbose!", "print messages")
+
+
+logger::log_threshold(logger::TRACE)
+logger::log_layout(logger::layout_glue_colors)
+
+# header ------------------------------------------------------------------
+
+# load data ---------------------------------------------------------------
 gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
@@ -19,6 +35,13 @@ gse_data <- import(
 gse_dataset_metadata_full <- import(
   "analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
 )
+# load conn ---------------------------------------------------------------
+
+# src ---------------------------------------------------------------------
+
+# function ----------------------------------------------------------------
+
+# body --------------------------------------------------------------------
 
 gse_data |>
   dplyr::select(
@@ -45,19 +68,20 @@ gse_data_haplo_variant |>
     heteroplasmic = purrr::map(
       somatic_variant,
       .f = \(.x) {
-        tibble::tibble(
-          variant = .x$somatic
-        ) |>
-          dplyr::mutate(
-            pos = stringr::str_extract(variant, "\\d+") |> as.integer(),
-          ) |>
-          dplyr::filter(
-            !pos %in% variants_tobe_excluded,
-          ) -> .xx
-        .xx$variant -> heteroplasmic_variant
-        c(.x$high_af, .x$haplo) |> unique() -> homoplasmic_variant
-        .x$heteroplasmic_variant <- heteroplasmic_variant
-        .x$homoplasmic_variant <- homoplasmic_variant
+        # .x <- gse_data_haplo_variant$somatic_variant[[1]]
+        # tibble::tibble(
+        #   variant = .x$somatic
+        # ) |>
+        #   dplyr::mutate(
+        #     pos = stringr::str_extract(variant, "\\d+") |> as.integer(),
+        #   ) |>
+        #   dplyr::filter(
+        #     !pos %in% variants_tobe_excluded,
+        #   ) -> .xx
+        # .xx$variant -> heteroplasmic_variant
+        # c(.x$high_af, .x$haplo) |> unique() -> homoplasmic_variant
+        .x$heteroplasmic_variant <- .x$hete
+        .x$homoplasmic_variant <- .x$homo
 
         .x
       }
@@ -76,6 +100,7 @@ gse_data_haplo_variant |>
   ) |>
   tidyr::unnest(cols = n_heteroplasmic) -> gse_data_variant_heteroplasmic
 
+
 export(
   gse_data_variant_heteroplasmic,
   file = file.path(
@@ -85,117 +110,7 @@ export(
   format = "qs",
 )
 
+#
+# footer ------------------------------------------------------------------
 
-gse_data_variant_heteroplasmic$heteroplasmic |>
-  purrr::map(
-    .f = \(.x) {
-      .x$heteroplasmic_variant
-    }
-  ) |>
-  purrr::reduce(
-    union
-  ) -> heteroplasmic_variant
-
-gse_data_variant_heteroplasmic$heteroplasmic |>
-  purrr::map(
-    .f = \(.x) {
-      .x$homoplasmic_variant
-    }
-  ) |>
-  purrr::reduce(
-    union
-  ) -> homoplasmic_variant
-
-
-# gse_data_variant_heteroplasmic |>
-#   dplyr::select(srrid, hetero) |>
-#   tidyr::unnest(cols = hetero) |>
-#   dplyr::group_by(srrid, variant) |>
-#   dplyr::summarise(
-#     af = mean(af, na.rm = TRUE),
-#   ) |>
-#   dplyr::ungroup() |>
-#   dplyr::group_by(variant) |>
-#   dplyr::summarise(
-#     af = mean(af, na.rm = TRUE),
-#   ) -> variant_mean_af
-
-gse_data_variant_heteroplasmic |>
-  dplyr::select(srrid, bulkaf) |>
-  tidyr::unnest(cols = bulkaf) |>
-  dplyr::group_by(variant) |>
-  dplyr::summarise(
-    af = mean(bulkaf, na.rm = TRUE),
-  ) -> variant_mean_af
-
-gse_data_haplo_variant |>
-  dplyr::select(gseid, srrid, chemistry, haplo_variant) |>
-  tidyr::unnest(cols = haplo_variant) -> all_variants
-
-all_variants |>
-  dplyr::select(Position, variant, aachange, Disease, `Gnomad Frequency`) |>
-  dplyr::mutate(
-    Disease = ifelse(is.na(Disease), "", Disease),
-  ) |>
-  dplyr::distinct() |>
-  dplyr::arrange(Position) -> variant_type
-
-
-all_variants |>
-  dplyr::count(variant) |>
-  dplyr::left_join(
-    variant_type,
-    by = "variant"
-  ) |>
-  dplyr::mutate(
-    issomatic = ifelse(
-      variant %in% heteroplasmic_variant,
-      "heteroplasmic",
-      "other"
-    ),
-  ) |>
-  dplyr::mutate(
-    issomatic = ifelse(
-      variant %in% homoplasmic_variant,
-      "homoplasmic",
-      issomatic
-    ),
-  ) |>
-  dplyr::arrange(
-    desc(n)
-  ) |>
-  dplyr::group_by(Position) |>
-  dplyr::mutate(
-    issomatic = ifelse(
-      dplyr::n() > 1,
-      "multiple",
-      issomatic
-    )
-  ) |>
-  dplyr::ungroup() |>
-  dplyr::left_join(
-    variant_mean_af,
-    by = "variant"
-  ) -> variant_count
-
-
-{
-  export(
-    variant_count,
-    file = file.path(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
-      "all_variant.csv"
-    ),
-    format = "both",
-    sep = ",",
-    row.names = FALSE,
-    col.names = TRUE,
-  )
-  export(
-    variant_count,
-    file = file.path(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
-      "all_variant.rds"
-    )
-  )
-}
+# save image --------------------------------------------------------------
