@@ -18,7 +18,7 @@ VERSION = "v0.0.1"
 # default: default value specified here.
 
 verbose = TRUE
-# gseid = "GSE175499" # no default gseid, current gseid is for testing
+# gseid = "GSE235050" # no default gseid, current gseid is for testing
 basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 
 GetoptLong(
@@ -93,6 +93,190 @@ CUTOFF_HETEROPLASMIC = 0.05
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
+
+fn_plot_clusteraf <- function(
+  .srrdir,
+  af_list,
+  .somatic
+) {
+  .somatic |>
+    tibble::enframe(name = "variant_type", value = "variant") |>
+    tidyr::unnest(cols = variant) -> .somatic_variant_type
+
+  .somatic_variant_type |>
+    dplyr::count(variant_type) -> n_hete_homo
+
+  af_list$clusteraf |>
+    dplyr::select(variant, celltype, clusteraf) |>
+    tidyr::pivot_wider(
+      names_from = celltype,
+      values_from = clusteraf
+    ) |>
+    dplyr::left_join(
+      af_list$bulkaf |> dplyr::select(variant, Bulk = bulkaf),
+      by = "variant"
+    ) |>
+    dplyr::filter(
+      variant %in% .somatic_variant_type$variant
+    ) |>
+    dplyr::mutate(
+      variant = forcats::fct_reorder(variant, Bulk, .desc = TRUE)
+    ) |>
+    tidyr::pivot_longer(
+      cols = -variant,
+      names_to = "celltype",
+      values_to = "clusteraf"
+    ) -> .clusteraf_remain
+
+  af_list$clusteraf |>
+    dplyr::select(variant, celltype, cluster_total_reads = total_reads) |>
+    tidyr::pivot_wider(
+      names_from = celltype,
+      values_from = cluster_total_reads
+    ) |>
+    dplyr::left_join(
+      af_list$bulkaf |> dplyr::select(variant, Bulk = total_reads),
+      by = "variant"
+    ) |>
+    dplyr::filter(
+      variant %in% .somatic_variant_type$variant
+    ) |>
+    dplyr::mutate(
+      variant = factor(variant, levels = levels(.clusteraf_remain$variant))
+    ) |>
+    tidyr::pivot_longer(
+      cols = -variant,
+      names_to = "celltype",
+      values_to = "cluster_total_reads"
+    ) -> .clusteraf_remain_total_reads
+
+  variant_type_labels <- c(
+    "homo" = "Homoplasmic",
+    "haplo" = "Ethnicity",
+    "hete" = "Heteroplasmic",
+    "somatic" = "Somatic",
+    "n_cells" = "Low Cells",
+    "editing" = "RNA Editing",
+    "excluding_pos" = "Mis-alignment"
+  )
+
+  # -> forplot
+
+  .clusteraf_remain_total_reads |>
+    dplyr::mutate(
+      `Depth(log2)` = log2(cluster_total_reads + 1)
+    ) |>
+    ggplot(aes(
+      x = celltype,
+      y = variant,
+      fill = `Depth(log2)`
+    )) +
+    geom_tile() +
+    scale_fill_gradient(low = "white", high = "gold", na.value = "grey90") +
+    theme_classic() +
+    labs(
+      x = "Depth(log2)",
+      y = "Sample"
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(face = "bold", size = 12),
+      axis.title.x = element_text(face = "bold", size = 12)
+    ) -> p1
+
+  .clusteraf_remain |>
+    ggplot(aes(
+      x = celltype,
+      y = variant,
+      fill = clusteraf
+    )) +
+    geom_tile() +
+    scale_fill_gradient(low = "white", high = "red", na.value = "grey90") +
+    theme_classic() +
+    labs(
+      x = "Allele Frequency",
+      y = "Sample"
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(face = "bold", size = 12),
+      axis.title.x = element_text(face = "bold", size = 12)
+    ) -> p2
+
+  .somatic_variant_type |>
+    dplyr::mutate(v = 1) |>
+    tidyr::pivot_wider(
+      names_from = variant_type,
+      values_from = v,
+      values_fill = NA_integer_
+    ) |>
+    dplyr::mutate(
+      variant = factor(
+        variant,
+        levels = levels(forplot$variant)
+      )
+    ) |>
+    tidyr::pivot_longer(
+      cols = -variant,
+      names_to = "variant_type",
+      values_to = "value"
+    ) |>
+    ggplot(
+      aes(
+        x = variant_type,
+        y = variant,
+        fill = value
+      )
+    ) +
+    geom_tile() +
+    scale_x_discrete(
+      limits = names(variant_type_labels),
+      labels = variant_type_labels
+    ) +
+    scale_fill_gradient(
+      name = "Presence",
+      low = "white",
+      high = "blue"
+    ) +
+    theme_classic() +
+    labs(
+      x = "Variant Type",
+      y = "Sample"
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(face = "bold", size = 10),
+      axis.title.x = element_text(face = "bold", size = 12)
+    ) -> p3
+
+  wrap_plots(
+    p1,
+    p2,
+    p3,
+    ncol = 3,
+    widths = c(1.2, 1.2, 1.5),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title = glue::glue(
+        "{length(unique(.clusteraf_remain$variant))} Variant Allele Frequency and Type\n{.srrdir}"
+      ),
+      theme = theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+      )
+    ) -> p_collect
+  {
+    outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+    ggsave(
+      filename = glue::glue("Example-Variant-Type.pdf"),
+      plot = p_collect,
+      path = outdir,
+      width = 20,
+      height = 15
+    )
+  }
+  p_collect
+}
 
 fn_cell_cluster_bulk_af <- function(.srrdir) {
   .cellaf <- import(
@@ -372,7 +556,7 @@ fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
         mean_clusteraf >= CUTOFF_HOMOPLASMIC
     ) |>
     dplyr::pull(variant) -> .homo_variant
-  .hete_variant <- setdiff(.haplo_variant_remain$variant, .homo_variant)
+  .hete_variant <- setdiff(unique(.clusteraf_remain$variant), .homo_variant)
 
   list(
     homo_variant = .homo_variant,
@@ -522,7 +706,9 @@ tibble::tibble(
     dir_exists = file_exists(srrdir)
   ) -> srr_out
 
-srr_out |> tibble::rowid_to_column() |> dplyr::filter(!dir_exists)
+srr_out |>
+  tibble::rowid_to_column() |>
+  dplyr::filter(!dir_exists)
 
 
 srr_out |>
@@ -535,7 +721,15 @@ srr_out |>
           srrid = basename(.srrdir),
           gseid = basename(dirname(dirname(.srrdir)))
         )
+
         # .srrdir <- srr_out$srrdir[[4]]
+        # gseid <- "GSE235050"
+        # srrid <- "GSM7493841"
+        # .srrdir <- path(
+        #   glue(
+        #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid}/final/{srrid}"
+        #   )
+        # )
         if (!file_exists(.srrdir)) {
           return(NULL)
         }
