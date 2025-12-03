@@ -16,7 +16,7 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
       srrid == thesrrid,
       variant == thevariant
     ) |>
-    dplyr::collect() |>
+    as.data.table() |>
     dplyr::mutate(
       variant_type = dplyr::case_match(
         variant_type,
@@ -31,18 +31,6 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
       variant_type = factor(
         variant_type,
         levels = color_variantcell
-      )
-    ) |>
-    dplyr::arrange(
-      variant_type,
-      -af
-    ) -> forplot_
-
-  forplot_ |>
-    dplyr::mutate(
-      barcode = factor(
-        barcode,
-        levels = forplot_$barcode
       )
     ) |>
     dplyr::mutate(
@@ -65,9 +53,6 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
         af
       )
     ) |>
-    # dplyr::mutate(
-    #   variant_type = as.character(variant_type),
-    # ) |>
     dplyr::mutate(
       depth = log2(depth + 1) # log2 transform to reduce skewness
     ) |>
@@ -78,6 +63,18 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
       cellvarianttype = factor(
         cellvarianttype,
         levels = colorcode
+      )
+    ) |>
+    dplyr::arrange(
+      cellvarianttype,
+      celltype,
+      -af
+    ) -> forplot_
+  forplot_ |>
+    dplyr::mutate(
+      barcode = factor(
+        barcode,
+        levels = forplot_$barcode
       )
     ) -> forplot
   DBI::dbDisconnect(conn_all_hetero_af, shutdown = TRUE)
@@ -226,27 +223,70 @@ fn_plot_cell_af_somatic_variant_cell <- function(forplot, thetheme) {
       y = "Variant cells",
     )
 }
-fn_plot_cell_af_cellvarianttype <- function(forplot) {
-  source("analysis/00-colors.R")
-  colorcode <- setNames(names(color_variantcell), color_variantcell)
-
+fn_plot_cell_number_of_cells <- function(forplot) {
   forplot |>
+    dplyr::count(variant_type, celltype) |>
     dplyr::mutate(
-      color = as.character(variant_type),
+      variant_type = as.character(variant_type),
     ) |>
-    dplyr::count(color) |>
-    dplyr::mutate(
-      varianttype = colorcode[color]
-    ) |>
-    dplyr::mutate(
-      varianttype = factor(
-        varianttype,
-        levels = colorcode
+    ggplot(aes(
+      x = variant_type,
+      y = celltype,
+      fill = variant_type
+    )) +
+    geom_tile() +
+    # scale_fill_gradient(
+    #   name = "Number of cells",
+    #   low = "white",
+    #   high = "red",
+    #   na.value = "grey"
+    # ) +
+    scale_fill_identity(
+      guide = "legend",
+      name = "Variant cell",
+      breaks = c("red", "darkblue", "gray", "white"),
+      labels = c(
+        "Heteroplasmy",
+        "Sufficient reads",
+        "No sufficient reads",
+        "No reads"
       )
-    ) |>
-    dplyr::arrange(varianttype) -> cellvarianttype
+    ) +
+    geom_text(
+      aes(
+        label = n,
+        color = variant_type
+      ),
+      size = 4,
+      show.legend = FALSE
+    ) +
+    scale_color_manual(
+      values = c(
+        "red" = "white",
+        "darkblue" = "white",
+        "gray" = "black",
+        "white" = "black"
+      )
+    ) +
+    scale_x_discrete(
+      limits = c("red", "darkblue", "gray", "white"),
+    ) +
+    theme_bw() +
+    theme(
+      panel.grid = element_blank(),
+      legend.position = "none",
+      axis.text = element_text(face = "bold"),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.text.y = element_text(size = 12),
+      axis.title = element_blank(),
+    ) +
+    coord_fixed(
+      ratio = 1
+    )
 }
-fn_plot_cell_af_somatic_variant <- function(forplot_) {
+
+fn_plot_cell_af_somatic_variant <- function(forplot) {
   source("analysis/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
@@ -259,47 +299,11 @@ fn_plot_cell_af_somatic_variant <- function(forplot_) {
     plot.margin = margin(t = 0, b = 0, unit = "cm"),
   )
 
-  forplot_ |>
-    dplyr::mutate(
-      barcode = factor(
-        barcode,
-        levels = forplot_$barcode
-      )
-    ) |>
-    dplyr::mutate(
-      celltype = gsub(
-        "_",
-        " ",
-        celltype
-      )
-    ) |>
-    dplyr::mutate(
-      celltype = factor(
-        celltype,
-        names(color_celltype)
-      )
-    ) |>
-    dplyr::mutate(
-      af = ifelse(
-        af < 0.01,
-        NA_real_,
-        af
-      )
-    ) |>
-    dplyr::mutate(
-      cellvarianttype = colorcode[variant_type]
-    ) |>
-    dplyr::mutate(
-      cellvarianttype = factor(
-        cellvarianttype,
-        levels = colorcode
-      )
-    ) -> forplot
-
   fn_plot_cell_af_somatic_variant_af(forplot, thetheme) -> p_af
   fn_plot_cell_af_somatic_variant_depth(forplot, thetheme) -> p_depth
   fn_plot_cell_af_somatic_variant_cell(forplot, thetheme) -> p_variant_cells
   fn_plot_cell_af_somatic_variant_celltype(forplot, thetheme) -> p_celltype
+  fn_plot_cell_number_of_cells(forplot) -> p_heatmap
 
   .gseid <- unique(forplot$gseid)
   .srrid <- unique(forplot$srrid)
@@ -316,6 +320,13 @@ fn_plot_cell_af_somatic_variant <- function(forplot_) {
     ncol = 1,
     heights = c(15, -1.05, 15, -1.05, 10, -1.05, 10),
     guides = "collect"
+  ) -> p_main
+
+  wrap_plots(
+    wrap_elements(p_main),
+    p_heatmap,
+    ncol = 2,
+    widths = c(3, 1)
   ) +
     plot_annotation(
       title = glue::glue(
@@ -333,9 +344,16 @@ fn_plot_cell_af_somatic_variant <- function(forplot_) {
   p_all
 }
 
+fn_plot_somatic <- function(thevariant, thesrrid) {
+  fn_plot_cell_af_depth_forplot(
+    thevariant = thevariant,
+    thesrrid = thesrrid
+  ) -> forplot
 
-.somatic$somatic
-{
+  fn_plot_cell_af_somatic_variant(forplot)
+}
+
+\() {
   outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
 
   pdf(
@@ -343,21 +361,42 @@ fn_plot_cell_af_somatic_variant <- function(forplot_) {
       outdir,
       glue::glue("Example-variant-{thesrrid}-somatic-GSM-multipage.pdf")
     ),
-    width = 13,
+    width = 16,
     height = 8
   )
 
-  for (thevariant in .somatic$somatic) {
-    cli_alert_info("Plotting page {thevariant}...")
-    thesrrid = "GSM7493841"
+  # thesrrid = "GSM7493841"
+  # thevariant <- "6440C>A"
 
-    fn_plot_cell_af_depth_forplot(
-      thevariant = thevariant,
-      thesrrid = thesrrid
-    ) |>
-      fn_plot_cell_af_somatic_variant() -> p
-    print(p)
-  }
+  print(fn_plot_somatic(
+    thevariant = thevariant,
+    thesrrid = thesrrid
+  ))
+
+  dev.off()
+}
+
+\() {
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+
+  thesrrid = "GSM7437874"
+  thevariant <- "7757G>A"
+
+  pdf(
+    path(
+      outdir,
+      glue::glue(
+        "Example-variant-{thesrrid}-{thevariant}-somatic-GSM-multipage.pdf"
+      )
+    ),
+    width = 16,
+    height = 8
+  )
+
+  print(fn_plot_somatic(
+    thevariant = thevariant,
+    thesrrid = thesrrid
+  ))
 
   dev.off()
 }
