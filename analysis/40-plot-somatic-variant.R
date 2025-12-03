@@ -1231,7 +1231,11 @@ thevariants <- c(
   "10398A>G"
 )
 
-
+fn_plot_cell_af_depth(
+  thevariant = thevariant,
+  thesrrid = "GSM7080018"
+) -> a
+a$plot
 # thevariants <- c("10398A>G")
 # thevariant <- "10398A>G"
 # thevariants <- c(thevariants, disease_variant$variant) |> unique()
