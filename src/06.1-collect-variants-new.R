@@ -699,6 +699,107 @@ fn_variant_classification <- function(.srrdir, .haplo_variant, af_list) {
   )
 }
 
+fn_gather_all <- function(.srrdir) {
+  {
+    # gseid <- "GSE235050"
+    # srrid <- "GSM7493841"
+    # .srrdir <- path(
+    #   glue(
+    #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid}/final/{srrid}"
+    #   )
+    # )
+  }
+  if (!file_exists(.srrdir)) {
+    return(NULL)
+  }
+
+  .chemistry <- import(
+    path(.srrdir, "chemistry.csv")
+  ) |>
+    dplyr::pull(name)
+
+  .metrics <- import(
+    path(.srrdir, "metrics_summary.csv")
+  ) |>
+    purrr::map_dfr(~ as.numeric(gsub("[,%]", "", .x)))
+
+  .cs <- import(
+    path(.srrdir, "qc_cell_stats.xlsx")
+  )
+
+  .celltype_ratio <- import(
+    path(.srrdir, "celltype_ratio.tsv")
+  )
+
+  depth_list <- fn_depth_all(.srrdir)
+
+  .cva <- import(
+    ifelse(
+      file_exists(path(.srrdir, "variant_annotation.tsv")),
+      path(.srrdir, "variant_annotation.tsv"),
+      path(.srrdir, "cell_variant_annotation.tsv")
+    )
+  ) |>
+    dplyr::mutate(
+      variant = glue::glue("{Position}{Ref}>{Alt}")
+    )
+
+  .hetero <- import(
+    path(.srrdir, "cluster.cell_heteroplasmic_df.tsv.gz")
+  ) |>
+    dplyr::rename(celltype = V1) |>
+    tidyr::gather(-celltype, key = variant, value = af) |>
+    dplyr::filter(variant %in% .cva$variant)
+
+  .cov <- depth_list$depth_cluster |>
+    dplyr::filter(pos %in% .cva$Position)
+
+  .haplo_variant <- import(
+    path(.srrdir, "violin_haplo_variant.csv")
+  )
+
+  .haplo_violin <- import(
+    path(.srrdir, "violin_haplo_forplot.csv")
+  )
+
+  af_list <- fn_cell_cluster_bulk_af(.srrdir)
+
+  .somatic <- fn_variant_classification(
+    .srrdir,
+    .haplo_variant,
+    af_list
+  )
+
+  fn_plot_clusteraf(
+    .srrdir,
+    af_list,
+    .somatic
+  )
+
+  cli_h2(
+    "Finished {basename(dirname(dirname(.srrdir)))} - { basename(.srrdir)}"
+  )
+
+  data.table::data.table(
+    chemistry = .chemistry,
+    metrics = list(.metrics),
+    cell_stats = list(.cs),
+    depth_read = list(depth_list$depth_read),
+    depth_cluster = list(depth_list$depth_cluster),
+    depth = list(depth_list$depth),
+    celltype_ratio = list(.celltype_ratio),
+    anno = list(.cva),
+    hetero = list(.hetero),
+    coverage = list(.cov),
+    haplo_variant = list(.haplo_variant),
+    haplo_violin = list(.haplo_violin),
+    somatic_variant = list(.somatic),
+    cellaf = list(af_list$cellaf),
+    clusteraf = list(af_list$clusteraf),
+    bulkaf = list(af_list$bulkaf)
+  )
+}
+
 # body --------------------------------------------------------------------
 
 #
@@ -723,113 +824,10 @@ srr_out |>
     cell_stats = parallel::mclapply(
       X = srrdir,
       FUN = purrr::safely(\(.srrdir) {
-        log_info(
-          "Start processing {gseid} - {srrid}",
-          srrid = basename(.srrdir),
-          gseid = basename(dirname(dirname(.srrdir)))
+        cli_h1(
+          "Processing {basename(dirname(dirname(.srrdir)))} - { basename(.srrdir)}"
         )
-        {
-          # gseid <- "GSE235050"
-          # srrid <- "GSM7493841"
-          # .srrdir <- path(
-          #   glue(
-          #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid}/final/{srrid}"
-          #   )
-          # )
-        }
-        if (!file_exists(.srrdir)) {
-          return(NULL)
-        }
-
-        .chemistry <- import(
-          path(.srrdir, "chemistry.csv")
-        ) |>
-          dplyr::pull(name)
-
-        .metrics <- import(
-          path(.srrdir, "metrics_summary.csv")
-        ) |>
-          purrr::map_dfr(~ as.numeric(gsub("[,%]", "", .x)))
-
-        .cs <- import(
-          path(.srrdir, "qc_cell_stats.xlsx")
-        )
-
-        .celltype_ratio <- import(
-          path(.srrdir, "celltype_ratio.tsv")
-        )
-
-        depth_list <- fn_depth_all(.srrdir)
-
-        .cva <- import(
-          ifelse(
-            file_exists(path(.srrdir, "variant_annotation.tsv")),
-            path(.srrdir, "variant_annotation.tsv"),
-            path(.srrdir, "cell_variant_annotation.tsv")
-          )
-        ) |>
-          dplyr::mutate(
-            variant = glue::glue("{Position}{Ref}>{Alt}")
-          )
-
-        .hetero <- import(
-          path(.srrdir, "cluster.cell_heteroplasmic_df.tsv.gz")
-        ) |>
-          dplyr::rename(celltype = V1) |>
-          tidyr::gather(-celltype, key = variant, value = af) |>
-          dplyr::filter(variant %in% .cva$variant)
-
-        .cov <- depth_list$depth_cluster |>
-          dplyr::filter(pos %in% .cva$Position)
-
-        .haplo_variant <- import(
-          path(.srrdir, "violin_haplo_variant.csv")
-        )
-
-        .haplo_violin <- import(
-          path(.srrdir, "violin_haplo_forplot.csv")
-        )
-
-        af_list <- fn_cell_cluster_bulk_af(.srrdir)
-
-        .somatic <- fn_variant_classification(
-          .srrdir,
-          .haplo_variant,
-          af_list
-        )
-        cli_alert_info(
-          "Identified {length(.somatic$somatic)} somatic variants in {srrid}",
-          srrid = basename(.srrdir)
-        )
-        fn_plot_clusteraf(
-          .srrdir,
-          af_list,
-          .somatic
-        )
-        log_success(
-          "Finished processing {gseid} - {srrid}",
-          srrid = basename(.srrdir),
-          gseid = basename(dirname(dirname(.srrdir)))
-        )
-
-        data.table::data.table(
-          chemistry = .chemistry,
-          metrics = list(.metrics),
-          cell_stats = list(.cs),
-          depth_read = list(depth_list$depth_read),
-          depth_cluster = list(depth_list$depth_cluster),
-          depth = list(depth_list$depth),
-          celltype_ratio = list(.celltype_ratio),
-          anno = list(.cva),
-          hetero = list(.hetero),
-          coverage = list(.cov),
-          haplo_variant = list(.haplo_variant),
-          haplo_violin = list(.haplo_violin),
-          somatic_variant = list(.somatic),
-          cellaf = list(af_list$cellaf),
-          clusteraf = list(af_list$clusteraf),
-          bulkaf = list(af_list$bulkaf)
-        )
+        fn_gather_all(.srrdir)
       }),
       mc.cores = 20
     )
@@ -921,7 +919,9 @@ srr_out_cell_stats |>
       .x = anno,
       .y = srrid,
       .f = \(.x, .y) {
-        log_info(gseid, " ", .y)
+        cli_alert_info(
+          "Processing {gseid} - { .y } for haplogroup annotation"
+        )
         if (is.null(.x)) {
           return(
             tibble::tibble(
@@ -1007,7 +1007,7 @@ log_success(
   "save metadata to {outdir}/{gseid}.cell_ratio_and_variant_clean.csv"
 )
 
-log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.qs" |> glue::glue())
+log_success("{gseid} save to {outdir}/{gseid}.scmocha.out.qs")
 
 # footer ------------------------------------------------------------------
 
