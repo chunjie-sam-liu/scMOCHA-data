@@ -16,11 +16,9 @@ gse_data_variant_classification_clusteraf_bulkaf |>
   ) -> somatic_variants_per_sample
 
 \() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse/somatic"
-  cli_progress_bar(
-    "Plotting somatic variants per sample",
-    total = nrow(somatic_variants_per_sample)
-  )
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse/somatic-updated"
+  dir_create(outdir)
+
   somatic_variants_per_sample |>
     # head(4) |>
     dplyr::mutate(
@@ -69,5 +67,4 @@ gse_data_variant_classification_clusteraf_bulkaf |>
         mc.cores = 20
       )
     )
-  cli_progress_done()
 }

@@ -699,13 +699,12 @@ fn_plot_mtdna_circos_celltype_variant_type(
 )
 
 
-fn_plot_mtdna_circos_celltype_variant_type(
-  gse_data_variant_classification_clusteraf_bulkaf_coord |>
-    dplyr::filter(celltype == "Bulk") |>
-    dplyr::filter(srrid == "GSM5494119"),
-  what = "variant_type"
-)
-
+# fn_plot_mtdna_circos_celltype_variant_type(
+#   gse_data_variant_classification_clusteraf_bulkaf_coord |>
+#     dplyr::filter(celltype == "Bulk") |>
+#     dplyr::filter(srrid == "GSM5494119"),
+#   what = "variant_type"
+# )
 
 {
   outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
