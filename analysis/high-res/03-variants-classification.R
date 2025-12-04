@@ -118,7 +118,7 @@ export(
 #
 
 gse_data_variant_heteroplasmic |>
-  dplyr::select(gseid, srrid, heteroplasmic) |>
+  dplyr::select(gseid, srrid, Haplogroup, heteroplasmic) |>
   dplyr::mutate(
     hhs = purrr::map(
       .x = heteroplasmic,
@@ -169,8 +169,8 @@ gse_data_variant_classification |>
 #
 #
 
-gse_data |>
-  dplyr::select(gseid, srrid, clusteraf, bulkaf) |>
+gse_data_variant_heteroplasmic |>
+  # dplyr::select(gseid, srrid, clusteraf, bulkaf) |>
   dplyr::mutate(
     variant_cluster_bulk_af = parallel::mcmapply(
       FUN = \(.clusteraf, .bulkaf) {
