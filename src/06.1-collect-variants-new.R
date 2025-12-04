@@ -797,7 +797,15 @@ srr_out |>
           .haplo_variant,
           af_list
         )
-
+        cli_alert_info(
+          "Identified {length(.somatic$somatic)} somatic variants in {srrid}",
+          srrid = basename(.srrdir)
+        )
+        fn_plot_clusteraf(
+          .srrdir,
+          af_list,
+          .somatic
+        )
         log_success(
           "Finished processing {gseid} - {srrid}",
           srrid = basename(.srrdir),
