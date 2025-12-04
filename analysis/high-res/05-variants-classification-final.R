@@ -549,7 +549,7 @@ dt_allvariants_euler |>
             plot = p,
             path = outdir,
             width = 15,
-            height = 8
+            height = 10
           )
         },
         variant,
