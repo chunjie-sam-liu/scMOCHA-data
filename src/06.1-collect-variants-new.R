@@ -87,13 +87,14 @@ ETHNICITY = TRUE
 HOMOPLASMIC_N_CELLTYPE = 7
 CUTOFF_HOMOPLASMIC = 0.95
 CUTOFF_HETEROPLASMIC = 0.05
-
+CUTOFF_SOMATIC_IGNORE_N_CELLS = 2
+CUTOFF_SOMATIC_MIN_N_CELLS = 10
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
 
 # function ----------------------------------------------------------------
-
+# fn_plot_clusteraf(.srrdir, af_list, .somatic)
 fn_plot_clusteraf <- function(
   .srrdir,
   af_list,
@@ -213,7 +214,7 @@ fn_plot_clusteraf <- function(
     dplyr::mutate(
       variant = factor(
         variant,
-        levels = levels(forplot$variant)
+        levels = levels(.clusteraf_remain_total_reads$variant)
       )
     ) |>
     tidyr::pivot_longer(
@@ -266,11 +267,11 @@ fn_plot_clusteraf <- function(
       )
     ) -> p_collect
   {
-    outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+    # outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
     ggsave(
-      filename = glue::glue("Example-Variant-Type.pdf"),
+      filename = glue::glue("Variant-Type.pdf"),
       plot = p_collect,
-      path = outdir,
+      path = .srrdir,
       width = 20,
       height = 15
     )
@@ -556,6 +557,7 @@ fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
         mean_clusteraf >= CUTOFF_HOMOPLASMIC
     ) |>
     dplyr::pull(variant) -> .homo_variant
+
   .hete_variant <- setdiff(unique(.clusteraf_remain$variant), .homo_variant)
 
   list(
@@ -565,11 +567,15 @@ fn_homo_hete <- function(.haplo_variant_remain, .clusteraf) {
 }
 
 fn_somatic <- function(hete, .cellaf) {
+  # .cellaf <- af_list$cellaf
   .cellaf |>
     dplyr::filter(
       variant %in% hete
     ) |>
     dplyr::filter(depth >= CUTOFF_MIN_READS) |>
+    dplyr::filter(
+      variant_type %in% c("colorful", "black")
+    ) |>
     dplyr::select(
       variant,
       barcode,
@@ -614,12 +620,16 @@ fn_somatic <- function(hete, .cellaf) {
         .x = data,
         .f = \(.x) {
           data.table(
-            n_cells_have_reads = sum(
+            n_celltypes_have_reads = sum(
               .x$black >= CUTOFF_MIN_CELLS,
               na.rm = TRUE
             ),
-            n_cells_have_variant = sum(
-              .x$colorful >= 2,
+            n_celltypes_have_variant = sum(
+              .x$colorful >= CUTOFF_SOMATIC_IGNORE_N_CELLS,
+              na.rm = TRUE
+            ),
+            n_sufficient_cells = sum(
+              .x$colorful >= CUTOFF_SOMATIC_MIN_N_CELLS,
               na.rm = TRUE
             )
           )
@@ -630,11 +640,12 @@ fn_somatic <- function(hete, .cellaf) {
 
   .hete_d |>
     dplyr::filter(
-      n_cells_have_variant > 0,
-      n_cells_have_reads > 0
+      n_celltypes_have_variant > 0,
+      n_celltypes_have_reads > 0,
+      n_sufficient_cells > 0
     ) |>
     dplyr::filter(
-      n_cells_have_reads - n_cells_have_variant > 1
+      n_celltypes_have_reads - n_celltypes_have_variant > 1
     ) -> .dd
   # .dd$data[[4]]
   .dd$variant
@@ -706,10 +717,6 @@ tibble::tibble(
     dir_exists = file_exists(srrdir)
   ) -> srr_out
 
-srr_out |>
-  tibble::rowid_to_column() |>
-  dplyr::filter(!dir_exists)
-
 
 srr_out |>
   dplyr::mutate(
@@ -721,15 +728,15 @@ srr_out |>
           srrid = basename(.srrdir),
           gseid = basename(dirname(dirname(.srrdir)))
         )
-
-        # .srrdir <- srr_out$srrdir[[4]]
-        # gseid <- "GSE235050"
-        # srrid <- "GSM7493841"
-        # .srrdir <- path(
-        #   glue(
-        #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid}/final/{srrid}"
-        #   )
-        # )
+        {
+          # gseid <- "GSE235050"
+          # srrid <- "GSM7493841"
+          # .srrdir <- path(
+          #   glue(
+          #     "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid}/final/{srrid}"
+          #   )
+          # )
+        }
         if (!file_exists(.srrdir)) {
           return(NULL)
         }
