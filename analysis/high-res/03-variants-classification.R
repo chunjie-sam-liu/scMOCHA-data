@@ -42,7 +42,6 @@ gse_dataset_metadata_full <- import(
 # function ----------------------------------------------------------------
 
 # body --------------------------------------------------------------------
-
 gse_data |>
   dplyr::select(
     gseid,
@@ -118,7 +117,29 @@ export(
 #
 
 gse_data_variant_heteroplasmic |>
-  dplyr::select(gseid, srrid, Haplogroup, heteroplasmic) |>
+  dplyr::select(gseid, srrid, anno, heteroplasmic) |>
+  dplyr::mutate(
+    hap = purrr::map(
+      .x = anno,
+      .f = \(.x) {
+        # .x <- gse_data_variant_heteroplasmic$anno[[1]]
+
+        .x |>
+          dplyr::select(Haplogroup, Verbose_haplogroup) |>
+          dplyr::distinct() |>
+          dplyr::filter(Haplogroup != "") -> .hap_info
+        if (nrow(.hap_info) == 0) {
+          tibble::tibble(
+            Haplogroup = NA_character_,
+            Verbose_haplogroup = NA_character_
+          )
+        } else {
+          .hap_info
+        }
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = hap) |>
   dplyr::mutate(
     hhs = purrr::map(
       .x = heteroplasmic,
@@ -144,7 +165,7 @@ gse_data_variant_heteroplasmic |>
       }
     )
   ) |>
-  dplyr::select(-heteroplasmic) |>
+  dplyr::select(-c(anno, heteroplasmic)) |>
   tidyr::unnest(cols = hhs) -> gse_data_variant_classification
 
 gse_data_variant_classification |>
@@ -216,8 +237,6 @@ gse_data_variant_classification |>
     file = path(outdir, "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"),
   )
 }
-
-gse_data_variant_classification_clusteraf_bulkaf
 
 #
 # footer ------------------------------------------------------------------

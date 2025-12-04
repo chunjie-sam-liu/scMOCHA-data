@@ -247,6 +247,40 @@ gsmids_tobe_excluded <- c(
 #
 #
 
+tibble::tibble(gseid = gseids) |>
+  dplyr::filter(
+    !gseid %in% gseids_tobe_excluded
+  ) -> clean_gseids_df
+
+clean_gseids_df$gseid |> unique() -> clean_gseids
+
+
+clean_gseids_df |>
+  dplyr::mutate(
+    anno = purrr::map(
+      .x = gseid,
+      .f = function(.gseid) {
+        out_file <- path(
+          basedir,
+          .gseid,
+          "out",
+          glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv")
+        )
+        cli_alert_info(
+          "{out_file}"
+        )
+        .anno <- import(out_file)
+
+        return(.anno)
+      }
+    )
+  ) |>
+  tidyr::unnest(cols = anno) |>
+  dplyr::filter(
+    !srrid %in% gsmids_tobe_excluded
+  ) -> cell_ratio_and_variant_clean
+
+
 gse_dataset_metadata_full <- import(
   path(foundation_out, "gse_dataset_metadata_full.rds")
 ) |>
@@ -291,6 +325,23 @@ gse_dataset_metadata_full <- import(
     by = "srrid"
   ) |>
   as.data.table()
+
+gse_dataset_metadata_full |>
+  dplyr::select(
+    -dplyr::all_of(
+      setdiff(
+        intersect(
+          colnames(gse_dataset_metadata_full),
+          colnames(cell_ratio_and_variant_clean)
+        ),
+        c("gseid", "srrid")
+      )
+    )
+  ) |>
+  dplyr::left_join(
+    cell_ratio_and_variant_clean,
+    by = c("gseid" = "gseid", "srrid" = "srrid")
+  ) -> gse_dataset_metadata_full
 
 
 # save gse_dataset_metadata_full ----------------------------------------------------------

@@ -76,8 +76,14 @@ fn_plot_af_variant_type <- function(
     ) -> forplot
 
   forplot |>
+    dplyr::select(srrid, Haplogroup, Verbose_haplogroup) |>
+    tidyr::pivot_longer(
+      cols = c(Haplogroup, Verbose_haplogroup),
+      names_to = "type",
+      values_to = "Haplogroup"
+    ) |>
     ggplot(aes(
-      x = 1,
+      x = type,
       y = srrid,
       fill = Haplogroup
     )) +
@@ -90,7 +96,7 @@ fn_plot_af_variant_type <- function(
       ),
       color = "black",
     ) +
-    scale_x_continuous(
+    scale_x_discrete(
       expand = c(0, 0)
     ) +
     theme_classic() +
@@ -191,7 +197,7 @@ fn_plot_af_variant_type <- function(
     p_af,
     p_variant_type,
     ncol = 3,
-    widths = c(0.1, 1, 0.8),
+    widths = c(0.2, 1, 0.8),
     guides = "collect"
   ) +
     plot_annotation(
@@ -205,8 +211,179 @@ fn_plot_af_variant_type <- function(
   p_collect
 }
 
-# body --------------------------------------------------------------------
 
+fn_plot_af_individual <- function(
+  thesrrid,
+  df = gse_data_variant_classification_clusteraf_bulkaf
+) {
+  df |>
+    dplyr::filter(srrid == thesrrid) |>
+    dplyr::arrange(variant_type) |>
+    dplyr::mutate(
+      srrid = forcats::fct_reorder(srrid, Bulk, .desc = TRUE),
+      variant = forcats::fct_reorder(variant, Bulk, .desc = TRUE)
+    ) -> df_thevariant
+
+  df_thevariant |>
+    dplyr::count(variant_type) |>
+    tibble::deframe() -> n_hete_homo
+
+  df_thevariant |>
+    tidyr::pivot_longer(
+      cols = c(B, CD4_T, CD8_T, DC, Mono, NK, other, Bulk, other_T),
+      names_to = "celltype",
+      values_to = "af"
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        levels = c(
+          "Bulk",
+          "B",
+          "CD4_T",
+          "CD8_T",
+          "other_T",
+          "NK",
+          "DC",
+          "Mono",
+          "other"
+        )
+      )
+    ) -> forplot
+
+  # forplot |>
+  #   ggplot(aes(
+  #     x = 1,
+  #     y = variant,
+  #     fill = variant_type
+  #   )) +
+  #   geom_tile(
+  #     show.legend = FALSE
+  #   ) +
+  #   geom_text(
+  #     aes(
+  #       label = variant_type
+  #     ),
+  #     color = "black",
+  #   ) +
+  #   scale_x_continuous(
+  #     expand = c(0, 0)
+  #   ) +
+  #   theme_classic() +
+  #   theme(
+  #     axis.text.x = element_blank(),
+  #     axis.ticks.x = element_blank(),
+  #     axis.title.x = element_blank(),
+  #     axis.line = element_blank(),
+  #     axis.title.y = element_blank(),
+  #   ) -> p_haplogroup
+
+  forplot |>
+    ggplot(aes(
+      x = celltype,
+      y = variant,
+      fill = af
+    )) +
+    geom_tile() +
+    scale_fill_gradient(
+      name = "AF",
+      low = "white",
+      high = "red"
+    ) +
+    scale_x_discrete(
+      expand = c(0, 0)
+    ) +
+    theme_classic() +
+    labs(
+      x = "Celltype",
+      y = "Sample"
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(face = "bold", size = 12),
+      # axis.title.x = element_text(face = "bold", size = 12),
+      axis.title = element_blank(),
+      # axis.line.y = element_blank(),
+      # axis.text.y = element_blank(),
+      # axis.ticks.y = element_blank()
+    ) -> p_af
+
+  df_thevariant |>
+    dplyr::select(variant, variant_type) |>
+    dplyr::mutate(v = 1) |>
+    tidyr::pivot_wider(
+      names_from = variant_type,
+      values_from = v,
+      values_fill = NA_integer_
+    ) |>
+    dplyr::mutate(
+      variant = factor(variant, forplot$variant |> levels())
+    ) |>
+    tidyr::pivot_longer(
+      cols = -variant,
+      names_to = "variant_type",
+      values_to = "value"
+    ) |>
+    ggplot(
+      aes(
+        x = variant_type,
+        y = variant,
+        fill = value
+      )
+    ) +
+    geom_tile() +
+    scale_x_discrete(
+      expand = c(0, 0),
+      limits = c("homo", "haplo", "hete", "somatic"),
+      labels = c(
+        "homo" = "Homoplasmic",
+        "haplo" = "Ethnicity",
+        "hete" = "Heteroplasmic",
+        "somatic" = "Somatic"
+      )
+    ) +
+    scale_fill_gradient(
+      name = "Presence",
+      low = "white",
+      high = "blue"
+    ) +
+    theme_classic() +
+    labs(
+      x = "Variant Type",
+      y = "Sample"
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(face = "bold", size = 12),
+      # axis.title.x = element_text(face = "bold", size = 12),
+      axis.title = element_blank(),
+      axis.line.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank()
+    ) -> p_variant_type
+
+  wrap_plots(
+    p_af,
+    p_variant_type,
+    ncol = 2,
+    widths = c(1, 0.8),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title = glue::glue(
+        "Variant {thevariant} Allele Frequency\n{unique(df_thevariant$gseid)}-{unique(df_thevariant$srrid)}"
+      ),
+      theme = theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+      )
+    ) -> p_collect
+  p_collect
+}
+
+
+# body --------------------------------------------------------------------
+gse_data_variant_classification_clusteraf_bulkaf |>
+  dplyr::filter(srrid == "GSM4712887")
 #
 # Euler venn diagram--------------------------------------------------------------------
 #
@@ -305,7 +482,8 @@ plot(
 #
 #
 
-fn_plot_af_variant_type("16266C>A")
+fn_plot_af_variant_type("15244A>G")
+fn_plot_af_individual("GSM6793473")
 
 dt_allvariants_euler |>
   dplyr::mutate(
