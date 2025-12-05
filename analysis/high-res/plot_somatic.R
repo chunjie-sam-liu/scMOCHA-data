@@ -400,3 +400,28 @@ fn_plot_somatic <- function(thevariant, thesrrid) {
 
   dev.off()
 }
+
+\() {
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+
+  thesrrid = "GSM7493835"
+  thevariant <- "4175G>A"
+
+  pdf(
+    path(
+      outdir,
+      glue::glue(
+        "Example-variant-{thesrrid}-{thevariant}-somatic-GSM-multipage.pdf"
+      )
+    ),
+    width = 16,
+    height = 8
+  )
+
+  print(fn_plot_somatic(
+    thevariant = thevariant,
+    thesrrid = thesrrid
+  ))
+
+  dev.off()
+}
