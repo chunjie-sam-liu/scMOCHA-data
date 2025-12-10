@@ -1,0 +1,98 @@
+<mxfile host="65bd71144e">
+    <diagram name="Page-1" id="page-1">
+        <mxGraphModel dx="1193" dy="849" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="2" value="All Detected Variants" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="20" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="3" value="Step 1: Filter Unreliable Variants" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="120" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="Mis-alignment Errors&lt;br&gt;Positions: 66-71, 300-316,&lt;br&gt;513-525, 3106-3107,&lt;br&gt;12418-12425, 16182-16194" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="160" width="190" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" value="RNA Editing Sites&lt;br&gt;Positions: 585, 1610, 3238,&lt;br&gt;4271, 5520, 7526, 8303,&lt;br&gt;9999, 10413, 12146, 12274,&lt;br&gt;14734, 15896, 295, 2617, 13710" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="100" y="70" width="190" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="6" value="Low Cell Number&lt;br&gt;AF ≥ 0.05, Depth ≥ 10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=10;" parent="1" vertex="1">
+                    <mxGeometry x="670" y="120" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" value="RELIABLE VARIANTS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="250" width="200" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="8" value="Step 2: Ethnicity-related&lt;br&gt;Keep haplogroup-defining variants" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="400" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="9" value="Ethnicity-related&#xa;Variants&#xa;(Tracked separately)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="990" y="540" width="140" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="10" value="Step 3: Biological Classification" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="350" width="200" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="HOMOPLASMIC&lt;br&gt;AF ≥ 0.95 in all cell types&lt;br&gt;OR mean AF ≥ 0.95" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="290" y="470" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="12" value="HETEROPLASMIC&lt;br&gt;0.05 ≤ AF &amp;lt; 0.95" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="470" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="13" value="Step 4: Somatic Variants&#xa;(subset of heteroplasmic)&#xa;Cell-type specific pattern" style="rhombus;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="580" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="14" value="SOMATIC (somatic)&#xa;Cell-type specific&#xa;heteroplasmic variants" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="700" width="140" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="GLOBAL PARAMETERS&#xa;&#xa;Quality Control:&#xa;• CUTOFF_MIN_READS: 10&#xa;• CUTOFF_MIN_CELLS: 10&#xa;• CUTOFF_NOTRELIABLE: 10&#xa;• CUTOFF_HETEROPLASMIC: 0.05&#xa;• CUTOFF_HOMOPLASMIC: 0.95&#xa;&#xa;Somatic:&#xa;• CUTOFF_SOMATIC_IGNORE_N_CELLS: 2&#xa;• CUTOFF_SOMATIC_MIN_N_CELLS: 10" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=9;" parent="1" vertex="1">
+                    <mxGeometry x="30" y="580" width="250" height="200" as="geometry"/>
+                </mxCell>
+                <mxCell id="16" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="2" target="3" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="17" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="3" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="18" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" target="5" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="360" y="160" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="19" style="endArrow=classic;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="3" target="6" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="21" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="7" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="460" y="200" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="24" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="7" target="10" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="25" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="8" target="9" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="26" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="10" target="11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="27" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="10" target="12" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="28" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="12" target="13" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="29" style="endArrow=classic;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="13" target="14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="35" value="AF ≥ 0.95" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#82b366;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="360" width="60" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="36" value="0.05 ≤ AF &lt; 0.95" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#6c8ebf;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="440" width="80" height="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="37" value="Cell-type&#xa;specific?" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=10;fontColor=#9673a6;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="660" width="60" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
