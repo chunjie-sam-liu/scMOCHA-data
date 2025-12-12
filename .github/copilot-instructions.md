@@ -54,5 +54,46 @@ Description: {Brief description}
 Version: 0.1
 ```
 
+# scMOCHA-data Coding Guidelines
+
+When generating or modifying scripts for the scMOCHA-data project:
+
+1. **Follow Project Conventions:** Consult [scmocha-agent-coding-guidelines.md](scmocha-agent-coding-guidelines.md) for comprehensive coding standards including:
+   - File naming patterns (numbered analysis, uppercase utilities, processing scripts)
+   - Script headers and metadata format (R and Python)
+   - Code organization and section structure
+   - Library loading order and preferences
+   - Data I/O patterns and file format choices
+   - Variable naming conventions (snake_case R, UPPERCASE constants Python)
+   - Error handling and logging patterns
+   - Parallel processing and workflow patterns
+
+2. **Use Templates:** Start from appropriate template in [.github/templates/](.github/templates/):
+   - `template-analysis-numbered.R` - Numbered analysis scripts (NN-name.R)
+   - `template-utility-uppercase.R` - Utility scripts (UPPERCASE_NAME.R)
+   - `template-processing.R` - Processing/preprocessing scripts
+   - `template-processing.py` - Python processing scripts
+
+3. **Key Requirements:**
+   - R: Always load `load_pkg(jutils)` first (includes magrittr and utilities)
+   - R: Use `load_pkg()` instead of `library()` - can load multiple: `load_pkg(ggplot2, data.table, dplyr)`
+   - R: Use `=` for assignment in args section, not `<-`
+   - R: GetoptLong direct call pattern (no spec string), see templates for examples
+   - R: Source `00-colors.R` for visualization scripts
+   - R: Use `qs` format for data, `fs::path()` for paths, `logger` for logging
+   - Python: Prefer `polars` over `pandas`, use `typer` for CLI, `rich` for output
+   - Python: Use `Path` from `pathlib`, not string concatenation for paths
+   - Both: Follow exact header template with @AUTHOR, @CONTACT, @DATE, @DESCRIPTION, @VERSION
+
+4. **Pre-Flight Checklist:** Before finalizing any script, verify:
+   - Header present with all required metadata fields
+   - Libraries loaded with `load_pkg()` - `load_pkg(jutils)` first, then others
+   - Section headers follow naming convention (# section name -----...)
+   - Args use `=` assignment (not `<-`) and direct GetoptLong() call
+   - Variables use appropriate naming (snake_case R, UPPERCASE constants Python)
+   - Paths use proper utilities (fs::path() or pathlib.Path)
+   - Error handling and logging configured
+   - Output directories created before writing files
+
 # AI Conversation Tracking
 Store in: `logs/{today}-{title-short-name}-{ai-model}.md`
