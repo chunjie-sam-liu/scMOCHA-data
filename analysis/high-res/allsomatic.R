@@ -100,15 +100,21 @@ fn_plot_all_variants <- function() {
 
           # cli_progress_update()
           dir_create(outdir / variant_type)
-
+          outfile <- path(
+            outdir / variant_type,
+            glue::glue(
+              "{variant_type}-{gseid}-{srrid}-{Haplogroup}-{Verbose_haplogroup}-{variant}.pdf"
+            )
+          )
+          if (file_exists(outfile)) {
+            cli_alert_info(glue::glue(
+              "File {outfile} already exists, skipping..."
+            ))
+            return(1)
+          }
           {
             pdf(
-              path(
-                outdir / variant_type,
-                glue::glue(
-                  "{variant_type}-{gseid}-{srrid}-{Haplogroup}-{Verbose_haplogroup}-{variant}.pdf"
-                )
-              ),
+              outfile,
               width = 16,
               height = 8
             )
@@ -132,7 +138,7 @@ fn_plot_all_variants <- function() {
         Verbose_haplogroup,
         variant_type,
         SIMPLIFY = FALSE,
-        mc.cores = 20
+        mc.cores = 50
       )
     )
 }
