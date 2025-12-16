@@ -338,7 +338,7 @@ fn_plot_circos <- function(
           labels = v_gene_name,
           facing = "clockwise",
           niceFacing = TRUE,
-          cex = 0.6,
+          cex = 1,
           col = "black",
         )
       }
