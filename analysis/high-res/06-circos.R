@@ -28,6 +28,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+load_pkg(circlize)
 allvariants <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
@@ -98,7 +99,6 @@ fn_plot_circos <- function(
   gap.degree = 1
   LENGTH <- 16569
 
-  load_pkg(circlize)
   # ! init --------------------------------------------------------------------
 
   circos.clear()
