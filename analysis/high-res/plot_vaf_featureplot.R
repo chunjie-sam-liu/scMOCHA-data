@@ -61,6 +61,7 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
     file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
   ) |>
     dplyr::arrange(cancer_types)
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
   sc$cell_hetero_coverage |>
     dplyr::filter(variant == .thevariant) -> vhc
 
@@ -69,13 +70,15 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
 
   if (is.null(.cell_annotation)) {
     vhc_umap |>
+      dplyr::arrange(af) |>
       ggplot(aes(x = UMAP_1, y = UMAP_2)) +
       geom_point(aes(color = af)) +
       scale_color_gradient2(
         name = "AF",
         low = "grey",
-        mid = "gold",
-        high = "#F02415"
+        mid = "grey50",
+        high = "#F02415",
+        midpoint = 0.01,
       ) +
       theme_bw() +
       labs(
@@ -91,11 +94,13 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
     return(p_feature)
   } else {
     vhc_umap |>
+      dplyr::arrange(af) |>
       ggplot(aes(x = UMAP_1, y = UMAP_2)) +
       geom_point(aes(color = celltype)) +
       scale_color_manual(
         name = "Cell Type",
-        values = pcc$color
+        # values = pcc$color
+        values = color_celltype
       ) +
       theme_bw() +
       labs() +
@@ -969,7 +974,7 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
       glue::glue(),
     path = outdir,
     plot = p_vaf_feature,
-    width = 9,
+    width = 12,
     height = 4,
   )
 }
