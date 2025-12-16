@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,11 +45,12 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 cleandatadir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
 
-pcc <- import(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- import(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 
 all_homo_af <- import(file.path(cleandatadir, "all_hetero_af.cluster.fst"))
@@ -70,7 +69,6 @@ all_heteroplasmic_af <- import(
 #   sep = ","
 # )
 
-
 all_variant <- import(
   file.path(cleandatadir, "all_variant.qs")
 )
@@ -79,13 +77,11 @@ all_variant |> dplyr::count(issomatic)
 
 all_variant |>
   dplyr::filter(issomatic %in% c("homoplasmic", "heteroplasmic")) |>
-  dplyr::arrange(Position) ->
-heteroplasmic
+  dplyr::arrange(Position) -> heteroplasmic
 
 heteroplasmic |>
   dplyr::filter(Disease != "") |>
-  dplyr::arrange(-n) ->
-heteroplasmic_disease
+  dplyr::arrange(-n) -> heteroplasmic_disease
 
 
 # #
@@ -126,8 +122,6 @@ heteroplasmic_disease
 #     limits = c(0, 1)
 #   )
 
-
-
 VARIANTS <- heteroplasmic$variant
 length(VARIANTS)
 
@@ -135,7 +129,9 @@ CELLBARCODE <- import(
   file.path(cleandatadir, "barcode_celltype.fst")
 )
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+) |>
   dplyr::select(
     srrid,
     Sex = sex
@@ -173,14 +169,12 @@ all_heteroplasmic_af |>
   dplyr::filter(
     num_variants > 0,
     # srrid %in% srrids
-  ) ->
-all_heteroplasmic_af_1
+  ) -> all_heteroplasmic_af_1
 nrow(all_heteroplasmic_af_1)
 
 all_heteroplasmic_af_1 |>
   dplyr::select(dplyr::any_of(VARIANTS)) |>
-  as.matrix() ->
-all_heteroplasmic_af_1_mat
+  as.matrix() -> all_heteroplasmic_af_1_mat
 
 all_heteroplasmic_af_1 |>
   dplyr::select(gseid, srrid, barcode) |>
@@ -194,7 +188,16 @@ all_heteroplasmic_af_1 |>
     Cluster = factor(barcode, levels = names(color_celltype))
   ) |>
   dplyr::left_join(
-    METADATA |> dplyr::select(gseid, srrid, Chemistry, Sex, Age_new, disease, Haplogroup_s),
+    METADATA |>
+      dplyr::select(
+        gseid,
+        srrid,
+        Chemistry,
+        Sex,
+        Age_new,
+        disease,
+        Haplogroup_s
+      ),
     by = c("gseid", "srrid")
   ) |>
   dplyr::select(-c(gseid, srrid, barcode)) |>
@@ -205,13 +208,10 @@ all_heteroplasmic_af_1 |>
     Age = Age_new,
     Disease = disease,
     Haplogroup = Haplogroup_s
-  ) ->
-.af_cluster_before
+  ) -> .af_cluster_before
 
 .af_cluster_before |>
-  tibble::column_to_rownames(var = "colname") ->
-.af_cluster
-
+  tibble::column_to_rownames(var = "colname") -> .af_cluster
 
 
 suppressPackageStartupMessages(library(ComplexHeatmap))
@@ -221,8 +221,7 @@ colSums(all_heteroplasmic_af_1_mat) |>
   as.data.frame() |>
   tibble::rownames_to_column(var = "variant") |>
   dplyr::select(variant, freq = `colSums(all_heteroplasmic_af_1_mat)`) |>
-  dplyr::arrange(desc(freq)) ->
-sort_variants
+  dplyr::arrange(desc(freq)) -> sort_variants
 
 dplyr::bind_rows(
   dplyr::slice_head(sort_variants, n = 10),
@@ -239,9 +238,7 @@ dplyr::bind_rows(
   ) |>
   dplyr::mutate(
     label = glue::glue("{variant};{aachange}\n{Disease}")
-  ) ->
-top_variants
-
+  ) -> top_variants
 
 
 .af_mtx <- all_heteroplasmic_af_1_mat |> t()
@@ -383,10 +380,8 @@ ComplexHeatmap::Heatmap(
     legend_direction = "vertical",
     title_gp = gpar(fontsize = 10)
   )
-) ->
-ch_af
+) -> ch_af
 # ch_af
-
 
 {
   pdf(
