@@ -433,8 +433,34 @@ fn_plot_circos <- function(
 }
 
 # body --------------------------------------------------------------------
-
 {
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/"
+  pdf(
+    file = path(
+      outdir,
+      "CIRCOS-ALL-VARIANTS-HOMO1266-HETE703-COLOR-FINAL.pdf"
+    ),
+    width = 13,
+    height = 10
+  )
+  # Original color scheme
+  fn_plot_circos(
+    color_circos_track = c(
+      "phastCons100way" = "#FFD700",
+      "gnomad" = "#000000",
+      "homo_paf" = "#ae00ff",
+      "hete_paf" = "#00b3ff",
+      "somatic_paf" = "#FF0000",
+      "homo_af" = "#ae00ff",
+      "hete_af" = "#00b3ff",
+      "somatic_af" = "#FF0000",
+      "gene_name_bg" = "#EAF7FF",
+      "coverage" = "#3FB5FF"
+    )
+  )
+  dev.off()
+}
+\() {
   outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/"
   pdf(
     file = path(
