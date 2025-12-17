@@ -296,6 +296,7 @@ col_fun = circlize::colorRamp2(
   col_pick
 )
 
+
 {
   ComplexHeatmap::Heatmap(
     matrix = AFMTX,
@@ -347,8 +348,8 @@ col_fun = circlize::colorRamp2(
     # right_annotation = hma_right,
     heatmap_legend_param = list(
       title = "Allele Freq",
-      at = c(0, 0.5, 1),
-      labels = c("0", "0.5", "1"),
+      at = SEQAF[closest_positions],
+      labels = c("0", "0.01", "0.05", "0.1", "0.5", "1"),
       legend_direction = "vertical",
       title_gp = gpar(fontsize = 10)
     )
@@ -366,6 +367,77 @@ col_fun = circlize::colorRamp2(
   dev.off()
 }
 
+
+{
+  library(ggplot2)
+
+  legend_df <- data.frame(
+    value = SEQAF,
+    col = col_fun(SEQAF)
+  ) |>
+    tibble::rowid_to_column(var = "id")
+
+  # Find closest SEQAF positions for desired labels
+  target_values <- c(0, 0.01, 0.05, 0.1, 0.5, 1.0)
+  closest_positions <- sapply(target_values, function(x) {
+    which.min(abs(SEQAF - x))
+  })
+
+  p_legend <- ggplot(
+    legend_df,
+    aes(y = id, x = 1, fill = col)
+  ) +
+    geom_tile(width = 0.8, height = 1) +
+    scale_fill_identity() +
+    scale_y_continuous(
+      breaks = closest_positions,
+      labels = c("0", "0.01", "0.05", "0.1", "0.5", "1"),
+      expand = c(0, 0),
+      position = "right"
+    ) +
+    scale_x_continuous(expand = c(0, 0)) +
+    coord_cartesian(xlim = c(0.6, 1.4)) +
+    theme_void() +
+    theme(
+      axis.text.y.right = element_text(
+        size = 10,
+        hjust = 0,
+        margin = margin(l = 5),
+        color = "black"
+      ),
+      axis.title.y.right = element_text(
+        size = 12,
+        angle = 270,
+        vjust = 0.5,
+        margin = margin(l = 10),
+        color = "black"
+      ),
+      plot.margin = margin(5, 25, 5, 5),
+      panel.border = element_rect(
+        color = "black",
+        fill = NA,
+        size = 0.5
+      )
+    ) +
+    labs(y = "Allele Frequency")
+
+  # Save legend as PDF
+  OUTDIR <- path(
+    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
+  )
+  ggsave(
+    filename = OUTDIR /
+      "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW-LEGEND.pdf",
+    plot = p_legend,
+    width = 2,
+    height = 6,
+    units = "in",
+    dpi = 300
+  )
+
+  print(p_legend)
+  cli_alert_success("Legend saved successfully.")
+}
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
