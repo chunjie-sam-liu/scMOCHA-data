@@ -967,7 +967,7 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
     thevariants = c("7757G>A")
   ) -> p_vaf_feature
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   )
   ggsave(
     filename = "7757G>A-selected_variants_vaf_featureplot.pdf" |>

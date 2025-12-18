@@ -5,7 +5,7 @@ gse_data_variant_classification_clusteraf_bulkaf <- import(
 
 
 fn_plot_somatic_variants <- function() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse/somatic-updated"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse/somatic-updated"
   dir_create(outdir)
 
   gse_data_variant_classification_clusteraf_bulkaf |>
@@ -72,7 +72,7 @@ fn_plot_somatic_variants <- function() {
 
 fn_plot_all_variants <- function() {
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse/all-variant"
+    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse/all-variant"
   )
   dir_create(outdir)
 

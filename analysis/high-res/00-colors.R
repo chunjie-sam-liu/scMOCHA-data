@@ -55,3 +55,27 @@ color_variantcell <- c(
   "No sufficient reads" = "gray",
   "No reads" = "white"
 )
+
+color_haplogroup <- c(
+  "A" = "#C1A72F",
+  "B" = "#FAD2D9",
+  "C" = "#ED2891",
+  "D" = "#F6B667",
+  "F" = "#104A7F",
+  "H" = "#9EDDF9",
+  "HV" = "#3953A4",
+  "I" = "#007EB5",
+  "J" = "#B2509E",
+  "K" = "#97D1A9",
+  "L" = "#ED1C24",
+  "M" = "#F8AFB3",
+  "N" = "#EA7075",
+  "R" = "#754C29",
+  "T" = "#D49DC7",
+  "U" = "#CACCDB",
+  "V" = "#D3C3E0",
+  "W" = "#A084BD",
+  "X" = "#542C88",
+  "Y" = "#D97D25",
+  "Z" = "#6E7BA2"
+)

@@ -267,7 +267,7 @@ fn_plot_clusteraf <- function(
       )
     ) -> p_collect
   {
-    # outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+    # outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
     ggsave(
       filename = glue::glue("Variant-Type.pdf"),
       plot = p_collect,

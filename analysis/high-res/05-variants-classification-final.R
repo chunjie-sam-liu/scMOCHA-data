@@ -371,7 +371,7 @@ fn_plot_af_individual <- function(
   ) +
     plot_annotation(
       title = glue::glue(
-        "Variant {thevariant} Allele Frequency\n{unique(df_thevariant$gseid)}-{unique(df_thevariant$srrid)}"
+        "Variant Allele Frequency\n{unique(df_thevariant$gseid)}-{unique(df_thevariant$srrid)}"
       ),
       theme = theme(
         plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
@@ -437,7 +437,7 @@ plot(
 
 
 {
-  outdir = "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+  outdir = "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   pdf(
     path(
       outdir,
@@ -456,7 +456,7 @@ plot(
 #
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   thevariant <- "2442T>C"
   ggsave(
     filename = glue::glue("Example-variant-{thevariant}-Hete-Homo.pdf"),
@@ -482,7 +482,7 @@ plot(
 #
 #
 
-fn_plot_af_variant_type("15244A>G")
+fn_plot_af_variant_type("14082C>G")
 fn_plot_af_individual("GSM6793473")
 
 dt_allvariants_euler |>
@@ -537,7 +537,7 @@ dt_allvariants_euler |>
 
 {
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse/euler-intersection-variants"
+    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse/euler-intersection-variants"
   )
   dir_create(outdir)
   df_variants_intersection_plot |>
@@ -568,7 +568,7 @@ dt_allvariants_euler |>
 #
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   thevariant <- "9449C>T"
   fn_plot_af_variant_type(thevariant)
   ggsave(
@@ -717,7 +717,7 @@ df_variants |>
   ) -> p_multiple_variants_bulk
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   ggsave(
     filename = glue::glue("Example-variant-multi.pdf"),
     plot = p_multiple_variants_bulk,

@@ -707,7 +707,7 @@ fn_plot_mtdna_circos_celltype_variant_type(
 # )
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/notuse"
+  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   pdf(
     file = path(outdir, "circos-haplo-homo-hetero-somatic.pdf"),
     width = 13,
