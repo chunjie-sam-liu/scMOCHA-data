@@ -17,7 +17,8 @@ gse_dataset_metadata_full <- import(
     Gender = SEXPRED
   )
 
-source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+
+source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 # ! Sankey plot for samples --------------------------------------------------------------------
 
 # meta --------------------------------------------------------------------

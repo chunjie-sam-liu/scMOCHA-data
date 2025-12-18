@@ -61,7 +61,7 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
     file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
   ) |>
     dplyr::arrange(cancer_types)
-  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
   sc$cell_hetero_coverage |>
     dplyr::filter(variant == .thevariant) -> vhc
 

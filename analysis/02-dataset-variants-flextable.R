@@ -50,6 +50,10 @@ gse_dataset_metadata_full <- import(
     Gender = SEXPRED
   )
 
+export(
+  gse_dataset_metadata_full,
+  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLES-METADATA-FULL.xlsx"
+)
 
 gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
@@ -198,7 +202,7 @@ gse_data_read_srrid |>
     -`# of somatic mutation`
   ) -> df_srrid
 
-export(df_srrid, path(outdir, "SAMPLES_METADATA_READ_MUTATION.xlsx"))
+export(df_srrid, path(outdir, "SAMPLES-METADATA-READ-MUTATION.xlsx"))
 #
 
 #

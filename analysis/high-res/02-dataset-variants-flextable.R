@@ -207,7 +207,7 @@ export(df_srrid, path(outdir, "SAMPLES_METADATA_READ_MUTATION.xlsx"))
 #
 #
 
-source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 

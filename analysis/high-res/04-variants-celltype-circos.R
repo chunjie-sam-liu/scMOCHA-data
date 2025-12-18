@@ -140,7 +140,7 @@ fn_plot_mtdna_circos <- function(
     dplyr::arrange(-paf) |>
     head(5) -> top_variants
 
-  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
   # conserve_rate
 
@@ -438,7 +438,7 @@ fn_plot_mtdna_circos_celltype_variant_type <- function(
   gap.degree = 1
   LENGTH <- 16569
 
-  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
   # conserve_rate
 

@@ -1,5 +1,5 @@
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  source("analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
   conn_all_hetero_af <- DBI::dbConnect(
     duckdb::duckdb(),
     "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
@@ -287,7 +287,7 @@ fn_plot_cell_number_of_cells <- function(forplot) {
 }
 
 fn_plot_cell_af_somatic_variant <- function(forplot) {
-  source("analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
   thetheme <- theme(

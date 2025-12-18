@@ -92,7 +92,7 @@ gse_data |>
   ) -> gse_data_haplo_variant
 
 # ! cell type ratio --------------------------------------------------------------------
-source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
 gse_data_haplo_variant |>
   # dplyr::mutate(

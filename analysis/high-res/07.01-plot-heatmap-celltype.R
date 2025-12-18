@@ -118,7 +118,7 @@ METADATA <- import(
   ) |>
   dplyr::mutate(Sex = SEXPRED)
 
-source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
 # load conn ---------------------------------------------------------------
 
