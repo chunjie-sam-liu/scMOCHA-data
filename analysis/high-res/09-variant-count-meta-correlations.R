@@ -32,7 +32,7 @@ outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 # source color
 source(path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/src/00-colors.R"
+  "/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R"
 ))
 
 # load conn ---------------------------------------------------------------
@@ -41,29 +41,48 @@ source(path(
 
 # function ----------------------------------------------------------------
 
-fn_eda_ggpubr <- function(anno_meta_info_clean) {
+fn_eda_ggpubr <- function(
+  anno_meta_info_clean,
+  varianttype = "# of somatic variants"
+) {
+  ylab_varianttype <- switch(
+    varianttype,
+    "# of somatic variants" = "Number of Somatic Variants",
+    "# of homoplasmic variants" = "Number of Homoplasmic Variants",
+    "# of heteroplasmic variants" = "Number of Heteroplasmic Variants",
+    "# of variants" = "Number of Total Variants",
+    stop("Invalid varianttype")
+  )
+
   p_ncells <- tryCatch(
     expr = {
       anno_meta_info_clean |>
         ggpubr::ggscatter(
           x = "# cells after filter",
-          y = "# of somatic variants",
+          y = varianttype,
           title = "Number of Cells",
           xlab = "",
-          ylab = "Number of Somatic Variants",
-          color = "Chemistry",
+          ylab = ylab_varianttype,
+          # color = "Chemistry",
           add = "reg.line",
-          palette = color_chemistry,
+          add.params = list(color = "blue"),
+          # palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
             method = "pearson",
             label.x = 3,
-            label.sep = "\n"
+            label.sep = "\n",
+            p.accuracy = 0.001
           )
         ) +
+        scale_x_continuous(
+          labels = scales::label_comma()
+        ) +
         theme(
+          plot.title = element_text(hjust = 0.5),
           legend.position = "none",
+          aspect.ratio = 1
         )
     },
     error = function(e) {
@@ -80,23 +99,30 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
         ) |>
         ggpubr::ggscatter(
           x = "Median UMI cell",
-          y = "# of somatic variants",
+          y = varianttype,
           title = "Number of UMI",
           xlab = "",
-          ylab = "Number of Somatic Variants",
-          color = "Chemistry",
+          ylab = ylab_varianttype,
+          # color = "Chemistry",
           add = "reg.line",
-          palette = color_chemistry,
+          add.params = list(color = "blue"),
+          # palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
             method = "pearson",
             label.x = 3,
-            label.sep = "\n"
+            label.sep = "\n",
+            p.accuracy = 0.001
           )
         ) +
+        scale_x_continuous(
+          labels = scales::label_comma()
+        ) +
         theme(
+          plot.title = element_text(hjust = 0.5),
           legend.position = "none",
+          aspect.ratio = 1
         )
     },
     error = function(e) {
@@ -110,23 +136,30 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
       anno_meta_info_clean |>
         ggpubr::ggscatter(
           x = "Depth read mean",
-          y = "# of somatic variants",
+          y = varianttype,
           title = "Average Depth",
           xlab = "",
-          ylab = "Number of Somatic Variants",
-          color = "Chemistry",
+          ylab = ylab_varianttype,
+          # color = "Chemistry",
           add = "reg.line",
-          palette = color_chemistry,
+          add.params = list(color = "blue"),
+          # palette = color_chemistry,
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
             method = "pearson",
             label.x = 3,
-            label.sep = "\n"
+            label.sep = "\n",
+            p.accuracy = 0.001
           )
         ) +
+        scale_x_continuous(
+          labels = scales::label_comma()
+        ) +
         theme(
+          plot.title = element_text(hjust = 0.5),
           legend.position = "none",
+          aspect.ratio = 1
         )
     },
     error = function(e) {
@@ -140,23 +173,30 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
       anno_meta_info_clean |>
         ggpubr::ggscatter(
           x = "Age_new",
-          y = "# of somatic variants",
+          y = varianttype,
           title = "Age",
           xlab = "",
-          ylab = "Number of Somatic Variants",
-          color = "Chemistry",
-          palette = color_chemistry,
+          ylab = ylab_varianttype,
+          # color = "Chemistry",
+          # palette = color_chemistry,
           add = "reg.line",
+          add.params = list(color = "blue"),
           # conf.int = TRUE,
           cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
           cor.coeff.args = list(
             method = "pearson",
             label.x = 3,
-            label.sep = "\n"
+            label.sep = "\n",
+            p.accuracy = 0.001
           )
         ) +
+        scale_x_continuous(
+          labels = scales::label_comma()
+        ) +
         theme(
-          legend.position = "right",
+          plot.title = element_text(hjust = 0.5),
+          legend.position = "none",
+          aspect.ratio = 1
         )
     },
     error = function(e) {
@@ -169,17 +209,26 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
     expr = {
       anno_meta_info_clean |>
         ggpubr::ggboxplot(
-          x = "sex_pred",
-          y = "# of somatic variants",
+          x = "SEXPRED",
+          y = varianttype,
           xlab = "",
-          ylab = "Number of Somatic Variants",
-          title = "Gender",
-          color = "Chemistry",
-          palette = color_chemistry,
+          ylab = ylab_varianttype,
+          title = "Sex",
+          color = "SEXPRED",
+          # palette = color_chemistry,
           add = "jitter",
         ) +
+        scale_color_manual(
+          values = color_gender
+        ) +
+        ggpubr::stat_compare_means(
+          method = "t.test",
+          label = "p.format"
+        ) +
         theme(
+          plot.title = element_text(hjust = 0.5),
           legend.position = "none",
+          aspect.ratio = 1
         )
     },
     error = function(e) {
@@ -216,16 +265,30 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
         ) |>
         ggpubr::ggboxplot(
           x = "disease",
-          y = "# of somatic variants",
+          y = varianttype,
           xlab = "",
-          ylab = "Number of Somatic Variants",
+          ylab = ylab_varianttype,
           title = "Disease",
-          color = "Chemistry",
-          palette = color_chemistry,
+          color = "disease",
+          # palette = color_chemistry,
           add = "jitter"
         ) +
+        scale_color_manual(
+          values = color_disease
+        ) +
+        ggpubr::stat_compare_means(
+          method = "anova",
+          label.y = max(
+            anno_meta_info_clean$`# of somatic variants`,
+            na.rm = TRUE
+          ) *
+            1.1
+        ) +
         theme(
+          plot.title = element_text(hjust = 0.5),
           legend.position = "none",
+          aspect.ratio = 1,
+          axis.text.x = element_text(angle = 15, hjust = 1)
         )
     },
     error = function(e) {
@@ -233,6 +296,24 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
       ggplot()
     }
   )
+
+  {
+    pdf(
+      file = outdir /
+        glue::glue(
+          "VARIANT-COUNT-vs-metadata-{ylab_varianttype}.pdf"
+        ),
+      width = 6,
+      height = 4
+    )
+    print(p_ncells)
+    print(p_numi)
+    print(p_avg_depth)
+    print(p_age)
+    print(p_gender)
+    print(p_disease)
+    dev.off()
+  }
 
   wrap_plots(
     list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease),
@@ -242,7 +323,10 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
   p_combined
 }
 
-fn_eda_ggpubr(METAFULL)
+fn_eda_ggpubr(METAFULL, "# of somatic variants")
+fn_eda_ggpubr(METAFULL, "# of homoplasmic variants")
+fn_eda_ggpubr(METAFULL, "# of heteroplasmic variants")
+fn_eda_ggpubr(METAFULL, "# of variants")
 
 # body --------------------------------------------------------------------
 

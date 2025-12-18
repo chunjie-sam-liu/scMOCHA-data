@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,9 +45,7 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
@@ -63,7 +59,9 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+) |>
   dplyr::select(
     srrid,
     sex_pred = sex
@@ -234,7 +232,13 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
       anno_meta_info_clean |>
         dplyr::mutate(
           disease = dplyr::case_when(
-            disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+            disease %in%
+              c(
+                "Alzheimer's Disease",
+                "Healthy",
+                "COVID-19",
+                "Unknown"
+              ) ~ disease,
             TRUE ~ "Other"
           )
         ) |>
@@ -291,7 +295,9 @@ ggsave(
 ggsave(
   path = zzz_out,
   filename = "ggpubr_correlation_somatic_variants_cutoff2.pdf",
-  plot = fn_eda_ggpubr(anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 2)),
+  plot = fn_eda_ggpubr(
+    anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 2)
+  ),
   width = 20,
   height = 10
 )
@@ -299,20 +305,25 @@ ggsave(
 ggsave(
   path = zzz_out,
   filename = "ggpubr_correlation_somatic_variants_cutoff1.pdf",
-  plot = fn_eda_ggpubr(anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 1)),
+  plot = fn_eda_ggpubr(
+    anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 1)
+  ),
   width = 20,
   height = 10
 )
 
 
-
-
 # ! age --------------------------------------------------------------------
 
-
 theme_cor <- function() {
-  theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
-    plot.title = element_text(size = rel(1.3), vjust = 2, hjust = 0.5, lineheight = 0.8),
+  theme(
+    # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+    plot.title = element_text(
+      size = rel(1.3),
+      vjust = 2,
+      hjust = 0.5,
+      lineheight = 0.8
+    ),
 
     # axis
     axis.title.x = element_text(face = "bold", size = 16),
@@ -401,8 +412,7 @@ anno_meta_info_clean |>
     title = "Number of Somatic Variants correlates with Age",
     x = "Age",
     y = "# of somatic variants"
-  ) ->
-p_age_cor
+  ) -> p_age_cor
 ggsave(
   path = zzz_out,
   filename = "ggpubr_correlation_age_somatic_variants.pdf",
@@ -410,7 +420,6 @@ ggsave(
   width = 8,
   height = 6
 )
-
 
 
 # ! age correlation with ggstatsplot --------------------------------------
@@ -466,8 +475,7 @@ ggscatterstats(
     title = "Number of Somatic Variants correlates with Age",
     x = "Age",
     y = "# of somatic variants"
-  ) ->
-p_age_cor_ggstatsplot
+  ) -> p_age_cor_ggstatsplot
 
 # Save the plot
 ggsave(
@@ -519,8 +527,7 @@ anno_meta_info_clean |>
   labs(
     x = "",
     y = "# of somatic variants",
-  ) ->
-p1
+  ) -> p1
 
 anno_meta_info_clean |>
   dplyr::filter(
@@ -564,8 +571,7 @@ anno_meta_info_clean |>
   labs(
     x = "",
     y = "# of somatic variants",
-  ) ->
-p2
+  ) -> p2
 
 wrap_plots(
   p1,
@@ -579,8 +585,7 @@ wrap_plots(
     legend.box = "horizontal",
     legend.position = "top",
     # plot.background = element_rect(color = "black"),
-  ) ->
-p_collect
+  ) -> p_collect
 
 # Save the plot
 ggsave(
@@ -590,7 +595,6 @@ ggsave(
   width = 8,
   height = 5
 )
-
 
 # footer ------------------------------------------------------------------
 
