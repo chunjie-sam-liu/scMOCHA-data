@@ -265,6 +265,8 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 
 fn_plot_bar <- function(.d) {
   .d |>
+    dplyr::select(variant, variant_six, L_H_strand) |>
+    dplyr::distinct() |>
     dplyr::group_by(
       variant_six,
       L_H_strand
@@ -302,6 +304,12 @@ fn_plot_bar <- function(.d) {
 
 fn_plot_pie_nature_aging <- function(.d) {
   .d |>
+    dplyr::select(
+      variant,
+      deamination_ros,
+      variant_six
+    ) |>
+    dplyr::distinct() |>
     dplyr::count(
       deamination_ros,
       variant_six
@@ -409,10 +417,11 @@ fn_plot_pie_nature_aging <- function(.d) {
 #   dplyr::count(variant_six) |>
 #   fn_plot_pie()
 
+# fn_plot_bar(fn_variant_L_H_strand(SOMATIC_VARIANTS))
 {
   # somatic variants
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-SOMATIC.pdf",
+    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-SOMATIC-DISTINCT.pdf",
     width = 8,
     height = 6
   )
@@ -423,7 +432,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # hete
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HETE.pdf",
+    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HETE-DISTINCT.pdf",
     width = 8,
     height = 6
   )
@@ -434,7 +443,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # homo
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO.pdf",
+    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO-DISTINCT.pdf",
     width = 8,
     height = 6
   )
@@ -445,7 +454,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # homo_hete
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO-HETE.pdf",
+    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO-HETE-DISTINCT.pdf",
     width = 8,
     height = 6
   )
