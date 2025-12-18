@@ -87,10 +87,12 @@ source(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/plot_variant_celltype_af_haplogroup.R"
 )
 
+
 # function ----------------------------------------------------------------
 fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
-  max_n <- max(df$n_individuals)
-  maxy <- max_n + 1
+  fn_xy_breaks_limits(
+    df$n_individuals,
+  ) -> ybl_
 
   df |> dplyr::filter(variant %in% label_variants) -> forlabel
   df |>
@@ -129,9 +131,9 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
     ) +
     scale_y_continuous(
       expand = expansion(add = c(.05, 0.05), mult = c(0.01, 0.01)),
-      limits = c(0, max(pretty(c(0, maxy), n = 5))),
-      breaks = pretty(c(0, maxy), n = 5),
-      labels = pretty(c(0, maxy), n = 5),
+      limits = ybl_$limits,
+      breaks = ybl_$breaks,
+      # labels = ybl_$limits,
     ) +
     theme(
       plot.margin = margin(t = 0, b = 0, unit = "cm"),
