@@ -33,10 +33,10 @@ color_celltype <- c(
 color_circos_track <- c(
   "phastCons100way" = "#FFD700",
   "gnomad" = "#0000FF",
-  "homoplasmic_paf" = "#03DC62",
-  "heteroplasmic_paf" = "#7A0202",
-  "homoplasmic_af" = "#A6FCCB",
-  "heteroplasmic_af" = "#FF0000",
+ # "homoplasmic_paf" = "#03DC62",
+ # "heteroplasmic_paf" = "#7A0202",
+ # "homoplasmic_af" = "#A6FCCB",
+ # "heteroplasmic_af" = "#FF0000",
   "gene_name_bg" = "#EAF7FF",
   "coverage" = "#3FB5FF"
 )
