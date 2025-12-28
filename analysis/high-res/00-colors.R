@@ -30,16 +30,18 @@ color_celltype <- c(
   "other" = "grey50"
 )
 
-color_circos_track <- c(
-  "phastCons100way" = "#FFD700",
-  "gnomad" = "#0000FF",
-  "homoplasmic_paf" = "#03DC62",
-  "heteroplasmic_paf" = "#7A0202",
-  "homoplasmic_af" = "#A6FCCB",
-  "heteroplasmic_af" = "#FF0000",
-  "gene_name_bg" = "#EAF7FF",
-  "coverage" = "#3FB5FF"
-)
+ color_circos_track = c(
+      "phastCons100way" = "#FFD700",
+      "gnomad" = "#000000",
+      "homo_paf" = "#ae00ff",
+      "hete_paf" = "#00b3ff",
+      "somatic_paf" = "#FF0000",
+      "homo_af" = "#ae00ff",
+      "hete_af" = "#00b3ff",
+      "somatic_af" = "#FF0000",
+      "gene_name_bg" = "#EAF7FF",
+      "coverage" = "#3FB5FF"
+    )
 
 color_mtdna_gene_type <- c(
   "D-Loop" = "#FFFFB3",

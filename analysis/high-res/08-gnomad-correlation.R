@@ -203,8 +203,7 @@ ggsave(
 #
 #
 mtdna <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
-rnr1 <- mtdna[gene_name == "MT-RNR1", .(start, end)] |> as.numeric()
-rnr2 <- mtdna[gene_name == "MT-RNR2", .(start, end)] |> as.numeric()
+
 
 
 allvariants |>
