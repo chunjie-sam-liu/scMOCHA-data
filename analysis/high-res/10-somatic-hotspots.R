@@ -177,6 +177,200 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
       y = "# of Samples",
     )
 }
+
+fn_plot_somatic_ <- function() {
+  SOMATIC_VARIANTS |>
+    dplyr::mutate(srridvariant = glue("{srrid}_{variant}")) |>
+    dplyr::select(
+      srridvariant,
+      c(B, CD4_T, CD8_T, DC, Mono, NK, other, Bulk, other_T)
+    ) |>
+    tibble::column_to_rownames("srridvariant") |>
+    as.matrix() -> mat_somatic_af
+
+  hc <- hclust(dist(mat_somatic_af))
+  clustered_order <- rownames(mat_somatic_af)[hc$order]
+
+  SOMATIC_VARIANTS |>
+    dplyr::mutate(srridvariant = glue("{srrid}_{variant}")) |>
+    tidyr::pivot_longer(
+      cols = c(B, CD4_T, CD8_T, DC, Mono, NK, other, Bulk, other_T),
+      names_to = "celltype",
+      values_to = "af"
+    ) |>
+    dplyr::mutate(
+      celltype = factor(
+        celltype,
+        levels = c(
+          "Bulk",
+          "B",
+          "CD4_T",
+          "CD8_T",
+          "other_T",
+          "NK",
+          "DC",
+          "Mono",
+          "other"
+        )
+      )
+    ) |>
+    dplyr::mutate(
+      srridvariant = factor(
+        srridvariant,
+        levels = clustered_order
+      )
+    ) -> forplot
+
+  forplot |>
+    dplyr::select(Haplogroup, Verbose_haplogroup) |>
+    dplyr::distinct() |>
+    dplyr::mutate(
+      Haplogroup_s = purrr::map_chr(
+        .x = Haplogroup,
+        .f = \(.x) {
+          # if (stringr::str_starts(.x, "L")) {
+          #   gsub("L", "L0", .x)
+          # }
+          gsub("\\d+.*", "", .x)
+        }
+      )
+    ) |>
+    dplyr::mutate(
+      color_haplogroup = color(color_haplogroup[Haplogroup_s])
+    ) |>
+    dplyr::mutate(
+      color_verbose_haplogroup = ifelse(
+        Haplogroup == Verbose_haplogroup,
+        color_haplogroup,
+        prismatic::clr_lighten(color_haplogroup, 0.5)
+      )
+    ) |>
+    dplyr::filter(!is.na(Haplogroup)) |>
+    dplyr::select(-Haplogroup_s) -> haplo_colors
+
+  c(
+    haplo_colors$color_haplogroup,
+    haplo_colors$color_verbose_haplogroup
+  ) -> haplo_color_vector
+  names(haplo_color_vector) <- c(
+    haplo_colors$Haplogroup,
+    haplo_colors$Verbose_haplogroup
+  )
+
+  forplot |>
+    dplyr::select(srridvariant, srrid, Haplogroup, Verbose_haplogroup) |>
+    dplyr::mutate(
+      srridvariant = factor(
+        srridvariant,
+        levels = clustered_order
+      )
+    ) |>
+    tidyr::pivot_longer(
+      cols = c(Haplogroup, Verbose_haplogroup),
+      names_to = "type",
+      values_to = "Haplogroup"
+    ) -> forplot_haplogroup
+
+  forplot_haplogroup |>
+    ggplot(aes(
+      x = type,
+      y = srridvariant,
+      fill = Haplogroup
+    )) +
+    geom_tile(
+      show.legend = FALSE
+    ) +
+    scale_fill_manual(
+      values = haplo_color_vector
+    ) +
+    geom_text(
+      data = forplot_haplogroup |> dplyr::distinct(),
+      aes(
+        label = Haplogroup,
+      ),
+      color = "black",
+      fontface = "bold"
+    ) +
+    scale_x_discrete(
+      expand = c(0, 0)
+    ) +
+    scale_y_discrete(
+      labels = function(x) sub("_.*", "", x)
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      axis.line = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_text(
+        face = "bold",
+        size = 12
+      ),
+      axis.ticks.y = element_blank(),
+    ) -> p_haplogroup
+
+  forplot |>
+    ggplot(aes(
+      x = celltype,
+      y = srridvariant,
+      fill = af
+    )) +
+    geom_tile() +
+    geom_text(
+      aes(
+        label = ifelse(af >= 0.01, sprintf("%.2f", af), "")
+      ),
+      color = "black",
+      fontface = "bold"
+    ) +
+    scale_fill_gradient(
+      name = "AF",
+      low = "white",
+      high = "red"
+    ) +
+    scale_x_discrete(
+      expand = c(0, 0)
+    ) +
+    scale_y_discrete(
+      labels = function(x) sub(".*_", "", x)
+    ) +
+    theme_classic() +
+    labs(
+      x = "Celltype",
+    ) +
+    theme(
+      plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+      axis.text.x = element_text(
+        face = "bold",
+        size = 12,
+        angle = 15,
+        hjust = 1
+      ),
+      # axis.title.x = element_text(face = "bold", size = 12),
+      axis.title.y = element_blank(),
+      axis.line.y = element_blank(),
+      axis.text.y = element_text(),
+      axis.ticks.y = element_blank(),
+    ) -> p_af
+
+  wrap_plots(
+    p_haplogroup,
+    p_af,
+    ncol = 2,
+    widths = c(0.2, 1),
+    guides = "collect"
+  ) +
+    plot_annotation(
+      title = glue::glue(
+        "Variant  Allele Frequency"
+      ),
+      theme = theme(
+        plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
+      )
+    )
+}
 # body --------------------------------------------------------------------
 
 #
