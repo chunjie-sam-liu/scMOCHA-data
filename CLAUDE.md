@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Plan & Review
+
+### Before starting work
+- Always in plan mode to make a plan.
+- After get the plan, make sure you Write the plan to .claude/tasks/TASK_NAME.md.
+- The plan should be a detailed implementation plan and the reasoning behind them, as well as task broken down.
+- If the task require external knowledge or certain package, also research to get latest knowledge (use Task tool to research).
+- Don't over plan it, always think MVP.
+- Once you write the plan, firstly ask me to review it. Do not continue until I approve the plan.
+
+### While implementing
+- You should update the plan as you work.
+- After you complete tasks in the plan, you should update and append detailed description of the changes you made, so following tasks can be easily hand over to other engineers.
+
+
 ## Project Overview
 
 **scMOCHA-data** is a single-cell mitochondrial variant analysis pipeline for large-scale scRNA-seq datasets. The project processes data from multiple GEO datasets to identify, classify, and analyze mitochondrial DNA variants at the single-cell level. Key focus areas include heteroplasmic and homoplasmic variants, somatic mutations, and cell-type-specific variant patterns.
@@ -125,15 +140,12 @@ All Variants
 
 # Library -----------------------------------------------------------------
 load_pkg(jutils)  # ALWAYS FIRST
-load_pkg(ggplot2, data.table, dplyr)
 
 # args --------------------------------------------------------------------
 GetoptLong.options(help_style = "two-column")
-gseid = "GSE123456"  # Use = not <-
 verbose = FALSE
 
 GetoptLong(
-  "gseid=s", "GSE accession ID",
   "verbose!", "print messages"
 )
 
