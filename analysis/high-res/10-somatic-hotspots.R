@@ -178,7 +178,7 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
     )
 }
 
-fn_plot_somatic_ <- function() {
+fn_plot_somatic_dist <- function() {
   SOMATIC_VARIANTS |>
     dplyr::mutate(srridvariant = glue("{srrid}_{variant}")) |>
     dplyr::select(
@@ -188,8 +188,54 @@ fn_plot_somatic_ <- function() {
     tibble::column_to_rownames("srridvariant") |>
     as.matrix() -> mat_somatic_af
 
-  hc <- hclust(dist(mat_somatic_af))
-  clustered_order <- rownames(mat_somatic_af)[hc$order]
+  # Identify dominant cell type for each variant (excluding Bulk)
+  mat_specific <- mat_somatic_af[, c(
+    "B",
+    "CD4_T",
+    "CD8_T",
+    "other_T",
+    "NK",
+    "DC",
+    "Mono",
+    "other"
+  )]
+
+  # For each variant, find the cell type with maximum AF
+  dominant_celltype <- apply(mat_specific, 1, function(x) {
+    if (max(x, na.rm = TRUE) < 0.01) {
+      return("Bulk")
+    }
+    colnames(mat_specific)[which.max(x)]
+  })
+
+  # Create ordering: group by dominant cell type, then by AF within each group
+  celltype_order <- c(
+    "Bulk",
+    "B",
+    "CD4_T",
+    "CD8_T",
+    "other_T",
+    "NK",
+    "DC",
+    "Mono",
+    "other"
+  )
+
+  variant_df <- data.frame(
+    srridvariant = rownames(mat_somatic_af),
+    dominant_celltype = dominant_celltype,
+    max_af = apply(mat_specific, 1, max, na.rm = TRUE),
+    stringsAsFactors = FALSE
+  )
+
+  variant_df$dominant_celltype <- factor(
+    variant_df$dominant_celltype,
+    levels = celltype_order
+  )
+  variant_ordered <- variant_df[
+    order(variant_df$dominant_celltype, -variant_df$max_af),
+  ]
+  clustered_order <- variant_ordered$srridvariant
 
   SOMATIC_VARIANTS |>
     dplyr::mutate(srridvariant = glue("{srrid}_{variant}")) |>
@@ -311,6 +357,122 @@ fn_plot_somatic_ <- function() {
       axis.ticks.y = element_blank(),
     ) -> p_haplogroup
 
+  gtf_gene_df <- import(
+    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+  )
+
+  forplot |>
+    dplyr::select(srridvariant, variant) |>
+    dplyr::distinct() |>
+    dplyr::mutate(
+      pos = as.integer(gsub("(\\d+)[A-Z]>[A-Z]", "\\1", variant))
+    ) |>
+    dplyr::mutate(
+      gene_df = purrr::map(
+        .x = pos,
+        .f = \(.x) {
+          gtf_gene_df |>
+            dplyr::filter(start <= .x & end >= .x) |>
+            dplyr::select(gene_name, TYPE, COLOR)
+        }
+      )
+    ) |>
+    tidyr::unnest(cols = gene_df) -> forplot_variant_gene
+
+  # Create color vector: COLOR is for TYPE, lighten for different gene_name
+  type_color_df <- forplot_variant_gene |>
+    dplyr::select(TYPE, COLOR) |>
+    dplyr::distinct()
+
+  # For each TYPE, create lightened colors for each gene_name
+  gene_colors_list <- forplot_variant_gene |>
+    dplyr::select(TYPE, gene_name, COLOR) |>
+    dplyr::distinct() |>
+    dplyr::arrange(TYPE, gene_name) |>
+    dplyr::group_by(TYPE) |>
+    dplyr::mutate(
+      gene_idx = dplyr::row_number(),
+      n_genes = dplyr::n()
+    ) |>
+    dplyr::ungroup() |>
+    dplyr::mutate(
+      gene_color = purrr::pmap_chr(
+        .l = list(
+          .color = COLOR,
+          .idx = gene_idx
+        ),
+        .f = \(.color, .idx) {
+          if (.idx == 1) {
+            .color
+          } else {
+            as.character(prismatic::clr_lighten(.color, shift = 0.05 * .idx))
+          }
+        }
+      )
+    )
+
+  # Create named vectors
+  type_color_vector <- type_color_df$COLOR
+  names(type_color_vector) <- type_color_df$TYPE
+
+  gene_color_vector <- gene_colors_list$gene_color
+  names(gene_color_vector) <- gene_colors_list$gene_name
+
+  all_color_vector <- c(type_color_vector, gene_color_vector)
+
+  forplot_variant_gene |>
+    dplyr::select(srridvariant, gene_name, TYPE, COLOR) |>
+    dplyr::mutate(
+      srridvariant = factor(srridvariant, levels = clustered_order)
+    ) |>
+    tidyr::pivot_longer(
+      cols = c(TYPE, gene_name),
+      names_to = "type",
+      values_to = "label"
+    ) |>
+    dplyr::mutate(
+      type = factor(type, levels = c("TYPE", "gene_name"))
+    ) -> forplot_gene
+
+  forplot_gene |>
+    ggplot(aes(
+      x = type,
+      y = srridvariant,
+      fill = label
+    )) +
+    geom_tile(
+      show.legend = FALSE
+    ) +
+    scale_fill_manual(
+      values = all_color_vector
+    ) +
+    geom_text(
+      data = forplot_gene |> dplyr::distinct(),
+      aes(label = label),
+      color = "black",
+      fontface = "bold",
+      size = 3
+    ) +
+    scale_x_discrete(
+      expand = c(0, 0)
+    ) +
+    scale_y_discrete(
+      labels = function(x) sub(".*_", "", x)
+    ) +
+    theme_classic() +
+    theme(
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.x = element_blank(),
+      axis.line = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_text(
+        face = "bold",
+        size = 10
+      ),
+      axis.ticks.y = element_blank(),
+    ) -> p_gene
+
   forplot |>
     ggplot(aes(
       x = celltype,
@@ -349,28 +511,45 @@ fn_plot_somatic_ <- function() {
         hjust = 1
       ),
       # axis.title.x = element_text(face = "bold", size = 12),
-      axis.title.y = element_blank(),
+      axis.title = element_blank(),
       axis.line.y = element_blank(),
-      axis.text.y = element_text(),
+      axis.text.y = element_blank(),
       axis.ticks.y = element_blank(),
     ) -> p_af
 
+  SOMATIC_VARIANTS$variant |> unique() |> length() -> n_variants
+  SOMATIC_VARIANTS$srrid |> unique() |> length() -> n_samples
+
   wrap_plots(
     p_haplogroup,
+    p_gene,
     p_af,
-    ncol = 2,
-    widths = c(0.2, 1),
+    ncol = 3,
+    widths = c(0.2, 0.3, 1),
     guides = "collect"
   ) +
     plot_annotation(
       title = glue::glue(
-        "Variant  Allele Frequency"
+        "Somatic variants distribution across cell types and haplogroups\n({n_variants} variants across {n_samples} samples)"
       ),
       theme = theme(
         plot.title = element_text(size = 14, face = "bold", hjust = 0.5)
       )
-    )
+    ) -> p_collect
+
+  pdf(
+    file = path(
+      "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+    ) /
+      "HOTSPOTS-SOMATIC-CLUSTER.pdf",
+    width = 15,
+    height = 35
+  )
+  print(p_collect)
+  dev.off()
 }
+
+fn_plot_somatic_dist()
 # body --------------------------------------------------------------------
 
 #
