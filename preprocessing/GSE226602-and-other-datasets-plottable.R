@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 datadir <- "/home/liuc9/github/scMOCHA-data/data/out_new_ting"
 filename_ <- file.path(
@@ -76,9 +73,9 @@ gses_meta_read |>
     Chemistry = factor(Chemistry, levels = chem_levels)
   ) |>
   dplyr::arrange(
-    Chemistry, -`Avg. somatic mutation`
-  ) ->
-df
+    Chemistry,
+    -`Avg. somatic mutation`
+  ) -> df
 
 
 library(flextable)
@@ -209,8 +206,7 @@ flextable::flextable(df) |>
   flextable::width(
     j = c(10),
     width = 2
-  ) ->
-ft
+  ) -> ft
 ft
 
 flextable::save_as_image(

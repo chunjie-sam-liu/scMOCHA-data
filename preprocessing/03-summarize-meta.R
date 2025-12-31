@@ -37,7 +37,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -45,7 +44,6 @@ log_layout(layout_glue_colors)
 # future::plan(future::multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-
 
 # load data ---------------------------------------------------------------
 gseidlist <- c(
@@ -64,9 +62,10 @@ length(gseidlist)
 gseid <- gseidlist[[7]]
 datadir <- file.path(basedir, gseid)
 outdir <- file.path(
-  datadir, "out"
+  datadir,
+  "out"
 )
-dir.create(outdir, showWarnings = F,recursive = T)
+dir.create(outdir, showWarnings = F, recursive = T)
 
 srrid_list <- readr::read_lines(
   file.path(
@@ -101,7 +100,7 @@ srarun |>
     sex = dplyr::contains("sex")
   )
 
-pheno |>         #dplyr::glimpse()
+pheno |> #dplyr::glimpse()
   dplyr::select(
     srrid = geo_accession,
     age = dplyr::contains("age"),
@@ -112,8 +111,8 @@ pheno |>         #dplyr::glimpse()
   ) |>
   dplyr::mutate(
     disease = gsub("", "", x = disease)
-  ) ->
-  suc;suc
+  ) -> suc
+suc
 
 data.table::fwrite(
   x = suc,
@@ -122,7 +121,6 @@ data.table::fwrite(
     "{gseid}.meta.csv" |> glue::glue()
   )
 )
-
 
 # footer ------------------------------------------------------------------
 

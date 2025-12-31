@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -43,9 +41,7 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
-
 
 # load data ---------------------------------------------------------------
 
@@ -57,12 +53,18 @@ ks_test_dir <- file.path(dbdir, "all_hetero_af.cell.ks_test")
 plotdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-celltype-specific-variant"
 
 
-
-META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs") |>
+META <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.sex_pred.qs"
+) |>
   dplyr::select(
-    gseid, srrid, Age_new, Age_group,
+    gseid,
+    srrid,
+    Age_new,
+    Age_group,
     Haplogroup,
-    disease, Chemistry, sex_pred
+    disease,
+    Chemistry,
+    sex_pred
   ) |>
   dplyr::mutate(
     Haplogroup = purrr::map_chr(
@@ -77,7 +79,6 @@ META <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data
   )
 
 
-
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
   dbdir = "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1" |>
@@ -89,20 +90,16 @@ all_hetero_af_cell_tbl <- dplyr::tbl(conn, "all_hetero_af_cell")
 all_hetero_af_cell_tbl |>
   dplyr::select(variant) |>
   dplyr::distinct() |>
-  dplyr::collect() ->
-all_hetero_af_cell_variants
+  dplyr::collect() -> all_hetero_af_cell_variants
 all_hetero_af_cell_tbl |>
   dplyr::select(celltype) |>
   dplyr::distinct() |>
-  dplyr::collect() ->
-all_hetero_af_cell_celltypes
+  dplyr::collect() -> all_hetero_af_cell_celltypes
 
 
 # function ----------------------------------------------------------------
 
-
 # body --------------------------------------------------------------------
-
 
 META |>
   dplyr::select(-Age_group) |>
@@ -114,8 +111,7 @@ META |>
   ) |>
   dplyr::mutate(
     Chemistry = as.character(Chemistry),
-  ) ->
-META_age
+  ) -> META_age
 
 library(glmmTMB)
 library(DHARMa)
@@ -132,8 +128,7 @@ all_hetero_af_cell_variants |>
             # celltype == thecelltype,
             af > 0
           ) |>
-          as.data.table() ->
-        .d
+          as.data.table() -> .d
         .d |>
           dplyr::inner_join(
             META_age,
@@ -141,13 +136,16 @@ all_hetero_af_cell_variants |>
           ) |>
           dplyr::mutate(
             af = ifelse(af == 1, 0.9999, af),
-          ) ->
-        .dd
-
+          ) -> .dd
 
         model <- glmmTMB(
-          af ~ celltype + Age_new + disease + Chemistry + Haplogroup + sex_pred + (1 | srrid
-          ),
+          af ~ celltype +
+            Age_new +
+            disease +
+            Chemistry +
+            Haplogroup +
+            sex_pred +
+            (1 | srrid),
           family = beta_family(),
           data = .dd
         )
@@ -155,15 +153,15 @@ all_hetero_af_cell_variants |>
       },
       mc.cores = 50
     )
-  ) ->
-all_hetero_af_cell_variants_models
+  ) -> all_hetero_af_cell_variants_models
 
 export(
   all_hetero_af_cell_variants_models,
-  file = file.path("/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.glmmTMB", "all_hetero_af.cell.variants.models.qs")
+  file = file.path(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/all_hetero_af.cell.glmmTMB",
+    "all_hetero_af.cell.variants.models.qs"
+  )
 )
-
-
 
 
 all_hetero_af_cell_variants_models |>
@@ -181,21 +179,24 @@ all_hetero_af_cell_variants_models |>
       },
       mc.cores = 20
     )
-  ) ->
-all_hetero_af_cell_variants_models_params
+  ) -> all_hetero_af_cell_variants_models_params
 
 all_hetero_af_cell_variants_models_params |>
   tidyr::unnest(cols = c(params)) |>
   dplyr::filter(
     p < 0.05
-  ) ->
-all_hetero_af_cell_variants_models_params_filtered
+  ) -> all_hetero_af_cell_variants_models_params_filtered
 
 lymphoid_cells <- c(
-  "B", "CD4_T", "CD8_T", "other_T", "NK"
+  "B",
+  "CD4_T",
+  "CD8_T",
+  "other_T",
+  "NK"
 )
 myeloid_cells <- c(
-  "DC", "Mono"
+  "DC",
+  "Mono"
 )
 
 all_hetero_af_cell_variants_models_params_filtered |>
@@ -204,7 +205,10 @@ all_hetero_af_cell_variants_models_params_filtered |>
       grepl("Age_new", Parameter)
   ) |>
   dplyr::select(
-    variant, Parameter, Coefficient, p
+    variant,
+    Parameter,
+    Coefficient,
+    p
   ) |>
   tidyr::nest(
     .by = variant,
@@ -225,8 +229,9 @@ all_hetero_af_cell_variants_models_params_filtered |>
     )
   ) |>
   dplyr::select(-params) |>
-  tidyr::unnest(cols = c(params_new)) ->
-all_hetero_af_cell_variants_models_params_filtered_sorted
+  tidyr::unnest(
+    cols = c(params_new)
+  ) -> all_hetero_af_cell_variants_models_params_filtered_sorted
 
 all_hetero_af_cell_variants_models_params_filtered_sorted |>
   dplyr::filter(cell_age > 0)
@@ -293,7 +298,6 @@ all_hetero_af_cell_tbl |>
     x = "Allele Frequency",
     y = "Cell Type"
   )
-
 
 # footer ------------------------------------------------------------------
 

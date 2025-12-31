@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 project_filename <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source.csv"
 project_source <- data.table::fread(project_filename)
@@ -68,7 +65,10 @@ sra_table <- dplyr::tbl(sra_con, "sra")
 study_table <- dplyr::tbl(sra_con, "study")
 sample_table <- dplyr::tbl(sra_con, "sample")
 
-col_inter <- setdiff(intersect(colnames(sra_table), colnames(study_table)), "study_accession")
+col_inter <- setdiff(
+  intersect(colnames(sra_table), colnames(study_table)),
+  "study_accession"
+)
 
 
 proj_IDs <- project_source$proj_ID
@@ -80,13 +80,11 @@ sra_table |>
       dplyr::select(-col_inter),
     by = "study_accession"
   ) |>
-  as.data.table() ->
-sra_df
+  as.data.table() -> sra_df
 
 sra_df |>
   dplyr::pull(sample_accession) |>
-  unique() ->
-sample_accessions
+  unique() -> sample_accessions
 
 
 sample_df <- sample_table |>
@@ -109,8 +107,7 @@ cleaned_sample_df |>
       FUN = function(.x) {
         .x |>
           stringr::str_split(" \\|\\| ") |>
-          _[[1]] ->
-        .xx
+          _[[1]] -> .xx
 
         tibble::tibble(
           xx = .xx
@@ -120,8 +117,7 @@ cleaned_sample_df |>
             into = c("key", "value"),
             sep = ": ",
             remove = TRUE
-          ) ->
-        .d
+          ) -> .d
 
         .d |> dplyr::filter(key == "source_name") -> .dd
 
@@ -136,8 +132,7 @@ cleaned_sample_df |>
       mc.cores = 20
     )
   ) |>
-  tidyr::unnest(cols = sa) ->
-cleaned_sample_source_name
+  tidyr::unnest(cols = sa) -> cleaned_sample_source_name
 
 # study_name
 # experiment_name
@@ -153,21 +148,19 @@ sra_df |>
     samp_ID = experiment_name
   ) |>
   dplyr::relocate(
-    proj_ID, samp_ID,
+    proj_ID,
+    samp_ID,
     .before = 1
-  ) ->
-cleaned_sample_df_sra
+  ) -> cleaned_sample_df_sra
 
 cleaned_sample_df_sra |> dplyr::glimpse()
-
 
 
 project_source |>
   dplyr::left_join(
     cleaned_sample_df_sra,
     by = c("proj_ID" = "proj_ID", "samp_ID" = "samp_ID")
-  ) ->
-project_source_sra
+  ) -> project_source_sra
 
 project_source_sra |> dplyr::glimpse()
 

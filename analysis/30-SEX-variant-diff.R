@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,11 +39,9 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-
 
 # load data ---------------------------------------------------------------
 # load data ---------------------------------------------------------------
@@ -63,7 +59,9 @@ gse_data <- import(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
 )
 
-all_variant <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs") |>
+all_variant <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
+) |>
   dplyr::select(variant, issomatic)
 
 all_hetero_af_cluster <- import(
@@ -87,10 +85,11 @@ all_hetero_af_bulk <- import(
 all_hetero_af_cluster |>
   dplyr::bind_rows(
     all_hetero_af_bulk
-  ) ->
-all_hetero_af_cluster_bulk
+  ) -> all_hetero_af_cluster_bulk
 
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+) |>
   dplyr::select(
     srrid,
     sex
@@ -109,23 +108,24 @@ gse_dataset_metadata_full |>
   #   disease %in% c("Healthy", "Alzheimer's Disease")
   # ) |>
   dplyr::select(
-    gseid, srrid, Chemistry, disease, sex
-  ) ->
-admeta
+    gseid,
+    srrid,
+    Chemistry,
+    disease,
+    sex
+  ) -> admeta
 admeta |>
   dplyr::filter(
     # Chemistry %in% c("SC5P-PE", "SC5P-R2")
     Chemistry == "SC5P-PE"
-  ) ->
-admeta_sc5p
+  ) -> admeta_sc5p
 
 
 admeta_sc5p |>
   dplyr::left_join(
     gse_data,
     by = c("gseid", "srrid")
-  ) ->
-admeta_sc5p_variant
+  ) -> admeta_sc5p_variant
 
 
 admeta_sc5p_variant |>
@@ -146,9 +146,13 @@ admeta_sc5p_variant |>
     )
   ) |>
   dplyr::select(
-    gseid, srrid, Chemistry, disease, variant_type, sex
-  ) ->
-admeta_sc5p_variant_type
+    gseid,
+    srrid,
+    Chemistry,
+    disease,
+    variant_type,
+    sex
+  ) -> admeta_sc5p_variant_type
 
 # ! compare variant between Female and Male --------------------------------------------------------------------
 
@@ -158,17 +162,20 @@ admeta_sc5p_variant_type |>
     issomatic == "heteroplasmic"
   ) |>
   dplyr::select(
-    srrid, disease, variant, sex
+    srrid,
+    disease,
+    variant,
+    sex
   ) |>
   dplyr::left_join(
     all_hetero_af_cluster_bulk,
     by = c("srrid", "variant")
-  ) ->
-admeta_sc5p_variant_type_af
+  ) -> admeta_sc5p_variant_type_af
 
 admeta_sc5p_variant_type_af |>
   dplyr::group_by(
-    variant, barcode
+    variant,
+    barcode
   ) |>
   tidyr::nest() |>
   dplyr::ungroup() |>
@@ -181,8 +188,7 @@ admeta_sc5p_variant_type_af |>
           tidyr::pivot_wider(
             names_from = sex,
             values_from = n
-          ) ->
-        .xx
+          ) -> .xx
         tryCatch(
           expr = {
             t.test(
@@ -192,7 +198,12 @@ admeta_sc5p_variant_type_af |>
             ) |>
               broom::tidy() |>
               dplyr::select(
-                estimate, estimate1, estimate2, p.value, conf.low, conf.high
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
               ) |>
               dplyr::bind_cols(
                 .xx
@@ -208,8 +219,7 @@ admeta_sc5p_variant_type_af |>
       mc.cores = 10,
       SIMPLIFY = FALSE
     )
-  ) ->
-admeta_sc5p_variant_type_af_ttest
+  ) -> admeta_sc5p_variant_type_af_ttest
 
 
 admeta_sc5p_variant_type_af_ttest |>
@@ -232,13 +242,11 @@ admeta_sc5p_variant_type_af_ttest |>
   dplyr::filter(
     Female >= 10,
     Male >= 10
-  ) ->
-admeta_sc5p_variant_type_af_ttest_rank
+  ) -> admeta_sc5p_variant_type_af_ttest_rank
 
 admeta_sc5p_variant_type_af_ttest_rank |>
   dplyr::filter(estimate > 0.03) |>
-  dplyr::arrange(variant) ->
-top5_variant
+  dplyr::arrange(variant) -> top5_variant
 
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
@@ -284,8 +292,7 @@ admeta_sc5p_variant_type_af_ttest |>
       variant,
       NA
     ),
-  ) ->
-forplot_test
+  ) -> forplot_test
 
 forplot_test |>
   ggplot(aes(
@@ -373,7 +380,6 @@ forplot_test |>
   )
 
 # body --------------------------------------------------------------------
-
 
 # footer ------------------------------------------------------------------
 

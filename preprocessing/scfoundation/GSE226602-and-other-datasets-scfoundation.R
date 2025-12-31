@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -49,7 +47,6 @@ log_layout(layout_glue_colors)
 fn_plot_mtdna <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
-
   gtf_gene_df <-
     readr::read_rds(
       file = mt_exons_df
@@ -61,7 +58,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = gene_biotype
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -102,8 +100,7 @@ fn_plot_mtdna <- function() {
         vjust = -1,
       ),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  pg
+    coord_cartesian(xlim = c(0, 17000)) -> pg
   pg
 }
 
@@ -145,12 +142,67 @@ gseids <- c(
 )
 
 gseids_meta_raw <- tibble::tibble(
-  GSE_ID = c("GSE163668", "GSE149689", "GSE155223", "GSE155673", "GSE157344", "GSE166992", "GSE171555", "GSE226602", "GSE181279", "WT"),
+  GSE_ID = c(
+    "GSE163668",
+    "GSE149689",
+    "GSE155223",
+    "GSE155673",
+    "GSE157344",
+    "GSE166992",
+    "GSE171555",
+    "GSE226602",
+    "GSE181279",
+    "WT"
+  ),
   samples = c(38, 20, 18, 12, 33, 9, 48, 50, 5, 1),
-  Disease = c("COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "COVID-19", "AD", "AD", "-"),
-  Source = c("PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "PBMC", "Mixed"),
-  Chemistry = c("SC5P-R2", "SC3Pv3", "SC5P-R2", "SC3Pv3", "SC3Pv3", "SC5P-PE", "SC5P-R2", "SC5P-PE", "SC5P-PE", "SC3Pv3"),
-  Publication = c("Nature, 2021", "Exp Mol Med, 2022", "Cell Rep, 2023", "Science, 2020", "Nat Commun, 2021", "Cell Rep, 2021", "Med, 2021", "Neuron, 2024", "Front Immunol., 2021", "-")
+  Disease = c(
+    "COVID-19",
+    "COVID-19",
+    "COVID-19",
+    "COVID-19",
+    "COVID-19",
+    "COVID-19",
+    "COVID-19",
+    "AD",
+    "AD",
+    "-"
+  ),
+  Source = c(
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "PBMC",
+    "Mixed"
+  ),
+  Chemistry = c(
+    "SC5P-R2",
+    "SC3Pv3",
+    "SC5P-R2",
+    "SC3Pv3",
+    "SC3Pv3",
+    "SC5P-PE",
+    "SC5P-R2",
+    "SC5P-PE",
+    "SC5P-PE",
+    "SC3Pv3"
+  ),
+  Publication = c(
+    "Nature, 2021",
+    "Exp Mol Med, 2022",
+    "Cell Rep, 2023",
+    "Science, 2020",
+    "Nat Commun, 2021",
+    "Cell Rep, 2021",
+    "Med, 2021",
+    "Neuron, 2024",
+    "Front Immunol., 2021",
+    "-"
+  )
 )
 gseids_meta_ting <- tibble::tibble(
   GSE_ID = c(
@@ -174,9 +226,13 @@ gseids_meta_ting <- tibble::tibble(
       GSE_ID,
       .f = \(.x) {
         data.table::fread(
-          file.path(basedir, .x, "out", glue::glue("{.x}.cell_ratio_and_variant_clean.csv"))
-        ) ->
-        .d
+          file.path(
+            basedir,
+            .x,
+            "out",
+            glue::glue("{.x}.cell_ratio_and_variant_clean.csv")
+          )
+        ) -> .d
         tibble::tibble(
           samples = nrow(.d),
           Disease = "-",
@@ -206,9 +262,13 @@ gseids_meta_scfoundation <- tibble::tibble(
       .f = \(.x) {
         basedir <- "/home/liuc9/github/scMOCHA-data/data"
         data.table::fread(
-          file.path(basedir, .x, "out", glue::glue("{.x}.cell_ratio_and_variant_clean.csv"))
-        ) ->
-        .d
+          file.path(
+            basedir,
+            .x,
+            "out",
+            glue::glue("{.x}.cell_ratio_and_variant_clean.csv")
+          )
+        ) -> .d
         tibble::tibble(
           samples = nrow(.d),
           Disease = "-",
@@ -228,7 +288,6 @@ gseids_meta <- dplyr::bind_rows(
 )
 
 
-
 # body --------------------------------------------------------------------
 
 tibble::tibble(
@@ -239,7 +298,12 @@ tibble::tibble(
       .x = gseid,
       .f = \(.gseid) {
         data.table::fread(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv"))
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv")
+          )
         ) |>
           dplyr::select(-Chemistry)
       }
@@ -250,19 +314,22 @@ tibble::tibble(
       .x = gseid,
       .f = \(.gseid) {
         readr::read_rds(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.scmocha.out.rds.gz")
+          )
         )
       }
     )
-  ) ->
-gse_data_loaded
+  ) -> gse_data_loaded
 
 gse_data_loaded |>
   dplyr::select(anno) |>
   tidyr::unnest(cols = anno) |>
   dplyr::select(celltype_ratio) |>
-  tidyr::unnest(cols = celltype_ratio) ->
-a
+  tidyr::unnest(cols = celltype_ratio) -> a
 
 outdir <- file.path(basedir, "scfoundation", "out")
 
@@ -291,13 +358,11 @@ gse_data_loaded |>
   dplyr::left_join(
     gseids_meta,
     by = c("gseid" = "GSE_ID")
-  ) ->
-gse_cell_ratio_variant_meta
+  ) -> gse_cell_ratio_variant_meta
 
 # save gse cell ratio and variant data ------------------------------------
 gse_cell_ratio_variant_meta |>
-  tidyr::unnest(cols = cell_ratio_variant) ->
-gse_cell_ratio_variant_meta_xlsx
+  tidyr::unnest(cols = cell_ratio_variant) -> gse_cell_ratio_variant_meta_xlsx
 
 gse_cell_ratio_variant_meta_xlsx |>
   dplyr::select(-anno) |>
@@ -315,12 +380,13 @@ gse_cell_ratio_variant_meta_xlsx |>
   dplyr::ungroup() |>
   dplyr::arrange(dplyr::desc(`Avg # of somatic variants`)) |>
   dplyr::mutate(
-    label = glue::glue("{gseid} ({Chemistry}, {`# of samples`}, {round(`Avg # of somatic variants`, 2)})")
+    label = glue::glue(
+      "{gseid} ({Chemistry}, {`# of samples`}, {round(`Avg # of somatic variants`, 2)})"
+    )
   ) |>
   dplyr::mutate(
     label = factor(label, levels = label)
-  ) ->
-gseid_ranked
+  ) -> gseid_ranked
 # plot average depth and number of somatic variants ------------------------
 
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
@@ -335,13 +401,15 @@ gse_cell_ratio_variant_meta |>
   tidyr::unnest(cols = cell_ratio_variant) |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = chem_levels),
-  ) ->
-forplot
+  ) -> forplot
 
-cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |> broom::tidy() -> cor_test_all
+cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |>
+  broom::tidy() -> cor_test_all
 # cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot, subset = gseid != "GSE181279") |> broom::tidy() -> cor_test_250k
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 
 forplot |>
@@ -354,7 +422,9 @@ forplot |>
     color = label
   )) +
   geom_smooth(
-    method = "loess", se = FALSE, color = "black",
+    method = "loess",
+    se = FALSE,
+    color = "black",
     linetype = 21,
   ) +
   geom_hline(
@@ -403,9 +473,10 @@ forplot |>
   labs(
     x = "Average Depth",
     y = "Number of Somatic Variants",
-    title = glue::glue("All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}")
-  ) ->
-p_somatic_variant
+    title = glue::glue(
+      "All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}"
+    )
+  ) -> p_somatic_variant
 
 ggsave(
   filename = file.path(outdir, "somatic_variant_with_avg_depth.pdf"),
@@ -420,8 +491,7 @@ gse_cell_ratio_variant_meta |>
   dplyr::select(gseid, anno, Chemistry) |>
   tidyr::unnest(cols = anno) |>
   dplyr::select(gseid, srrid, depth, Chemistry) |>
-  tidyr::unnest(cols = depth) ->
-all_gseid_depth
+  tidyr::unnest(cols = depth) -> all_gseid_depth
 
 all_gseid_depth |>
   dplyr::filter(pos == 3173) |>
@@ -433,13 +503,14 @@ all_gseid_depth |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = chem_levels)
   ) |>
-  dplyr::arrange(Chemistry, dplyr::desc(mean_depth)) ->
-theposes_depth_ranked
+  dplyr::arrange(Chemistry, dplyr::desc(mean_depth)) -> theposes_depth_ranked
 
 
 all_gseid_depth |>
   dplyr::group_by(
-    Chemistry, gseid, pos
+    Chemistry,
+    gseid,
+    pos
   ) |>
   dplyr::summarise(
     depth = mean(depth, na.rm = TRUE)
@@ -448,8 +519,7 @@ all_gseid_depth |>
   dplyr::mutate(
     gseid = factor(gseid, levels = theposes_depth_ranked$gseid),
     Chemistry = factor(Chemistry, levels = chem_levels)
-  ) ->
-all_gseid_depth_forplot_separated
+  ) -> all_gseid_depth_forplot_separated
 
 chem_color <- tibble::tibble(
   color = chem_colors,
@@ -457,8 +527,10 @@ chem_color <- tibble::tibble(
 )
 
 theposes_depth_ranked |>
-  dplyr::left_join(chem_color, by = "Chemistry") ->
-theposes_depth_ranked_chem_color
+  dplyr::left_join(
+    chem_color,
+    by = "Chemistry"
+  ) -> theposes_depth_ranked_chem_color
 
 all_gseid_depth_forplot_separated |>
   ggplot() +
@@ -530,8 +602,7 @@ all_gseid_depth_forplot_separated |>
     )
   ) +
   coord_cartesian(xlim = c(0, 17000)) +
-  labs(y = "Depth") ->
-p_depth_all_separated
+  labs(y = "Depth") -> p_depth_all_separated
 
 p_mtdna <- fn_plot_mtdna()
 

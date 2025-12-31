@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,16 +39,13 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
-
 
 # load data ---------------------------------------------------------------
 srr_filename <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir.csv"
 srr <- import(srr_filename)
 
 # function ----------------------------------------------------------------
-
 
 # body --------------------------------------------------------------------
 library(Seurat)
@@ -76,11 +71,17 @@ srr |>
         .sc$sc_azimuth@meta.data |>
           tibble::rownames_to_column("barcode") |>
           dplyr::select(
-            -c(orig.ident, nCount_RNA, nFeature_RNA, percent.mt, percent.ribo, Percent.Largest.Gene),
+            -c(
+              orig.ident,
+              nCount_RNA,
+              nFeature_RNA,
+              percent.mt,
+              percent.ribo,
+              Percent.Largest.Gene
+            ),
             -dplyr::contains("score"),
           ) |>
-          data.table::as.data.table() ->
-        .d
+          data.table::as.data.table() -> .d
 
         .colnames <- gsub("\\.", "_", gsub("predicted.", "", colnames(.d)))
         colnames(.d) <- .colnames
@@ -102,13 +103,11 @@ srr |>
       },
       mc.cores = 50
     )
-  ) ->
-srr_load
+  ) -> srr_load
 
 srr_load |>
   dplyr::select(-srrdir) |>
-  tidyr::unnest(cols = c(load)) ->
-srr_load_unnest
+  tidyr::unnest(cols = c(load)) -> srr_load_unnest
 
 export(
   srr_load_unnest,

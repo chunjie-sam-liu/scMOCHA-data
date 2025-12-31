@@ -37,7 +37,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -73,14 +72,12 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 basedir <- "/home/liuc9/github/scMOCHA/06-bigdata/"
 gseid <- "GSE226602"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 # body --------------------------------------------------------------------
 
-
-
 # parse log files ---------------------------------------------------------
-
 
 logfile <- file.path(
   datadir,
@@ -97,8 +94,7 @@ tibble::tibble(
   dplyr::mutate(
     srrid = basename(srrdir)
   ) |>
-  dplyr::select(srrdir, srrid) ->
-srr_out
+  dplyr::select(srrdir, srrid) -> srr_out
 
 
 outdir <- file.path(
@@ -106,7 +102,6 @@ outdir <- file.path(
   "output"
 )
 dir.create(outdir, showWarnings = F, recursive = T)
-
 
 
 readr::write_lines(
@@ -141,8 +136,7 @@ srr_out |>
           dplyr::mutate(
             v = glue::glue("{Position}{Ref}>{Alt}")
           ) |>
-          dplyr::pull(v) ->
-        .v
+          dplyr::pull(v) -> .v
         .cva$Position -> .pos
 
         .hetero <- data.table::fread(
@@ -169,8 +163,7 @@ srr_out |>
       }
     )
   ) |>
-  tidyr::unnest(cols = cell_stats) ->
-srr_out_cell_stats
+  tidyr::unnest(cols = cell_stats) -> srr_out_cell_stats
 
 
 readr::write_rds(

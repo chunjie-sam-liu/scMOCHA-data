@@ -41,7 +41,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -68,7 +67,10 @@ fn_parse_log <- function(logfile) {
 
   while (length(line <- readLines(con, n = 1, warn = FALSE)) > 0) {
     if (grepl("scMOCHA.output_dir_tar_gz", line)) {
-      cleaned_line <- stringr::str_remove_all(line, "\"| |,|scMOCHA.output_dir_tar_gz|\\:")
+      cleaned_line <- stringr::str_remove_all(
+        line,
+        "\"| |,|scMOCHA.output_dir_tar_gz|\\:"
+      )
       output_lines <- c(output_lines, cleaned_line)
     }
   }
@@ -80,7 +82,8 @@ fn_parse_log <- function(logfile) {
 # basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 dir.create(
@@ -90,7 +93,8 @@ dir.create(
 )
 
 targzdir <- file.path(
-  datadir, "targz"
+  datadir,
+  "targz"
 )
 dir.create(
   path = targzdir,
@@ -100,7 +104,6 @@ dir.create(
 
 # body --------------------------------------------------------------------
 # parse log file ----------------------------------------------------------
-
 
 logfile <- file.path(
   datadir,
@@ -135,7 +138,8 @@ readr::write_lines(
 
 # uncompress --------------------------------------------------------------
 untargzdir <- file.path(
-  datadir, "final"
+  datadir,
+  "final"
 )
 dir.create(
   path = untargzdir,
@@ -167,8 +171,7 @@ srarun <- data.table::fread(
 srarun |>
   dplyr::filter(
     experiment_name %in% gsms
-  ) ->
-toberemoved
+  ) -> toberemoved
 
 runfile <- data.table::fread(
   file.path(
@@ -191,8 +194,7 @@ runfile |>
       }
     )
   ) |>
-  dplyr::select(rm_cmd) ->
-rm_cmds
+  dplyr::select(rm_cmd) -> rm_cmds
 
 
 cmd_rm_fastq <- glue::glue("{rm_cmds$rm_cmd} &")
@@ -204,7 +206,6 @@ readr::write_lines(
     "06.{gseid}.scmocha.clear.sh" |> glue::glue()
   )
 )
-
 
 # footer ------------------------------------------------------------------
 

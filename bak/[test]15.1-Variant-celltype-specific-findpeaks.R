@@ -17,7 +17,14 @@ find_density_peak <- function(x, bw = "nrd0", ...) {
 }
 
 # Function to find multiple peaks (local maxima)
-find_density_peaks <- function(x, bw = "nrd0", min_height = 0.01, min_prominence = 0.1, min_distance = 0.05, ...) {
+find_density_peaks <- function(
+  x,
+  bw = "nrd0",
+  min_height = 0.01,
+  min_prominence = 0.1,
+  min_distance = 0.05,
+  ...
+) {
   # Calculate density
   dx <- density(x, bw = bw, ...)
 
@@ -27,7 +34,9 @@ find_density_peaks <- function(x, bw = "nrd0", min_height = 0.01, min_prominence
 
   # Check each point (excluding endpoints)
   for (i in 2:(n - 1)) {
-    if (dx$y[i] > dx$y[i - 1] && dx$y[i] > dx$y[i + 1] && dx$y[i] >= min_height) {
+    if (
+      dx$y[i] > dx$y[i - 1] && dx$y[i] > dx$y[i + 1] && dx$y[i] >= min_height
+    ) {
       peaks <- c(peaks, i)
     }
   }
@@ -76,9 +85,16 @@ find_density_peaks <- function(x, bw = "nrd0", min_height = 0.01, min_prominence
     }
 
     # Sort by density value (highest first) and remove helper columns
-    peaks_info <- peaks_info[order(peaks_info$y, decreasing = TRUE), c("x", "y", "prominence")]
+    peaks_info <- peaks_info[
+      order(peaks_info$y, decreasing = TRUE),
+      c("x", "y", "prominence")
+    ]
   } else {
-    peaks_info <- data.frame(x = numeric(0), y = numeric(0), prominence = numeric(0))
+    peaks_info <- data.frame(
+      x = numeric(0),
+      y = numeric(0),
+      prominence = numeric(0)
+    )
   }
 
   return(list(
@@ -102,19 +118,47 @@ max_density <- max(dx$y)
 adaptive_min_height <- max_density * 0.1 # 10% of maximum density
 adaptive_min_prominence <- max_density * 0.2 # 20% of maximum density
 
-peaks_result <- find_density_peaks(x, min_height = adaptive_min_height, min_prominence = adaptive_min_prominence, min_distance = 0.2)
+peaks_result <- find_density_peaks(
+  x,
+  min_height = adaptive_min_height,
+  min_prominence = adaptive_min_prominence,
+  min_distance = 0.2
+)
 cat("Number of significant peaks found:", nrow(peaks_result$peaks), "\n")
-cat("Adaptive thresholds - min_height:", round(adaptive_min_height, 3), ", min_prominence:", round(adaptive_min_prominence, 3), "\n")
+cat(
+  "Adaptive thresholds - min_height:",
+  round(adaptive_min_height, 3),
+  ", min_prominence:",
+  round(adaptive_min_prominence, 3),
+  "\n"
+)
 
 if (nrow(peaks_result$peaks) > 0) {
   print(peaks_result$peaks)
 
   # Add all peaks to the plot
-  points(peaks_result$peaks$x, peaks_result$peaks$y, col = "blue", pch = 17, cex = 1.2)
+  points(
+    peaks_result$peaks$x,
+    peaks_result$peaks$y,
+    col = "blue",
+    pch = 17,
+    cex = 1.2
+  )
   for (i in 1:nrow(peaks_result$peaks)) {
-    text(peaks_result$peaks$x[i], peaks_result$peaks$y[i] + 0.1,
-      paste("P", i, " (prom:", round(peaks_result$peaks$prominence[i], 2), ")", sep = ""),
-      col = "blue", pos = 3, cex = 0.8
+    text(
+      peaks_result$peaks$x[i],
+      peaks_result$peaks$y[i] + 0.1,
+      paste(
+        "P",
+        i,
+        " (prom:",
+        round(peaks_result$peaks$prominence[i], 2),
+        ")",
+        sep = ""
+      ),
+      col = "blue",
+      pos = 3,
+      cex = 0.8
     )
   }
 }

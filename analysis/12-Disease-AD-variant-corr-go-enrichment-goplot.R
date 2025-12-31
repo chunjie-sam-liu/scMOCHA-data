@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,11 +39,9 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-
 
 # load data ---------------------------------------------------------------
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/go"
@@ -64,7 +60,6 @@ variant_go_all <- import(file.path(outdir, "variant_go_all.qs"))
 
 # body --------------------------------------------------------------------
 
-
 variant_go_all |>
   dplyr::select(
     variant,
@@ -80,8 +75,7 @@ variant_go_all |>
     into = c("posneg", "gotype", ".s"),
     sep = "_",
     remove = FALSE
-  ) ->
-forsaveplots
+  ) -> forsaveplots
 
 
 # ! save go for each plot --------------------------------------------------------------------
@@ -130,8 +124,7 @@ forsaveplots |>
           plot_annotation(
             title = "Positive correlation with expression",
             theme = theme(plot.title = element_text(size = 20))
-          ) ->
-        .pos_plot
+          ) -> .pos_plot
         .posout_filename <- "pos_{.gotype}_all.pdf" |> glue::glue()
         ggsave(
           path = outdir,
@@ -149,8 +142,7 @@ forsaveplots |>
           plot_annotation(
             title = "Negative correlation with expression",
             theme = theme(plot.title = element_text(size = 20))
-          ) ->
-        .neg_plot
+          ) -> .neg_plot
         .posneg_filename <- "neg_{.gotype}_all.pdf" |> glue::glue()
         ggsave(
           path = outdir,
@@ -165,9 +157,7 @@ forsaveplots |>
   )
 
 
-
 # ! don't run below --------------------------------------------------------------------
-
 
 #
 #
@@ -193,13 +183,16 @@ variant_go_all |>
   stringr::str_split("/") |>
   unlist() |>
   sort() |>
-  unique() ->
-genes_pathway
+  unique() -> genes_pathway
 
-expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs") |>
+expr <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
+) |>
   dplyr::filter(celltype == "Mono")
 
-v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
+v_3173G_A <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs"
+) |>
   dplyr::filter(celltype == "Mono")
 
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
@@ -212,16 +205,17 @@ import(
     Chemistry == "SC5P-PE"
   ) |>
   dplyr::filter(
-    disease %in% c(
-      "Alzheimer's Disease",
-      "Healthy"
-    )
-  ) ->
-metadata
+    disease %in%
+      c(
+        "Alzheimer's Disease",
+        "Healthy"
+      )
+  ) -> metadata
 
 fn_load_corr <- function(.variant) {
   import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |>
+      glue::glue()
   ) |>
     dplyr::filter(celltype == "Mono") |>
     dplyr::filter(pval < 0.05) |>
@@ -230,7 +224,8 @@ fn_load_corr <- function(.variant) {
 }
 
 import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A-corr.fst" |> glue::glue()
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A-corr.fst" |>
+    glue::glue()
 ) |>
   dplyr::arrange(corr) |>
   dplyr::filter(pval < 0.05) |>
@@ -252,12 +247,17 @@ expr |>
     by = c("genename", "celltype")
   ) |>
   dplyr::arrange(desc(corr)) |>
-  dplyr::filter(genename %in% genes_pathway) ->
-expr_v_3173G_A
+  dplyr::filter(genename %in% genes_pathway) -> expr_v_3173G_A
 
 theme_cor <- function() {
-  theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
-    plot.title = element_text(size = rel(1.3), vjust = 2, hjust = 0.5, lineheight = 0.8),
+  theme(
+    # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+    plot.title = element_text(
+      size = rel(1.3),
+      vjust = 2,
+      hjust = 0.5,
+      lineheight = 0.8
+    ),
 
     # axis
     axis.title.x = element_text(face = "bold", size = 16),
@@ -311,8 +311,7 @@ expr_v_3173G_A |>
           dplyr::inner_join(
             metadata,
             by = c("srrid")
-          ) ->
-        .expr_af
+          ) -> .expr_af
         cor_test <- cor.test(~ expr + af, data = .expr_af, method = "pearson")
 
         tryCatch(
@@ -369,8 +368,7 @@ expr_v_3173G_A |>
         )
       }
     )
-  ) ->
-expr_v_3173G_A_plot
+  ) -> expr_v_3173G_A_plot
 
 expr_v_3173G_A_plot |>
   dplyr::mutate(
@@ -405,21 +403,20 @@ expr_v_3173G_A |>
   # dplyr::filter(corr < -0.35) |>
   dplyr::mutate(
     variant = "3173G>A",
-  ) ->
-expr_v_3173G_A_top10
+  ) -> expr_v_3173G_A_top10
 
 variants |>
   purrr::map(
     ~ {
       import(
-        "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+        "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |>
+          glue::glue()
       ) |>
         dplyr::filter(genename %in% expr_v_3173G_A_top10$genename) |>
         dplyr::mutate(variant = .x)
     }
   ) |>
-  dplyr::bind_rows() ->
-variant_corr_top10
+  dplyr::bind_rows() -> variant_corr_top10
 
 variant_corr_top10 |>
   dplyr::filter(variant == "3173G>A") |>
@@ -439,8 +436,7 @@ variant_corr_top10 |>
       pval < 0.05 ~ "*",
       TRUE ~ ""
     )
-  ) ->
-variant_corr_top10_3173G_A_forplot
+  ) -> variant_corr_top10_3173G_A_forplot
 
 variant_corr_top10_3173G_A_forplot |>
   ggplot(aes(
@@ -495,8 +491,7 @@ variant_corr_top10_3173G_A_forplot |>
   labs(
     x = "Gene",
     y = "Cell type"
-  ) ->
-variant_corr_top10_3173G_A_plot
+  ) -> variant_corr_top10_3173G_A_plot
 
 ggsave(
   path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
@@ -580,8 +575,7 @@ variant_corr_top10 |>
   labs(
     x = "Gene",
     y = "Cell type"
-  ) ->
-variant_corr_top10_5variant_plot
+  ) -> variant_corr_top10_5variant_plot
 
 ggsave(
   path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",

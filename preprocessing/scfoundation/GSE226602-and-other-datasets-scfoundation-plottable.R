@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 
 # datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out"
@@ -74,7 +71,9 @@ gses_meta_read__ <- readxl::read_xlsx(
     filename_
   )
 )
-gse_dataset_metadata_full <- readr::read_rds("/home/liuc9/github/scMOCHA-data/data/scfoundation/out/gse_dataset_metadata_full.rds") |>
+gse_dataset_metadata_full <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/gse_dataset_metadata_full.rds"
+) |>
   dplyr::select(gseid, disease) |>
   dplyr::distinct() |>
   dplyr::group_by(gseid) |>
@@ -85,8 +84,7 @@ chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 
 gses_meta_read |>
   dplyr::bind_rows(gses_meta_read_) |>
-  dplyr::bind_rows(gses_meta_read__) ->
-gses_meta_read_all
+  dplyr::bind_rows(gses_meta_read__) -> gses_meta_read_all
 
 gses_meta_read_all$gseid |>
   sort() |>
@@ -122,9 +120,9 @@ gses_meta_read_all |>
     Chemistry = factor(Chemistry, levels = chem_levels)
   ) |>
   dplyr::arrange(
-    Chemistry, -`Avg. somatic mutation`
-  ) ->
-df
+    Chemistry,
+    -`Avg. somatic mutation`
+  ) -> df
 
 
 library(flextable)
@@ -265,8 +263,7 @@ flextable::flextable(df) |>
   flextable::width(
     j = c(10),
     width = 2
-  ) ->
-ft
+  ) -> ft
 ft
 
 datadir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation/out"

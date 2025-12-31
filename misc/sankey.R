@@ -3,18 +3,31 @@ library(ggsankey)
 df <- mtcars %>%
   make_long(cyl, vs, am, gear, carb)
 
-ggplot(df, aes(
-  x = x,
-  next_x = next_x,
-  node = node,
-  next_node = next_node,
-  fill = factor(node)
-)) +
+ggplot(
+  df,
+  aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = factor(node)
+  )
+) +
   geom_sankey() +
   scale_fill_discrete(drop = FALSE)
 
 
-ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+ggplot(
+  df,
+  aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = factor(node),
+    label = node
+  )
+) +
   geom_sankey(
     flow.alpha = .6,
     node.color = "gray30"
@@ -30,7 +43,17 @@ ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill 
   ggtitle("Car features")
 
 
-ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill = factor(node), label = node)) +
+ggplot(
+  df,
+  aes(
+    x = x,
+    next_x = next_x,
+    node = node,
+    next_node = next_node,
+    fill = factor(node),
+    label = node
+  )
+) +
   geom_alluvial(flow.alpha = .6) +
   geom_alluvial_text(size = 3, color = "white") +
   scale_fill_viridis_d(drop = FALSE) +
@@ -45,16 +68,27 @@ ggplot(df, aes(x = x, next_x = next_x, node = node, next_node = next_node, fill 
 
 df <- gapminder %>%
   dplyr::group_by(continent, year) %>%
-  summarise(gdp = (sum(pop * gdpPercap) / 1e9) %>% round(0), .groups = "keep") %>%
+  summarise(
+    gdp = (sum(pop * gdpPercap) / 1e9) %>% round(0),
+    .groups = "keep"
+  ) %>%
   ungroup()
 
-ggplot(df, aes(
-  x = year,
-  node = continent,
-  fill = continent,
-  value = gdp
-)) +
-  geom_sankey_bump(space = 0, type = "alluvial", color = "transparent", smooth = 6) +
+ggplot(
+  df,
+  aes(
+    x = year,
+    node = continent,
+    fill = continent,
+    value = gdp
+  )
+) +
+  geom_sankey_bump(
+    space = 0,
+    type = "alluvial",
+    color = "transparent",
+    smooth = 6
+  ) +
   scale_fill_viridis_d(option = "A", alpha = .8) +
   theme_sankey_bump(base_size = 16) +
   labs(

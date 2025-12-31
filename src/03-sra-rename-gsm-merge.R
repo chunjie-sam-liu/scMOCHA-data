@@ -20,7 +20,6 @@ library(logger)
 
 # args --------------------------------------------------------------------
 
-
 # gseid <- "GSE226602"
 
 # s: string, i: integer, f: float, !: boolean
@@ -42,7 +41,6 @@ GetoptLong.options(help_style = "two-column")
 GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
-
 
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
@@ -97,7 +95,6 @@ rename_code <- c(
 # SC3Pv4     - read1: 26, read2: 25, index1: 0
 # ARC-v1     - read1: 26, read2: 25, index1: 0
 
-
 rename_code2 <- c()
 # function ----------------------------------------------------------------
 
@@ -118,7 +115,6 @@ fn_rename <- function(.srrdir) {
       )
     )
 
-
   .fastqs |>
     dplyr::mutate(
       rl = purrr::map_chr(
@@ -126,8 +122,7 @@ fn_rename <- function(.srrdir) {
         .f = fn_get_fastq_read_length
       )
     ) |>
-    dplyr::arrange(rl) ->
-  .fastqs_rl
+    dplyr::arrange(rl) -> .fastqs_rl
 
   # .fastqs_rl |>
   #   dplyr::mutate(
@@ -159,12 +154,13 @@ fn_rename <- function(.srrdir) {
       sep = -1,
       remove = F
     ) |>
-    dplyr::mutate(read_type = ifelse(
-      n == 1,
-      glue::glue("{ir}{irn}"),
-      glue::glue("{ir}{idx}")
-    )) ->
-  .fastqs_rl_rt
+    dplyr::mutate(
+      read_type = ifelse(
+        n == 1,
+        glue::glue("{ir}{irn}"),
+        glue::glue("{ir}{idx}")
+      )
+    ) -> .fastqs_rl_rt
 
   .fastqs_rl_rt
 }
@@ -175,7 +171,8 @@ log_warn(gseid)
 # basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 dir.create(
@@ -209,8 +206,7 @@ gsm |>
   ) |>
   dplyr::group_by(experiment_name) |>
   tidyr::nest() |>
-  dplyr::ungroup() ->
-gsm_nest
+  dplyr::ungroup() -> gsm_nest
 
 
 gsm_nest |>
@@ -221,7 +217,6 @@ gsm_nest |>
       .f = \(.x, .y) {
         # .x <- gsm_nest$experiment_name[[1]]
         # .y <- gsm_nest$data[[1]]
-
 
         gsmdir <- file.path(
           datadir,
@@ -235,10 +230,8 @@ gsm_nest |>
           recursive = T
         )
 
-
         .y |>
-          tibble::rowid_to_column() ->
-        .y_idx
+          tibble::rowid_to_column() -> .y_idx
 
         .y_idx |>
           dplyr::mutate(
@@ -253,12 +246,12 @@ gsm_nest |>
 
                 .rt |>
                   dplyr::mutate(
-                    targetname = "{.x}_S1_L00{.rowid}_{read_type}_001.fastq" |> glue::glue()
+                    targetname = "{.x}_S1_L00{.rowid}_{read_type}_001.fastq" |>
+                      glue::glue()
                   ) |>
                   dplyr::mutate(
                     to = file.path(gsmdir, targetname)
-                  ) ->
-                .rt_from_to
+                  ) -> .rt_from_to
 
                 .rt_from_to |>
                   dplyr::mutate(
@@ -284,7 +277,6 @@ gsm_nest |>
       }
     )
   )
-
 
 # footer ------------------------------------------------------------------
 

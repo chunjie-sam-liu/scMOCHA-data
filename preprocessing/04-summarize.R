@@ -37,7 +37,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -45,7 +44,6 @@ log_layout(layout_glue_colors)
 # future::plan(future::multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-
 
 # load data ---------------------------------------------------------------
 basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
@@ -71,30 +69,31 @@ tibble::tibble(
       .f = \(.gse) {
         data.table::fread(
           file.path(
-            basedir, .gse, "out",
+            basedir,
+            .gse,
+            "out",
             "{.gse}.meta.csv" |> glue::glue()
           )
         )
       }
     )
-  ) ->
-  metadata
+  ) -> metadata
 
 metadata |>
   dplyr::mutate(
     meta = purrr::map(
       .x = meta,
       .f = \(.meta) {
-        if(!"age" %in% colnames(.meta)) {
+        if (!"age" %in% colnames(.meta)) {
           age = NA
         }
-        if(!"gender" %in% colnames(.meta)) {
+        if (!"gender" %in% colnames(.meta)) {
           gender = NA
         }
-        if(!"sex" %in% colnames(.meta)) {
+        if (!"sex" %in% colnames(.meta)) {
           sex = NA
         }
-        if(!"race" %in% colnames(.meta)) {
+        if (!"race" %in% colnames(.meta)) {
           race = NA
         }
         .meta |>
@@ -107,8 +106,7 @@ metadata |>
       }
     )
   ) |>
-  tidyr::unnest(cols = meta) ->
-  meta_un
+  tidyr::unnest(cols = meta) -> meta_un
 
 meta_un$disease |> unique() |> sort()
 meta_un$gender |> unique()
@@ -119,13 +117,13 @@ meta_un$race |> unique()
 meta_un |>
   dplyr::mutate(
     dis = ifelse(
-      disease %in% c("", "CONTROL", "healthy", "Healthy", "Healthy control", "NEGATIVE"),
+      disease %in%
+        c("", "CONTROL", "healthy", "Healthy", "Healthy control", "NEGATIVE"),
       "Health",
       "Covid-19"
     )
   ) |>
-  dplyr::select(gse, srrid, dis, age, gender) ->
-  meta_un_meta
+  dplyr::select(gse, srrid, dis, age, gender) -> meta_un_meta
 
 
 meta_un_meta |>
@@ -158,14 +156,15 @@ metadata |>
       .x = gse,
       .f = \(.gse) {
         file.path(
-          basedir, .gse, "out",
+          basedir,
+          .gse,
+          "out",
           "{.gse}.scmocha.out.rds" |> glue::glue()
         ) |>
           readr::read_rds()
       }
     )
-  ) ->
-  variants
+  ) -> variants
 
 variants |>
   dplyr::select(gse, anno) |>
@@ -174,29 +173,31 @@ variants |>
     meta_un_meta |>
       dplyr::select(-gse),
     by = "srrid"
-  ) ->
-  metadata_anno
+  ) -> metadata_anno
 
 metadata_anno |>
   dplyr::filter(!gse %in% c("GSE157344", "GSE171555")) |>
   dplyr::arrange(dis, age, gender) |>
   dplyr::select(srrid, dis, celltype_ratio) |>
   # dplyr::arrange(disease) |>
-  dplyr::mutate(color = dplyr::case_match(
-    dis,
-    "Covid-19" ~ggsci::pal_jama()(4)[[1]],
-    "Health" ~ ggsci::pal_jama()(4)[[2]]
-  )) |>
-  dplyr::arrange(dplyr::desc(dplyr::row_number())) ->
-  for_ratio_plot
+  dplyr::mutate(
+    color = dplyr::case_match(
+      dis,
+      "Covid-19" ~ ggsci::pal_jama()(4)[[1]],
+      "Health" ~ ggsci::pal_jama()(4)[[2]]
+    )
+  ) |>
+  dplyr::arrange(dplyr::desc(dplyr::row_number())) -> for_ratio_plot
 
 
 for_ratio_plot |>
   tidyr::unnest(cols = celltype_ratio) |>
   # dplyr::filter(!grepl("cluster", celltype)) |>
-  dplyr::mutate(celltype = factor(
-    celltype
-  )) |>
+  dplyr::mutate(
+    celltype = factor(
+      celltype
+    )
+  ) |>
   ggplot(aes(
     x = `ratio`,
     y = `srrid`,
@@ -233,8 +234,8 @@ for_ratio_plot |>
     axis.title.y = element_blank(),
     legend.position = "right"
   ) +
-  labs(x = "Cell ratio") ->
-  p_cellratio;p_cellratio
+  labs(x = "Cell ratio") -> p_cellratio
+p_cellratio
 
 
 ggsave(
@@ -250,7 +251,6 @@ ggsave(
 fn_plot_gene <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
-
   gtf_gene_df <-
     readr::read_rds(
       file = mt_exons_df
@@ -262,7 +262,8 @@ fn_plot_gene <- function() {
       aes(
         fill = gene_biotype
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -294,8 +295,8 @@ fn_plot_gene <- function() {
       axis.text.y = element_blank(),
       axis.text.x = element_text(size = 14),
       legend.text = element_text(size = 14)
-    ) ->
-    pg;pg
+    ) -> pg
+  pg
 }
 
 
@@ -304,18 +305,19 @@ metadata_anno |>
   dplyr::arrange(dis, age, gender) |>
   dplyr::select(srrid, dis, depth) |>
   # dplyr::arrange(disease) |>
-  dplyr::mutate(color = dplyr::case_match(
-    dis,
-    "Covid-19" ~ggsci::pal_jama()(4)[[1]],
-    "Health" ~ ggsci::pal_jama()(4)[[2]]
-  )) |>
-  dplyr::arrange(dplyr::desc(dplyr::row_number())) ->
-  for_depth_plot
+  dplyr::mutate(
+    color = dplyr::case_match(
+      dis,
+      "Covid-19" ~ ggsci::pal_jama()(4)[[1]],
+      "Health" ~ ggsci::pal_jama()(4)[[2]]
+    )
+  ) |>
+  dplyr::arrange(dplyr::desc(dplyr::row_number())) -> for_depth_plot
 
 
 for_depth_plot |>
   tidyr::unnest(cols = depth) |>
-  ggplot(aes(x=pos, y = depth, fill = `color`)) +
+  ggplot(aes(x = pos, y = depth, fill = `color`)) +
   geom_bar(stat = "identity") +
   scale_x_continuous(
     expand = expansion(mult = c(0.01, 0)),
@@ -344,7 +346,7 @@ for_depth_plot |>
     legend.position = c(0.8, 0.5),
     legend.key = element_blank(),
     axis.title.y = element_text(size = 16, color = "black"),
-    axis.text.y = element_text( color = "black"),
+    axis.text.y = element_text(color = "black"),
     legend.text = element_text(
       size = 14,
       color = "black"
@@ -365,8 +367,8 @@ for_depth_plot |>
     ncol = 1,
     strip.position = "right"
   ) +
-  labs(y = "Depth") ->
-  p_mt_depth;p_mt_depth
+  labs(y = "Depth") -> p_mt_depth
+p_mt_depth
 
 
 wrap_plots(
@@ -374,8 +376,8 @@ wrap_plots(
   fn_plot_gene(),
   ncol = 1,
   heights = c(0.9, 0.1)
-) ->
-  p_depth;p_depth
+) -> p_depth
+p_depth
 
 ggsave(
   filename = "Sample_depth_merge.pdf",

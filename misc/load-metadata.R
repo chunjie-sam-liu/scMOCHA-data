@@ -37,7 +37,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -56,12 +55,12 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 gseid <- "GSE226602"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 srrid_list <- readr::read_lines(
@@ -93,8 +92,7 @@ pheno |>
     genotype = `genotype:ch1`,
     gender = `Sex:ch1`
   ) |>
-  dplyr::arrange(disease, age, gender) ->
-  pheno_sel
+  dplyr::arrange(disease, age, gender) -> pheno_sel
 
 data.table::fwrite(
   x = pheno_sel,
@@ -104,11 +102,7 @@ data.table::fwrite(
   )
 )
 
-
-
 # body --------------------------------------------------------------------
-
-
 
 # footer ------------------------------------------------------------------
 

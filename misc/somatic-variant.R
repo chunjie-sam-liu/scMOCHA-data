@@ -9,8 +9,7 @@ all_variant_cell_table |>
     srrid == thesrrid,
     variant == thevariant
   ) |>
-  dplyr::collect() ->
-seid_srrid_variant
+  dplyr::collect() -> seid_srrid_variant
 
 filename <- file.path(
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/TABLES",
@@ -25,9 +24,10 @@ cell_cov <- data.table::fread(
 
 cell_cov |>
   dplyr::select(
-    base, barcode, dplyr::all_of(thepos)
-  ) ->
-cell_cov_sel
+    base,
+    barcode,
+    dplyr::all_of(thepos)
+  ) -> cell_cov_sel
 
 cell_cov_sel |>
   dplyr::group_by(
@@ -35,8 +35,7 @@ cell_cov_sel |>
   ) |>
   dplyr::summarise(
     depth = sum(`12501`)
-  ) ->
-cell_cov_depth
+  ) -> cell_cov_depth
 
 
 cell_cov_sel |>
@@ -57,8 +56,7 @@ cell_cov_sel |>
   dplyr::left_join(
     cell_cov_depth,
     by = "barcode"
-  ) ->
-cell_cov_variant
+  ) -> cell_cov_variant
 
 cell_cov_variant |>
   dplyr::mutate(
@@ -70,9 +68,11 @@ cell_cov_variant |>
     )
   ) |>
   dplyr::left_join(
-    seid_srrid_variant |> dplyr::select(
-      barcode, variant_type
-    ),
+    seid_srrid_variant |>
+      dplyr::select(
+        barcode,
+        variant_type
+      ),
     by = c("barcode")
   ) |>
   dplyr::filter(

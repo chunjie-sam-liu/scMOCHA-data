@@ -60,7 +60,6 @@ geo_search <- entrez_search(db = "gds", term = gse_id)
 geo_summary <- entrez_summary(db = "sra", id = geo_search$ids)
 
 
-
 geo_data <- entrez_fetch(db = "gds", id = geo_search$ids, rettype = "xml")
 
 # Load XML package to parse the data
@@ -78,7 +77,12 @@ search_res <- entrez_search(db = "sra", term = project_id)
 summary_res <- entrez_summary(db = "sra", id = search_res$ids)
 
 # 获取相关的 Run 信息
-sra_xml <- entrez_fetch(db = "sra", id = search_res$ids, rettype = "xml", parsed = TRUE)
+sra_xml <- entrez_fetch(
+  db = "sra",
+  id = search_res$ids,
+  rettype = "xml",
+  parsed = TRUE
+)
 
 # 打印摘要
 summary_res

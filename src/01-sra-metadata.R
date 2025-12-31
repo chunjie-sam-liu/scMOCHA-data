@@ -44,7 +44,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -63,12 +62,10 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 fn_get_html <- function(theid, prefix, datadir) {
   # .url <- glue::glue("https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={theid}") # geo
   # .url <- glue::glue("https://www.ncbi.nlm.nih.gov/Traces/study/?acc={theid}") # sraruntable
   .url <- glue::glue("{prefix}={theid}")
-
 
   # .html <- rvest::read_html(.url)
   httr::GET(.url)
@@ -88,14 +85,12 @@ fn_get_html <- function(theid, prefix, datadir) {
 fn_parse_bioprojectid <- function(.of) {
   rvest::read_html(.of) |>
     rvest::html_elements("td") %>%
-    .[rvest::html_text2(.) == "BioProject"] ->
-  .ele
+    .[rvest::html_text2(.) == "BioProject"] -> .ele
 
   .ele |>
     rvest::html_element(xpath = "./parent::tr") |>
     rvest::html_elements("td") %>%
-    .[[2]] ->
-  .the_ele
+    .[[2]] -> .the_ele
 
   .projid <- rvest::html_text2(.the_ele)
   .projid
@@ -107,21 +102,20 @@ fn_parse_sratable <- function(.of) {
 }
 
 fn_edirect_gds_gseid <- function(.gseid, datadir = datadir) {
-  .cmd <- "esearch -db gds -query {.gseid}|efetch -format docsum >{datadir}/{.gseid}.edirect.gds.xml" |> glue::glue()
+  .cmd <- "esearch -db gds -query {.gseid}|efetch -format docsum >{datadir}/{.gseid}.edirect.gds.xml" |>
+    glue::glue()
   # system(.cmd)
   .cmd
 }
 
 # load data ---------------------------------------------------------------
 
-
-
 # body --------------------------------------------------------------------
-
 
 log_warn(gseid)
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 dir.create(
@@ -132,7 +126,6 @@ dir.create(
 
 # get gsm -----------------------------------------------------------------
 
-
 gse <- GEOquery::getGEO(
   GEO = gseid,
   destdir = datadir,
@@ -142,8 +135,7 @@ gse <- GEOquery::getGEO(
 
 gse[[1]] |>
   Biobase::phenoData() |>
-  Biobase::pData() ->
-gse_pheno
+  Biobase::pData() -> gse_pheno
 
 data.table::fwrite(
   x = gse_pheno,
@@ -161,7 +153,6 @@ data.table::fwrite(
 #     "00.edirect.gds.{gseid}.sh" |> glue::glue()
 #   )
 # )
-
 
 # footer ------------------------------------------------------------------
 

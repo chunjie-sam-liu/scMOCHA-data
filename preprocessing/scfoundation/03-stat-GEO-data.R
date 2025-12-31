@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -55,8 +53,7 @@ fn_plot_pie <- function(.d, .colors = NULL) {
     dplyr::mutate(pos = n / 2 + dplyr::lead(csum, 1)) %>%
     dplyr::mutate(pos = dplyr::if_else(is.na(pos), n / 2, pos)) %>%
     dplyr::mutate(percentage = n / sum(n)) |>
-    dplyr::mutate(group = factor(group, levels = group)) ->
-  .dd
+    dplyr::mutate(group = factor(group, levels = group)) -> .dd
 
   .scalefill <- if (is.null(.colors)) {
     ggsci::scale_fill_aaas(
@@ -117,9 +114,10 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 }
 
 
-
 # load data ---------------------------------------------------------------
-project_source_sra <- readr::read_rds("/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra.rds.gz")
+project_source_sra <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra.rds.gz"
+)
 
 # project_source_sra |> dplyr::glimpse()
 
@@ -127,8 +125,7 @@ project_source_sra <- readr::read_rds("/home/liuc9/github/scMOCHA-data/data/scfo
 project_source_sra |>
   dplyr::filter(proj_source == "GEO") |>
   dplyr::select(proj_ID, source_name) |>
-  dplyr::distinct() ->
-project_source_sra_proj_ID_source_name
+  dplyr::distinct() -> project_source_sra_proj_ID_source_name
 
 
 project_source_sra_proj_ID_source_name |>
@@ -148,7 +145,10 @@ project_source_sra_proj_ID_source_name |>
   dplyr::arrange(-n) |>
   tibble::rownames_to_column(var = "idx") |>
   dplyr::select(-n) |>
-  data.table::fwrite("/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra_proj_ID_source_name.tissue_count.tsv", sep = "\t")
+  data.table::fwrite(
+    "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra_proj_ID_source_name.tissue_count.tsv",
+    sep = "\t"
+  )
 
 
 project_source_sra |>
@@ -167,7 +167,6 @@ project_source_sra |>
 #     sep = "\t"
 #   )
 
-
 # project_source_sra_proj_ID_source_name |>
 #   dplyr::filter(!is.na(source_name)) |>
 #   dplyr::distinct() |>
@@ -176,8 +175,9 @@ project_source_sra |>
 #     sep = "\t"
 #   )
 
-
-tissue_grouped <- data.table::fread("/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra_tissue_grouped.tsv") |>
+tissue_grouped <- data.table::fread(
+  "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_sra_tissue_grouped.tsv"
+) |>
   dplyr::mutate(
     tissue_group = stringr::str_to_title(tissue_group)
   ) |>
@@ -201,8 +201,7 @@ project_source_sra |>
     tissue_grouped,
     by = c("proj_ID")
   ) |>
-  dplyr::filter(!is.na(tissue_group)) ->
-project_source_sra_tissue_grouped
+  dplyr::filter(!is.na(tissue_group)) -> project_source_sra_tissue_grouped
 
 readr::write_rds(
   project_source_sra_tissue_grouped,
@@ -213,8 +212,7 @@ project_source_sra_tissue_grouped |>
   dplyr::select(proj_ID, tissue_group) |>
   dplyr::distinct() |>
   dplyr::count(tissue_group) |>
-  fn_plot_pie() ->
-tissue_grouped_pie
+  fn_plot_pie() -> tissue_grouped_pie
 
 ggsave(
   filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_tissue_group_pie.pdf",
@@ -224,14 +222,12 @@ ggsave(
 )
 
 
-
 # ! pbmc --------------------------------------------------------------------
 
 project_source_sra_tissue_grouped |>
   dplyr::filter(tissue_group == "PBMC") |>
   dplyr::select(proj_ID, samp_ID, tissue_group) |>
-  dplyr::distinct() ->
-project_source_sra_tissue_grouped_pbmc
+  dplyr::distinct() -> project_source_sra_tissue_grouped_pbmc
 
 
 processed_gseid <- c(
@@ -266,23 +262,73 @@ processed_gseid <- c(
   "GSE188632"
 )
 geo_pbmc_dataset <- c(
-  "GSE165496", "GSE165822", "GSE140881", "GSE162708", "GSE163314", "GSE162528", "GSE171555", "GSE165087", "GSE178756",
-  "GSE192391", "GSE159117", "GSE168453", "GSE164690", "GSE167825", "GSE154386", "GSE163633", "GSE162117", "GSE166638",
-  "GSE190839", "GSE142595", "GSE147794", "GSE149313", "GSE153098", "GSE179566", "GSE184703", "GSE188632", "GSE143353",
-  "GSE148215", "GSE152981", "GSE153421", "GSE174125"
+  "GSE165496",
+  "GSE165822",
+  "GSE140881",
+  "GSE162708",
+  "GSE163314",
+  "GSE162528",
+  "GSE171555",
+  "GSE165087",
+  "GSE178756",
+  "GSE192391",
+  "GSE159117",
+  "GSE168453",
+  "GSE164690",
+  "GSE167825",
+  "GSE154386",
+  "GSE163633",
+  "GSE162117",
+  "GSE166638",
+  "GSE190839",
+  "GSE142595",
+  "GSE147794",
+  "GSE149313",
+  "GSE153098",
+  "GSE179566",
+  "GSE184703",
+  "GSE188632",
+  "GSE143353",
+  "GSE148215",
+  "GSE152981",
+  "GSE153421",
+  "GSE174125"
 )
 
 geo_pbmc_dataset_unique <- setdiff(geo_pbmc_dataset, processed_gseid)
 geo_pbmc_dataset_unique <- c(
-  "GSE165496", "GSE165822", "GSE140881", "GSE162708", "GSE163314", "GSE162528", "GSE165087", "GSE178756", "GSE192391",
-  "GSE168453", "GSE164690", "GSE167825", "GSE163633", "GSE166638", "GSE190839", "GSE142595", "GSE147794", "GSE153098",
-  "GSE179566", "GSE184703", "GSE143353", "GSE148215", "GSE152981", "GSE153421", "GSE174125"
+  "GSE165496",
+  "GSE165822",
+  "GSE140881",
+  "GSE162708",
+  "GSE163314",
+  "GSE162528",
+  "GSE165087",
+  "GSE178756",
+  "GSE192391",
+  "GSE168453",
+  "GSE164690",
+  "GSE167825",
+  "GSE163633",
+  "GSE166638",
+  "GSE190839",
+  "GSE142595",
+  "GSE147794",
+  "GSE153098",
+  "GSE179566",
+  "GSE184703",
+  "GSE143353",
+  "GSE148215",
+  "GSE152981",
+  "GSE153421",
+  "GSE174125"
 )
 
 ggvenn::ggvenn(
   data = list(
     "Processed PBMC dataset" = processed_gseid,
-    "GEO PBMC dataset" = project_source_sra_tissue_grouped_pbmc$proj_ID |> unique()
+    "GEO PBMC dataset" = project_source_sra_tissue_grouped_pbmc$proj_ID |>
+      unique()
   ),
   show_percentage = FALSE,
   fill_color = ggsci::pal_aaas()(2) |> rev(),
@@ -290,8 +336,7 @@ ggvenn::ggvenn(
   stroke_size = 0.5,
   set_name_size = 6,
   text_size = 8
-) ->
-p_venn_pbmc
+) -> p_venn_pbmc
 ggsave(
   filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_tissue_group_pbmc_venn.pdf",
   plot = p_venn_pbmc,
@@ -299,7 +344,9 @@ ggsave(
   width = 7,
   height = 6
 )
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv")
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+)
 
 project_source_sra_tissue_grouped_pbmc |>
   dplyr::filter(!proj_ID %in% processed_gseid) |> # nrow()
@@ -311,8 +358,7 @@ project_source_sra_tissue_grouped_pbmc |>
   dplyr::group_by(proj_ID) |>
   dplyr::summarize(n = sum(n)) |>
   dplyr::slice_head(n = 10) |>
-  fn_plot_pie() ->
-tissue_grouped_pbmc_geo_pie
+  fn_plot_pie() -> tissue_grouped_pbmc_geo_pie
 
 ggsave(
   filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_tissue_group_pbmc_geo_pie.pdf",
@@ -326,10 +372,18 @@ ggsave(
 project_source_sra_tissue_grouped |>
   dplyr::filter(tissue_group == "Bone Marrow") |>
   dplyr::select(proj_ID, samp_ID, tissue_group) |>
-  dplyr::distinct() ->
-project_source_sra_tissue_grouped_bone_marrow
+  dplyr::distinct() -> project_source_sra_tissue_grouped_bone_marrow
 
-geo_bone_marrow_dataset <- c("GSE183267", "GSE153056", "GSE163278", "GSE165087", "GSE173320", "GSE154109", "GSE182020", "GSE149136")
+geo_bone_marrow_dataset <- c(
+  "GSE183267",
+  "GSE153056",
+  "GSE163278",
+  "GSE165087",
+  "GSE173320",
+  "GSE154109",
+  "GSE182020",
+  "GSE149136"
+)
 
 project_source_sra_tissue_grouped_bone_marrow |>
   dplyr::count(proj_ID) |>
@@ -340,8 +394,7 @@ project_source_sra_tissue_grouped_bone_marrow |>
   # dplyr::group_by(proj_ID) |>
   # dplyr::summarize(n = sum(n)) |>
   # dplyr::slice_head(n = 10) |>
-  fn_plot_pie() ->
-tissue_grouped_bone_marrow_geo_pie
+  fn_plot_pie() -> tissue_grouped_bone_marrow_geo_pie
 
 ggsave(
   filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_tissue_group_bone_marrow_geo_pie.pdf",
@@ -349,8 +402,6 @@ ggsave(
   width = 7,
   height = 6
 )
-
-
 
 # footer ------------------------------------------------------------------
 

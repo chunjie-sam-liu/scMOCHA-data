@@ -44,7 +44,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 datadir <- "/home/liuc9/github/scMOCHA-data/data/GSE226602"
 outdir <- file.path(datadir, "out")
@@ -56,8 +55,7 @@ meta <- data.table::fread(file.path(outdir, "GSE226602.pheno.select.csv"))
 
 anno |>
   dplyr::select(-c(srrdir, dir_exists)) |>
-  dplyr::inner_join(meta, by = "srrid") ->
-anno_meta
+  dplyr::inner_join(meta, by = "srrid") -> anno_meta
 
 anno_meta |>
   dplyr::mutate(
@@ -101,8 +99,7 @@ anno_meta |>
           dplyr::filter(!is.na(Haplogroup)) |>
           dplyr::filter(Haplogroup != "") |>
           dplyr::distinct() |>
-          dplyr::mutate_all(.funs = as.character) ->
-        .xx
+          dplyr::mutate_all(.funs = as.character) -> .xx
 
         if (nrow(.xx) == 0) {
           tibble::tibble(
@@ -120,9 +117,11 @@ anno_meta |>
     cols = cell_stats
   ) |>
   dplyr::mutate(
-    ratio = round(`number of cells after filtering` / `estimated number of cells`, 2)
-  ) ->
-anno_meta_info
+    ratio = round(
+      `number of cells after filtering` / `estimated number of cells`,
+      2
+    )
+  ) -> anno_meta_info
 
 anno_meta_info |>
   dplyr::arrange(disease, age, gender) |>
@@ -135,8 +134,7 @@ anno_meta_info |>
     Gender = gender,
     Disease = disease,
     `# cells after filter` = `number of cells after filtering`,
-  ) ->
-metadata_clean
+  ) -> metadata_clean
 # save to xslx and tsv
 data.table::fwrite(
   x = metadata_clean,
@@ -148,7 +146,6 @@ writexl::write_xlsx(
 )
 
 # ggstats correlation plot ------------------------------------------------
-
 
 # Age
 # # of cells after filtering
@@ -181,8 +178,7 @@ anno_meta_info |>
     disease,
     haplo_violin,
     somatic_variant
-  ) ->
-anno_meta_info_clean
+  ) -> anno_meta_info_clean
 
 fn_eda <- function(anno_meta_info_clean) {
   p_ncells <- tryCatch(
@@ -287,7 +283,10 @@ fn_eda <- function(anno_meta_info_clean) {
     }
   )
 
-  wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
+  wrap_plots(
+    list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease),
+    ncol = 3
+  ) -> p_combined
   p_combined
 }
 
@@ -331,8 +330,7 @@ anno_meta_info_clean |>
           )
       }
     )
-  ) ->
-anno_meta_info_clean_cell_variant
+  ) -> anno_meta_info_clean_cell_variant
 
 anno_meta_info_clean_cell_variant |>
   dplyr::mutate(
@@ -345,20 +343,22 @@ anno_meta_info_clean_cell_variant |>
       }
     )
   ) |>
-  dplyr::mutate(color = dplyr::case_match(
-    disease,
-    "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
-    "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
-  )) |>
-  tidyr::unnest(cols = somatic_variant) ->
-anno_meta_info_clean_cell_variant_forupset
+  dplyr::mutate(
+    color = dplyr::case_match(
+      disease,
+      "Alzheimers Disease" ~ ggsci::pal_jama()(4)[[1]],
+      "Healthy Control" ~ ggsci::pal_jama()(4)[[2]]
+    )
+  ) |>
+  tidyr::unnest(
+    cols = somatic_variant
+  ) -> anno_meta_info_clean_cell_variant_forupset
 
 fn_upset_plot <- function(.x) {
   # .x <- "nCoV_PBMC(severe)"
   library(ggupset)
   anno_meta_info_clean_cell_variant_forupset |>
-    dplyr::filter(disease == .x) ->
-  d
+    dplyr::filter(disease == .x) -> d
 
   d |>
     tidyr::unnest(cols = variant) |>
@@ -374,9 +374,7 @@ fn_upset_plot <- function(.x) {
         }
       )
     ) |>
-    dplyr::select(-data) ->
-  dd
-
+    dplyr::select(-data) -> dd
 
   dd |>
     ggplot(aes(x = srrid)) +
@@ -430,8 +428,7 @@ fn_upset_plot <- function(.x) {
         size = 16,
         face = "bold"
       )
-    ) ->
-  .p_up
+    ) -> .p_up
 
   ggsave(
     plot = .p_up,
@@ -443,10 +440,12 @@ fn_upset_plot <- function(.x) {
   )
 
   dd |>
-    dplyr::mutate(n = purrr::map_int(
-      .x = srrid,
-      .f = length
-    )) |>
+    dplyr::mutate(
+      n = purrr::map_int(
+        .x = srrid,
+        .f = length
+      )
+    ) |>
     dplyr::mutate(
       sharing = purrr::map_chr(
         .x = srrid,
@@ -455,8 +454,7 @@ fn_upset_plot <- function(.x) {
       )
     ) |>
     dplyr::arrange(n) |>
-    dplyr::select(-srrid) ->
-  .v
+    dplyr::select(-srrid) -> .v
 
   list(
     v = .v,
@@ -468,12 +466,10 @@ anno_meta_info_clean_cell_variant_forupset$disease |>
   unique() |>
   purrr::map(
     .f = fn_upset_plot
-  ) ->
-p_ups
+  ) -> p_ups
 
 (p_ups[[1]]$p_up | p_ups[[2]]$p_up) +
-  plot_annotation(tag_levels = "A") ->
-p_ups_together
+  plot_annotation(tag_levels = "A") -> p_ups_together
 p_ups_together
 
 # save upset plot
@@ -495,11 +491,9 @@ p_ups |>
 
 anno_meta_info_clean_cell_variant |>
   dplyr::select(-haplo_violin, -somatic_variant) |>
-  tidyr::unnest(cols = cell_variant) ->
-anno_meta_info_clean_cell_variant_unnest
+  tidyr::unnest(cols = cell_variant) -> anno_meta_info_clean_cell_variant_unnest
 
 anno_meta_info_clean_cell_variant_unnest |> dplyr::glimpse()
-
 
 
 # forupset |>
@@ -513,15 +507,13 @@ p_ups |>
   purrr::map(
     \(.x) {
       .x |>
-        dplyr::arrange(-n) ->
-      .xx
+        dplyr::arrange(-n) -> .xx
       top_90_percent <- round(.xx$n[[1]] * 0.9)
       .xx |>
         dplyr::filter(n >= .xx$n[[1]]) |>
         dplyr::pull(variant)
     }
-  ) ->
-sel_variants
+  ) -> sel_variants
 
 # venn plot --------------------------------------------------------------
 library(ggvenn)
@@ -551,7 +543,6 @@ ggsave(
 fn_plot_mtdna <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
-
   gtf_gene_df <-
     readr::read_rds(
       file = mt_exons_df
@@ -563,7 +554,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = gene_biotype
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -604,14 +596,15 @@ fn_plot_mtdna <- function() {
         vjust = -1,
       ),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  pg
+    coord_cartesian(xlim = c(0, 17000)) -> pg
   pg
 }
 
 
 fn_plot_hotspots <- function(sel_variants) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   anno_meta_info_clean_cell_variant_unnest |>
@@ -622,11 +615,9 @@ fn_plot_hotspots <- function(sel_variants) {
     dplyr::mutate(
       af = ifelse(depth < log2(10), NA_real_, af)
     ) |>
-    dplyr::filter(af > 0) ->
-  theforplot
+    dplyr::filter(af > 0) -> theforplot
 
   library(ggh4x)
-
 
   theforplot |>
     ggplot() +
@@ -687,8 +678,7 @@ fn_plot_hotspots <- function(sel_variants) {
       axis.title.y = element_text(color = "black"),
       axis.text.y = element_text(color = "black"),
     ) +
-    labs(y = "AF") ->
-  p_af_cell
+    labs(y = "AF") -> p_af_cell
   p_af_cell
 }
 
@@ -713,20 +703,22 @@ purrr::map(
 
 # cell level analysis -----------------------------------------------------
 the_variants <- c(
-  "2191A>C", "2192A>T", "2193T>A",
-  "3173G>A", "3176A>T", "3178T>A"
+  "2191A>C",
+  "2192A>T",
+  "2193T>A",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A"
 )
 
 one_variant <- "2191A>C"
 the_srrid <- "GSM7080019"
 
 
-
 anno_meta_info_clean_cell_variant_unnest |>
   dplyr::filter(variant == one_variant) |>
   # dplyr::filter(cluster == "B") |>
-  dplyr::filter(srrid == the_srrid) ->
-forcellplot
+  dplyr::filter(srrid == the_srrid) -> forcellplot
 
 forcellplot |>
   ggstatsplot::ggbetweenstats(
@@ -748,8 +740,7 @@ the_variants |>
       anno_meta_info_clean_cell_variant_unnest |>
         dplyr::filter(variant == .thevariant) |>
         # dplyr::filter(cluster == "B") |>
-        dplyr::filter(srrid == the_srrid) ->
-      .forcellplot
+        dplyr::filter(srrid == the_srrid) -> .forcellplot
 
       .forcellplot |>
         ggstatsplot::ggbetweenstats(
@@ -765,8 +756,7 @@ the_variants |>
           limits = c(0, 1)
         )
     }
-  ) ->
-p_test_variants_between_clusters
+  ) -> p_test_variants_between_clusters
 
 ggsave(
   path = outdir_plot,
@@ -774,7 +764,8 @@ ggsave(
   plot = wrap_plots(
     p_test_variants_between_clusters,
     ncol = 3
-  ) + plot_annotation(tag_levels = "A"),
+  ) +
+    plot_annotation(tag_levels = "A"),
   width = 20,
   height = 10
 )
@@ -791,8 +782,7 @@ anno_meta_info_clean_cell_variant_unnest |>
   ) |>
   dplyr::mutate(
     age_group = factor(age_group, levels = c("<50", "50-60", "60-70", ">=70"))
-  ) ->
-anno_meta_info_clean_cell_variant_unnest_age_group
+  ) -> anno_meta_info_clean_cell_variant_unnest_age_group
 
 parallel::mclapply(
   the_variants,
@@ -808,8 +798,7 @@ parallel::mclapply(
         title = glue::glue("{.x} - celltypes combined"),
         pairwise.display = "significant",
         p.adjust.method = "BH"
-      ) ->
-    .p
+      ) -> .p
     log_success("save plot ", .x)
 
     ggsave(
@@ -823,8 +812,7 @@ parallel::mclapply(
     .p
   },
   mc.cores = length(the_variants)
-) ->
-p_variants
+) -> p_variants
 
 ggsave(
   path = file.path(outdir_plot, "age_group"),
@@ -832,7 +820,8 @@ ggsave(
   plot = wrap_plots(
     p_variants,
     ncol = 3
-  ) + plot_annotation(tag_levels = "A"),
+  ) +
+    plot_annotation(tag_levels = "A"),
   width = 20,
   height = 10
 )
@@ -858,8 +847,7 @@ parallel::mclapply(
             title = glue::glue("{.x} - {.y}"),
             pairwise.display = "significant",
             p.adjust.method = "BH"
-          ) ->
-        .p
+          ) -> .p
 
         log_success("save plot ", .x, " - ", .y)
         ggsave(
@@ -873,8 +861,7 @@ parallel::mclapply(
         .p
       },
       mc.cores = length(celltypes)
-    ) ->
-    p_celltypes
+    ) -> p_celltypes
 
     ggsave(
       path = file.path(outdir_plot, "age_group"),
@@ -882,15 +869,15 @@ parallel::mclapply(
       plot = wrap_plots(
         p_celltypes,
         ncol = 4
-      ) + plot_annotation(tag_levels = "A"),
+      ) +
+        plot_annotation(tag_levels = "A"),
       width = 20,
       height = 10
     )
     p_celltypes
   },
   mc.cores = length(the_variants)
-) ->
-p_variants_celltypes
+) -> p_variants_celltypes
 
 ggsave(
   path = file.path(outdir_plot, "age_group"),

@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,7 +39,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
@@ -62,7 +59,6 @@ fn_go_enrich <- function(cancer_sgene, ont = c("BP", "CC", "MF")) {
 
 fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
   .ont <- match.arg(.ont)
-
 
   base_fill <- c("BP" = "#AE1700", "CC" = "#DF8F44FF", "MF" = "#00A1D5FF")
   ont_fullname <- c(
@@ -87,15 +83,12 @@ fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
     dplyr::arrange(adjp, Count) %>%
     dplyr::mutate(
       Description = factor(Description, levels = Description)
-    ) ->
-  .go_bp_for_plot
+    ) -> .go_bp_for_plot
 
   if (!is.infinite(.topn)) {
     .go_bp_for_plot |>
-      tail(.topn) ->
-    .go_bp_for_plot
+      tail(.topn) -> .go_bp_for_plot
   }
-
 
   .go_bp_for_plot |>
     ggplot(aes(x = Description, y = adjp)) +
@@ -119,7 +112,8 @@ fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
 
 fn_load_corr <- function(.variant) {
   import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |>
+      glue::glue()
   ) |>
     dplyr::filter(celltype == "Mono") |>
     dplyr::filter(pval < 0.05) |>
@@ -196,7 +190,6 @@ fn_variant_go <- function(.variant) {
 
 # load data ---------------------------------------------------------------
 
-
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/go"
 dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 
@@ -224,12 +217,10 @@ tibble::tibble(
       SIMPLIFY = FALSE
     )
   ) |>
-  tidyr::unnest(cols = a) ->
-variant_go_all
+  tidyr::unnest(cols = a) -> variant_go_all
 
 
 # ! export to qs --------------------------------------------------------------------
-
 
 export(
   variant_go_all,
@@ -245,7 +236,7 @@ export(
 
 # ! save to bp to plot --------------------------------------------------------------------
 
-\(){
+\() {
   variant_go_all |>
     dplyr::mutate(
       a = purrr::map2(
@@ -260,8 +251,7 @@ export(
         }
       )
     ) |>
-    dplyr::pull(a) ->
-  pos_bp_plot_all
+    dplyr::pull(a) -> pos_bp_plot_all
 
   names(pos_bp_plot_all) <- variant_go_all$variant
 
@@ -270,8 +260,7 @@ export(
     plot_annotation(
       title = "Positive correlation with expression",
       theme = theme(plot.title = element_text(size = 20))
-    ) ->
-  pos_bp_plot_all_patch
+    ) -> pos_bp_plot_all_patch
 
   ggsave(
     path = outdir,
@@ -296,12 +285,16 @@ export(
       }
     )
 
-
-
   # ! 3173G>A --------------------------------------------------------------------
   theme_cor <- function() {
-    theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
-      plot.title = element_text(size = rel(1.3), vjust = 2, hjust = 0.5, lineheight = 0.8),
+    theme(
+      # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+      plot.title = element_text(
+        size = rel(1.3),
+        vjust = 2,
+        hjust = 0.5,
+        lineheight = 0.8
+      ),
 
       # axis
       axis.title.x = element_text(face = "bold", size = 16),
@@ -349,19 +342,24 @@ export(
   mt_dna_repair_genes <- c(
     "OGG1",
     "MUTYH",
-    "NEIL1", "NEIL2", "NTHL1",
+    "NEIL1",
+    "NEIL2",
+    "NTHL1",
     "APEX1",
     "POLG",
     "LIG3",
     "TWINKLE",
     "TFAM",
-    "SIRT3", "SIRT4", "SIRT5",
-    "PRDX3", "PRDX5", "GPX1",
+    "SIRT3",
+    "SIRT4",
+    "SIRT5",
+    "PRDX3",
+    "PRDX5",
+    "GPX1",
     "MPV17",
     "TWNK",
     "TYMP"
   )
-
 
   variant_go_all |>
     dplyr::filter(variant == "3173G>A") |>
@@ -372,15 +370,17 @@ export(
     stringr::str_split("/") |>
     unlist() |>
     sort() |>
-    unique() ->
-  dna_repair_genes_pathway
+    unique() -> dna_repair_genes_pathway
   dna_repair_genes <- c(dna_repair_genes_pathway, mt_dna_repair_genes)
 
-
-  expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs") |>
+  expr <- import(
+    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
+  ) |>
     dplyr::filter(celltype == "Mono")
 
-  v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
+  v_3173G_A <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs"
+  ) |>
     dplyr::filter(celltype == "Mono")
 
   source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
@@ -395,13 +395,12 @@ export(
       Chemistry == "SC5P-PE"
     ) |>
     dplyr::filter(
-      disease %in% c(
-        "Alzheimer's Disease",
-        "Healthy"
-      )
-    ) ->
-  metadata
-
+      disease %in%
+        c(
+          "Alzheimer's Disease",
+          "Healthy"
+        )
+    ) -> metadata
 
   corr_3173G_A <- fn_load_corr("3173G>A") |>
     dplyr::filter(genename %in% c(dna_repair_genes)) |>
@@ -420,8 +419,7 @@ export(
       by = c("genename", "celltype")
     ) |>
     dplyr::arrange(desc(corr)) |>
-    dplyr::filter(genename %in% dna_repair_genes) ->
-  expr_v_3173G_A
+    dplyr::filter(genename %in% dna_repair_genes) -> expr_v_3173G_A
 
   expr_v_3173G_A |>
     dplyr::mutate(
@@ -445,8 +443,7 @@ export(
             dplyr::inner_join(
               metadata,
               by = c("srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
           cor_test <- cor.test(~ expr + af, data = .expr_af, method = "pearson")
 
           tryCatch(
@@ -503,8 +500,7 @@ export(
           )
         }
       )
-    ) ->
-  expr_v_3173G_A_plot
+    ) -> expr_v_3173G_A_plot
 
   expr_v_3173G_A_plot |>
     dplyr::mutate(
@@ -531,27 +527,25 @@ export(
       file = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/3173G_A/3173G_A_corr.csv"
     )
 
-
   expr_v_3173G_A |>
     dplyr::select(genename, corr, pval) |>
     dplyr::slice(1:10) |>
     dplyr::mutate(
       variant = "3173G>A",
-    ) ->
-  expr_v_3173G_A_top10
+    ) -> expr_v_3173G_A_top10
 
   variants |>
     purrr::map(
       ~ {
         import(
-          "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+          "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |>
+            glue::glue()
         ) |>
           dplyr::filter(genename %in% expr_v_3173G_A_top10$genename) |>
           dplyr::mutate(variant = .x)
       }
     ) |>
-    dplyr::bind_rows() ->
-  variant_corr_top10
+    dplyr::bind_rows() -> variant_corr_top10
 
   variant_corr_top10 |>
     dplyr::filter(variant == "3173G>A") |>
@@ -562,7 +556,10 @@ export(
       celltype = factor(celltype, levels = names(color_celltype) |> rev())
     ) |>
     dplyr::mutate(
-      genename = factor(genename, levels = unique(expr_v_3173G_A_top10$genename))
+      genename = factor(
+        genename,
+        levels = unique(expr_v_3173G_A_top10$genename)
+      )
     ) |>
     dplyr::mutate(
       mark = dplyr::case_when(
@@ -571,8 +568,7 @@ export(
         pval < 0.05 ~ "*",
         TRUE ~ ""
       )
-    ) ->
-  variant_corr_top10_3173G_A_forplot
+    ) -> variant_corr_top10_3173G_A_forplot
   variant_corr_top10_3173G_A_forplot |>
     ggplot(aes(
       x = genename,
@@ -594,7 +590,12 @@ export(
     theme_cor() +
     theme(
       axis.text.y = element_text(hjust = 1, size = 14, face = "bold"),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1,
+        vjust = 1,
+        face = "bold"
+      ),
       axis.line = element_blank(),
       axis.ticks = element_blank(),
       legend.position = "right",
@@ -626,8 +627,7 @@ export(
     labs(
       x = "Gene",
       y = "Cell type"
-    ) ->
-  variant_corr_top10_3173G_A_plot
+    ) -> variant_corr_top10_3173G_A_plot
 
   ggsave(
     path = outdir,
@@ -637,8 +637,6 @@ export(
     height = 5,
     dpi = 300
   )
-
-
 
   variant_corr_top10 |>
     # dplyr::filter(variant == "3173G>A") |>
@@ -650,7 +648,10 @@ export(
       celltype = factor(celltype, levels = names(color_celltype) |> rev())
     ) |>
     dplyr::mutate(
-      genename = factor(genename, levels = unique(expr_v_3173G_A_top10$genename))
+      genename = factor(
+        genename,
+        levels = unique(expr_v_3173G_A_top10$genename)
+      )
     ) |>
     dplyr::mutate(
       mark = dplyr::case_when(
@@ -680,7 +681,12 @@ export(
     theme_cor() +
     theme(
       axis.text.y = element_text(hjust = 1, size = 14, face = "bold"),
-      axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, face = "bold"),
+      axis.text.x = element_text(
+        angle = 45,
+        hjust = 1,
+        vjust = 1,
+        face = "bold"
+      ),
       axis.line = element_blank(),
       axis.ticks = element_blank(),
       legend.position = "right",
@@ -712,8 +718,7 @@ export(
     labs(
       x = "Gene",
       y = "Cell type"
-    ) ->
-  variant_corr_top10_5_variant_plot
+    ) -> variant_corr_top10_5_variant_plot
 
   ggsave(
     path = outdir,
@@ -724,7 +729,6 @@ export(
     dpi = 300
   )
 }
-
 
 # footer ------------------------------------------------------------------
 

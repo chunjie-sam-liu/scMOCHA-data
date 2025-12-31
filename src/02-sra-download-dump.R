@@ -42,7 +42,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -61,7 +60,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 log_warn(gseid)
 
@@ -69,7 +67,8 @@ log_warn(gseid)
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 # basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/Bone-Marrow"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 dir.create(
@@ -96,7 +95,11 @@ sratable <- data.table::fread(
 
 # GSM samples -------------------------------------------------------------
 
-sample_name_ <- ifelse("Sample Name" %in% colnames(sratable), "Sample Name", "SampleName")
+sample_name_ <- ifelse(
+  "Sample Name" %in% colnames(sratable),
+  "Sample Name",
+  "SampleName"
+)
 
 sratable |>
   dplyr::select(
@@ -136,17 +139,17 @@ sratable |>
   dplyr::select(srrid = Run) |>
   dplyr::mutate(
     srrdir = file.path(
-      sradir, srrid
+      sradir,
+      srrid
     )
   ) |>
   dplyr::mutate(
     srrdir_exists = file.exists(srrdir)
   ) |>
   dplyr::mutate(
-    prefetch = "prefetch -p --max-size 100G {srrid} --output-directory {sradir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |> glue::glue()
-  ) ->
-sratable_prefetch
-
+    prefetch = "prefetch -p --max-size 100G {srrid} --output-directory {sradir} 1>{erroutdir}/prefetch.{srrid}.err 2>{erroutdir}/prefetch.{srrid}.err " |>
+      glue::glue()
+  ) -> sratable_prefetch
 
 
 if (length(sratable_prefetch$prefetch) > 0) {
@@ -168,8 +171,10 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=00.{gseid}.prefetch" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |> glue::glue(),
-  "#SBATCH --error={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |>
+    glue::glue(),
+  "#SBATCH --error={datadir}/errout/00.{gseid}.prefetch._%A-%a.err" |>
+    glue::glue(),
   "#SBATCH --cpus-per-task=1",
   "#SBATCH --mem=10G",
   "#SBATCH --array=1-{length(sratable_prefetch$prefetch)}" |> glue::glue(),
@@ -215,7 +220,6 @@ if (length(sratable_prefetch$prefetch) > 0) {
 
 # Check sra file ----------------------------------------------------------
 
-
 sratable_prefetch |>
   dplyr::mutate(
     srafile = file.path(
@@ -225,12 +229,13 @@ sratable_prefetch |>
   ) |>
   dplyr::mutate(
     srafile_exist = file.exists(srafile)
-  ) ->
-srafiles
+  ) -> srafiles
 
 if (length(srafiles$srafile) > 0) {
   readr::write_lines(
-    glue::glue("vdb-validate {srafiles$srafile} 1> {srafiles$srafile}.validate 2>&1 &"),
+    glue::glue(
+      "vdb-validate {srafiles$srafile} 1> {srafiles$srafile}.validate 2>&1 &"
+    ),
     file = file.path(
       datadir,
       "01.{gseid}.prefetch.check.sh" |> glue::glue()
@@ -240,7 +245,6 @@ if (length(srafiles$srafile) > 0) {
 
 # check sra slrm --------------------------------------------------------------
 
-
 slrm_header <- c(
   "#!/usr/bin/env bash",
   "# @AUTHOR: Chun-Jie Liu",
@@ -248,8 +252,10 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=01.{gseid}.prefetch.check" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/01.{gseid}.prefetch.check._%A-%a.err" |> glue::glue(),
-  "#SBATCH --error={datadir}/errout/01.{gseid}.prefetch.check._%A-%a.err" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/01.{gseid}.prefetch.check._%A-%a.err" |>
+    glue::glue(),
+  "#SBATCH --error={datadir}/errout/01.{gseid}.prefetch.check._%A-%a.err" |>
+    glue::glue(),
   "#SBATCH --cpus-per-task=1",
   "#SBATCH --mem=10G",
   "#SBATCH --array=1-{length(srafiles$srafile)}" |> glue::glue(),
@@ -295,7 +301,6 @@ if (length(srafiles$srafile) > 0) {
 
 # Generate dump scripts ---------------------------------------------------
 
-
 srafiles |>
   dplyr::mutate(
     dump_cmd = purrr::map2_chr(
@@ -305,7 +310,8 @@ srafiles |>
         .srrid <- basename(.x)
 
         cmd_dump <- c(
-          "fasterq-dump {.y} --temp /mnt/isilon/u01_project/large-scale/liuc9/tmp  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.err 2>{erroutdir}/fasterq_dump.{.srrid}.err" |> glue::glue()
+          "fasterq-dump {.y} --temp /mnt/isilon/u01_project/large-scale/liuc9/tmp  --include-technical --mem 50G --threads 10 --split-files --outdir {.x} 1>{erroutdir}/fasterq_dump.{.srrid}.err 2>{erroutdir}/fasterq_dump.{.srrid}.err" |>
+            glue::glue()
         )
 
         cmd <- c(
@@ -314,11 +320,9 @@ srafiles |>
         cmd
       }
     )
-  ) ->
-srafile_dump
+  ) -> srafile_dump
 
 # save to runfile ---------------------------------------------------------
-
 
 data.table::fwrite(
   x = srafile_dump,
@@ -330,8 +334,6 @@ data.table::fwrite(
 
 
 # dump sh -----------------------------------------------------------------
-
-
 
 if (length(srafile_dump$dump_cmd) > 0) {
   readr::write_lines(
@@ -352,7 +354,8 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=02.{gseid}.dump" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/02.{gseid}.dump._%A-%a.err" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/02.{gseid}.dump._%A-%a.err" |>
+    glue::glue(),
   "#SBATCH --error={datadir}/errout/02.{gseid}.dump._%A-%a.err" |> glue::glue(),
   "#SBATCH --cpus-per-task=10",
   "#SBATCH --mem=80G",
@@ -395,10 +398,6 @@ if (length(srafile_dump$dump_cmd) > 0) {
     )
   )
 }
-
-
-
-
 
 # footer ------------------------------------------------------------------
 

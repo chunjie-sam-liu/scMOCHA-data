@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,14 +39,19 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
 
 theme_cor <- function() {
-  theme( # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
-    plot.title = element_text(size = rel(1.3), vjust = 2, hjust = 0.5, lineheight = 0.8),
+  theme(
+    # plot.margin = unit(c(0.5,0.5,0.5,0.5), "cm"),
+    plot.title = element_text(
+      size = rel(1.3),
+      vjust = 2,
+      hjust = 0.5,
+      lineheight = 0.8
+    ),
 
     # axis
     axis.title.x = element_text(face = "bold", size = 16),
@@ -88,10 +91,14 @@ dir.create(outdir, recursive = TRUE, showWarnings = FALSE)
 library(clusterProfiler)
 variant_go_all <- import(file.path(outdir, "variant_go_all.qs"))
 
-expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs") |>
+expr <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.qs"
+) |>
   dplyr::filter(celltype == "Mono")
 
-v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs") |>
+v_3173G_A <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs"
+) |>
   dplyr::filter(celltype == "Mono")
 
 import(
@@ -102,18 +109,19 @@ import(
     Chemistry == "SC5P-PE"
   ) |>
   dplyr::filter(
-    disease %in% c(
-      "Alzheimer's Disease",
-      "Healthy"
-    )
-  ) ->
-metadata
+    disease %in%
+      c(
+        "Alzheimer's Disease",
+        "Healthy"
+      )
+  ) -> metadata
 
 # body --------------------------------------------------------------------
 
 fn_load_corr <- function(.variant) {
   import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |> glue::glue()
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.fst" |>
+      glue::glue()
   ) |>
     dplyr::filter(celltype == "Mono") |>
     dplyr::filter(pval < 0.05) |>
@@ -123,10 +131,6 @@ fn_load_corr <- function(.variant) {
 
 corr_3173G_A <- fn_load_corr("3173G>A") |>
   dplyr::arrange(desc(corr))
-
-
-
-
 
 
 expr |>
@@ -139,9 +143,7 @@ expr |>
     by = c("genename", "celltype")
   ) |>
   dplyr::arrange(corr) |>
-  dplyr::filter(!grepl("ENSG0", genename)) ->
-expr_v_3173G_A
-
+  dplyr::filter(!grepl("ENSG0", genename)) -> expr_v_3173G_A
 
 
 # ? plot scatter and correlation --------------------------------------------------------------------
@@ -166,8 +168,7 @@ expr_v_3173G_A |>
           dplyr::inner_join(
             metadata,
             by = c("srrid")
-          ) ->
-        .expr_af
+          ) -> .expr_af
         cor_test <- cor.test(~ expr + af, data = .expr_af, method = "pearson")
 
         tryCatch(
@@ -231,9 +232,7 @@ expr_v_3173G_A |>
       mc.cores = 10,
       SIMPLIFY = FALSE
     )
-  ) ->
-expr_v_3173G_A_plot
-
+  ) -> expr_v_3173G_A_plot
 
 
 # ? save plots --------------------------------------------------------------------
@@ -265,20 +264,18 @@ expr_v_3173G_A_plot |>
   )
 
 
-
-
 # ? all correlation with 3173G>A --------------------------------------------------------------------
 
-
-genebiotype <- import("/home/liuc9/github/scMOCHA-data/config/Homo_sapiens.GRCh38.107.gtf.id_name_length_genetype.fst")
+genebiotype <- import(
+  "/home/liuc9/github/scMOCHA-data/config/Homo_sapiens.GRCh38.107.gtf.id_name_length_genetype.fst"
+)
 
 expr_v_3173G_A_plot |>
   dplyr::filter(AD >= 20, Healthy >= 20) |>
   dplyr::left_join(
     genebiotype,
     by = c("genename" = "gene_name")
-  ) ->
-expr_v_3173G_A_plot_filtered
+  ) -> expr_v_3173G_A_plot_filtered
 
 
 expr_v_3173G_A_plot_filtered |>
@@ -316,8 +313,7 @@ expr_v_3173G_A_plot_filtered |>
   labs(
     x = "Gene rank",
     y = "Corr. between gene expr and 3173G>A AF in Mono"
-  ) ->
-plot_corr_3173G_A
+  ) -> plot_corr_3173G_A
 
 ggsave(
   filename = "corr_gene_3173G_A_in_mono.pdf",
@@ -327,8 +323,6 @@ ggsave(
   height = 6,
   dpi = 300
 )
-
-
 
 
 # ? all variant and celltype --------------------------------------------------------------------
@@ -345,13 +339,13 @@ variants |>
   purrr::map(
     ~ {
       import(
-        "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |> glue::glue()
+        "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.x}-corr.fst" |>
+          glue::glue()
       ) |>
         dplyr::mutate(variant = .x)
     }
   ) |>
-  dplyr::bind_rows() ->
-variant_corr_celltype
+  dplyr::bind_rows() -> variant_corr_celltype
 
 expr_v_3173G_A_plot_filtered |>
   tibble::rowid_to_column() |>
@@ -363,8 +357,7 @@ expr_v_3173G_A_plot_filtered |>
       NA_character_
     )
   ) |>
-  dplyr::filter(!is.na(label)) ->
-topcorrgenes
+  dplyr::filter(!is.na(label)) -> topcorrgenes
 
 topcorrgenes |> dplyr::pull(genename)
 
@@ -387,8 +380,7 @@ variant_corr_celltype |>
       pval < 0.05 ~ "*",
       TRUE ~ ""
     )
-  ) ->
-variant_topcorrgenes_3173G_A_forplot
+  ) -> variant_topcorrgenes_3173G_A_forplot
 
 variant_topcorrgenes_3173G_A_forplot |>
   ggplot(aes(
@@ -443,8 +435,7 @@ variant_topcorrgenes_3173G_A_forplot |>
   labs(
     x = "Gene",
     y = "Cell type"
-  ) ->
-variant_topcorrgenes_3173G_A_tileplot
+  ) -> variant_topcorrgenes_3173G_A_tileplot
 
 ggsave(
   path = "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/corr/",
@@ -455,16 +446,13 @@ ggsave(
   dpi = 300
 )
 
-
 # ? mito genes --------------------------------------------------------------------
-
 
 # variant_go_all |>
 #   dplyr::filter(
 #     variant == "3173G>A"
 #   ) |>
 #   dplyr::pull(neg_cc)
-
 
 # footer ------------------------------------------------------------------
 

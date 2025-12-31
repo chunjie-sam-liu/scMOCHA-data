@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -67,7 +65,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   # load count
   cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
 
-
   # vaf cell umap -------------------------------------------------------------
 
   fn_plot_vaf_featureplot_multi(
@@ -78,7 +75,8 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   # p_vaf_feature
 
   ggsave(
-    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |> glue::glue(),
+    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |>
+      glue::glue(),
     path = outdir,
     plot = p_vaf_feature,
     width = 9,
@@ -118,7 +116,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
     height = 9,
   )
 
-
   # # hotspots ----------------------------------------------------------------
   # p_hotspots <- fn_plot_hotspots(thepath, thevariants)
 
@@ -140,13 +137,16 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   log_success("Finish to plot ", thepath)
 }
 
-fn_get_count_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
+fn_get_count_all <- function(
+  thepath,
+  thevariants = thevariants,
+  outdir = outdir
+) {
   log_info("Start to plot ", thepath)
   # ! parse --------------------------------------------------------------------
   if (!file.exists(outdir)) {
     dir.create(outdir, showWarnings = FALSE)
   }
-
 
   gsmid <- basename(thepath)
   gseid <- basename(dirname(dirname(thepath)))
@@ -187,22 +187,88 @@ thepaths <- c(
 )
 
 sc5p_pe_variant <- c(
-  "1255T>C", "1314C>T", "1315G>A", "1380G>T", "1382A>T", "1397T>A", "1670A>G", "2191A>C", "2285T>C", "2289G>T", "2442T>C", "3173G>A", "3176A>T", "3178T>A", "3727T>C",
-  "3728C>T", "3734A>G", "7428G>A", "11560A>G", "13752T>G", "13954C>A", "14082C>G", "15666T>C"
+  "1255T>C",
+  "1314C>T",
+  "1315G>A",
+  "1380G>T",
+  "1382A>T",
+  "1397T>A",
+  "1670A>G",
+  "2191A>C",
+  "2285T>C",
+  "2289G>T",
+  "2442T>C",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A",
+  "3727T>C",
+  "3728C>T",
+  "3734A>G",
+  "7428G>A",
+  "11560A>G",
+  "13752T>G",
+  "13954C>A",
+  "14082C>G",
+  "15666T>C"
 )
 sc5p_r2_variant <- c(
-  "153A>G", "195T>C", "827A>G", "1002C>T", "2352T>C", "3547A>G", "3766T>C", "4820G>A", "4977T>C", "6164C>T", "6473C>T", "8362T>G", "8598T>C", "8730A>G", "9196G>A",
-  "9497T>C", "10604T>A", "10819A>G", "11177C>T", "14212T>C", "14905G>A", "15047G>A", "15535C>T", "15747T>C"
+  "153A>G",
+  "195T>C",
+  "827A>G",
+  "1002C>T",
+  "2352T>C",
+  "3547A>G",
+  "3766T>C",
+  "4820G>A",
+  "4977T>C",
+  "6164C>T",
+  "6473C>T",
+  "8362T>G",
+  "8598T>C",
+  "8730A>G",
+  "9196G>A",
+  "9497T>C",
+  "10604T>A",
+  "10819A>G",
+  "11177C>T",
+  "14212T>C",
+  "14905G>A",
+  "15047G>A",
+  "15535C>T",
+  "15747T>C"
 )
 sc3pv2_variant <- c(
-  "3010G>A", "6260G>A", "8251G>A", "9055G>A", "9150A>G", "9698T>C", "9950T>C", "9974C>T", "10211C>T", "11840C>T", "12016C>A", "15662A>G"
+  "3010G>A",
+  "6260G>A",
+  "8251G>A",
+  "9055G>A",
+  "9150A>G",
+  "9698T>C",
+  "9950T>C",
+  "9974C>T",
+  "10211C>T",
+  "11840C>T",
+  "12016C>A",
+  "15662A>G"
 )
 
 sample_chem <- tibble::tibble(
   gseid = c("GSE226602", "GSE163668", "GSE163668", "GSE279945", "GSE162117"),
-  gsmid = c("GSM7080044", "GSM4995425", "GSM4995448", "GSM8583898", "GSM4933442"),
+  gsmid = c(
+    "GSM7080044",
+    "GSM4995425",
+    "GSM4995448",
+    "GSM8583898",
+    "GSM4933442"
+  ),
   thepath = thepaths,
-  thevariant = list(sc5p_pe_variant, sc5p_r2_variant, NULL, NULL, sc3pv2_variant),
+  thevariant = list(
+    sc5p_pe_variant,
+    sc5p_r2_variant,
+    NULL,
+    NULL,
+    sc3pv2_variant
+  ),
   chemistry = c("SC5P-PE", "SC5P-R2", "SC5P-R2", "SC3Pv3", "SC3Pv2"),
   color = c("red", "blue", "black", "black", "green")
 ) |>
@@ -215,18 +281,21 @@ sample_chem <- tibble::tibble(
     chemistry = factor(chemistry, levels = chemistry |> unique())
   )
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 
 # body --------------------------------------------------------------------
 
 thevariants <- c(
-  sc5p_pe_variant, sc5p_r2_variant, sc3pv2_variant
+  sc5p_pe_variant,
+  sc5p_r2_variant,
+  sc3pv2_variant
 )
 theposes <- thevariants |>
   purrr::map(~ gsub(pattern = "[>|AGCT]", "", x = .)) |>
   purrr::map_int(as.integer)
-
 
 
 # ! variant distribution --------------------------------------------------------------------
@@ -345,8 +414,7 @@ fn_plot_variant_depth_combined <- function(.d, .v) {
       )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "Depth") ->
-  .pd
+    labs(y = "Depth") -> .pd
 
   pp <- wrap_plots(
     .pd,
@@ -389,8 +457,7 @@ tibble::tibble(
               }
             ),
           ) |>
-          tidyr::unnest(cols = c(cov)) ->
-        .plot
+          tidyr::unnest(cols = c(cov)) -> .plot
 
         log_success("Finish to plot ", .y)
 
@@ -406,14 +473,15 @@ tibble::tibble(
   )
 
 
-
-
 # ! read count --------------------------------------------------------------------
 
-parallel::mclapply(thepaths, function(path) {
-  fn_get_count_all(path, thevariants = thevariants, outdir = outdir)
-}, mc.cores = length(thepaths)) ->
-load_count
+parallel::mclapply(
+  thepaths,
+  function(path) {
+    fn_get_count_all(path, thevariants = thevariants, outdir = outdir)
+  },
+  mc.cores = length(thepaths)
+) -> load_count
 
 load_count |>
   purrr::map(
@@ -421,7 +489,9 @@ load_count |>
       .x |>
         tibble::enframe() |>
         tidyr::spread(key = name, value = value) |>
-        tidyr::unnest(cols = c(thevariants, theposes, cluster_n_forplot, gseid, gsmid)) |>
+        tidyr::unnest(
+          cols = c(thevariants, theposes, cluster_n_forplot, gseid, gsmid)
+        ) |>
         dplyr::left_join(sample_chem, by = c("gseid", "gsmid")) |>
         dplyr::mutate(
           cluster_n_forplot = purrr::map2(
@@ -435,20 +505,17 @@ load_count |>
         )
     }
   ) |>
-  dplyr::bind_rows() ->
-load_count_unnest
+  dplyr::bind_rows() -> load_count_unnest
 
 
 load_count_unnest |>
-  tidyr::unnest(cols = c(cluster_n_forplot)) ->
-cluster_n_forplot_
+  tidyr::unnest(cols = c(cluster_n_forplot)) -> cluster_n_forplot_
 
 # only B cell
 cluster_n_forplot_ |>
   dplyr::filter(
     group == "B"
-  ) ->
-cluster_n_forplot_B
+  ) -> cluster_n_forplot_B
 
 
 gt <- factor(c("A", "G", "C", "T"), levels = c("A", "G", "C", "T"))
@@ -499,13 +566,11 @@ tibble::tibble(
   dplyr::mutate(
     posref = factor(posref, levels = posref),
     thevariant = factor(thevariant, levels = thevariant)
-  ) ->
-posref_df_rank
+  ) -> posref_df_rank
 
 cluster_n_forplot_B |>
   dplyr::select(-c(posref, thevariant)) |>
-  dplyr::left_join(posref_df_rank, by = c("pos")) ->
-cluster_n_forplot_B_
+  dplyr::left_join(posref_df_rank, by = c("pos")) -> cluster_n_forplot_B_
 
 
 fn_plot_read_count <- function(.d) {
@@ -588,10 +653,8 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
   purrr::map(
     ~ {
       cluster_n_forplot_B_ |>
-        dplyr::filter(variant_from == .x) ->
-      plot_for_
+        dplyr::filter(variant_from == .x) -> plot_for_
       plot_for_$thevariant |> unique() -> thevariant_for_plot
-
 
       thevariant_for_plot |>
         # split the vector into several vectors, each with 10 elements
@@ -600,12 +663,12 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
           \(.y) {
             plot_for_ |>
               dplyr::filter(thevariant %in% .y) |>
-              fn_plot_read_count() ->
-            pv
+              fn_plot_read_count() -> pv
             vname <- .y |>
               paste(collapse = "_")
             ggsave(
-              filename = "selected_variants_ratio_{.x}_{.y}.pdf" |> glue::glue(),
+              filename = "selected_variants_ratio_{.x}_{.y}.pdf" |>
+                glue::glue(),
               path = outdir,
               plot = pv,
               width = 26,
@@ -617,10 +680,7 @@ c("sc5p_pe_variant", "sc5p_r2_variant", "sc3pv2_variant") |>
   )
 
 
-
-
-
-notrun <- \(){
+notrun <- \() {
   c("A", "G", "C", "T") |>
     purrr::map(
       ~ {
@@ -630,16 +690,20 @@ notrun <- \(){
             gsmid_label = factor(gsmid_label, levels = sample_chem$gsmid_label)
           ) |>
           dplyr::filter(group == "B") |>
-          dplyr::filter(pos %in% (posref_df_rank |>
-            dplyr::filter(variant_group == .x) |>
-            dplyr::pull(pos)
-          )) |>
+          dplyr::filter(
+            pos %in%
+              (posref_df_rank |>
+                dplyr::filter(variant_group == .x) |>
+                dplyr::pull(pos))
+          ) |>
           dplyr::mutate(
-            posref = factor(posref, levels = posref_df_rank |>
-              dplyr::filter(variant_group == .x) |>
-              dplyr::pull(posref))
-          ) ->
-        .m
+            posref = factor(
+              posref,
+              levels = posref_df_rank |>
+                dplyr::filter(variant_group == .x) |>
+                dplyr::pull(posref)
+            )
+          ) -> .m
         .m |>
           ggplot(aes(x = posref, y = gsmid_label)) +
           geom_tile(aes(fill = ratio)) +
@@ -715,8 +779,7 @@ notrun <- \(){
             axis.line = element_line(
               color = "black"
             )
-          ) ->
-        pv
+          ) -> pv
 
         ggsave(
           filename = "selected_variants_ratio_{.x}.pdf" |> glue::glue(),
@@ -728,9 +791,6 @@ notrun <- \(){
       }
     )
 }
-
-
-
 
 # footer ------------------------------------------------------------------
 

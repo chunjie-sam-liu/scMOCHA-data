@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
@@ -57,7 +54,9 @@ gse_dataset_metadata_full <- readr::read_rds(
 )
 
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 
 
@@ -70,8 +69,15 @@ gse_data <- readr::read_rds(
 # body --------------------------------------------------------------------
 
 gse_data |>
-  dplyr::select(gseid, srrid, chemistry, anno, hetero, haplo_violin, somatic_variant) ->
-for_hetero
+  dplyr::select(
+    gseid,
+    srrid,
+    chemistry,
+    anno,
+    hetero,
+    haplo_violin,
+    somatic_variant
+  ) -> for_hetero
 
 
 gse_data |>
@@ -79,10 +85,7 @@ gse_data |>
   dplyr::left_join(
     gse_dataset_metadata_full |> dplyr::select(srrid, Chemistry, disease),
     by = c("srrid" = "srrid")
-  ) ->
-gse_data_haplo_variant
-
-
+  ) -> gse_data_haplo_variant
 
 
 # gse_data_haplo_variant |>
@@ -101,10 +104,7 @@ gse_data_haplo_variant
 #   dplyr::filter(color == "black") ->
 # somatic_variants
 
-
-
 # ! no longer use --------------------------------------------------------------------
-
 
 \() {
   gse_data_haplo_variant |>
@@ -112,27 +112,28 @@ gse_data_haplo_variant
     dplyr::filter(variant %in% somatic_variants$variant) |>
     dplyr::filter(disease %in% c("Alzheimer's Disease", "Healthy")) |>
     dplyr::group_by(
-      srrid, disease, variant
+      srrid,
+      disease,
+      variant
     ) |>
     dplyr::summarise(af = mean(af, na.rm = TRUE)) |>
     dplyr::ungroup() |>
-    dplyr::arrange(disease) ->
-  for_hetero_af_tile
+    dplyr::arrange(disease) -> for_hetero_af_tile
 
   for_hetero_af_tile |>
     dplyr::select(variant) |>
-    dplyr::mutate(pos = gsub(variant, pattern = "[ACGT]|>", replacement = "")) |>
+    dplyr::mutate(
+      pos = gsub(variant, pattern = "[ACGT]|>", replacement = "")
+    ) |>
     dplyr::mutate(pos = as.numeric(pos)) |>
     dplyr::arrange(-pos) |>
-    dplyr::distinct() ->
-  rank_variant
+    dplyr::distinct() -> rank_variant
 
   for_hetero_af_tile |>
     dplyr::group_by(disease, srrid) |>
     dplyr::count() |>
     dplyr::ungroup() |>
-    dplyr::arrange(disease, -n) ->
-  rank_srrid
+    dplyr::arrange(disease, -n) -> rank_srrid
 
   rank_srrid |>
     dplyr::mutate(
@@ -168,9 +169,7 @@ gse_data_haplo_variant
       axis.text = element_blank(),
       axis.ticks = element_blank(),
       legend.position = "none"
-    ) ->
-  p_tile
-
+    ) -> p_tile
 
   for_hetero_af_tile |>
     dplyr::mutate(
@@ -208,8 +207,7 @@ gse_data_haplo_variant
     ) +
     labs(
       y = "Variant",
-    ) ->
-  p_variants_tile
+    ) -> p_variants_tile
 
   ggsave(
     filename = file.path(outdir, "disease_varaint.pdf" |> glue::glue()),
@@ -227,11 +225,11 @@ gse_data_haplo_variant
 }
 
 
-
 # ! mean heteroplasmic variant count --------------------------------------------------------------------
 
-
-all_variant <- readr::read_rds("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.rds")
+all_variant <- readr::read_rds(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.rds"
+)
 
 # for_hetero$somatic_variant[[1]] -> .somatic_variant
 for_hetero |>
@@ -254,48 +252,42 @@ for_hetero |>
           dplyr::group_by(variant) |>
           dplyr::summarize(
             mean_af = mean(af, na.rm = TRUE),
-          ) ->
-        .variant_non_editing
+          ) -> .variant_non_editing
 
         .haplo_violin |>
           dplyr::filter(!variant %in% .editing) |>
           dplyr::group_by(barcode) |>
           dplyr::summarize(
             haplo_af_cell = mean(af, na.rm = TRUE),
-          ) ->
-        .barcode_non_editing_cell
+          ) -> .barcode_non_editing_cell
 
         .haplo_violin |>
           dplyr::filter(!variant %in% .editing) |>
           dplyr::group_by(cluster) |>
           dplyr::summarize(
             haplo_af_cluster = mean(af, na.rm = TRUE),
-          ) ->
-        .cluster_non_editing_cluster
+          ) -> .cluster_non_editing_cluster
 
         .haplo_violin |>
           dplyr::filter(variant %in% .somatic) |>
           dplyr::group_by(variant) |>
           dplyr::summarize(
             mean_af = mean(af, na.rm = TRUE),
-          ) ->
-        .variant_somatic
+          ) -> .variant_somatic
 
         .haplo_violin |>
           dplyr::filter(variant %in% .somatic) |>
           dplyr::group_by(barcode) |>
           dplyr::summarize(
             somatic_af_cell = mean(af, na.rm = TRUE),
-          ) ->
-        .variant_somatic_cell
+          ) -> .variant_somatic_cell
 
         .haplo_violin |>
           dplyr::filter(variant %in% .somatic) |>
           dplyr::group_by(cluster) |>
           dplyr::summarize(
             somatic_af_cluster = mean(af, na.rm = TRUE),
-          ) ->
-        .cluster_somatic_cluster
+          ) -> .cluster_somatic_cluster
 
         cli::cli_alert_success("Completed processing {i}/{total}")
 
@@ -315,25 +307,23 @@ for_hetero |>
       mc.cores = 10,
       SIMPLIFY = FALSE
     )
-  ) ->
-for_hetero_af
+  ) -> for_hetero_af
 
 for_hetero_af |>
   dplyr::select(gseid, srrid, chemistry, mean_heteroplasmy_count) |>
   tidyr::unnest(cols = mean_heteroplasmy_count) |>
   dplyr::left_join(
-    gse_dataset_metadata_full |> dplyr::select(srrid, Age, Age_new, Age_group, disease),
+    gse_dataset_metadata_full |>
+      dplyr::select(srrid, Age, Age_new, Age_group, disease),
     by = c("srrid" = "srrid")
-  ) ->
-for_hetero_af_forplot
-
+  ) -> for_hetero_af_forplot
 
 
 # ! somatic --------------------------------------------------------------------
 
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
 celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
-\(){
+\() {
   for_hetero_af_forplot |>
     dplyr::filter(Age_group != "Unknown") |>
     dplyr::filter(!is.na(somatic_af)) |>
@@ -341,15 +331,13 @@ celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
     tidyr::unnest(cols = somatic_af_cluster) |>
     dplyr::mutate(
       cluster = factor(cluster, levels = celltypes)
-    ) ->
-  for_hetero_af_forplot_cluster
+    ) -> for_hetero_af_forplot_cluster
 
   for_hetero_af_forplot_cluster |>
     dplyr::group_by(Age_group) |>
     dplyr::summarise(
       mean_somatic_af = mean(somatic_af_cluster, na.rm = TRUE)
-    ) ->
-  cluster_mean
+    ) -> cluster_mean
 
   for_hetero_af_forplot_cluster |>
     dplyr::left_join(
@@ -444,9 +432,7 @@ celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
     ) +
     labs(
       y = "Mean heteroplasmy count"
-    ) ->
-  p_age_somatic_af_cluster
-
+    ) -> p_age_somatic_af_cluster
 
   ggsave(
     file.path(outdir, "p_age_somatic_af_cluster.pdf"),
@@ -454,8 +440,6 @@ celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
     width = 12,
     height = 7
   )
-
-
 
   # ! haplo --------------------------------------------------------------------
 
@@ -466,15 +450,13 @@ celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
     tidyr::unnest(cols = haplo_af_cluster) |>
     dplyr::mutate(
       cluster = factor(cluster, levels = celltypes)
-    ) ->
-  for_hetero_af_forplot_cluster
+    ) -> for_hetero_af_forplot_cluster
 
   for_hetero_af_forplot_cluster |>
     dplyr::group_by(Age_group) |>
     dplyr::summarise(
       mean_haplo_af = mean(haplo_af_cluster, na.rm = TRUE)
-    ) ->
-  cluster_mean
+    ) -> cluster_mean
 
   for_hetero_af_forplot_cluster |>
     dplyr::left_join(
@@ -569,9 +551,7 @@ celltypes <- c("B", "CD4_T", "CD8_T", "DC", "Mono", "NK", "other", "other_T")
     ) +
     labs(
       y = "Mean heteroplasmy count"
-    ) ->
-  p_age_haplot_af_cluster
-
+    ) -> p_age_haplot_af_cluster
 
   ggsave(
     file.path(outdir, "p_age_haplot_af_cluster.pdf"),
@@ -607,8 +587,7 @@ for_hetero_af_forplot |>
         "COVID-19"
       )
     )
-  ) ->
-for_mhc_disease_boxplot
+  ) -> for_mhc_disease_boxplot
 
 my_comparisons <- list(
   c("Alzheimer's Disease", "Healthy"),
@@ -636,8 +615,7 @@ for_mhc_disease_boxplot |>
   labs(
     y = "Mean somatic variant AF",
     title = "All samples"
-  ) ->
-p1
+  ) -> p1
 for_mhc_disease_boxplot |>
   dplyr::filter(
     somatic_af > 0
@@ -661,8 +639,7 @@ for_mhc_disease_boxplot |>
   labs(
     y = "Mean somatic variant AF",
     title = "Samples with # of somatic variants > 0"
-  ) ->
-p2
+  ) -> p2
 
 wrap_plots(list(p1, p2), ncol = 2) -> p_combined
 p_combined
@@ -691,8 +668,7 @@ gse_dataset_metadata_full |>
         "COVID-19"
       )
     )
-  ) ->
-for_count_disease_boxplot
+  ) -> for_count_disease_boxplot
 
 for_count_disease_boxplot |>
   ggpubr::ggboxplot(
@@ -714,8 +690,7 @@ for_count_disease_boxplot |>
   labs(
     y = "# of somatic variants",
     title = "All samples"
-  ) ->
-p1_count
+  ) -> p1_count
 
 for_count_disease_boxplot |>
   dplyr::filter(
@@ -740,8 +715,7 @@ for_count_disease_boxplot |>
   labs(
     y = "# of somatic variants",
     title = "Samples with # of somatic variants > 0"
-  ) ->
-p2_count
+  ) -> p2_count
 
 
 wrap_plots(list(p1_count, p2_count), ncol = 2) -> p_combined_count
@@ -788,22 +762,30 @@ for_hetero_af_forplot |>
     Age_group = ifelse(is.na(Age_group), "Unknown", Age_group)
   ) |>
   dplyr::mutate(
-    Age_group = factor(Age_group, levels = c(
-      "<20", "20-29", "30-39", "40-49", "50-59",
-      "60-69", "70-79", ">80", "Unknown"
-    ))
+    Age_group = factor(
+      Age_group,
+      levels = c(
+        "<20",
+        "20-29",
+        "30-39",
+        "40-49",
+        "50-59",
+        "60-69",
+        "70-79",
+        ">80",
+        "Unknown"
+      )
+    )
   ) |>
   dplyr::filter(Age_group != "Unknown") |>
   # dplyr::filter(somatic_af > 0) |>
-  dplyr::filter(!is.na(Age_new)) ->
-for_age_plot
+  dplyr::filter(!is.na(Age_new)) -> for_age_plot
 
 for_age_plot |>
   dplyr::group_by(Age_group) |>
   dplyr::summarise(
     mean_somatic_af = mean(somatic_af, na.rm = TRUE)
-  ) ->
-age_mean
+  ) -> age_mean
 
 for_age_plot |>
   dplyr::left_join(
@@ -905,8 +887,7 @@ for_age_plot |>
   ) +
   labs(
     y = "Mean heteroplasmy count"
-  ) ->
-p_age_somatic_af
+  ) -> p_age_somatic_af
 p_age_somatic_af
 
 ggsave(
@@ -917,10 +898,6 @@ ggsave(
 )
 
 
-
-
-
-
 # ! age and somatic and disease--------------------------------------------------------------------
 
 gse_dataset_metadata_full |>
@@ -928,7 +905,8 @@ gse_dataset_metadata_full |>
   dplyr::filter(!is.na(Age_new)) |>
   dplyr::mutate(
     disease = dplyr::case_when(
-      disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+      disease %in%
+        c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
       TRUE ~ "Other"
     )
   ) |>
@@ -989,8 +967,7 @@ gse_dataset_metadata_full |>
   labs(
     x = "Age",
     y = "# of somatic variants"
-  ) ->
-p_age_somatic_af_disease
+  ) -> p_age_somatic_af_disease
 p_age_somatic_af_disease
 
 ggsave(
@@ -999,10 +976,6 @@ ggsave(
   width = 12,
   height = 7
 )
-
-
-
-
 
 # footer ------------------------------------------------------------------
 

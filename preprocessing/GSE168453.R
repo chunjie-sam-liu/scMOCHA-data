@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -46,7 +44,6 @@ log_layout(layout_glue_colors)
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
-
 
 # load data ---------------------------------------------------------------
 datadir <- "/home/liuc9/github/scMOCHA-data/data/GSE168453"

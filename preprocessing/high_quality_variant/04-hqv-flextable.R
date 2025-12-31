@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/hqv"
@@ -81,8 +78,7 @@ gse_dataset_metadata_full |>
     Disease = paste0(sort(unique(disease)), collapse = ", "),
     Source = paste0(sort(unique(Source)), collapse = ", "),
     Publication = paste0(sort(unique(Publication)), collapse = ", "),
-  ) ->
-gse_dataset_metadata_full_sel
+  ) -> gse_dataset_metadata_full_sel
 
 gse_data |>
   # hqv variant
@@ -140,19 +136,16 @@ gse_data |>
             .f = \(.a) {
               intersect(.a, .y$variant)
             }
-          ) ->
-        .x
+          ) -> .x
         .x |>
           purrr::reduce(union) |>
           unique() |>
-          length() ->
-        .nmut
+          length() -> .nmut
 
         .x |>
           purrr::map_int(length) |>
           tibble::enframe() |>
-          tidyr::spread(key = name, value = value) ->
-        .xx
+          tidyr::spread(key = name, value = value) -> .xx
         names(.xx) <- glue::glue("nmut_{names(.xx)}")
         .xx |>
           tibble::add_column(
@@ -162,10 +155,8 @@ gse_data |>
       }
     )
   ) |>
-  tidyr::unnest(cols = nmut_variant) ->
-gse_data_read
+  tidyr::unnest(cols = nmut_variant) -> gse_data_read
 # body --------------------------------------------------------------------
-
 
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 
@@ -199,17 +190,16 @@ gse_data_read |>
   dplyr::rename(
     `GSE ID` = gseid,
     Samples = samples,
-  ) ->
-gses_meta_read_all
+  ) -> gses_meta_read_all
 
 gses_meta_read_all |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = chem_levels)
   ) |>
   dplyr::arrange(
-    Chemistry, -`Avg. somatic mutation`
-  ) ->
-df
+    Chemistry,
+    -`Avg. somatic mutation`
+  ) -> df
 
 chem_colors <- viridis::viridis_pal(option = "D")(4) |>
   prismatic::color()
@@ -281,8 +271,7 @@ library(flextable)
 the_header |>
   tibble::rowid_to_column() |>
   dplyr::group_by(line2) |>
-  dplyr::filter(!dplyr::n() > 1) ->
-the_header_idx
+  dplyr::filter(!dplyr::n() > 1) -> the_header_idx
 
 flextable::flextable(df) |>
   flextable::set_header_df(
@@ -347,7 +336,13 @@ flextable::flextable(df) |>
     j = c("Publication")
   ) |>
   flextable::vline(
-    j = c("Samples", "Chemistry", "Avg. mutation", "Avg. total reads", "Avg. median UMI/cell"),
+    j = c(
+      "Samples",
+      "Chemistry",
+      "Avg. mutation",
+      "Avg. total reads",
+      "Avg. median UMI/cell"
+    ),
     border = fp_border_default()
   ) |>
   flextable::hline(
@@ -358,7 +353,13 @@ flextable::flextable(df) |>
     j = c("Avg. somatic mutation", "Avg. mutation", "Avg. Age")
   ) |>
   colformat_num(
-    j = c("Avg. total reads", "Avg. mapped reads", "Avg. # of cells", "Avg. median genes/cell", "Avg. median UMI/cell"),
+    j = c(
+      "Avg. total reads",
+      "Avg. mapped reads",
+      "Avg. # of cells",
+      "Avg. median genes/cell",
+      "Avg. median UMI/cell"
+    ),
   ) |>
   align(align = "center", part = "all") |>
   valign(valign = "center", part = "header") |>
@@ -369,8 +370,7 @@ flextable::flextable(df) |>
   flextable::width(
     j = c(14),
     width = 2
-  ) ->
-ft
+  ) -> ft
 
 flextable::save_as_image(
   ft,
@@ -383,7 +383,6 @@ flextable::save_as_pptx(
   ft,
   path = file.path(outdir, "gses_meta_read_hqv.pptx")
 )
-
 
 # footer ------------------------------------------------------------------
 

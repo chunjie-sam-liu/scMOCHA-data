@@ -28,8 +28,6 @@ library(logger)
 # %: hash
 # default: default value specified here.
 
-
-
 verbose <- FALSE
 
 # cell ranger chemistry auto detector
@@ -67,7 +65,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # src ---------------------------------------------------------------------
 
-
 # header ------------------------------------------------------------------
 log_threshold(TRACE)
 log_layout(layout_glue_colors)
@@ -86,14 +83,13 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-
 
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA-data/data"
 # basedir <- "/mnt/isilon/u01_project/large-scale/liuc9/raw"
 datadir <- file.path(
-  basedir, gseid
+  basedir,
+  gseid
 )
 
 dir.create(
@@ -180,16 +176,20 @@ gsm |>
         )
 
         .jsonfile <- file.path(
-          .ydir, "{.srrid}.json" |> glue::glue()
+          .ydir,
+          "{.srrid}.json" |> glue::glue()
         )
         .errfile <- file.path(
-          .ydir, "{.srrid}.err" |> glue::glue()
+          .ydir,
+          "{.srrid}.err" |> glue::glue()
         )
         .logfile <- file.path(
-          .ydir, "{.srrid}.log" |> glue::glue()
+          .ydir,
+          "{.srrid}.log" |> glue::glue()
         )
         runwdl_sh_file <- file.path(
-          .ydir, "runwdl_{.srrid}.sh" |> glue::glue()
+          .ydir,
+          "runwdl_{.srrid}.sh" |> glue::glue()
         )
 
         runwdl_cmd <- c(
@@ -218,8 +218,7 @@ gsm |>
       }
     )
   ) |>
-  tidyr::unnest(cols = scmocha) ->
-conf_scmocha
+  tidyr::unnest(cols = scmocha) -> conf_scmocha
 
 data.table::fwrite(
   x = conf_scmocha,
@@ -241,7 +240,8 @@ readr::write_lines(
 
 dir.create(
   path = file.path(
-    datadir, "errout"
+    datadir,
+    "errout"
   ),
   showWarnings = F,
   recursive = T
@@ -254,8 +254,10 @@ slrm_header <- c(
   "# @DATE: {lubridate::now()}" |> glue::glue(),
   "",
   "#SBATCH --job-name=02.{gseid}.runwdl" |> glue::glue(),
-  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
-  "#SBATCH --error={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |> glue::glue(),
+  "#SBATCH --output={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |>
+    glue::glue(),
+  "#SBATCH --error={datadir}/errout/02.{gseid}.runwdl._%A-%a.err" |>
+    glue::glue(),
   "#SBATCH --cpus-per-task=10",
   "#SBATCH --mem=50G",
   "#SBATCH --array=1-{length(conf_scmocha$scmocha_sh)}" |> glue::glue(),
@@ -265,8 +267,10 @@ slrm_header <- c(
 )
 
 slrm_array <- c(
-  "#input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |> glue::glue(),
-  "input_files=($(sed 's/bash \\(.*\\) &/\\1/' {datadir}/03.{gseid}.runwdl.sh_notrun))" |> glue::glue(),
+  "#input_files=({paste0(conf_scmocha$scmocha_sh, collapse = ' ')})" |>
+    glue::glue(),
+  "input_files=($(sed 's/bash \\(.*\\) &/\\1/' {datadir}/03.{gseid}.runwdl.sh_notrun))" |>
+    glue::glue(),
   "",
   "",
   "index=$((SLURM_ARRAY_TASK_ID - 1))",
@@ -283,7 +287,6 @@ readr::write_lines(
     "03.{gseid}.runwdl.slrm_notrun" |> glue::glue()
   )
 )
-
 
 
 # for batch scMOCHA solving database conflicts ----------------------------
@@ -392,7 +395,6 @@ readr::write_lines(
     "04.{gseid}.batch.sh" |> glue::glue()
   )
 )
-
 
 # 249 * 0.7# footer ------------------------------------------------------------------
 

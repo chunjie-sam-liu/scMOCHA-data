@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -45,7 +43,6 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 
 gse_dataset_metadata_full <- import(
@@ -56,7 +53,8 @@ gse_dataset_metadata_full <- import(
     Chemistry == "SC5P-PE"
   ) |>
   dplyr::select(
-    srrid, disease
+    srrid,
+    disease
   ) |>
   dplyr::mutate(
     disease = dplyr::case_when(
@@ -65,7 +63,9 @@ gse_dataset_metadata_full <- import(
     )
   )
 
-expr <- import("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst") |>
+expr <- import(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/db/EXPR/gse_srrid_celltype_gene_expr.fst"
+) |>
   dplyr::inner_join(
     gse_dataset_metadata_full,
     by = c("srrid")
@@ -92,14 +92,16 @@ variants <- c(
 
 
 fn_cor_test_variant <- function(.variant) {
-  .v <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}.qs" |> glue::glue())
+  .v <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}.qs" |>
+      glue::glue()
+  )
 
   expr |>
     dplyr::left_join(
       .v,
       by = c("celltype")
-    ) ->
-  .expr_v
+    ) -> .expr_v
 
   .expr_v |>
     dplyr::mutate(
@@ -112,16 +114,14 @@ fn_cor_test_variant <- function(.variant) {
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
 
           .expr_af |>
             dplyr::count(disease) |>
             tidyr::pivot_wider(
               names_from = disease,
               values_from = n
-            ) ->
-          .n_disease
+            ) -> .n_disease
 
           if (sum(.n_disease < 10) > 0) {
             return(NULL)
@@ -158,12 +158,12 @@ fn_cor_test_variant <- function(.variant) {
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  .expr_v_corr
+    tidyr::unnest(cols = corr_results) -> .expr_v_corr
 
   export(
     .expr_v_corr,
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue(),
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-{.variant}-corr.csv" |>
+      glue::glue(),
     format = "both"
   )
 }
@@ -175,26 +175,20 @@ variants |>
   )
 
 
-
-
 # ! don't run below --------------------------------------------------------------------
 
-
-
-
-\(){
+\() {
   # !  v_3173G_A--------------------------------------------------------------------
 
-
-
-  v_3173G_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs")
+  v_3173G_A <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3173G>A.qs"
+  )
 
   expr |>
     dplyr::left_join(
       v_3173G_A,
       by = c("celltype")
-    ) ->
-  expr_v_3173G_A
+    ) -> expr_v_3173G_A
 
   expr_v_3173G_A |>
     # head(20) |>
@@ -209,8 +203,7 @@ variants |>
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
           tryCatch(
             {
               cor.test(~ af + expr, data = .expr_af, method = "pearson") |>
@@ -233,8 +226,7 @@ variants |>
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  expr_v_3173G_A_corr
+    tidyr::unnest(cols = corr_results) -> expr_v_3173G_A_corr
 
   export(
     expr_v_3173G_A_corr,
@@ -242,24 +234,21 @@ variants |>
     format = "both"
   )
 
-
   # expr_v_3173G_A_corr |>
   #   dplyr::filter(celltype == "Mono") |>
   #   dplyr::filter(pval < 0.05, abs(corr) > 0.5) |>
   #   dplyr::arrange(desc(abs(corr)))
 
-
-
   # ! v_1397T_A --------------------------------------------------------------------
 
-  v_1397T_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1397T>A.qs")
+  v_1397T_A <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1397T>A.qs"
+  )
   expr |>
     dplyr::left_join(
       v_1397T_A,
       by = c("celltype")
-    ) ->
-  expr_v_1397T_A
-
+    ) -> expr_v_1397T_A
 
   expr_v_3173G_A |>
     # head(20) |>
@@ -274,8 +263,7 @@ variants |>
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
           tryCatch(
             {
               cor.test(~ af + expr, data = .expr_af, method = "pearson") |>
@@ -298,8 +286,7 @@ variants |>
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  expr_v_1397T_A_corr
+    tidyr::unnest(cols = corr_results) -> expr_v_1397T_A_corr
 
   export(
     expr_v_1397T_A_corr,
@@ -307,16 +294,16 @@ variants |>
     format = "both"
   )
 
-
   # ! v_1670A_G --------------------------------------------------------------------
 
-  v_1670A_G <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1670A>G.qs")
+  v_1670A_G <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-1670A>G.qs"
+  )
   expr |>
     dplyr::left_join(
       v_1670A_G,
       by = c("celltype")
-    ) ->
-  expr_v_1670A_G
+    ) -> expr_v_1670A_G
 
   expr_v_1670A_G |>
     dplyr::mutate(
@@ -326,8 +313,7 @@ variants |>
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
           tryCatch(
             {
               cor.test(~ af + expr, data = .expr_af, method = "pearson") |>
@@ -349,8 +335,7 @@ variants |>
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  expr_v_1670A_G_corr
+    tidyr::unnest(cols = corr_results) -> expr_v_1670A_G_corr
 
   export(
     expr_v_1670A_G_corr,
@@ -358,16 +343,16 @@ variants |>
     format = "both"
   )
 
-
   # ! v_3176A_T --------------------------------------------------------------------
 
-  v_3176A_T <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3176A>T.qs")
+  v_3176A_T <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3176A>T.qs"
+  )
   expr |>
     dplyr::left_join(
       v_3176A_T,
       by = c("celltype")
-    ) ->
-  expr_v_3176A_T
+    ) -> expr_v_3176A_T
 
   expr_v_3176A_T |>
     dplyr::mutate(
@@ -377,8 +362,7 @@ variants |>
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
           tryCatch(
             {
               cor.test(~ af + expr, data = .expr_af, method = "pearson") |>
@@ -400,8 +384,7 @@ variants |>
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  expr_v_3176A_T_corr
+    tidyr::unnest(cols = corr_results) -> expr_v_3176A_T_corr
 
   export(
     expr_v_3176A_T_corr,
@@ -409,33 +392,37 @@ variants |>
     format = "both"
   )
 
-
   # ! v_3178T_A --------------------------------------------------------------------
 
-  v_3178T_A <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3178T>A.qs")
+  v_3178T_A <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/ad/ad-celltype-variant-af-3178T>A.qs"
+  )
   expr |>
     dplyr::left_join(
       v_3178T_A,
       by = c("celltype")
     ) |>
     # Filter rows where af is not NULL to ensure proper size matching
-    dplyr::filter(!purrr::map_lgl(af, is.null)) ->
-  expr_v_3178T_A
+    dplyr::filter(!purrr::map_lgl(af, is.null)) -> expr_v_3178T_A
 
   expr_v_3178T_A |>
     dplyr::mutate(
       corr_results = purrr::map2(
-        expr, af,
+        expr,
+        af,
         function(.expr, .af) {
           .expr |>
             dplyr::left_join(
               .af,
               by = c("gseid", "srrid")
-            ) ->
-          .expr_af
+            ) -> .expr_af
 
           # Only proceed if we have sufficient data after joining
-          if (nrow(.expr_af) < 3 || all(is.na(.expr_af$af)) || all(is.na(.expr_af$expr))) {
+          if (
+            nrow(.expr_af) < 3 ||
+              all(is.na(.expr_af$af)) ||
+              all(is.na(.expr_af$expr))
+          ) {
             return(tibble::tibble(corr = NA_real_, pval = NA_real_))
           }
 
@@ -456,8 +443,7 @@ variants |>
       )
     ) |>
     dplyr::select(-expr, -af) |>
-    tidyr::unnest(cols = corr_results) ->
-  expr_v_3178T_A_corr
+    tidyr::unnest(cols = corr_results) -> expr_v_3178T_A_corr
 
   export(
     expr_v_3178T_A_corr,

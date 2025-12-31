@@ -47,7 +47,8 @@ fn_umap_coord <- function(.x) {
   .col_names <- c("UMAP_1", "UMAP_2")
 
   if ("ref.umap" %in% names(.x@reductions)) {
-    .umap <- .x@reductions$ref.umap@cell.embeddings |> data.table::as.data.table()
+    .umap <- .x@reductions$ref.umap@cell.embeddings |>
+      data.table::as.data.table()
     colnames(.umap) <- .col_names
     .tsne <- NULL
   } else {
@@ -62,8 +63,7 @@ fn_umap_coord <- function(.x) {
     dplyr::select(
       celltype
     ) |>
-    data.table::as.data.table() ->
-  .xx
+    data.table::as.data.table() -> .xx
 
   .xxx <- dplyr::bind_cols(.umap, .xx) |>
     dplyr::mutate(barcode = rownames(.x@meta.data))
@@ -81,7 +81,12 @@ fn_load_hetero <- function(.filename) {
   data.table::fread(input = .filename) -> .d
 
   data.table::setnames(.d, "V1", "barcode")
-  .d <- data.table::melt(.d, id.vars = "barcode", variable.name = "variant", value.name = "af")
+  .d <- data.table::melt(
+    .d,
+    id.vars = "barcode",
+    variable.name = "variant",
+    value.name = "af"
+  )
   .d[, pos := gsub(pattern = ">|[AGCT]", replacement = "", x = variant)]
   .d[, pos := as.integer(pos)]
   .d
@@ -92,22 +97,20 @@ fn_load_coverage <- function(.filename) {
     input = .filename,
     sep = ",",
     col.names = c("pos", "barcode", "depth")
-  ) ->
-  .d
+  ) -> .d
   .d
 }
 
 fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
   sc$cell_hetero_coverage |>
-    dplyr::filter(variant == .thevariant) ->
-  vhc
-
+    dplyr::filter(variant == .thevariant) -> vhc
 
   sc$umap_coord |>
-    dplyr::left_join(vhc, by = "barcode") ->
-  vhc_umap
+    dplyr::left_join(vhc, by = "barcode") -> vhc_umap
 
   if (is.null(.cell_annotation)) {
     vhc_umap |>
@@ -125,10 +128,11 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
       ) +
       theme(
         plot.title = element_text(
-          color = "black", face = "bold", hjust = 0.5
+          color = "black",
+          face = "bold",
+          hjust = 0.5
         )
-      ) ->
-    p_feature
+      ) -> p_feature
     return(p_feature)
   } else {
     vhc_umap |>
@@ -142,8 +146,7 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
       labs() +
       theme(
         plot.title = element_blank()
-      ) ->
-    p_annotation
+      ) -> p_annotation
     return(p_annotation)
   }
 }
@@ -152,7 +155,10 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
 fn_load_by_path <- function(thepath) {
   library(Seurat)
   azimuth_file <- file.path(thepath, "sc_azimuth.rds.gz")
-  cell_hetero_file <- file.path(thepath, "cell.cell_heteroplasmic_df_raw.tsv.gz")
+  cell_hetero_file <- file.path(
+    thepath,
+    "cell.cell_heteroplasmic_df_raw.tsv.gz"
+  )
   cell_coverage_file <- file.path(thepath, "cell.coverage.txt.gz")
 
   sc <- readr::read_rds(azimuth_file)
@@ -170,10 +176,13 @@ fn_plot_vaf_featureplot_multi <- function(.thevariants, sc) {
     .thevariants,
     fn_plot_vaf_featureplot,
     sc = sc
-  ) ->
-  variant_plots
+  ) -> variant_plots
 
-  fn_plot_vaf_featureplot(.thevariants[[1]], sc, .cell_annotation = TRUE) -> p_annotation
+  fn_plot_vaf_featureplot(
+    .thevariants[[1]],
+    sc,
+    .cell_annotation = TRUE
+  ) -> p_annotation
 
   c(variant_plots, list(p_annotation)) |>
     wrap_plots(ncol = 4) +
@@ -210,18 +219,25 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
     tidyr::unnest(cols = d) |>
     as.data.table() |>
     dplyr::mutate(nv = V3 + V4) |>
-    dplyr::select(gt = n, pos = V1, group = V2, fw = V3, rv = V4, nv) ->
-  cluster_n
+    dplyr::select(
+      gt = n,
+      pos = V1,
+      group = V2,
+      fw = V3,
+      rv = V4,
+      nv
+    ) -> cluster_n
 
-  fasta <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA/fasta/rCRS.chrM.fasta")
+  fasta <- Biostrings::readDNAStringSet(
+    "/home/liuc9/github/scMOCHA/fasta/rCRS.chrM.fasta"
+  )
 
   fasta$chrM |>
     as.data.table() |>
     tibble::rownames_to_column(var = "pos") |>
     dplyr::rename(ref = x) |>
     dplyr::mutate(posref = glue::glue("{pos}{ref}")) |>
-    dplyr::mutate(pos = as.integer(pos)) ->
-  fasta_df
+    dplyr::mutate(pos = as.integer(pos)) -> fasta_df
   # data.table::fwrite(
   #   fasta_df,
   #   file = "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta.csv",
@@ -232,28 +248,29 @@ fn_load_count <- function(thepath, type = c("cluster", "cell")) {
     dtplyr::lazy_dt() |>
     dplyr::left_join(fasta_df, by = "pos") |>
     dplyr::mutate(gt = factor(gt, levels = c("A", "G", "C", "T"))) |>
-    as.data.table() ->
-  cluster_n_temp
+    as.data.table() -> cluster_n_temp
 
   cluster_n_temp[, ratio := nv / sum(nv), by = .(group, pos)]
 
   cluster_n_temp |>
     dplyr::mutate(
-      label = glue::glue("total = {nv} \n forward = {fw} \n reverse = {rv} \n ratio = {round(ratio, 3) * 100}%")
-    ) ->
-  cluster_n_forplot
+      label = glue::glue(
+        "total = {nv} \n forward = {fw} \n reverse = {rv} \n ratio = {round(ratio, 3) * 100}%"
+      )
+    ) -> cluster_n_forplot
 
   cluster_n_forplot
 }
 
 fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   if (!all(is.na(group_sel))) {
     cluster_n_forplot |>
-      dplyr::filter(group %in% group_sel) ->
-    cluster_n_forplot
+      dplyr::filter(group %in% group_sel) -> cluster_n_forplot
   }
 
   if (length(unique(cluster_n_forplot$group)) > 10) {
@@ -261,14 +278,12 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
     cluster_n_forplot |>
       dplyr::filter(pos == thepos) |>
       dplyr::arrange(-nv) |>
-      dplyr::slice(1:10) ->
-    cluster_n_forplot
+      dplyr::slice(1:10) -> cluster_n_forplot
   }
 
   cluster_n_forplot |>
     dplyr::filter(pos %in% thepos) |>
-    dplyr::mutate(pos = as.character(pos)) ->
-  cluster_n_forplot_
+    dplyr::mutate(pos = as.character(pos)) -> cluster_n_forplot_
 
   gt <- factor(c("A", "G", "C", "T"), levels = c("A", "G", "C", "T"))
   posref = cluster_n_forplot_$posref |> unique()
@@ -279,7 +294,6 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
     posref = rep(posref, length(gt)),
     group = rep(group, each = length(gt) * length(posref))
   )
-
 
   cluster_n_forplot_ |>
     dplyr::full_join(posref_df, by = c("gt", "posref", "group")) |>
@@ -338,27 +352,26 @@ fn_plot_count <- function(cluster_n_forplot, thepos, group_sel = NA) {
       axis.line = element_line(
         color = "black"
       )
-    ) ->
-  p_tile
+    ) -> p_tile
   p_tile
 }
 
 fn_plot_count_multi <- function(cluster_n_forplot, theposes, group_sel = NA) {
   theposes |>
-    purrr::map(~ fn_plot_count(cluster_n_forplot, thepos = ., group_sel = NA)) |>
+    purrr::map(
+      ~ fn_plot_count(cluster_n_forplot, thepos = ., group_sel = NA)
+    ) |>
     wrap_plots(ncol = 1) +
     plot_layout(guides = "collect") &
     theme(
       legend.justification = "left",
       legend.position = "none",
-    ) ->
-  p_count
+    ) -> p_count
   p_count
 }
 
 fn_plot_mtdna <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
-
 
   gtf_gene_df <-
     readr::read_rds(
@@ -371,7 +384,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = gene_biotype
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -412,8 +426,7 @@ fn_plot_mtdna <- function() {
         vjust = -1,
       ),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  pg
+    coord_cartesian(xlim = c(0, 17000)) -> pg
   pg
 }
 
@@ -421,9 +434,12 @@ fn_plot_mtdna <- function() {
   # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
   LENGTH <- 16569
-  rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
-  gtf_gene_df <- readr::read_rds("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz")
-
+  rCRS <- Biostrings::readDNAStringSet(
+    "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta"
+  )
+  gtf_gene_df <- readr::read_rds(
+    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz"
+  )
 
   library(gggenes)
   ggplot(gtf_gene_df, aes(xmin = start, xmax = end, y = seqnames)) +
@@ -432,7 +448,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = TYPE
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -481,8 +498,13 @@ fn_plot_mtdna <- function() {
 }
 
 fn_plot_coverage <- function(thepath, theposes = NULL) {
-  .cluster_coverage <- fn_load_coverage(file.path(thepath, "cluster.coverage.txt.gz"))
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  .cluster_coverage <- fn_load_coverage(file.path(
+    thepath,
+    "cluster.coverage.txt.gz"
+  ))
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   if (!is.null(theposes)) {
@@ -560,10 +582,7 @@ fn_plot_coverage <- function(thepath, theposes = NULL) {
       )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "Depth") ->
-  p_mt_depth_celltype
-
-
+    labs(y = "Depth") -> p_mt_depth_celltype
 
   .cluster_coverage |>
     dplyr::group_by(pos) |>
@@ -612,9 +631,7 @@ fn_plot_coverage <- function(thepath, theposes = NULL) {
       )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "Depth") ->
-  p_mt_depth_allcell
-
+    labs(y = "Depth") -> p_mt_depth_allcell
 
   list(
     p_mt_depth_celltype = p_mt_depth_celltype,
@@ -656,8 +673,7 @@ fn_forheatmap_plot <- function(.af, .coverage, .meta) {
     dplyr::group_by(barcode, cluster) |>
     dplyr::summarise(s_af = sum(af, na.rm = T)) |>
     dplyr::ungroup() |>
-    dplyr::arrange(cluster, -s_af) ->
-  .rank
+    dplyr::arrange(cluster, -s_af) -> .rank
 
   .af |>
     dplyr::select(barcode, dplyr::contains(">")) |>
@@ -682,13 +698,11 @@ fn_forheatmap_plot <- function(.af, .coverage, .meta) {
     dplyr::mutate(af = ifelse(is.na(depth), NA, af)) |>
     # dplyr::mutate(af = ifelse(depth < log2(10), -0.1, af)) |>
     dplyr::mutate(af = ifelse(depth < 10, -0.1, af)) |>
-    dplyr::arrange(pos) ->
-  .forplot
+    dplyr::arrange(pos) -> .forplot
 
   .coverage |>
     dplyr::group_by(barcode) |>
-    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) ->
-  .coverage_cell
+    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) -> .coverage_cell
 
   list(
     rank = .rank,
@@ -699,7 +713,9 @@ fn_forheatmap_plot <- function(.af, .coverage, .meta) {
 }
 
 fn_plot_hotspots <- function(thepath, thevariants = NULL) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   .cell_anno <- data.table::fread(
@@ -710,7 +726,6 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     )
   ) |>
     dplyr::mutate(variant = glue::glue("{Position}{Ref}>{Alt}"))
-
 
   cluster_umap <- fn_load_cluster(
     .filename = file.path(thepath, "barcode_cluster.tsv")
@@ -763,18 +778,15 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     ) |>
     dplyr::mutate(
       depth_log2 = log2(depth + 1)
-    ) ->
-  .forplot_cluster_cell_variant
+    ) -> .forplot_cluster_cell_variant
 
   .forplot_cluster_cell_variant |>
-    dplyr::filter(af > 0) ->
-  .theforplot
+    dplyr::filter(af > 0) -> .theforplot
 
   .theforplot |>
     dplyr::select(variant, pos) |>
     dplyr::distinct() |>
-    dplyr::arrange(pos) ->
-  .sort_variant
+    dplyr::arrange(pos) -> .sort_variant
 
   .forplot_cluster_cell_variant |>
     dplyr::group_by(cluster, variant) |>
@@ -787,8 +799,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     dplyr::mutate(
       sum_cluster_variant_depth_log2 = log2(sum_cluster_variant_depth + 1)
     ) |>
-    dplyr::filter(variant %in% .sort_variant$variant) ->
-  .cluster_variant_af
+    dplyr::filter(variant %in% .sort_variant$variant) -> .cluster_variant_af
 
   .c <- unique(.cluster_variant_af$cluster)
   .v <- unique(.cluster_variant_af$variant)
@@ -806,8 +817,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     ) |>
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
-    ) ->
-  .no_depth
+    ) -> .no_depth
 
   .cell_anno |>
     dplyr::filter(variant %in% .sort_variant$variant) |>
@@ -816,8 +826,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_variant
+    dplyr::arrange(variant) -> .haplo_variant
 
   .theforplot |>
     dplyr::inner_join(
@@ -827,9 +836,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant |> unique())
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_forplot
-
+    dplyr::arrange(variant) -> .haplo_forplot
 
   library(ggh4x)
   library(ggbeeswarm)
@@ -839,8 +846,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
   .haplo_forplot |>
     dplyr::select(variant, pos, cluster, mean_cluster_variant_af) |>
     dplyr::distinct() |>
-    dplyr::filter(cluster == .cl) ->
-  .forlabel
+    dplyr::filter(cluster == .cl) -> .forlabel
 
   ggplot() +
     ggrepel::geom_text_repel(
@@ -876,11 +882,11 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       legend.key = element_blank(),
       axis.title.y = element_blank(),
       axis.text.y = element_blank(),
-      axis.ticks.y = element_blank(), ,
+      axis.ticks.y = element_blank(),
+      ,
       axis.line.y = element_blank(),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  p_label
+    coord_cartesian(xlim = c(0, 17000)) -> p_label
 
   .haplo_forplot |>
     ggplot() +
@@ -958,8 +964,7 @@ fn_plot_hotspots <- function(thepath, thevariants = NULL) {
       # )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "AF") ->
-  p_af_cell
+    labs(y = "AF") -> p_af_cell
 
   wrap_plots(
     p_label,
@@ -991,7 +996,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   # load count
   cluster_n_forplot <- fn_load_count(thepath, type = "cluster")
 
-
   # vaf cell umap -------------------------------------------------------------
 
   fn_plot_vaf_featureplot_multi(
@@ -1002,7 +1006,8 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   # p_vaf_feature
 
   ggsave(
-    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |> glue::glue(),
+    filename = "{gseid}-{gsmid}-selected_variants_vaf_featureplot.pdf" |>
+      glue::glue(),
     path = outdir,
     plot = p_vaf_feature,
     width = 9,
@@ -1042,7 +1047,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
     height = 9,
   )
 
-
   # # hotspots ----------------------------------------------------------------
   # p_hotspots <- fn_plot_hotspots(thepath, thevariants)
 
@@ -1064,8 +1068,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
   log_success("Finish to plot ", thepath)
 }
 
-
-
 # load data ---------------------------------------------------------------
 
 # thepath <- "/home/liuc9/github/scMOCHA/06-bigdata/GSE226602/cromwell-executions/scMOCHABatch/192a6bdb-b835-4f39-a21d-9423f9c8165d/call-scMOCHA/shard-13/sub.scMOCHA/c3913f7f-efd1-4d72-9615-2463d684f359/call-gather_outputfiles/execution/GSM7080019"
@@ -1076,7 +1078,6 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
 # thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995425"
 # thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE163668/final/GSM4995448"
 # thepath <- "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
-
 
 # targeted variant and position ------------------------------------------
 # thevariants <- c(
@@ -1094,13 +1095,7 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
 #   "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE279945/final/GSM8583898"
 # )
 
-
-
-
-
-
 # ! plot all --------------------------------------------------------------------
-
 
 # fn_plot_all(
 #   thepath = "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE226602/final/GSM7080044",
@@ -1108,22 +1103,12 @@ fn_plot_all <- function(thepath, thevariants = thevariants, outdir = outdir) {
 #   outdir = outdir
 # )
 
-
-
 # !  --------------------------------------------------------------------
-
 
 # ! run --------------------------------------------------------------------
 
-
 # thepaths |>
 #   purrr::walk(~ fn_plot_all(.x, thevariants = thevariants, outdir = outdir))
-
-
-
-
-
-
 
 # footer ------------------------------------------------------------------
 

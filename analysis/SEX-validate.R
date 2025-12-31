@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -41,19 +39,23 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # header ------------------------------------------------------------------
 
-
 # future: :plan(future: :multisession, workers = 10)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-sex_pred <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs") |>
+sex_pred <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+) |>
   dplyr::select(
-    gseid, srrid, srrdir,
+    gseid,
+    srrid,
+    srrdir,
     sex_pred = sex
   )
-sex_real <- import("/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs") |>
+sex_real <- import(
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
+) |>
   dplyr::select(gseid, srrid, sex_real = Gender)
 
 # body --------------------------------------------------------------------
@@ -62,30 +64,30 @@ sex_pred |>
   dplyr::mutate(
     sex_pred = factor(sex_pred, levels = c("Male", "Female"))
   ) |>
-  dplyr::left_join(sex_real, by = c("gseid", "srrid")) ->
-sex_pred_real
+  dplyr::left_join(sex_real, by = c("gseid", "srrid")) -> sex_pred_real
 
 
 sex_pred_real |>
   dplyr::count(sex_pred) |>
   dplyr::mutate(sex_pred_str = glue::glue("{sex_pred}\n(n={n})")) %>%
   dplyr::select(-n) |>
-  dplyr::mutate(sex_pred_str = factor(sex_pred_str, levels = sex_pred_str)) ->
-sex_pred_str
+  dplyr::mutate(
+    sex_pred_str = factor(sex_pred_str, levels = sex_pred_str)
+  ) -> sex_pred_str
 
 sex_pred_real |>
   dplyr::count(sex_real) |>
   dplyr::mutate(sex_real_str = glue::glue("{sex_real}\n(n={n})")) %>%
   dplyr::select(-n) |>
-  dplyr::mutate(sex_real_str = factor(sex_real_str, levels = sex_real_str)) ->
-sex_real_str
+  dplyr::mutate(
+    sex_real_str = factor(sex_real_str, levels = sex_real_str)
+  ) -> sex_real_str
 
 sex_pred_real |>
   dplyr::select(sex_pred, sex_real) |>
   dplyr::count(sex_pred, sex_real) |>
   dplyr::left_join(sex_pred_str, by = "sex_pred") |>
-  dplyr::left_join(sex_real_str, by = "sex_real") ->
-for_sankey_plot
+  dplyr::left_join(sex_real_str, by = "sex_real") -> for_sankey_plot
 
 source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 library(ggalluvial)
@@ -129,8 +131,7 @@ for_sankey_plot |>
     panel.background = element_rect(fill = NA, colour = NA),
     legend.position = "top"
   ) +
-  guides(fill = guide_legend(title = "Sex", nrow = 1)) ->
-sex_pred_real_plot
+  guides(fill = guide_legend(title = "Sex", nrow = 1)) -> sex_pred_real_plot
 
 ggsave(
   filename = "SEX-validate.pdf",
@@ -140,7 +141,6 @@ ggsave(
   height = 4,
   width = 6,
 )
-
 
 
 sex_pred_real |>

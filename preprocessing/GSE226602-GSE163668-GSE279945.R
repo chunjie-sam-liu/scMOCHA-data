@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 gseid_list <- c("GSE226602", "GSE163668", "GSE279945", "GSE162117")
 
@@ -60,10 +57,7 @@ basedir <- "/home/liuc9/github/scMOCHA-data/data"
 outdir <- "/home/liuc9/github/scMOCHA-data/data/out_variant_check"
 # body --------------------------------------------------------------------
 
-
-
 # ! load data --------------------------------------------------------------------
-
 
 gseid_list |>
   dplyr::mutate(
@@ -95,14 +89,10 @@ gseid_list |>
         )
       }
     )
-  ) ->
-gseid_list_anno
-
+  ) -> gseid_list_anno
 
 
 # ! merge data --------------------------------------------------------------------
-
-
 
 dplyr::inner_join(
   gseid_list_anno |>
@@ -113,12 +103,17 @@ dplyr::inner_join(
     dplyr::select(-chem) |>
     tidyr::unnest(cols = anno),
   by = c("gseid", "srrid")
-) ->
-gseid_list_anno_merged
+) -> gseid_list_anno_merged
 
 
 gseid_list_anno_merged |> dplyr::glimpse()
-selected_srrid <- c("GSM4995425", "GSM4995448", "GSM4933442", "GSM7080044", "GSM8583898")
+selected_srrid <- c(
+  "GSM4995425",
+  "GSM4995448",
+  "GSM4933442",
+  "GSM7080044",
+  "GSM8583898"
+)
 
 # selected_srrid <- gseid_list_anno_merged$srrid |>
 #   unique() |>
@@ -160,13 +155,19 @@ htmlwidgets::saveWidget(
 )
 
 
-
-
 # ! selected samples --------------------------------------------------------------------
 
 gseid_list_anno_merged |>
   dplyr::filter(srrid %in% selected_srrid) |>
-  dplyr::select(gseid, srrid, chemistry, `# of somatic variants`, `# of variants`, srrdir, somatic_variant) |>
+  dplyr::select(
+    gseid,
+    srrid,
+    chemistry,
+    `# of somatic variants`,
+    `# of variants`,
+    srrdir,
+    somatic_variant
+  ) |>
   dplyr::mutate(
     sv = purrr::map(
       somatic_variant,
@@ -175,9 +176,6 @@ gseid_list_anno_merged |>
       }
     )
   ) -> gseid_list_anno_merged_selected
-
-
-
 
 
 gseid_list_anno_merged_selected$sv[[1]]
@@ -190,9 +188,7 @@ gseid_list_anno_merged_selected$srrid[[2]]
 gseid_list_anno_merged_selected |>
   # dplyr::select(gseid, srrid, chemistry) |>
   dplyr::mutate(label = glue::glue("{srrid}-{chemistry}")) |>
-  dplyr::select(label, sv) ->
-gseid_list_anno_merged_selected_
-
+  dplyr::select(label, sv) -> gseid_list_anno_merged_selected_
 
 
 gseid_list_anno_merged_selected_ |>
@@ -202,8 +198,7 @@ gseid_list_anno_merged_selected_ |>
     ~ {
       .x[[1]]
     }
-  ) ->
-variant_list
+  ) -> variant_list
 
 library(ggVennDiagram)
 # variant_list <- list(
@@ -219,20 +214,22 @@ variant_list_df <- variant_list |>
   ggVennDiagram::process_data()
 
 ggplot() +
-  geom_path(aes(X, Y, color = id, group = id),
+  geom_path(
+    aes(X, Y, color = id, group = id),
     data = ggVennDiagram::venn_setedge(variant_list_df),
     show.legend = FALSE
   ) +
   ggsci::scale_color_npg() +
-  geom_text(aes(X, Y, label = name),
+  geom_text(
+    aes(X, Y, label = name),
     data = ggVennDiagram::venn_setlabel(variant_list_df)
   ) +
-  geom_label(aes(X, Y, label = count),
+  geom_label(
+    aes(X, Y, label = count),
     data = ggVennDiagram::venn_regionlabel(variant_list_df)
   ) +
   coord_equal() +
-  theme_void() ->
-p_venn
+  theme_void() -> p_venn
 p_venn
 
 ggsave(
@@ -264,8 +261,7 @@ gseid_list_anno_merged_selected |>
         )
       }
     )
-  ) ->
-gseid_list_anno_merged_selected_stats
+  ) -> gseid_list_anno_merged_selected_stats
 
 
 gseid_list_anno_merged_selected_stats$sv[[1]]
@@ -294,7 +290,6 @@ gseid_list_anno_merged_selected_stats$stats[[1]] |>
   dplyr::filter(
     strand_correlation == 1
   )
-
 
 # footer ------------------------------------------------------------------
 

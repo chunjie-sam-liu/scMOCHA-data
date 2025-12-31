@@ -1,17 +1,20 @@
 fn_plot_mtdna_cov_circos <- function(
-    start.degree = 80,
-    canvas.xlim = c(-1, 1),
-    canvas.ylim = c(-1, 1),
-    gap.degree = 20,
-    scaley = FALSE) {
+  start.degree = 80,
+  canvas.xlim = c(-1, 1),
+  canvas.ylim = c(-1, 1),
+  gap.degree = 20,
+  scaley = FALSE
+) {
   LENGTH <- 16569
-  gtf_gene_df <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
-
+  gtf_gene_df <- import(
+    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+  )
 
   # coverage
   coverage <- import(
     file.path(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/", "gse_data_coverage_chemistry.csv"
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
+      "gse_data_coverage_chemistry.csv"
     )
   ) |>
     dplyr::mutate(
@@ -35,9 +38,7 @@ fn_plot_mtdna_cov_circos <- function(
 
   library(circlize)
 
-
   # ! init --------------------------------------------------------------------
-
 
   circos.clear()
   circos.par(
@@ -46,7 +47,6 @@ fn_plot_mtdna_cov_circos <- function(
     canvas.ylim = canvas.ylim,
     gap.degree = gap.degree
   )
-
 
   # ! axis --------------------------------------------------------------------
 
@@ -58,8 +58,7 @@ fn_plot_mtdna_cov_circos <- function(
 
   # ! highlights --------------------------------------------------------------------
   gtf_gene_df |>
-    dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) ->
-  highlight_df
+    dplyr::filter(TYPE %in% c("D-Loop", "MT rRNA")) -> highlight_df
 
   for (i in seq_len(nrow(highlight_df))) {
     pos = circlize(
@@ -84,8 +83,7 @@ fn_plot_mtdna_cov_circos <- function(
   # ! coverage --------------------------------------------------------------------
   for (chem in names(color_chemistry)) {
     coverage |>
-      dplyr::filter(chemistry == chem) ->
-    coverage_chem
+      dplyr::filter(chemistry == chem) -> coverage_chem
 
     maxy <- max(coverage$depth)
 
@@ -113,8 +111,6 @@ fn_plot_mtdna_cov_circos <- function(
       }
     )
   }
-
-
 
   # ! gene name--------------------------------------------------------------------
 
@@ -151,9 +147,7 @@ fn_plot_mtdna_cov_circos <- function(
     }
   )
 
-
   # ! gene region --------------------------------------------------------------------
-
 
   circos.genomicTrack(
     gtf_gene_df,
@@ -178,8 +172,6 @@ fn_plot_mtdna_cov_circos <- function(
       }
     },
   )
-
-
 
   circos.clear()
 }

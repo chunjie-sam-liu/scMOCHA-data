@@ -1,4 +1,6 @@
-gwas <- import("/mnt/isilon/xing_lab/liuc9/refdata/gwas/gwas_catalog_v1.0.2-associations_e107_r2022-10-08-ftp-efo.fst")
+gwas <- import(
+  "/mnt/isilon/xing_lab/liuc9/refdata/gwas/gwas_catalog_v1.0.2-associations_e107_r2022-10-08-ftp-efo.fst"
+)
 
 thedisease <- " Alzheimer's disease"
 
@@ -11,8 +13,7 @@ gwas |> dplyr::glimpse()
 # gwas  |>
 #   dplyr::filter(CHR_ID == )
 gwas |>
-  dplyr::filter(grepl(thedisease, `DISEASE/TRAIT`)) ->
-gwas_ad
+  dplyr::filter(grepl(thedisease, `DISEASE/TRAIT`)) -> gwas_ad
 
 
 gwas_ad |>
@@ -27,6 +28,8 @@ gwas_ad |>
   )
 
 
-h <- import("/mnt/isilon/xing_lab/liuc9/refdata/gwas/summary_statistics/34737426-GCST90042678-EFO_0009268.h.tsv.gz")
+h <- import(
+  "/mnt/isilon/xing_lab/liuc9/refdata/gwas/summary_statistics/34737426-GCST90042678-EFO_0009268.h.tsv.gz"
+)
 
 h |> dplyr::count(chromosome)

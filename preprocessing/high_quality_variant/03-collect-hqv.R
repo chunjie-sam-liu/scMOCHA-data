@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,9 +45,10 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-SRR <- data.table::fread("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/gse_srrid_srrdir.csv")
+SRR <- data.table::fread(
+  "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data/gse_srrid_srrdir.csv"
+)
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 hqvdir <- file.path(basedir, "high_quality_variant")
 
@@ -57,14 +56,19 @@ hqvdir <- file.path(basedir, "high_quality_variant")
 SRR |>
   dplyr::mutate(
     srrdir_hqv = file.path(
-      hqvdir, gseid, "final", srrid
+      hqvdir,
+      gseid,
+      "final",
+      srrid
     )
-  ) ->
-SRR_hqv
+  ) -> SRR_hqv
 
 data.table::fwrite(
   SRR_hqv,
-  file.path("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data", "gse_srrid_srrdir_hqv.csv")
+  file.path(
+    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data",
+    "gse_srrid_srrdir_hqv.csv"
+  )
 )
 
 SRR_hqv |>
@@ -77,16 +81,15 @@ SRR_hqv |>
         )
       }
     )
-  ) ->
-SRR_hqv_load
+  ) -> SRR_hqv_load
 
 readr::write_rds(
   SRR_hqv_load,
-  file.path("/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data", "gse_srrid_srrdir_hqv_load.rds")
+  file.path(
+    "/mnt/isilon/u01_project/large-scale/liuc9/raw/zzz/clean-data",
+    "gse_srrid_srrdir_hqv_load.rds"
+  )
 )
-
-
-
 
 # footer ------------------------------------------------------------------
 

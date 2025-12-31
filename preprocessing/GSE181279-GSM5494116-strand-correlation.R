@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,7 +45,6 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
 
 datadir <- "/home/liuc9/github/scMOCHA-data/data"
@@ -68,9 +65,10 @@ stats |>
 
 variant_annotation <- data.table::fread(
   file.path(datadir, gseid, "final", gsm, "variant_annotation.tsv")
-) |> dplyr::mutate(
-  variant = glue::glue("{Position}{Ref}>{Alt}")
-)
+) |>
+  dplyr::mutate(
+    variant = glue::glue("{Position}{Ref}>{Alt}")
+  )
 
 stats |>
   dplyr::mutate(
@@ -78,8 +76,7 @@ stats |>
   ) |>
   dplyr::filter(
     strand_correlation > 0.3 & vmr_log > log10(0.01)
-  ) ->
-stats_filtered
+  ) -> stats_filtered
 
 
 ggvenn::ggvenn(
@@ -100,7 +97,9 @@ stats |>
   ) |>
   dplyr::mutate(
     color = ifelse(
-      strand_correlation > 0.65 & vmr_log > log10(0.01) & variant %in% variant_annotation$variant,
+      strand_correlation > 0.65 &
+        vmr_log > log10(0.01) &
+        variant %in% variant_annotation$variant,
       "red",
       "black"
     )

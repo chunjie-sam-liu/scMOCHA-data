@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -55,8 +53,7 @@ fn_plot_pie <- function(.d, .colors = NULL) {
     dplyr::mutate(pos = n / 2 + dplyr::lead(csum, 1)) %>%
     dplyr::mutate(pos = dplyr::if_else(is.na(pos), n / 2, pos)) %>%
     dplyr::mutate(percentage = n / sum(n)) |>
-    dplyr::mutate(group = factor(group, levels = group)) ->
-  .dd
+    dplyr::mutate(group = factor(group, levels = group)) -> .dd
 
   .scalefill <- if (is.null(.colors)) {
     ggsci::scale_fill_aaas(
@@ -123,14 +120,16 @@ project <- readxl::read_xlsx(project_filename) |> as.data.table()
 
 # body --------------------------------------------------------------------
 
-
 project |>
   dplyr::mutate(
     project_source = parallel::mclapply(
       X = project_ID,
       FUN = function(.project_ID) {
         .source_ <- stringr::str_split(.project_ID, "-")[[1]][1]
-        .ID <- paste0(stringr::str_split(.project_ID, "-")[[1]][-1], collapse = "-")
+        .ID <- paste0(
+          stringr::str_split(.project_ID, "-")[[1]][-1],
+          collapse = "-"
+        )
         tibble::tibble(proj_source = .source_, proj_ID = .ID)
       },
       mc.cores = 10
@@ -142,19 +141,20 @@ project |>
       X = sample_ID,
       FUN = function(.sample_ID) {
         .source_ <- stringr::str_split(.sample_ID, "-")[[1]][1]
-        .ID <- paste0(stringr::str_split(.sample_ID, "-")[[1]][-1], collapse = "-")
+        .ID <- paste0(
+          stringr::str_split(.sample_ID, "-")[[1]][-1],
+          collapse = "-"
+        )
         tibble::tibble(samp_source = .source_, samp_ID = .ID)
       },
       mc.cores = 10
     )
   ) |>
-  tidyr::unnest(cols = sample_source) ->
-project_source
+  tidyr::unnest(cols = sample_source) -> project_source
 
 project_source |>
   dplyr::count(proj_source) |>
-  fn_plot_pie() ->
-project_source_pie
+  fn_plot_pie() -> project_source_pie
 
 
 ggsave(
@@ -177,9 +177,7 @@ project_source |>
   dplyr::select(proj_source, proj_ID) |>
   dplyr::distinct() |>
   dplyr::count(proj_source) |>
-  fn_plot_pie() ->
-
-nrow(project_source_proj_ID_pie)
+  fn_plot_pie() -> nrow(project_source_proj_ID_pie)
 
 ggsave(
   filename = "/home/liuc9/github/scMOCHA-data/data/scfoundation/out/project_source_proj_ID_pie.pdf",
@@ -187,7 +185,6 @@ ggsave(
   width = 10,
   height = 10
 )
-
 
 # footer ------------------------------------------------------------------
 

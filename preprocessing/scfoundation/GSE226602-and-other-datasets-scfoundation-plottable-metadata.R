@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,20 +45,23 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-
-
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 foundation_out <- file.path(basedir, "scfoundation/out")
-gse_dataset_scfoundation <- readxl::read_excel(file.path(foundation_out, "gses_cell_ratio_variant_meta.xlsx")) |>
+gse_dataset_scfoundation <- readxl::read_excel(file.path(
+  foundation_out,
+  "gses_cell_ratio_variant_meta.xlsx"
+)) |>
   dplyr::filter(gseid != "WT")
 gse_dataset_scfoundation2 <- readxl::read_excel(
   "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC/out/gses_cell_ratio_variant_meta.xlsx"
 )
 
-gse_dataset <- dplyr::bind_rows(gse_dataset_scfoundation, gse_dataset_scfoundation2)
+gse_dataset <- dplyr::bind_rows(
+  gse_dataset_scfoundation,
+  gse_dataset_scfoundation2
+)
 
 gseids <- c(
   "GSE155673",
@@ -104,7 +105,6 @@ gseids <- c(
 
 # body --------------------------------------------------------------------
 
-
 gse_dataset |>
   dplyr::select(gseid, srrid)
 
@@ -115,7 +115,11 @@ gse_dataset |>
     biosample = purrr::map(
       .x = gseid,
       .f = \(.gseid) {
-        .filename <- file.path(basedir, .gseid, "{.gseid}.edirect.biosample.csv" |> glue::glue())
+        .filename <- file.path(
+          basedir,
+          .gseid,
+          "{.gseid}.edirect.biosample.csv" |> glue::glue()
+        )
         .d <- data.table::fread(.filename)
         data.table::fread(
           file.path(
@@ -131,8 +135,7 @@ gse_dataset |>
             Experiment,
             Sample
           ) |>
-          dplyr::distinct() ->
-        .dd
+          dplyr::distinct() -> .dd
         log_success(
           file.exists(
             file.path(
@@ -154,16 +157,13 @@ gse_dataset |>
             experiment_name,
             Experiment = experiment_accession
           ) |>
-          dplyr::distinct() ->
-        .dd_gsm
-        .dd |> dplyr::inner_join(.dd_gsm, by = "Experiment") ->
-        .dd_gsm_d
+          dplyr::distinct() -> .dd_gsm
+        .dd |> dplyr::inner_join(.dd_gsm, by = "Experiment") -> .dd_gsm_d
         .d |>
           dplyr::inner_join(
             .dd_gsm_d,
             by = c("biosample_id" = "biosample_id")
-          ) ->
-        .ddd
+          ) -> .ddd
 
         tibble::tibble(
           biosample = list(.ddd),
@@ -172,13 +172,11 @@ gse_dataset |>
       }
     )
   ) |>
-  tidyr::unnest(cols = biosample) ->
-gse_dataset_load
+  tidyr::unnest(cols = biosample) -> gse_dataset_load
 
 
 gse_dataset_load$colnames |>
-  purrr::reduce(intersect) ->
-sel_colnames
+  purrr::reduce(intersect) -> sel_colnames
 
 c_colnames <- c(
   "geo_id",
@@ -216,18 +214,14 @@ gse_dataset_load |>
         # Select the columns from the modified data frame
         .biosample |>
           dplyr::select(dplyr::all_of(.coln)) |>
-          dplyr::mutate(age = as.character(age)) ->
-        .out
+          dplyr::mutate(age = as.character(age)) -> .out
       }
     )
   ) |>
-  dplyr::select(gseid, biosample_sel) ->
-gse_dataset_load_sel
+  dplyr::select(gseid, biosample_sel) -> gse_dataset_load_sel
 
 gse_dataset_load_sel |>
-  tidyr::unnest(cols = biosample_sel) ->
-gse_dataset_load_sel_unnest
-
+  tidyr::unnest(cols = biosample_sel) -> gse_dataset_load_sel_unnest
 
 
 gse_dataset_load_sel_unnest |>
@@ -240,8 +234,7 @@ gse_dataset_load_sel_unnest |>
   ) |>
   dplyr::filter(
     srrid %in% gse_dataset$srrid
-  ) ->
-gse_dataset_load_sel_unnest_age_meta
+  ) -> gse_dataset_load_sel_unnest_age_meta
 
 
 # race --------------------------------------------------------------------
@@ -258,8 +251,7 @@ gse_dataset_load_sel_unnest_age_meta |>
   ) |>
   dplyr::mutate(
     Race = factor(Race, levels = c("White", "Black", "Hispanic", "Unknown"))
-  ) ->
-gse_dataset_race
+  ) -> gse_dataset_race
 
 # ethnicity ----------------------------------------------------------------
 gse_dataset_load_sel_unnest_age_meta |>
@@ -274,9 +266,16 @@ gse_dataset_load_sel_unnest_age_meta |>
     Ethnicity = stringr::str_to_title(Ethnicity)
   ) |>
   dplyr::mutate(
-    Ethnicity = factor(Ethnicity, levels = c("Caucasian", "Hispanic Or Latino", "Not Hispanic Or Latino", "Unknown"))
-  ) ->
-gse_dataset_ethnicity
+    Ethnicity = factor(
+      Ethnicity,
+      levels = c(
+        "Caucasian",
+        "Hispanic Or Latino",
+        "Not Hispanic Or Latino",
+        "Unknown"
+      )
+    )
+  ) -> gse_dataset_ethnicity
 
 # gender ------------------------------------------------------------------
 gse_dataset_load_sel_unnest_age_meta |>
@@ -292,8 +291,7 @@ gse_dataset_load_sel_unnest_age_meta |>
   ) |>
   dplyr::mutate(
     Gender = factor(Gender, levels = c("Male", "Female", "Unknown"))
-  ) ->
-gse_dataset_gender
+  ) -> gse_dataset_gender
 
 # age ---------------------------------------------------------------------
 gse_dataset_load_sel_unnest_age_meta |>
@@ -311,7 +309,11 @@ gse_dataset_load_sel_unnest_age_meta |>
     Age = gsub("&lt;", "<", Age)
   ) |>
   dplyr::mutate(
-    Age = ifelse(Age %in% c("Fetal(28-29weeks)", "Neonate(39-41weeks)"), "<1", Age)
+    Age = ifelse(
+      Age %in% c("Fetal(28-29weeks)", "Neonate(39-41weeks)"),
+      "<1",
+      Age
+    )
   ) |>
   dplyr::mutate(
     Age_new = as.integer(Age)
@@ -341,15 +343,34 @@ gse_dataset_load_sel_unnest_age_meta |>
     Age_group = ifelse(is.na(Age_group), "Unknown", Age_group)
   ) |>
   dplyr::mutate(
-    Age_group = factor(Age_group, levels = c(
-      "<1", "1~5", "5~10", "10~15", "15~20",
-      "20~25", "25~30", "30~35", "35~40", "40~45",
-      "45~50", "50~55", "55~60", "60~65", "65~70",
-      "70~75", "75~80", "80~85", "85~90", "90~95",
-      "95~100", "Unknown"
-    ))
-  ) ->
-gse_dataset_age
+    Age_group = factor(
+      Age_group,
+      levels = c(
+        "<1",
+        "1~5",
+        "5~10",
+        "10~15",
+        "15~20",
+        "20~25",
+        "25~30",
+        "30~35",
+        "35~40",
+        "40~45",
+        "45~50",
+        "50~55",
+        "55~60",
+        "60~65",
+        "65~70",
+        "70~75",
+        "75~80",
+        "80~85",
+        "85~90",
+        "90~95",
+        "95~100",
+        "Unknown"
+      )
+    )
+  ) -> gse_dataset_age
 
 # disease status ------------------------------------------------------------
 gse_dataset_load_sel_unnest_age_meta |>
@@ -361,30 +382,28 @@ gse_dataset_load_sel_unnest_age_meta |>
 
 # after claud process, and then load the data
 # Claud prompt
-.claud_prompt <- function() {
-  based on input and editor output
-  input: metadata_disease_mess_for_claude.csv
-
-  process: accordding each row description ,based on nlp process, please add tow column, disease_ and status_, to give each sample a disease_, status_, for example, disease_ is COVID-19, status_ is Severe, disease_ is Heatlhy, status_ is Unknown, and etc.
-
-  Infected, exposed are COVID-19 status_, plrease correct classify them.
-
-  please refer below as output, only keep the sgeid, srrid and disease_, status_ with comma seprated
-
-  gseid,srrid,disease_,status_
-  GSE155673,GSM4712885,COVID-19,Severe
-  GSE155673,GSM4712887,COVID-19,Moderate
-  GSE155673,GSM4712889,COVID-19,Moderate
-
-  output:metadata_disease_mess_for_claude.out.csv
-
-}
-
+# .claud_prompt <- function() {
+#   based on input and editor output
+#   input: metadata_disease_mess_for_claude.csv
+#
+#   process: accordding each row description ,based on nlp process, please add tow column, disease_ and status_, to give each sample a disease_, status_, for example, disease_ is COVID-19, status_ is Severe, disease_ is Heatlhy, status_ is Unknown, and etc.
+#
+#   Infected, exposed are COVID-19 status_, plrease correct classify them.
+#
+#   please refer below as output, only keep the sgeid, srrid and disease_, status_ with comma seprated
+#
+#   gseid,srrid,disease_,status_
+#   GSE155673,GSM4712885,COVID-19,Severe
+#   GSE155673,GSM4712887,COVID-19,Moderate
+#   GSE155673,GSM4712889,COVID-19,Moderate
+#
+#   output:metadata_disease_mess_for_claude.out.csv
+#
+# }
 
 gse_dataset_disease_status_ <- data.table::fread(
   file.path(foundation_out, "metadata_disease_mess_for_claude.out.csv")
 )
-
 
 
 gse_dataset_load_sel_unnest_age_meta |>
@@ -400,8 +419,7 @@ gse_dataset_load_sel_unnest_age_meta |>
   dplyr::mutate(
     status = ifelse(is.na(status), "Unknown", status),
     disease = ifelse(is.na(disease), "Unknown", disease)
-  ) ->
-gse_dataset_disease_status
+  ) -> gse_dataset_disease_status
 
 # metadata together --------------------------------------------------------
 
@@ -409,15 +427,16 @@ gse_dataset_race |>
   dplyr::inner_join(gse_dataset_ethnicity, by = c("gseid", "srrid")) |>
   dplyr::inner_join(gse_dataset_gender, by = c("gseid", "srrid")) |>
   dplyr::inner_join(gse_dataset_age, by = c("gseid", "srrid")) |>
-  dplyr::inner_join(gse_dataset_disease_status, by = c("gseid", "srrid")) ->
-gse_dataset_metadata
+  dplyr::inner_join(
+    gse_dataset_disease_status,
+    by = c("gseid", "srrid")
+  ) -> gse_dataset_metadata
 
 gse_dataset_metadata |>
   dplyr::inner_join(
     gse_dataset,
     by = c("gseid", "srrid")
-  ) ->
-gse_dataset_metadata_full
+  ) -> gse_dataset_metadata_full
 
 data.table::fwrite(
   gse_dataset_metadata_full,
@@ -535,10 +554,12 @@ fn_eda <- function(anno_meta_info_clean) {
     }
   )
 
-  wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
+  wrap_plots(
+    list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease),
+    ncol = 3
+  ) -> p_combined
   p_combined
 }
-
 
 
 ggsave(
@@ -552,7 +573,9 @@ ggsave(
 ggsave(
   path = foundation_out,
   filename = "correlation_somatic_variants_cutoff2.pdf",
-  plot = fn_eda(gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 2)),
+  plot = fn_eda(
+    gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 2)
+  ),
   width = 20,
   height = 10
 )
@@ -560,14 +583,15 @@ ggsave(
 ggsave(
   path = foundation_out,
   filename = "correlation_somatic_variants_cutoff1.pdf",
-  plot = fn_eda(gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 1)),
+  plot = fn_eda(
+    gse_dataset_metadata_full |> dplyr::filter(`# of somatic variants` >= 1)
+  ),
   width = 20,
   height = 10
 )
 
 
 #new plot -- ---------------------------------------------------
-
 
 chem_levels <- c("SC3Pv2", "SC3Pv3", "SC5P-R2", "SC5P-PE") |> rev()
 ggsci::pal_aaas()(3) |> prismatic::color()
@@ -576,15 +600,16 @@ chem_colors <- viridis::viridis_pal(option = "D")(4) |>
 
 anno_meta_info_clean <- readr::read_rds(
   file.path(foundation_out, "gse_dataset_metadata_full.rds")
-) |> dplyr::filter(
-  gseid != "GSE220189"
 ) |>
-dplyr::mutate(
-  Chemistry = factor(
-    Chemistry,
-    levels = chem_levels
+  dplyr::filter(
+    gseid != "GSE220189"
+  ) |>
+  dplyr::mutate(
+    Chemistry = factor(
+      Chemistry,
+      levels = chem_levels
+    )
   )
-)
 
 fn_eda_ggpubr <- function(anno_meta_info_clean) {
   p_ncells <- tryCatch(
@@ -690,7 +715,6 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
             label.x = 3,
             label.sep = "\n"
           )
-
         )
     },
     error = function(e) {
@@ -722,10 +746,16 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
     expr = {
       anno_meta_info_clean |>
         dplyr::mutate(
-            disease = dplyr::case_when(
-            disease %in% c("Alzheimer's Disease", "Healthy", "COVID-19", "Unknown") ~ disease,
+          disease = dplyr::case_when(
+            disease %in%
+              c(
+                "Alzheimer's Disease",
+                "Healthy",
+                "COVID-19",
+                "Unknown"
+              ) ~ disease,
             TRUE ~ "Other"
-            )
+          )
         ) |>
         dplyr::mutate(
           disease = factor(
@@ -757,7 +787,10 @@ fn_eda_ggpubr <- function(anno_meta_info_clean) {
     }
   )
 
-  wrap_plots(list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease), ncol = 3) -> p_combined
+  wrap_plots(
+    list(p_ncells, p_numi, p_avg_depth, p_age, p_gender, p_disease),
+    ncol = 3
+  ) -> p_combined
   p_combined
 }
 
@@ -772,7 +805,9 @@ ggsave(
 ggsave(
   path = foundation_out,
   filename = "ggpubr_correlation_somatic_variants_cutoff2.pdf",
-  plot = fn_eda_ggpubr(anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 2)),
+  plot = fn_eda_ggpubr(
+    anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 2)
+  ),
   width = 20,
   height = 10
 )
@@ -780,11 +815,12 @@ ggsave(
 ggsave(
   path = foundation_out,
   filename = "ggpubr_correlation_somatic_variants_cutoff1.pdf",
-  plot = fn_eda_ggpubr(anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 1)),
+  plot = fn_eda_ggpubr(
+    anno_meta_info_clean |> dplyr::filter(`# of somatic variants` >= 1)
+  ),
   width = 20,
   height = 10
 )
-
 
 # footer ------------------------------------------------------------------
 

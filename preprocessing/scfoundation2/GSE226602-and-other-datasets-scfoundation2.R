@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -47,29 +45,25 @@ log_layout(layout_glue_colors)
 
 # function ----------------------------------------------------------------
 
-
 # load data ---------------------------------------------------------------
-
 
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC"
 
 
-gseids = (
-  gseids <- c(
-    "GSE143353", # done
-    "GSE147794", # finished, some are not success, need rerun, done
-    "GSE148215", # under run, done
-    "GSE153421", # under run, done
-    "GSE163314", # under run, done
-    "GSE163633", # under run, some are not success, need rerun, under run, done
-    "GSE164690", # under run, some are not success, need rerun, done
-    "GSE167825", # under run, some are not success, need rerun, under run, done
-    "GSE168453", # under run, some are not success, need rerun, under run, done
-    "GSE174125", # under run, done
-    "GSE184703" # under run, some are not success, need rerun, under run, done
-  )
-)
+gseids = (gseids <- c(
+  "GSE143353", # done
+  "GSE147794", # finished, some are not success, need rerun, done
+  "GSE148215", # under run, done
+  "GSE153421", # under run, done
+  "GSE163314", # under run, done
+  "GSE163633", # under run, some are not success, need rerun, under run, done
+  "GSE164690", # under run, some are not success, need rerun, done
+  "GSE167825", # under run, some are not success, need rerun, under run, done
+  "GSE168453", # under run, some are not success, need rerun, under run, done
+  "GSE174125", # under run, done
+  "GSE184703" # under run, some are not success, need rerun, under run, done
+))
 
 
 gseids_meta_scfoundation <- tibble::tibble(
@@ -94,9 +88,13 @@ gseids_meta_scfoundation <- tibble::tibble(
       .f = \(.x) {
         basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC"
         data.table::fread(
-          file.path(basedir, .x, "out", glue::glue("{.x}.cell_ratio_and_variant_clean.csv"))
-        ) ->
-        .d
+          file.path(
+            basedir,
+            .x,
+            "out",
+            glue::glue("{.x}.cell_ratio_and_variant_clean.csv")
+          )
+        ) -> .d
         tibble::tibble(
           samples = nrow(.d),
           Disease = "-",
@@ -123,7 +121,12 @@ tibble::tibble(
       .f = \(.gseid) {
         basedir <- "/home/liuc9/github/scMOCHA-data/data/scfoundation2/PBMC"
         data.table::fread(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv"))
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.cell_ratio_and_variant_clean.csv")
+          )
         ) |>
           dplyr::select(-Chemistry)
       }
@@ -134,12 +137,16 @@ tibble::tibble(
       .x = gseid,
       .f = \(.gseid) {
         readr::read_rds(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.scmocha.out.rds.gz")
+          )
         )
       }
     )
-  ) ->
-gse_data_loaded
+  ) -> gse_data_loaded
 
 outdir <- file.path(basedir, "out")
 dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
@@ -169,13 +176,11 @@ gse_data_loaded |>
   dplyr::left_join(
     gseids_meta,
     by = c("gseid" = "GSE_ID")
-  ) ->
-gse_cell_ratio_variant_meta
+  ) -> gse_cell_ratio_variant_meta
 
 # save gse cell ratio and variant data ------------------------------------
 gse_cell_ratio_variant_meta |>
-  tidyr::unnest(cols = cell_ratio_variant) ->
-gse_cell_ratio_variant_meta_xlsx
+  tidyr::unnest(cols = cell_ratio_variant) -> gse_cell_ratio_variant_meta_xlsx
 
 gse_cell_ratio_variant_meta_xlsx |>
   dplyr::select(-anno) |>
@@ -193,13 +198,13 @@ gse_cell_ratio_variant_meta_xlsx |>
   dplyr::ungroup() |>
   dplyr::arrange(dplyr::desc(`Avg # of somatic variants`)) |>
   dplyr::mutate(
-    label = glue::glue("{gseid} ({Chemistry}, {`# of samples`}, {round(`Avg # of somatic variants`, 2)})")
+    label = glue::glue(
+      "{gseid} ({Chemistry}, {`# of samples`}, {round(`Avg # of somatic variants`, 2)})"
+    )
   ) |>
   dplyr::mutate(
     label = factor(label, levels = label)
-  ) ->
-gseid_ranked
-
+  ) -> gseid_ranked
 
 
 # plot average depth and number of somatic variants ------------------------
@@ -216,12 +221,14 @@ gse_cell_ratio_variant_meta |>
   tidyr::unnest(cols = cell_ratio_variant) |>
   dplyr::mutate(
     Chemistry = factor(Chemistry, levels = chem_levels),
-  ) ->
-forplot
+  ) -> forplot
 
-cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |> broom::tidy() -> cor_test_all
+cor.test(~ `Depth mean` + `# of somatic variants`, data = forplot) |>
+  broom::tidy() -> cor_test_all
 
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 
 forplot |>
@@ -234,7 +241,9 @@ forplot |>
     color = label
   )) +
   geom_smooth(
-    method = "loess", se = FALSE, color = "black",
+    method = "loess",
+    se = FALSE,
+    color = "black",
     linetype = 21,
   ) +
   geom_hline(
@@ -283,9 +292,10 @@ forplot |>
   labs(
     x = "Average Depth",
     y = "Number of Somatic Variants",
-    title = glue::glue("All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}")
-  ) ->
-p_somatic_variant
+    title = glue::glue(
+      "All samples test, Pearson's r = {round(cor_test_all$estimate, 2)}, p-value = {scales::pvalue(cor_test_all$p.value)}"
+    )
+  ) -> p_somatic_variant
 
 ggsave(
   filename = file.path(outdir, "somatic_variant_with_avg_depth.pdf"),

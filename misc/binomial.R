@@ -14,9 +14,18 @@ binom.test(
   n = 500,
   p = background_error_rate,
 )
-df$p_value <- mapply(function(alt, total) {
-  binom.test(x = alt, n = total, p = background_error_rate, alternative = "greater")$p.value
-}, df$AltCount, df$TotalCount)
+df$p_value <- mapply(
+  function(alt, total) {
+    binom.test(
+      x = alt,
+      n = total,
+      p = background_error_rate,
+      alternative = "greater"
+    )$p.value
+  },
+  df$AltCount,
+  df$TotalCount
+)
 
 # 添加突变频率
 df$MutationFreq <- df$AltCount / df$TotalCount
@@ -25,10 +34,7 @@ df
 print(df)
 
 
-
-
 # ? beta-binomial --------------------------------------------------------------------
-
 
 # 测序深度（每个位点的总reads数）
 depth <- c(1000, 1200, 950, 1100, 1050, 1300, 900, 1000, 1150, 1020)

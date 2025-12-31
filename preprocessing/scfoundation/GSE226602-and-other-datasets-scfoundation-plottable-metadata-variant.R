@@ -6,8 +6,6 @@
 # @DESCRIPTION: filename
 # @VERSION: v0.0.1
 
-
-
 # Library -----------------------------------------------------------------
 
 suppressPackageStartupMessages(library(magrittr))
@@ -57,7 +55,12 @@ fn_load_hetero <- function(.filename) {
   data.table::fread(input = .filename) -> .d
 
   data.table::setnames(.d, "V1", "barcode")
-  .d <- data.table::melt(.d, id.vars = "barcode", variable.name = "variant", value.name = "af")
+  .d <- data.table::melt(
+    .d,
+    id.vars = "barcode",
+    variable.name = "variant",
+    value.name = "af"
+  )
   .d[, pos := gsub(pattern = ">|[AGCT]", replacement = "", x = variant)]
   .d[, pos := as.integer(pos)]
   .d
@@ -104,21 +107,21 @@ fn_forplot <- function(.af, .coverage, .meta) {
   variant_cols <- grep(">", names(.af), value = TRUE)
 
   # Melt data.table to long format and summarize in one chain
-  .rank <- melt(.af,
+  .rank <- melt(
+    .af,
     id.vars = c("barcode", "cluster"),
     measure.vars = variant_cols,
     variable.name = "variant",
     value.name = "af"
-  )[, .(s_af = sum(af, na.rm = TRUE)),
-    by = .(barcode, cluster)
-  ]
+  )[, .(s_af = sum(af, na.rm = TRUE)), by = .(barcode, cluster)]
 
   # Sort by cluster and -s_af (modifies in place)
   setorder(.rank, cluster, -s_af)
 
   # Select barcode and variant columns, then melt to long format
   variant_cols <- grep(">", names(.af), value = TRUE)
-  .forplot <- melt(.af[, c("barcode", variant_cols), with = FALSE],
+  .forplot <- melt(
+    .af[, c("barcode", variant_cols), with = FALSE],
     id.vars = "barcode",
     measure.vars = variant_cols,
     variable.name = "variant",
@@ -126,7 +129,9 @@ fn_forplot <- function(.af, .coverage, .meta) {
   )
 
   # Extract position from variant
-  .forplot[, pos := as.numeric(gsub(pattern = "([[:digit:]]*).*", "\\1", variant))]
+  .forplot[,
+    pos := as.numeric(gsub(pattern = "([[:digit:]]*).*", "\\1", variant))
+  ]
 
   # Convert coverage to data.table if not already
   setDT(.coverage)
@@ -144,8 +149,7 @@ fn_forplot <- function(.af, .coverage, .meta) {
 
   .coverage |>
     dplyr::group_by(barcode) |>
-    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) ->
-  .coverage_cell
+    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) -> .coverage_cell
 
   list(
     rank = .rank,
@@ -213,17 +217,20 @@ tibble::tibble(
       .x = gseid,
       .f = \(.gseid) {
         .anno <- readr::read_rds(
-          file.path(basedir, .gseid, "out", glue::glue("{.gseid}.scmocha.out.rds.gz"))
+          file.path(
+            basedir,
+            .gseid,
+            "out",
+            glue::glue("{.gseid}.scmocha.out.rds.gz")
+          )
         )
       }
     )
-  ) ->
-gse_data_loaded
+  ) -> gse_data_loaded
 
 
 gse_data_loaded |>
-  tidyr::unnest(cols = anno) ->
-gse_data
+  tidyr::unnest(cols = anno) -> gse_data
 
 gse_data |>
   dplyr::select(somatic_variant) |>
@@ -236,8 +243,7 @@ gse_data |>
     )
   ) |>
   dplyr::pull(somatic_variant_new) |>
-  purrr::reduce(union) ->
-somatic_variants
+  purrr::reduce(union) -> somatic_variants
 
 gse_data |>
   dplyr::select(gseid, srrid, srrdir) |>
@@ -268,7 +274,6 @@ gse_data |>
           .filename = file.path(.srrdir, cell_meta_data_file)
         )
 
-
         # cell_raw_cluster_af <- cluster_umap |>
         #   dplyr::left_join(cell_hetero_raw, by = "barcode") |>
         #   dplyr::rename(cluster = celltype) |>
@@ -296,8 +301,7 @@ gse_data |>
       },
       mc.cores = 20
     )
-  ) ->
-gse_data_af
+  ) -> gse_data_af
 
 gse_data_af |>
   dplyr::filter(purrr::map_lgl(
@@ -346,14 +350,15 @@ gse_data_af |>
             )
           },
           error = function(e) {
-            log_error(glue::glue("Error processing {basename(.srrdir)}: {e$message}"))
+            log_error(glue::glue(
+              "Error processing {basename(.srrdir)}: {e$message}"
+            ))
             NULL
           }
         )
       }
     )
-  ) ->
-gse_data_af_new
+  ) -> gse_data_af_new
 
 
 # readr::write_rds(
@@ -398,13 +403,11 @@ gse_data_af_new |>
       mc.cores = 20
     )
   ) |>
-  dplyr::select(gseid, srrid, cell_hetero_raw_anno) ->
-gse_data_af_new_anno
+  dplyr::select(gseid, srrid, cell_hetero_raw_anno) -> gse_data_af_new_anno
 
 gse_data_af_new_anno |>
   tidyr::unnest(cols = cell_hetero_raw_anno) |>
-  as.data.table() ->
-gse_data_af_new_anno_dt
+  as.data.table() -> gse_data_af_new_anno_dt
 
 gse_data_af_new |>
   dplyr::select(gseid, srrid, raw) |>
@@ -430,22 +433,21 @@ gse_data_af_new |>
       mc.cores = 20
     )
   ) |>
-  dplyr::select(gseid, srrid, cell_hetero_raw_anno) ->
-gse_data_af_new_celltype
+  dplyr::select(gseid, srrid, cell_hetero_raw_anno) -> gse_data_af_new_celltype
 
 
 gse_data_af_new_celltype |>
   tidyr::unnest(cols = cell_hetero_raw_anno) |>
   dplyr::mutate(
     celltype_new = glue::glue("{srrid}_{celltype}")
-  ) ->
-gse_data_af_new_celltype_new
+  ) -> gse_data_af_new_celltype_new
 
 gse_data_af_new_celltype_new |>
   dplyr::select(celltype_new, variant, af) |>
-  tidyr::spread(key = celltype_new, value = af) ->
-gse_data_af_new_celltype_new_wide
-
+  tidyr::spread(
+    key = celltype_new,
+    value = af
+  ) -> gse_data_af_new_celltype_new_wide
 
 
 library(ComplexHeatmap)
@@ -456,17 +458,16 @@ library(circlize)
 gse_data_af_new_celltype_new_wide |>
   as.data.frame() |>
   tibble::column_to_rownames(var = "variant") |>
-  as.matrix() ->
-af_mtx
-
+  as.matrix() -> af_mtx
 
 
 gse_data_af_new_celltype_new |>
   dplyr::select(celltype_new, celltype, gseid, srrid) |>
   dplyr::mutate(celltype = factor(celltype, levels = celltypes)) |>
-  dplyr::distinct() ->
-af_cluster
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  dplyr::distinct() -> af_cluster
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |>
   dplyr::arrange(cancer_types)
 col_clusters <- levels(af_cluster$celltype)
 col_colors <- pcc$color[1:length(levels(af_cluster$celltype))]
