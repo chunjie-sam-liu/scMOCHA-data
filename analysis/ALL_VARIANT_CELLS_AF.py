@@ -381,7 +381,7 @@ def create_sh(
         gseid = row["gseid"]
         srrid = row["srrid"]
         cmd = [
-            "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
+            "/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/python3.13",
             "/home/liuc9/github/scMOCHA-data/analysis/ALL_VARIANT_CELLS_AF.py",
             "heteroplasmic-af",
             gseid,

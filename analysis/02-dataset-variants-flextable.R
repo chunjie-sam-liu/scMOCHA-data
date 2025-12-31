@@ -493,7 +493,7 @@ flextable::save_as_html(
 
 
 # wkhtmltopdf --page-width 300mm --page-height 200mm -T 5mm -B 5mm -L 5mm -R 5mm input.html output.pdf
-cmd <- "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/wkhtmltopdf"
+cmd <- "/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/wkhtmltopdf"
 args <- c(
   "--page-width",
   "500mm",

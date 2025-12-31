@@ -28,7 +28,7 @@
   "scMOCHABatch.IMAGE": "File (optional, default = \"/scr1/users/liuc9/sif/scmocha_latest.sif\")",
   "scMOCHABatch.celllevel": "String",
   "scMOCHABatch.mt_exons_df": "File (optional, default = \"/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz\")",
-  "scMOCHABatch.conda_root": "String (optional, default = \"/home/liuc9/tools/anaconda3\")",
+  "scMOCHABatch.conda_root": "String (optional, default = \"/home/liuc9/tools/miniforge3\")",
   "scMOCHABatch.output_id_list": "File",
   "scMOCHABatch.scmocha_version": "String (optional, default = \"latest\")",
   "scMOCHABatch.npcs": "Int (optional, default = 10)",
@@ -37,4 +37,3 @@
   "scMOCHABatch.memory": "String (optional, default = \"50 GB\")",
   "scMOCHABatch.docker": "String (optional, default = \"chunjiesamliu/scmocha\")"
 }
-

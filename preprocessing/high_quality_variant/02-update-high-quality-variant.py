@@ -236,7 +236,7 @@ def create_sh(
             # srrdir.resolve()
 
             cmds = [
-                "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
+                "/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/python3.13",
                 "/home/liuc9/github/scMOCHA-data/stats/high_quality_variant/02-update-high-quality-variant.py",
                 "generate-hqv",
                 str(srrdir),

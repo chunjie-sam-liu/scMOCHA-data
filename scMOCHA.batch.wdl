@@ -57,7 +57,7 @@ workflow scMOCHABatch {
   File sqlite_path = "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3"
 
   String bindir = "/mnt/isilon/u01_project/large-scale/liuc9/scMOCHA/bin"
-  String conda_root = "/home/liuc9/tools/anaconda3"
+  String conda_root = "/home/liuc9/tools/miniforge3"
   String conda_env = "scmocha"
 
   scatter (idx in range(length(output_ids))) {

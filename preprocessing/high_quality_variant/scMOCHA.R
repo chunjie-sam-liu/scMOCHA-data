@@ -21,12 +21,13 @@ library(data.table)
 ht_opt$message <- FALSE
 
 # src ---------------------------------------------------------------------
-pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |> # nolint
+pcc <- readr::read_tsv(
+  file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+) |> # nolint
   dplyr::arrange(cancer_types)
 
 
 # args --------------------------------------------------------------------
-
 
 # s: string, i: integer, f: float, !: boolean
 # @: array
@@ -45,8 +46,7 @@ jar_path <- "/scr1/users/liuc9/tools/haplogrep3"
 sqlite_path <- "/mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3"
 
 
-
-conda_root <- "/home/liuc9/tools/anaconda3"
+conda_root <- "/home/liuc9/tools/miniforge3"
 conda_env <- "scmocha"
 verbose <- FALSE
 
@@ -64,14 +64,13 @@ Options:
 <perlscript=s> /home/liuc9/github/scMOCHA/bin/get_variants_info.pl
 <jar_path=s> /scr1/users/liuc9/tools/haplogrep3
 <sqlite_path=s> /mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3
-<conda_root=s> /home/liuc9/tools/anaconda3
+<conda_root=s> /home/liuc9/tools/miniforge3
 <conda_env=s> scmocha
 <verbose!> Print messages
 "
 
 GetoptLong.options(help_style = "two-column")
 GetoptLong(spec, template_control = list(opt_width = 50))
-
 
 
 # header ------------------------------------------------------------------
@@ -108,7 +107,12 @@ fn_load_hetero <- function(.filename) {
   data.table::fread(input = .filename) -> .d
 
   data.table::setnames(.d, "V1", "barcode")
-  .d <- data.table::melt(.d, id.vars = "barcode", variable.name = "variant", value.name = "af")
+  .d <- data.table::melt(
+    .d,
+    id.vars = "barcode",
+    variable.name = "variant",
+    value.name = "af"
+  )
   # .d[, pos := gsub(pattern = ">|[AGCT]", replacement = "", x = variant)]
   # .d[, pos := as.integer(pos)]
   .d |> dplyr::filter(af > 0.05)
@@ -149,10 +153,11 @@ fn_af <- function(.cluster, .hetero) {
   .cluster |>
     dplyr::rename(cluster = celltype) |>
     dplyr::inner_join(
-      .hetero |> tidyr::pivot_wider(
-        names_from  = variant,
-        values_from = af
-      ),
+      .hetero |>
+        tidyr::pivot_wider(
+          names_from = variant,
+          values_from = af
+        ),
       by = "barcode"
     )
 }
@@ -169,8 +174,7 @@ fn_forplot <- function(.af, .coverage, .meta) {
     dplyr::group_by(barcode, cluster) |>
     dplyr::summarise(s_af = sum(af, na.rm = T)) |>
     dplyr::ungroup() |>
-    dplyr::arrange(cluster, -s_af) ->
-  .rank
+    dplyr::arrange(cluster, -s_af) -> .rank
 
   .af |>
     dplyr::select(barcode, dplyr::contains(">")) |>
@@ -195,13 +199,11 @@ fn_forplot <- function(.af, .coverage, .meta) {
     dplyr::mutate(af = ifelse(is.na(depth), NA, af)) |>
     # dplyr::mutate(af = ifelse(depth < log2(10), -0.1, af)) |>
     dplyr::mutate(af = ifelse(depth < 10, -0.1, af)) |>
-    dplyr::arrange(pos) ->
-  .forplot
+    dplyr::arrange(pos) -> .forplot
 
   .coverage |>
     dplyr::group_by(barcode) |>
-    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) ->
-  .coverage_cell
+    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) -> .coverage_cell
 
   list(
     rank = .rank,
@@ -222,21 +224,21 @@ fn_forplot <- function(.af, .coverage, .meta) {
   variant_cols <- grep(">", names(.af), value = TRUE)
 
   # Melt data.table to long format and summarize in one chain
-  .rank <- melt(.af,
+  .rank <- melt(
+    .af,
     id.vars = c("barcode", "cluster"),
     measure.vars = variant_cols,
     variable.name = "variant",
     value.name = "af"
-  )[, .(s_af = sum(af, na.rm = TRUE)),
-    by = .(barcode, cluster)
-  ]
+  )[, .(s_af = sum(af, na.rm = TRUE)), by = .(barcode, cluster)]
 
   # Sort by cluster and -s_af (modifies in place)
   setorder(.rank, cluster, -s_af)
 
   # Select barcode and variant columns, then melt to long format
   variant_cols <- grep(">", names(.af), value = TRUE)
-  .forplot <- melt(.af[, c("barcode", variant_cols), with = FALSE],
+  .forplot <- melt(
+    .af[, c("barcode", variant_cols), with = FALSE],
     id.vars = "barcode",
     measure.vars = variant_cols,
     variable.name = "variant",
@@ -244,7 +246,9 @@ fn_forplot <- function(.af, .coverage, .meta) {
   )
 
   # Extract position from variant
-  .forplot[, pos := as.numeric(gsub(pattern = "([[:digit:]]*).*", "\\1", variant))]
+  .forplot[,
+    pos := as.numeric(gsub(pattern = "([[:digit:]]*).*", "\\1", variant))
+  ]
 
   # Convert coverage to data.table if not already
   setDT(.coverage)
@@ -262,8 +266,7 @@ fn_forplot <- function(.af, .coverage, .meta) {
 
   .coverage |>
     dplyr::group_by(barcode) |>
-    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) ->
-  .coverage_cell
+    dplyr::summarise(sum_depth = sum(depth, na.rm = TRUE)) -> .coverage_cell
 
   list(
     rank = .rank,
@@ -273,8 +276,16 @@ fn_forplot <- function(.af, .coverage, .meta) {
   )
 }
 
-fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NULL, col_option = "turbo", show_column_title = FALSE) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+fn_heatmap <- function(
+  .forplot,
+  .cell_variants = NULL,
+  .variant_annotation = NULL,
+  col_option = "turbo",
+  show_column_title = FALSE
+) {
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
   # library(ComplexHeatmap)
   suppressPackageStartupMessages(library(ComplexHeatmap))
@@ -290,13 +301,11 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
     ) |>
     tibble::column_to_rownames(var = "barcode") |>
     as.matrix() |>
-    t() ->
-  .af_mtx
+    t() -> .af_mtx
 
   tibble::tibble(
     variants = rownames(.af_mtx)
-  ) ->
-  .for_gcol
+  ) -> .for_gcol
 
   .gcol <- if (is.null(.cell_variants)) {
     .for_gcol |>
@@ -327,8 +336,7 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
     dplyr::slice(match(.forplot$rank$barcode, barcode)) |>
     tibble::column_to_rownames(var = "barcode") |>
     as.matrix() |>
-    t() ->
-  .depth_mtx
+    t() -> .depth_mtx
 
   .forplot$rank |>
     dplyr::select(barcode, cluster) |>
@@ -347,9 +355,7 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
       by = "barcode"
     ) |>
     tibble::column_to_rownames(var = "barcode") |>
-    dplyr::rename(Cluster = cluster) ->
-  .af_cluster
-
+    dplyr::rename(Cluster = cluster) -> .af_cluster
 
   col_clusters <- levels(.af_cluster$Cluster)
   col_colors <- pcc$color[1:length(levels(.af_cluster$Cluster))]
@@ -370,16 +376,17 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
       ),
       `log10(Total reads)` = circlize::colorRamp2(
         # breaks = quantile(.af_cluster$`log10(Total reads)`, c(0.15, 0.75, 0.9), na.rm = T),
-        breaks = quantile(.af_cluster$`log10(Total reads)`, c(0.15, 0.9), na.rm = T),
+        breaks = quantile(
+          .af_cluster$`log10(Total reads)`,
+          c(0.15, 0.9),
+          na.rm = T
+        ),
         colors = c("white", "blue"),
         space = "RGB"
       )
     ),
     which = "column"
   )
-
-
-
 
   # col_start = 0
   # col_end = 1
@@ -428,11 +435,12 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
       dplyr::select(`Mitomap freq`, `Gnomad freq`, Haplogroup)
 
     .df_left |>
-      dplyr::mutate(Haplogroup_col = ifelse(is.na(Haplogroup), "grey", "#3B4992FF")) |>
+      dplyr::mutate(
+        Haplogroup_col = ifelse(is.na(Haplogroup), "grey", "#3B4992FF")
+      ) |>
       dplyr::select(dplyr::contains("Haplogroup")) |>
       dplyr::filter(!is.na(Haplogroup)) |>
-      dplyr::distinct() ->
-    .Haplogroup
+      dplyr::distinct() -> .Haplogroup
 
     .Haplogroup_col <- .Haplogroup$Haplogroup_col
     names(.Haplogroup_col) <- .Haplogroup$Haplogroup
@@ -474,7 +482,6 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
         )
       )
     )
-
 
     ComplexHeatmap::Heatmap(
       matrix = .af_mtx,
@@ -571,7 +578,6 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
     )
   }
 
-
   ComplexHeatmap::Heatmap(
     matrix = .depth_mtx,
     col = circlize::colorRamp2(
@@ -605,8 +611,7 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
     show_column_names = FALSE,
     row_names_side = "left",
     top_annotation = chm_top
-  ) ->
-  ch_depth
+  ) -> ch_depth
 
   list(
     ch_af = ch_af,
@@ -615,7 +620,9 @@ fn_heatmap <- function(.forplot, .cell_variants = NULL, .variant_annotation = NU
 }
 
 fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   .haplogroup <- .cell_anno$Haplogroup |>
@@ -626,8 +633,6 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
   if (length(.haplogroup) == 0) {
     .haplogroup <- "NO_Haplogroup"
   }
-
-
 
   if (!is.null(.sel_variants)) {
     .cell_anno <- .cell_anno |>
@@ -648,18 +653,15 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     ) |>
     dplyr::mutate(
       depth_log2 = log2(depth + 1)
-    ) ->
-  .forplot_cluster_cell_variant
+    ) -> .forplot_cluster_cell_variant
 
   .forplot_cluster_cell_variant |>
-    dplyr::filter(af > 0) ->
-  .theforplot
+    dplyr::filter(af > 0) -> .theforplot
 
   .theforplot |>
     dplyr::select(variant, pos) |>
     dplyr::distinct() |>
-    dplyr::arrange(pos) ->
-  .sort_variant
+    dplyr::arrange(pos) -> .sort_variant
 
   .forplot_cluster_cell_variant |>
     dplyr::group_by(cluster, variant) |>
@@ -672,8 +674,7 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     dplyr::mutate(
       sum_cluster_variant_depth_log2 = log2(sum_cluster_variant_depth + 1)
     ) |>
-    dplyr::filter(variant %in% .sort_variant$variant) ->
-  .cluster_variant_af
+    dplyr::filter(variant %in% .sort_variant$variant) -> .cluster_variant_af
 
   .c <- unique(.cluster_variant_af$cluster)
   .v <- unique(.cluster_variant_af$variant)
@@ -691,20 +692,20 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     ) |>
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
-    ) ->
-  .no_depth
-
-
+    ) -> .no_depth
 
   .cell_anno |>
     dplyr::filter(variant %in% .sort_variant$variant) |>
-    dplyr::mutate(fill = ifelse(Haplogroup == .haplogroup, "#3B0049", "white")) |>
-    dplyr::mutate(color = ifelse(Haplogroup == .haplogroup, "white", "black")) |>
+    dplyr::mutate(
+      fill = ifelse(Haplogroup == .haplogroup, "#3B0049", "white")
+    ) |>
+    dplyr::mutate(
+      color = ifelse(Haplogroup == .haplogroup, "white", "black")
+    ) |>
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_variant
+    dplyr::arrange(variant) -> .haplo_variant
 
   .theforplot |>
     dplyr::inner_join(
@@ -714,9 +715,7 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant |> unique())
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_forplot
-
+    dplyr::arrange(variant) -> .haplo_forplot
 
   library(ggh4x)
   library(ggbeeswarm)
@@ -806,8 +805,7 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
         hjust = 1,
         # color = pcc$color
       )
-    ) ->
-  p_af
+    ) -> p_af
 
   .forplot_cluster_cell_variant |>
     dplyr::filter(variant %in% .sort_variant$variant) |>
@@ -908,9 +906,7 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
         hjust = 1,
         # color = pcc$color
       )
-    ) ->
-  p_depth
-
+    ) -> p_depth
 
   list(
     p_af = p_af,
@@ -920,7 +916,12 @@ fn_plot_cell_violin <- function(.forplot, .cell_anno, .sel_variants = NULL) {
   )
 }
 
-fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .high_af = 0.95) {
+fn_somatic_variant <- function(
+  .haplo_variant,
+  .haplo_violin,
+  .n_cells = 10,
+  .high_af = 0.95
+) {
   # .haplo_variant <- srr_out_cell_stats$haplo_variant[[27]]
   # .haplo_violin <- srr_out_cell_stats$haplo_violin[[27]]
   .haplo_variant <- .haplo_variant |>
@@ -934,28 +935,38 @@ fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .hi
   # 1. filter by haplogrep marker variant
   .haplo_variant |>
     dplyr::filter(fill != "white") |>
-    dplyr::pull(variant) ->
-  .v_haplo
+    dplyr::pull(variant) -> .v_haplo
 
   # 2. filter by n_cells
   .n_cells <- 10
   .haplo_violin |>
     dplyr::count(variant) |>
     dplyr::filter(n < .n_cells) |>
-    dplyr::pull(variant) ->
-  .v_n_cells
+    dplyr::pull(variant) -> .v_n_cells
 
   # 3. tRNA p9 and RNA editing position
   .editing_pos <- c(
-    585, 1610, 3238, 4271, 5520, 7526, 8303, # tRNA p9
-    9999, 10413, 12146, 12274, 14734, 15896, # tRNA p9
-    295, 2617, 13710 # RNA editing
+    585,
+    1610,
+    3238,
+    4271,
+    5520,
+    7526,
+    8303, # tRNA p9
+    9999,
+    10413,
+    12146,
+    12274,
+    14734,
+    15896, # tRNA p9
+    295,
+    2617,
+    13710 # RNA editing
   )
 
   .haplo_variant |>
     dplyr::filter(Position %in% .editing_pos) |>
-    dplyr::pull(variant) ->
-  .v_editing
+    dplyr::pull(variant) -> .v_editing
 
   # 4. high af in 95% of cells
   .haplo_violin |>
@@ -964,21 +975,21 @@ fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .hi
       afm = mean(af, na.rm = T)
     ) |>
     dplyr::filter(afm > .high_af) |>
-    dplyr::pull(variant) ->
-  .v_high_af
+    dplyr::pull(variant) -> .v_high_af
 
   # 5. exclude sites
   .excluding_pos <- c(309, 310)
   .haplo_variant |>
     dplyr::filter(Position %in% .excluding_pos) |>
-    dplyr::pull(variant) ->
-  .v_excluding
+    dplyr::pull(variant) -> .v_excluding
 
   # somatic variant
   .haplo_variant |>
-    dplyr::filter(!variant %in% c(.v_haplo, .v_n_cells, .v_editing, .v_high_af, .v_excluding)) |>
-    dplyr::pull(variant) ->
-  .v_somatic
+    dplyr::filter(
+      !variant %in%
+        c(.v_haplo, .v_n_cells, .v_editing, .v_high_af, .v_excluding)
+    ) |>
+    dplyr::pull(variant) -> .v_somatic
 
   list(
     haplo = .v_haplo,
@@ -993,7 +1004,6 @@ fn_somatic_variant <- function(.haplo_variant, .haplo_violin, .n_cells = 10, .hi
 fn_plot_mtdna <- function() {
   mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
-
   gtf_gene_df <-
     readr::read_rds(
       file = mt_exons_df
@@ -1005,7 +1015,8 @@ fn_plot_mtdna <- function() {
       aes(
         fill = gene_biotype
       ),
-      arrowhead_height = unit(3, "mm"), arrowhead_width = unit(1, "mm")
+      arrowhead_height = unit(3, "mm"),
+      arrowhead_width = unit(1, "mm")
     ) +
     scale_fill_brewer(
       palette = "Set1",
@@ -1046,13 +1057,14 @@ fn_plot_mtdna <- function() {
         vjust = -1,
       ),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  pg
+    coord_cartesian(xlim = c(0, 17000)) -> pg
   pg
 }
 
 fn_plot_coverage <- function(.cluster_coverage) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   .cluster_coverage |>
@@ -1118,8 +1130,7 @@ fn_plot_coverage <- function(.cluster_coverage) {
       )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "Depth") ->
-  p_mt_depth_celltype
+    labs(y = "Depth") -> p_mt_depth_celltype
 
   .cluster_coverage |>
     dplyr::group_by(pos) |>
@@ -1167,8 +1178,7 @@ fn_plot_coverage <- function(.cluster_coverage) {
       )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "Depth") ->
-  p_mt_depth_allcell
+    labs(y = "Depth") -> p_mt_depth_allcell
 
   list(
     p_mt_depth_celltype = p_mt_depth_celltype,
@@ -1177,7 +1187,9 @@ fn_plot_coverage <- function(.cluster_coverage) {
 }
 
 fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
-  pcc <- readr::read_tsv(file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv") |>
+  pcc <- readr::read_tsv(
+    file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
+  ) |>
     dplyr::arrange(cancer_types)
 
   if (!is.null(.sel_variants)) {
@@ -1199,18 +1211,15 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     ) |>
     dplyr::mutate(
       depth_log2 = log2(depth + 1)
-    ) ->
-  .forplot_cluster_cell_variant
+    ) -> .forplot_cluster_cell_variant
 
   .forplot_cluster_cell_variant |>
-    dplyr::filter(af > 0) ->
-  .theforplot
+    dplyr::filter(af > 0) -> .theforplot
 
   .theforplot |>
     dplyr::select(variant, pos) |>
     dplyr::distinct() |>
-    dplyr::arrange(pos) ->
-  .sort_variant
+    dplyr::arrange(pos) -> .sort_variant
 
   .forplot_cluster_cell_variant |>
     dplyr::group_by(cluster, variant) |>
@@ -1223,8 +1232,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     dplyr::mutate(
       sum_cluster_variant_depth_log2 = log2(sum_cluster_variant_depth + 1)
     ) |>
-    dplyr::filter(variant %in% .sort_variant$variant) ->
-  .cluster_variant_af
+    dplyr::filter(variant %in% .sort_variant$variant) -> .cluster_variant_af
 
   .c <- unique(.cluster_variant_af$cluster)
   .v <- unique(.cluster_variant_af$variant)
@@ -1242,8 +1250,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     ) |>
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
-    ) ->
-  .no_depth
+    ) -> .no_depth
 
   # .theforplot |>
   #   dplyr::group_by(variant) |>
@@ -1258,8 +1265,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant)
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_variant
+    dplyr::arrange(variant) -> .haplo_variant
 
   .theforplot |>
     dplyr::inner_join(
@@ -1269,9 +1275,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
     dplyr::mutate(
       variant = factor(variant, .sort_variant$variant |> unique())
     ) |>
-    dplyr::arrange(variant) ->
-  .haplo_forplot
-
+    dplyr::arrange(variant) -> .haplo_forplot
 
   library(ggh4x)
   library(ggbeeswarm)
@@ -1281,8 +1285,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
   .haplo_forplot |>
     dplyr::select(variant, pos, cluster, mean_cluster_variant_af) |>
     dplyr::distinct() |>
-    dplyr::filter(cluster == .cl) ->
-  .forlabel
+    dplyr::filter(cluster == .cl) -> .forlabel
 
   ggplot() +
     ggrepel::geom_text_repel(
@@ -1318,11 +1321,11 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
       legend.key = element_blank(),
       axis.title.y = element_blank(),
       axis.text.y = element_blank(),
-      axis.ticks.y = element_blank(), ,
+      axis.ticks.y = element_blank(),
+      ,
       axis.line.y = element_blank(),
     ) +
-    coord_cartesian(xlim = c(0, 17000)) ->
-  p_label
+    coord_cartesian(xlim = c(0, 17000)) -> p_label
 
   .haplo_forplot |>
     ggplot() +
@@ -1418,8 +1421,7 @@ fn_plot_hotspots <- function(.forplot, .cell_anno, .sel_variants = NULL) {
       # )
     ) +
     coord_cartesian(xlim = c(0, 17000)) +
-    labs(y = "AF") ->
-  p_af_cell
+    labs(y = "AF") -> p_af_cell
 
   wrap_plots(
     p_label,
@@ -1450,7 +1452,11 @@ log_execution_time <- function(f) {
     start_time <- Sys.time()
     result <- f(...)
     end_time <- Sys.time()
-    cat(sprintf("Function '%s' executed in %.4f seconds\n", deparse(substitute(f)), as.numeric(difftime(end_time, start_time, units = "secs"))))
+    cat(sprintf(
+      "Function '%s' executed in %.4f seconds\n",
+      deparse(substitute(f)),
+      as.numeric(difftime(end_time, start_time, units = "secs"))
+    ))
     return(result)
   }
 }
@@ -1484,7 +1490,6 @@ ch_af_depth <- fn_heatmap(
 )
 
 
-
 {
   pdf(
     file = "heatmap_cell_af.pdf",
@@ -1508,7 +1513,6 @@ ch_af_depth <- fn_heatmap(
 
 # cluster allele-----------------------------------------------------------------
 
-
 cluster_hetero <- fn_load_hetero(
   .filename = cluster_hetero_file
 ) |>
@@ -1531,8 +1535,9 @@ cluster_coverage <- fn_load_coverage(
 
 
 cluster_cluster_af <-
-  cluster_hetero |> tidyr::pivot_wider(
-    names_from  = variant,
+  cluster_hetero |>
+  tidyr::pivot_wider(
+    names_from = variant,
     values_from = af
   )
 
@@ -1611,17 +1616,18 @@ cell_raw_cluster_forplot <- fn_forplot(
 
 # Variant annotation ------------------------------------------------------
 
-
 cell_raw_cluster_forplot$forplot |>
   dplyr::filter(!is.na(depth)) |>
   # dplyr::select(barcode, pos, variant) |>
   dplyr::select(pos, variant) |>
   dplyr::distinct() |>
-  dplyr::mutate(variant = gsub(
-    pattern = "[0-9]*",
-    replacement = "",
-    x = variant
-  )) |>
+  dplyr::mutate(
+    variant = gsub(
+      pattern = "[0-9]*",
+      replacement = "",
+      x = variant
+    )
+  ) |>
   tidyr::separate(
     col = variant,
     into = c("ref", "var")
@@ -1642,8 +1648,7 @@ cell_raw_cluster_forplot$forplot |>
   tidyr::pivot_wider(
     names_from = rowid,
     values_from = v
-  ) ->
-cell_variants
+  ) -> cell_variants
 
 readr::write_delim(
   x = cell_variants,
@@ -1653,14 +1658,16 @@ readr::write_delim(
 )
 
 
-cmd <- "source {conda_root}/etc/profile.d/conda.sh; conda activate {conda_env}; perl {perlscript} {file.path(jar_path, 'haplogrep3.jar')} {sqlite_path} cell_snvlist.tsv > variant_annotation.tsv" |> glue::glue()
+cmd <- "source {conda_root}/etc/profile.d/conda.sh; conda activate {conda_env}; perl {perlscript} {file.path(jar_path, 'haplogrep3.jar')} {sqlite_path} cell_snvlist.tsv > variant_annotation.tsv" |>
+  glue::glue()
 log_debug(cmd)
 system(command = cmd)
 
 
-
-
-if (file.exists("variant_annotation.tsv") | file.exists("cell_variant_annotation.tsv")) {
+if (
+  file.exists("variant_annotation.tsv") |
+    file.exists("cell_variant_annotation.tsv")
+) {
   cell_anno <- data.table::fread(
     ifelse(
       file.exists(file.path("variant_annotation.tsv")),
@@ -1675,7 +1682,6 @@ if (file.exists("variant_annotation.tsv") | file.exists("cell_variant_annotation
     path = "variant_annotation.xlsx"
   )
 
-
   variant_annotation <- cell_anno |>
     dplyr::mutate(
       variant = glue::glue("{Position}{Ref}>{Alt}")
@@ -1688,7 +1694,8 @@ if (file.exists("variant_annotation.tsv") | file.exists("cell_variant_annotation
       )
     ) |>
     dplyr::select(
-      variant, ntchange,
+      variant,
+      ntchange,
       calc_locus = Locus,
       Haplogroup,
       Verbose_haplogroup,
@@ -1769,7 +1776,16 @@ log_success("save cluster cell allele heatmap")
 
 log_fatal("for af color selection")
 fn_for_select_af_color <- function() {
-  pals <- c("magma", "inferno", "plasma", "viridis", "cividis", "rocket", "mako", "turbo")
+  pals <- c(
+    "magma",
+    "inferno",
+    "plasma",
+    "viridis",
+    "cividis",
+    "rocket",
+    "mako",
+    "turbo"
+  )
   library(grid)
   parallel::mclapply(
     X = pals,
@@ -1780,13 +1796,11 @@ fn_for_select_af_color <- function() {
         .variant_annotation = variant_annotation,
         col_option = pal,
         show_column_title = TRUE
-      ) ->
-      .p
+      ) -> .p
       .p$ch_af
     },
     mc.cores = length(pals)
-  ) ->
-  pl
+  ) -> pl
 
   pdf(
     file = "af_color_options.pdf",
@@ -1844,7 +1858,6 @@ log_success("save violin plot for all the variants")
 
 # ! somatic variant --------------------------------------------------------------------
 
-
 fn_somatic_variant(
   .haplo_variant = p_violin$haplo_variant,
   .haplo_violin = p_violin$haplo_forplot,
@@ -1889,7 +1902,8 @@ parallel::mclapply(
         base_width = 2
         base_height = 4
 
-        width = base_width * ifelse(length(.sel_variants) > 12, 12, length(.sel_variants))
+        width = base_width *
+          ifelse(length(.sel_variants) > 12, 12, length(.sel_variants))
         height = base_height * ceiling(length(.sel_variants) / 12)
 
         ggsave(

@@ -45,7 +45,7 @@ perlscript <- "/mnt/isilon/u01_project/large-scale/ting/raw/GSE180298/fail/GSM54
 jar_path <- "/mnt/isilon/u01_project/large-scale/ting/raw/GSE180298/fail/GSM5460407/cromwell-executions/scMOCHA/2e7beb96-5843-418a-b7c9-da434b9de347/call-plot_scMOCHA/inputs/-1029089182/haplogrep3"
 sqlite_path <- "/mnt/isilon/u01_project/large-scale/ting/raw/GSE180298/fail/GSM5460407/cromwell-executions/scMOCHA/2e7beb96-5843-418a-b7c9-da434b9de347/call-plot_scMOCHA/inputs/1397752364/mitomap_sqlite.db"
 
-conda_root <- "/home/pengt1/anaconda3"
+conda_root <- "/home/pengt1/miniforge3"
 conda_env <- "scmocha_0918"
 verbose <- FALSE
 
@@ -63,7 +63,7 @@ Options:
 <perlscript=s> /home/liuc9/github/scMOCHA/bin/get_variants_info.pl
 <jar_path=s> /scr1/users/liuc9/tools/haplogrep3
 <sqlite_path=s> /mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3
-<conda_root=s> /home/liuc9/tools/anaconda3
+<conda_root=s> /home/liuc9/tools/miniforge3
 <conda_env=s> scmocha
 <verbose!> Print messages
 "

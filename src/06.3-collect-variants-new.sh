@@ -10,10 +10,10 @@ if [ -f $HOME/.bashrc ]; then
   source ${HOME}/.bashrc
 fi
 
-source ~/tools/anaconda3/bin/activate
+source ~/tools/miniforge3/bin/activate
 
 
-RSCRIPT="/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/Rscript"
+RSCRIPT="/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/Rscript"
 SCRIPT="/home/liuc9/github/scMOCHA-data/src/06.1-collect-variants-new.R"
 BASEDIR="/mnt/isilon/u01_project/large-scale/liuc9/raw"
 

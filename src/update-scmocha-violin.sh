@@ -24,7 +24,7 @@ update_gsmid() {
   cd "$gsm_dir" || exit
   echo "Updating $gseid and $gsmid"
 
-  source /home/liuc9/tools/anaconda3/etc/profile.d/conda.sh
+  source /home/liuc9/tools/miniforge3/etc/profile.d/conda.sh
   conda activate scmocha
 
   if [[ -f chemistry.csv ]]; then
@@ -74,7 +74,7 @@ update_gsmid() {
     -p /home/liuc9/github/scMOCHA/bin/get_variants_info.pl \
     -j /scr1/users/liuc9/tools/haplogrep3 \
     -s /mnt/isilon/xing_lab/liuc9/refdata/mitomaster/mitomap_sqlite_20230525.sqlite3 \
-    -conda_root /home/liuc9/tools/anaconda3 \
+    -conda_root /home/liuc9/tools/miniforge3 \
     -conda_env scmocha
 
 }

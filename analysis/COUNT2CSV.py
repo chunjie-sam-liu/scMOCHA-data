@@ -405,7 +405,7 @@ class DataProcessor:
         commands = []
         for task in tasks:
             cmd_parts = [
-                "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/python3.13",
+                "/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/python3.13",
                 str(Path(__file__).absolute()),
                 "run-one",
                 task["gseid"],

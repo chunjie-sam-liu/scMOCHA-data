@@ -26,7 +26,7 @@ def process_row(row):
     gseid = row["gseid"]
     # gsedir = row["gsedir"]
     cmd_arr = [
-        "/scr1/users/liuc9/tools/anaconda3/envs/renv/bin/Rscript",
+        "/scr1/users/liuc9/tools/miniforge3/envs/renv/bin/Rscript",
         "/home/liuc9/github/scMOCHA-data/src/06.1-collect-variants-new.R",
         "-g",
         gseid,
