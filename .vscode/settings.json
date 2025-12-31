@@ -74,6 +74,8 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "Posit.air-vscode"
   },
+  "r.lsp.diagnostics": false,
+  "r.lsp.enabled": false,
   "[quarto]": {
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "quarto.quarto"
