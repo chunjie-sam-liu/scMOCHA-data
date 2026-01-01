@@ -110,9 +110,9 @@ ALLVARIANTS_TEST_SIG |>
           dplyr::mutate(
             p_hist = purrr::pmap(
               .l = list(
-                thevariant = thevariant,
-                thegseid = gseid,
-                thesrrid = srrid
+                gsesrrid$gseid,
+                gsesrrid$srrid,
+                rep(thevariant, nrow(gsesrrid))
               ),
               .f = \(thegseid, thesrrid, thevariant) {
                 print(fn_plot_hist(thevariant, thegseid, thesrrid))
@@ -138,9 +138,9 @@ ALLVARIANTS_TEST_SIG |>
           dplyr::mutate(
             p_cumfrac = purrr::pmap(
               .l = list(
-                thevariant = thevariant,
-                thegseid = gseid,
-                thesrrid = srrid
+                gsesrrid$gseid,
+                gsesrrid$srrid,
+                rep(thevariant, nrow(gsesrrid))
               ),
               .f = \(thegseid, thesrrid, thevariant) {
                 print(fn_plot_cumulative_fraction(
@@ -169,9 +169,9 @@ ALLVARIANTS_TEST_SIG |>
           dplyr::mutate(
             p_detail = purrr::pmap(
               .l = list(
-                thevariant = thevariant,
-                thegseid = gseid,
-                thesrrid = srrid
+                gsesrrid$gseid,
+                gsesrrid$srrid,
+                rep(thevariant, nrow(gsesrrid))
               ),
               .f = \(thegseid, thesrrid, thevariant) {
                 print(fn_plot_joy_celltype_detail(
@@ -206,9 +206,8 @@ ALLVARIANTS_TEST_SIG |>
         print(fn_plot_variant_ratio(thevariant))
         dev.off()
       },
-      thegseid = gseid,
-      thesrrid = srrid,
       thevariant = variant,
+      gsesrrid = gsesrrid,
       mc.cores = 20
     )
   )
