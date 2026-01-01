@@ -58,20 +58,21 @@ fn_kruskal_test <- function(.gseid, .srrid, .variant) {
   # .srrid <- "GSM7080053"
   # .variant <- "11251A>G"
   log_info(glue::glue("Processing {.gseid} - {.srrid} - {.variant}"))
+
   tbl_allvariants_cell |>
     dplyr::filter(
       srrid == .srrid,
-      variant == .variant
+      variant == .variant,
+      variant_type %in% c("colorful", "black")
     ) |>
-    dplyr::filter(variant_type == "colorful") |>
     as.data.table() |>
-    dplyr::mutate(
-      af = ifelse(
-        af < 0.01,
-        NA_real_,
-        af
-      )
-    ) |>
+    # dplyr::mutate(
+    #   af = ifelse(
+    #     af < 0.01,
+    #     NA_real_,
+    #     af
+    #   )
+    # ) |>
     dplyr::filter(celltype != "other") -> dt_variant_celltype_af
 
   tryCatch(

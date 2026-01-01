@@ -626,6 +626,7 @@ tbl_gseid_srrid_variant_celltype_ks_test |>
     y = "Density",
     title = "Distribution of Kruskal-Wallis statistic for all variants"
   ) -> plot_ks_statistic
+
 ggsave(
   file.path(
     plotdir,

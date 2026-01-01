@@ -1368,7 +1368,9 @@ export(
   gseid_srrid_variant_hetero_plot_ratio,
   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_hetero_plot_ratio.qs"
 )
-
+# gseid_srrid_variant_hetero_plot_ratio <- import(
+#   "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-real-somatic-variant/main-variants/gseid_srrid_variant_hetero_plot_ratio.qs"
+# )
 
 gseid_srrid_variant_hetero_plot_ratio |>
   dplyr::select(-c(plot, cellvarianttype)) |>
