@@ -1,9 +1,10 @@
 # pseudo-bulk
 source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
-ALLVARIANTS <- import(
+ALLVARIANTSFORPLOT <- import(
   path("/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES") /
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
-)
+) |>
+  dplyr::filter(variant_type %in% c("homo", "hete"))
 
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
@@ -17,7 +18,7 @@ tbl_allvariants_cell <- dplyr::tbl(
 )
 # thevariant <- "3173G>A"
 fn_plot_hetero_pseudo_bulk <- function(thevariant) {
-  .d <- ALLVARIANTS |>
+  .d <- ALLVARIANTSFORPLOT |>
     dplyr::filter(variant == thevariant)
 
   color_celltype_bulk <- c(
@@ -40,7 +41,7 @@ fn_plot_hetero_pseudo_bulk <- function(thevariant) {
   .all_hetero_af_thevariant |>
     dplyr::mutate(
       barcode = gsub(barcode, pattern = "_", replacement = " "),
-      barcode = ifelse(barcode == "bulk", "Pseudo-bulk", barcode),
+      barcode = ifelse(barcode == "Bulk", "Pseudo-bulk", barcode),
     ) |>
     dplyr::mutate(
       barcode = factor(
@@ -54,7 +55,7 @@ fn_plot_hetero_pseudo_bulk <- function(thevariant) {
     dplyr::arrange(-af) -> .rank_pseudo_bulk
 
   fn_xy_breaks_limits(
-    .forplot$af,
+    c(0, .forplot$af),
     step = 0.1,
     max = FALSE
   ) -> .ybl
@@ -65,6 +66,20 @@ fn_plot_hetero_pseudo_bulk <- function(thevariant) {
     ) |>
     ggplot(aes(x = srrid, y = af, fill = barcode)) +
     geom_col() +
+    ggh4x::facet_grid2(
+      ~barcode,
+      strip = ggh4x::strip_themed(
+        background_x = ggh4x::elem_list_rect(
+          fill = color_celltype_bulk,
+          color = NA
+        ),
+        text_x = ggh4x::elem_list_text(
+          colour = "white",
+          face = c("bold")
+        )
+      ),
+      switch = "x",
+    ) +
     geom_hline(
       aes(yintercept = 0.05),
       linetype = 20,
@@ -92,20 +107,7 @@ fn_plot_hetero_pseudo_bulk <- function(thevariant) {
         )
       },
     ) +
-    ggh4x::facet_grid2(
-      ~barcode,
-      strip = ggh4x::strip_themed(
-        background_x = ggh4x::elem_list_rect(
-          fill = color_celltype_bulk,
-          color = NA
-        ),
-        text_x = ggh4x::elem_list_text(
-          colour = "white",
-          face = c("bold")
-        )
-      ),
-      switch = "x",
-    ) +
+
     theme(
       plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
       panel.grid = element_blank(),
@@ -129,7 +131,7 @@ fn_plot_hetero_pseudo_bulk <- function(thevariant) {
 # fn_plot_hetero_pseudo_bulk(thevariant)
 
 fn_plot_variant_ratio <- function(thevariant) {
-  .m <- ALLVARIANTS |>
+  .m <- ALLVARIANTSFORPLOT |>
     dplyr::filter(variant == thevariant)
 
   .srrids <- unique(.m$srrid)
@@ -341,7 +343,7 @@ fn_plot_variant_ratio_paf <- function(.m, rank_srrid) {
   .m |>
     dplyr::select(gseid, srrid, af = Bulk) -> .bulk_forplot
 
-  fn_xy_breaks_limits(.bulk_forplot$af, step = 0.1, max = FALSE) -> .ybl
+  fn_xy_breaks_limits(c(0, .bulk_forplot$af), step = 0.1, max = FALSE) -> .ybl
 
   .bulk_forplot |>
     dplyr::mutate(
@@ -398,4 +400,4 @@ fn_plot_variant_ratio_paf <- function(.m, rank_srrid) {
   )
 }
 
-fn_plot_variant_ratio(thevariant)
+# fn_plot_variant_ratio(thevariant)

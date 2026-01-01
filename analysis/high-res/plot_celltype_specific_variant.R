@@ -464,6 +464,17 @@ fn_plot_joy_celltype_level2_level3 <- function(
       )
     ) -> forplot
 
+  if (nrow(forplot) == 0) {
+    return(
+      ggplot() +
+        labs(
+          title = glue::glue(
+            "{thecelltype}-{thecelltype_level}-{thevariant}\n({thegseid}-{thesrrid})"
+          )
+        )
+    )
+  }
+
   levels(forplot$plotcelltype)
 
   color_celltype_detail <- log(seq(
@@ -492,8 +503,7 @@ fn_plot_joy_celltype_level2_level3 <- function(
     ggridges::geom_density_ridges(
       scale = 2,
       alpha = 0.8,
-      rel_min_height = 0.01,
-      size = 0.1
+      rel_min_height = 0.01
     ) +
     scale_fill_manual(
       values = color_celltype_detail,
@@ -555,14 +565,36 @@ fn_plot_joy_celltype_detail <- function(
     dplyr::mutate(
       # p = parallel::mcmapply(
       p = mapply(
-        FUN = fn_plot_joy_celltype_level2_level3,
+        FUN = \(
+          thevariant,
+          thegseid,
+          thesrrid,
+          thecelltype,
+          thecelltype_prefix,
+          thecelltype_level
+        ) {
+          tryCatch(
+            {
+              fn_plot_joy_celltype_level2_level3(
+                thevariant = thevariant,
+                thegseid = thegseid,
+                thesrrid = thesrrid,
+                thecelltype = thecelltype,
+                thecelltype_prefix = thecelltype_prefix,
+                thecelltype_level = thecelltype_level
+              )
+            },
+            error = function(e) {
+              ggplot()
+            }
+          )
+        },
         thevariant = thevariant,
         thegseid = thegseid,
         thesrrid = thesrrid,
         thecelltype = thecelltype,
         thecelltype_prefix = thecelltype_prefix,
         thecelltype_level = thecelltype_level,
-        # mc.cores = 5,
         SIMPLIFY = FALSE
       )
     ) -> plot_thevariant_celltype_list

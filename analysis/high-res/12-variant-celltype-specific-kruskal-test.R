@@ -36,6 +36,9 @@ ALLVARIANTS <- import(
   outdir / "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 )
 
+HOMO_HETE_VARIANTS <- ALLVARIANTS |>
+  dplyr::filter(variant_type %in% c("homo", "hete"))
+
 # load conn ---------------------------------------------------------------
 
 conn <- DBI::dbConnect(
@@ -95,7 +98,7 @@ fn_kruskal_test <- function(.gseid, .srrid, .variant) {
 }
 # body --------------------------------------------------------------------
 
-ALLVARIANTS |>
+HOMO_HETE_VARIANTS |>
   # head(200) |>
   dplyr::mutate(
     kruskal_test = parallel::mcmapply(
@@ -107,12 +110,12 @@ ALLVARIANTS |>
       mc.cores = 20
     )
   ) |>
-  tidyr::unnest(kruskal_test) -> ALLVARIANTS_KRUSKAL
+  tidyr::unnest(kruskal_test) -> HOMO_HETE_VARIANTS_KRUSKAL
 
 
 {
   export(
-    ALLVARIANTS_KRUSKAL,
+    HOMO_HETE_VARIANTS_KRUSKAL,
     outdir /
       "VARIANT-KRUSKAL-WALLIS-TEST.xlsx"
   )

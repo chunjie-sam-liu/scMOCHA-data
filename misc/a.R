@@ -174,3 +174,4 @@ Sys.setenv(R_ZIPCMD = Sys.which("zip"))
 wb$save("mtcars.xlsx")
 
 wb_dims(x = mtcars)
+ALLVARIANTS |> dplyr::filter(variant == thevariant, srrid == "GSM7080053")
