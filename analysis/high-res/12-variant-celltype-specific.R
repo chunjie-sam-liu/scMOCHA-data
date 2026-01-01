@@ -113,9 +113,11 @@ ALLVARIANTS |>
   export(
     ALLVARIANTS_KRUSKAL,
     outdir /
-      "SAMPLE-VARIANT-KRUSKAL-WALLIS-TEST.xlsx"
+      "VARIANT-KRUSKAL-WALLIS-TEST.xlsx"
   )
 }
+DBI::dbDisconnect(conn, shutdown = TRUE)
+
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------

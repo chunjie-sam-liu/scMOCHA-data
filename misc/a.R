@@ -69,3 +69,35 @@ a2 <- import(
   "/scr1/users/liuc9/tmp/gse_data_variant_heteroplasmic_fisher.new.qs",
   nthreads = 4
 )
+
+
+wb <- wb_workbook()$add_worksheet(
+  "cj"
+)$add_data(x = mtcars)$add_fill(
+  dims = wb_dims(x = mtcars, rows = 1:5), # only 1st 5 rows of x data
+  color = wb_color("yellow")
+)$add_fill(
+  dims = wb_dims(x = mtcars, select = "col_names"), # only column names
+  color = wb_color("cyan2")
+)$add_fill(
+  dims = wb_dims(x = mtcars, cols = 2:3), # entire data
+  color = wb_color("red")
+)
+
+p <- ggplot(mtcars, aes(x = mpg, fill = as.factor(gear))) +
+  ggtitle("Distribution of Gas Mileage") +
+  geom_density(alpha = 0.5)
+
+print(p)
+wb$add_worksheet("add_plot")$add_plot(
+  width = 5,
+  height = 3.5,
+  file_type = "png",
+  units = "in"
+)
+
+Sys.setenv(R_ZIPCMD = Sys.which("zip"))
+
+wb$save("mtcars.xlsx")
+
+wb_dims(x = mtcars)
