@@ -8,6 +8,8 @@
 # Library -----------------------------------------------------------------
 
 load_pkg(jutils)
+load_pkg(magrittr)
+load_pkg(dplyr)
 
 # args --------------------------------------------------------------------
 
@@ -368,6 +370,12 @@ fn_de_ <- function(
   sc[["SCT"]]@SCTModel.list <- list(sc[["SCT"]]@SCTModel.list[[1]])
   sc <- Seurat::PrepSCTFindMarkers(sc)
 
+  sc@meta.data |> count(.data[[.group.by]]) |> pull(n) -> n_groups
+  if (any(n_groups < 3)) {
+    log_warn("Some groups have fewer than 3 cells, skipping DE")
+    return(NULL)
+  }
+
   export(
     sc,
     path_sc_prepsctfindmarker
@@ -535,13 +543,17 @@ fn_variant_ <- function(
       .celltype = .celltype
     )
 
-    log_info("GO enrichment for {thevariant} Heteroplasmy vs Sufficient reads")
-    fn_go_(
-      thevariant = thevariant,
-      p_hetero_high_vs_low = p_hetero_vs_sufficient,
-      .prefix = "hetero_vs_sufficient",
-      .celltype = .celltype
-    )
+    if (!is.null(p_hetero_vs_sufficient)) {
+      log_info(
+        "GO enrichment for {thevariant} Heteroplasmy vs Sufficient reads"
+      )
+      fn_go_(
+        thevariant = thevariant,
+        p_hetero_high_vs_low = p_hetero_vs_sufficient,
+        .prefix = "hetero_vs_sufficient",
+        .celltype = .celltype
+      )
+    }
     log_success(
       "Finished analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
     )
@@ -615,15 +627,17 @@ fn_variant_ <- function(
     .celltype = .celltype
   )
 
-  log_info(
-    "GO enrichment for  {thevariant} Heteroplasmy high {.label_high} vs low {.label_low}"
-  )
-  fn_go_(
-    thevariant = thevariant,
-    p_hetero_high_vs_low = p_hetero_high_vs_low,
-    .prefix = hetero_label,
-    .celltype = .celltype
-  )
+  if (!is.null(p_hetero_high_vs_low)) {
+    log_info(
+      "GO enrichment for  {thevariant} Heteroplasmy high {.label_high} vs low {.label_low}"
+    )
+    fn_go_(
+      thevariant = thevariant,
+      p_hetero_high_vs_low = p_hetero_high_vs_low,
+      .prefix = hetero_label,
+      .celltype = .celltype
+    )
+  }
   log_success(
     "Finished analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
   )
@@ -715,16 +729,18 @@ fn_variant_vaf_ <- function(
     .tmpdir = "deg_merge_vaf"
   )
 
-  log_info(
-    "GO enrichment for  {thevariant} Heteroplasmy high {.label_high} vs low {.label_low}"
-  )
-  fn_go_(
-    thevariant = thevariant,
-    p_hetero_high_vs_low = p_hetero_high_vs_low,
-    .prefix = hetero_label,
-    .celltype = .celltype,
-    .tmpdir = "go_merge_vaf"
-  )
+  if (!is.null(p_hetero_high_vs_low)) {
+    log_info(
+      "GO enrichment for  {thevariant} Heteroplasmy high {.label_high} vs low {.label_low}"
+    )
+    fn_go_(
+      thevariant = thevariant,
+      p_hetero_high_vs_low = p_hetero_high_vs_low,
+      .prefix = hetero_label,
+      .celltype = .celltype,
+      .tmpdir = "go_merge_vaf"
+    )
+  }
   log_success(
     "Finished analysis for {thevariant} with {hetero_label}"
   )
