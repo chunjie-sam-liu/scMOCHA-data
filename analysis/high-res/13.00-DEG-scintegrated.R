@@ -388,7 +388,12 @@ HOMO_HETE_VARIANTS |>
     file_exists = file.exists(sc_file)
   ) |>
   dplyr::filter(file_exists) |>
-  tidyr::nest(.by = variant, .key = "gseid_srrid") -> VARIANT_GSEID_SRRID_SCFILE
+  tidyr::nest(.by = variant, .key = "gseid_srrid") |>
+  dplyr::mutate(
+    n = purrr::map_int(gseid_srrid, nrow)
+  ) |>
+  dplyr::arrange(n) -> VARIANT_GSEID_SRRID_SCFILE
+
 
 VARIANT_GSEID_SRRID_SCFILE |>
   dplyr::mutate(
