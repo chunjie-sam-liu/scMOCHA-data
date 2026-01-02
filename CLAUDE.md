@@ -20,9 +20,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use `conda activate renv && Rscript` to run R scripts from command line
 - NEVER use `conda run -n renv Rscript` - it hangs/stucks
 - Don't read all the running R script logs and errs, that's too much.
-- Export the logs and errors to a file, and only grep and read lines of the log file to find errors.
+- Export the logs and errors to a temp file, and only grep and read lines of the log file to find errors.
 - After find errors, fix them in the code.
 
+
+## AI Conversation Tracking
+Store in: `logs/{today}-{title-short-name}-{ai-model}.md`
 
 ## Project Overview
 

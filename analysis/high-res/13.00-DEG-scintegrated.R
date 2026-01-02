@@ -22,7 +22,6 @@ dims = 1:30
 
 GetoptLong("verbose!", "print messages")
 
-
 logger::log_threshold(logger::TRACE)
 logger::log_layout(logger::layout_glue_colors)
 
@@ -36,6 +35,10 @@ outdirnotuse <- path(
 scmergedir <- outdirnotuse / "scmerge"
 scintegrateddir <- outdirnotuse / "integrated"
 
+# Ensure output directories exist
+fs::dir_create(scmergedir)
+fs::dir_create(scintegrateddir)
+
 cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
@@ -45,7 +48,6 @@ ALLVARIANTS <- import(
 
 HOMO_HETE_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
-
 
 # load conn ---------------------------------------------------------------
 
@@ -66,7 +68,7 @@ dplyr::tbl(
 #' Very important function
 #' @example fn_plot_cell_af_depth_forplot("10398A>G", "GSM5494107")
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  source("analysis/00-colors.R")
+  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
@@ -317,7 +319,21 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
 
   # step 2, load sc_list
   fn_load_sc_list(df) -> sc_list_loaded
-  log_success("Step 2: sc_list for variant {thevariant} loaded.")
+
+  # Filter out NULL entries from sc_list_loaded
+  sc_list_loaded <- Filter(Negate(is.null), sc_list_loaded)
+
+  if (length(sc_list_loaded) == 0) {
+    log_warn(
+      "No valid Seurat objects loaded for variant {thevariant}, skipping."
+    )
+    return(NULL)
+  }
+
+  n_samples <- length(sc_list_loaded)
+  log_success(
+    "Step 2: sc_list for variant {thevariant} loaded. {n_samples} valid objects."
+  )
 
   # # step 3, get var features
   fn_get_var_features(sc_list_loaded) -> var_features
@@ -354,21 +370,32 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
     Seurat::ScaleData() |>
     Seurat::RunPCA() |>
     Seurat::FindNeighbors(
-      dims = dims,
+      dims = 1:30,
       reduction = "pca"
     ) -> sc_merge
 
-  sc_merge <- Seurat::IntegrateLayers(
-    object = sc_merge,
-    method = CCAIntegration,
-    orig.reduction = "pca",
-    new.reduction = "integrated.cca",
-    verbose = FALSE
-  )
-
-  cli_alert_success("Finished integration layers")
-  sc_merge[["RNA"]] <- SeuratObject::JoinLayers(sc_merge[["RNA"]])
-  cli_alert_success("Finished joining layers")
+  # Only integrate if there are multiple samples (layers)
+  n_layers <- length(SeuratObject::Layers(
+    sc_merge,
+    assay = "RNA",
+    search = "counts"
+  ))
+  if (n_layers >= 2) {
+    sc_merge <- Seurat::IntegrateLayers(
+      object = sc_merge,
+      method = CCAIntegration,
+      orig.reduction = "pca",
+      new.reduction = "integrated.cca",
+      verbose = FALSE
+    )
+    cli_alert_success("Finished integration layers for variant {thevariant}")
+    sc_merge[["RNA"]] <- SeuratObject::JoinLayers(sc_merge[["RNA"]])
+    cli_alert_success("Finished joining layers for variant {thevariant}")
+  } else {
+    log_info(
+      "Only {n_layers} layer(s) for variant {thevariant}, skipping integration."
+    )
+  }
 
   export(
     sc_merge,
@@ -380,7 +407,6 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
   gc()
   1
 }
-
 
 # body --------------------------------------------------------------------
 
@@ -407,6 +433,20 @@ HOMO_HETE_VARIANTS |>
   ) |>
   dplyr::arrange(n) -> VARIANT_GSEID_SRRID_SCFILE
 
+
+VARIANT_GSEID_SRRID_SCFILE |>
+  tibble::rowid_to_column("idx") |>
+  dplyr::filter(n == 3)
+
+# fn_merge_sc_list_variant(
+#   VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1]],
+#   VARIANT_GSEID_SRRID_SCFILE$variant[[1]]
+# )
+
+# fn_merge_sc_list_variant(
+#   VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1250]],
+#   VARIANT_GSEID_SRRID_SCFILE$variant[[1250]]
+# )
 
 VARIANT_GSEID_SRRID_SCFILE |>
   dplyr::mutate(
