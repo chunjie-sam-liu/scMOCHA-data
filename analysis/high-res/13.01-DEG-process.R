@@ -496,7 +496,7 @@ fn_go_ <- function(
 fn_load_sc <- function(thevariant) {
   library(Seurat)
   sc <- import(
-    outdirnotuse / "qses" / glue::glue("sc_merge.sct.{thevariant}.qs")
+    outdirnotuse / "scintegrated" / glue::glue("sc.{thevariant}.integrated.qs")
   )
   sc
 }

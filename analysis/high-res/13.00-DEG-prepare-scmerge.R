@@ -33,6 +33,7 @@ outdirnotuse <- path(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
 )
 scmergedir <- outdirnotuse / "scmerge"
+scintegrateddir <- outdirnotuse / "integrated"
 
 cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
 
@@ -163,7 +164,7 @@ fn_load_sc_list <- function(df) {
     df$sc_file,
     function(f) {
       .sc <- import(f)
-      .sc[["SCT"]]@scale.data <- matrix()
+      # .sc[["SCT"]]@scale.data <- matrix()
       .sc
     }
   )
@@ -196,7 +197,7 @@ fn_merge_with_progress <- function(sc_list_loaded, ...) {
   cli::cli_progress_done()
   return(out)
 }
-fn_merge_ <- function(sc_list_loaded, forplot_list, thevariant, var_features) {
+fn_merge <- function(sc_list_loaded, forplot_list, thevariant) {
   if (length(sc_list_loaded) < 2) {
     log_info("Less than 2 sc objects for variant {thevariant}, cannot merge.")
 
@@ -235,29 +236,63 @@ fn_merge_ <- function(sc_list_loaded, forplot_list, thevariant, var_features) {
 
     sc_merge@meta.data <- .d_merge
   }
-  Seurat::VariableFeatures(sc_merge) <- var_features
+  # Seurat::VariableFeatures(sc_merge) <- var_features
+  sc_merge
+}
+
+fn_norm <- function(sc_merge) {
+  sc_merge |>
+    Seurat::NormalizeData() |>
+    Seurat::FindVariableFeatures() |>
+    Seurat::ScaleData() |>
+    Seurat::RunPCA() |>
+    Seurat::FindNeighbors(
+      dims = dims,
+      reduction = "pca"
+    ) -> sc_merge
   sc_merge
 }
 
 fn_integrated <- function(sc_merge) {
-  DefaultAssay(sc_merge) <- "SCT"
-  sc_merge <- Seurat::ScaleData(
-    sc_merge,
-    assay = "SCT",
-    verbose = FALSE
-  )
+  obj <- fn_norm(sc_merge)
 
   obj <- Seurat::IntegrateLayers(
-    object = sc_merge,
+    object = obj,
     method = CCAIntegration,
-    orig.reduction = "SCT",
+    orig.reduction = "pca",
     new.reduction = "integrated.cca",
     verbose = FALSE
   )
+
+  cli_alert_success("Finished integration layers")
+  obj[["RNA"]] <- SeuratObject::JoinLayers(obj[["RNA"]])
+  cli_alert_success("Finished joining layers")
+
+  # obj <- obj |>
+  #   Seurat::FindNeighbors(
+  #     reduction = "integrated.cca",
+  #     dims = dims
+  #   ) |>
+  #   Seurat::FindClusters(
+  #     resolution = resolution,
+  #     cluster.name = "clusters_integrated"
+  #   ) |>
+  #   Seurat::RunTSNE(
+  #     reduction = "integrated.cca",
+  #     dims = dims,
+  #     reduction.name = "tsne"
+  #   ) |>
+  #   Seurat::RunUMAP(
+  #     reduction = "integrated.cca",
+  #     dims = dims,
+  #     reduction.name = "umap"
+  #   )
+
+  obj
 }
 fn_merge_sc_list_variant <- function(df, thevariant) {
-  # df <- VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1868]]
-  # thevariant <- VARIANT_GSEID_SRRID_SCFILE$variant[[1868]]
+  # df <- VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1360]]
+  # thevariant <- VARIANT_GSEID_SRRID_SCFILE$variant[[1360]]
 
   log_info("Merging sc objects for variant {thevariant}")
 
@@ -269,20 +304,20 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
   fn_load_sc_list(df) -> sc_list_loaded
   log_success("Step 2: sc_list for variant {thevariant} loaded.")
 
-  # step 3, get var features
-  fn_get_var_features(sc_list_loaded) -> var_features
-  log_success("Step 3: var_features for variant {thevariant} obtained.")
+  # # step 3, get var features
+  # fn_get_var_features(sc_list_loaded) -> var_features
+  # log_success("Step 3: var_features for variant {thevariant} obtained.")
 
   # step 4, merge
-  fn_merge_(
+  fn_merge(
     sc_list_loaded,
     forplot_list,
-    thevariant,
-    var_features
+    thevariant
   ) -> sc_merge
   log_success("Step 4: sc_merge for variant {thevariant} obtained.")
 
   # clean up
+  rm(forplot_list)
   rm(sc_list_loaded)
   gc()
   log_success("Clean up done for variant sc_list_loaded.")
@@ -290,11 +325,39 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
   # step 5, export sc_merge
   export(
     sc_merge,
-    scmergedir / glue::glue("sc_merge.sct.{thevariant}.qs")
+    scmergedir / glue::glue("sc.{thevariant}.merge.qs")
   )
   log_success("Step 5: sc_merge for variant {thevariant} exported.")
 
   # step 6, integrated analysis
+  # sc_merge <- fn_integrated(sc_merge)
+  # to reduce mem, dont use function.
+  sc_merge |>
+    Seurat::NormalizeData() |>
+    Seurat::FindVariableFeatures() |>
+    Seurat::ScaleData() |>
+    Seurat::RunPCA() |>
+    Seurat::FindNeighbors(
+      dims = dims,
+      reduction = "pca"
+    ) -> sc_merge
+
+  sc_merge <- Seurat::IntegrateLayers(
+    object = sc_merge,
+    method = CCAIntegration,
+    orig.reduction = "pca",
+    new.reduction = "integrated.cca",
+    verbose = FALSE
+  )
+
+  cli_alert_success("Finished integration layers")
+  sc_merge[["RNA"]] <- SeuratObject::JoinLayers(sc_merge[["RNA"]])
+  cli_alert_success("Finished joining layers")
+
+  export(
+    sc_merge,
+    scintegrateddir / glue::glue("sc.{thevariant}.integrated.qs")
+  )
 
   # sc_merge
   rm(sc_merge)
@@ -309,21 +372,35 @@ HOMO_HETE_VARIANTS |>
   dplyr::select(gseid, srrid, variant, variant_type) |>
   dplyr::distinct() |>
   dplyr::mutate(
-    sc_file = file.path(
+    sc_file = path(
       "/home/liuc9/github/scMOCHA-data/data/",
       gseid,
       "final",
       srrid,
-      "de",
-      "sc_azimuth.sct.qs"
+      "for_integration",
+      "sc_azimuth.qs"
     )
   ) |>
   dplyr::mutate(
     file_exists = file.exists(sc_file)
   ) |>
+  dplyr::filter(file_exists) |>
   tidyr::nest(.by = variant, .key = "gseid_srrid") -> VARIANT_GSEID_SRRID_SCFILE
 
-VARIANT_GSEID_SRRID_SCFILE
+VARIANT_GSEID_SRRID_SCFILE |>
+  dplyr::mutate(
+    a = parallel::mclapply(
+      X = gseid_srrid,
+      FUN = function(df, thevariant) {
+        fn_merge_sc_list_variant(
+          df,
+          thevariant
+        )
+      },
+      thevariant = variant,
+      mc.cores = 10
+    )
+  )
 
 # footer ------------------------------------------------------------------
 
