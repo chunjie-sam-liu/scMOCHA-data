@@ -164,9 +164,21 @@ fn_load_sc_list <- function(df) {
   lapply(
     df$sc_file,
     function(f) {
-      .sc <- import(f)
-      # .sc[["SCT"]]@scale.data <- matrix()
-      .sc
+      tryCatch(
+        {
+          .sc <- qs::qread(f)
+          if (is.null(.sc)) {
+            log_error("Failed to load file: {f}")
+            return(NULL)
+          }
+          # .sc[["SCT"]]@scale.data <- matrix()
+          .sc
+        },
+        error = function(e) {
+          log_error("Error loading file {f}: {e$message}")
+          return(NULL)
+        }
+      )
     }
   )
 }

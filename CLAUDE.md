@@ -16,6 +16,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - You should update the plan as you work.
 - After you complete tasks in the plan, you should update and append detailed description of the changes you made, so following tasks can be easily hand over to other engineers.
 
+## Run and debug R scripts:
+- Use `conda activate renv && Rscript` to run R scripts from command line
+- NEVER use `conda run -n renv Rscript` - it hangs/stucks
+- Don't read all the running R script logs and errs, that's too much.
+- Export the logs and errors to a file, and only grep and read lines of the log file to find errors.
+- After find errors, fix them in the code.
+
 
 ## Project Overview
 
