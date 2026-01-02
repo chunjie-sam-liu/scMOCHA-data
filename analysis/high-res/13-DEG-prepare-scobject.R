@@ -89,6 +89,19 @@ fn_norm <- function(thegseid, thesrrid) {
     "final",
     thesrrid
   )
+  .forintegrationdir <- .dir / "for_integration"
+  dir_create(.forintegrationdir)
+  if (
+    file_exists(path(
+      .forintegrationdir,
+      "sc_azimuth.qs"
+    ))
+  ) {
+    cli_alert_info(
+      "Sample {thegseid} - {thesrrid} already processed, skip."
+    )
+    return(NULL)
+  }
 
   sc_azimuth <- fn_load_sc(
     .filepath = path(
@@ -99,9 +112,6 @@ fn_norm <- function(thegseid, thesrrid) {
     thesrrid = thesrrid
   )
 
-  .forintegrationdir <- .dir / "for_integration"
-  dir_create(.forintegrationdir)
-
   export(
     sc_azimuth,
     path(
@@ -110,19 +120,19 @@ fn_norm <- function(thegseid, thesrrid) {
     )
   )
 
-  sc_azimuth |>
-    Seurat::NormalizeData() |>
-    Seurat::FindVariableFeatures() |>
-    Seurat::ScaleData() |>
-    Seurat::RunPCA() -> sc_azimuth
+  # sc_azimuth |>
+  #   Seurat::NormalizeData() |>
+  #   Seurat::FindVariableFeatures() |>
+  #   Seurat::ScaleData() |>
+  #   Seurat::RunPCA() -> sc_azimuth
 
-  export(
-    sc_azimuth,
-    path(
-      .forintegrationdir,
-      "sc_azimuth.norm.qs"
-    )
-  )
+  # export(
+  #   sc_azimuth,
+  #   path(
+  #     .forintegrationdir,
+  #     "sc_azimuth.norm.qs"
+  #   )
+  # )
 }
 
 # body --------------------------------------------------------------------
@@ -131,7 +141,7 @@ HOMO_HETE_VARIANTS |>
   dplyr::select(gseid, srrid) |>
   dplyr::distinct() -> VARIANT_GSEID_SRRID
 
-
+cli_alert_info("Start processing {nrow(VARIANT_GSEID_SRRID)} samples")
 VARIANT_GSEID_SRRID |>
   dplyr::mutate(
     sct = parallel::mcmapply(
@@ -142,6 +152,8 @@ VARIANT_GSEID_SRRID |>
       mc.cores = 20
     )
   ) -> gseid_srrid_srrdir_sct
+
+cli_alert_success("Finished processing all samples")
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------

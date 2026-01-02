@@ -18,6 +18,7 @@ VERSION = "v0.0.1"
 # default: default value specified here.
 
 verbose = TRUE
+dims = 1:30
 
 GetoptLong("verbose!", "print messages")
 
@@ -397,14 +398,14 @@ HOMO_HETE_VARIANTS |>
 
 VARIANT_GSEID_SRRID_SCFILE |>
   dplyr::mutate(
-    a = parallel::mclapply(
-      X = gseid_srrid,
+    a = parallel::mcmapply(
       FUN = function(df, thevariant) {
         fn_merge_sc_list_variant(
           df,
           thevariant
         )
       },
+      df = gseid_srrid,
       thevariant = variant,
       mc.cores = 10
     )
