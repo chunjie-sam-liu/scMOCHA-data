@@ -189,8 +189,7 @@ fn_merge_with_progress <- function(sc_list_loaded, ...) {
     cli::cli_progress_update()
     out <- merge(
       out,
-      sc_list_loaded[[i]],
-      merge.data = FALSE,
+      sc_list_loaded[[i]]
       ...
     )
   }
