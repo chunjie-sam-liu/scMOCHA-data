@@ -962,15 +962,42 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
 }
 
 \() {
+  rawdir <- path("/mnt/isilon/u01_project/large-scale/liuc9/raw")
+  thgseid <- "GSE233844"
+  thesrrid <- "GSM7437874"
+  thevariant <- "7757G>A"
   fn_plot_all(
-    thepath = "/mnt/isilon/u01_project/large-scale/liuc9/raw/GSE233844/final/GSM7437874",
-    thevariants = c("7757G>A")
+    thepath = rawdir / thgseid / "final" / thesrrid,
+    thevariants = thevariant
   ) -> p_vaf_feature
   outdir <- path(
     "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   )
   ggsave(
-    filename = "7757G>A-selected_variants_vaf_featureplot.pdf" |>
+    filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>
+      glue::glue(),
+    path = outdir,
+    plot = p_vaf_feature,
+    width = 12,
+    height = 4,
+  )
+}
+
+
+\() {
+  rawdir <- path("/mnt/isilon/u01_project/large-scale/liuc9/raw")
+  thgseid <- "GSE149689"
+  thesrrid <- "GSM4509015"
+  thevariant <- "9033A>G"
+  fn_plot_all(
+    thepath = rawdir / thgseid / "final" / thesrrid,
+    thevariants = thevariant
+  ) -> p_vaf_feature
+  outdir <- path(
+    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  )
+  ggsave(
+    filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>
       glue::glue(),
     path = outdir,
     plot = p_vaf_feature,
