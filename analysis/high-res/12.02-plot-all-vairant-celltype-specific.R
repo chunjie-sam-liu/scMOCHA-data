@@ -55,7 +55,7 @@ source(
 
 # body --------------------------------------------------------------------
 ALLVARIANTS_TEST |>
-  dplyr::filter(p.value < 0.05) |>
+  # dplyr::filter(p.value < 0.05) |>
   dplyr::select(variant, gseid, srrid) |>
   tidyr::nest(.by = variant, .key = "gsesrrid") -> ALLVARIANTS_TEST_SIG
 

@@ -48,7 +48,8 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 # load conn ---------------------------------------------------------------
 conn_all_hetero_af <- DBI::dbConnect(
   duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1"
+  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  readonly = TRUE
 )
 DBI::dbListTables(conn_all_hetero_af)
 # DBI::dbDisconnect(conn_all_hetero_af)
