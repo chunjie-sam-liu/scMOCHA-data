@@ -189,14 +189,14 @@ fn_merge_with_progress <- function(sc_list_loaded, ...) {
     cli::cli_progress_update()
     out <- merge(
       out,
-      sc_list_loaded[[i]]
+      sc_list_loaded[[i]],
       ...
     )
   }
   cli::cli_progress_done()
   return(out)
 }
-fn_merge <- function(sc_list_loaded, forplot_list, thevariant) {
+fn_merge <- function(sc_list_loaded, forplot_list, thevariant, var_features) {
   if (length(sc_list_loaded) < 2) {
     log_info("Less than 2 sc objects for variant {thevariant}, cannot merge.")
 
@@ -235,7 +235,7 @@ fn_merge <- function(sc_list_loaded, forplot_list, thevariant) {
 
     sc_merge@meta.data <- .d_merge
   }
-  # Seurat::VariableFeatures(sc_merge) <- var_features
+  Seurat::VariableFeatures(sc_merge) <- var_features
   sc_merge
 }
 
@@ -290,8 +290,11 @@ fn_integrated <- function(sc_merge) {
   obj
 }
 fn_merge_sc_list_variant <- function(df, thevariant) {
-  # df <- VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1360]]
-  # thevariant <- VARIANT_GSEID_SRRID_SCFILE$variant[[1360]]
+  # VARIANT_GSEID_SRRID_SCFILE |>
+  #   tibble::rowid_to_column("idx") |>
+  #   dplyr::filter(variant == "3240C>G")
+  # df <- VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1438]]
+  # thevariant <- VARIANT_GSEID_SRRID_SCFILE$variant[[1438]]
 
   log_info("Merging sc objects for variant {thevariant}")
 
@@ -304,14 +307,15 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
   log_success("Step 2: sc_list for variant {thevariant} loaded.")
 
   # # step 3, get var features
-  # fn_get_var_features(sc_list_loaded) -> var_features
-  # log_success("Step 3: var_features for variant {thevariant} obtained.")
+  fn_get_var_features(sc_list_loaded) -> var_features
+  log_success("Step 3: var_features for variant {thevariant} obtained.")
 
   # step 4, merge
   fn_merge(
     sc_list_loaded,
     forplot_list,
-    thevariant
+    thevariant,
+    var_features
   ) -> sc_merge
   log_success("Step 4: sc_merge for variant {thevariant} obtained.")
 
