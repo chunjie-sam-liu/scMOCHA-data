@@ -436,7 +436,9 @@ HOMO_HETE_VARIANTS |>
 
 VARIANT_GSEID_SRRID_SCFILE |>
   tibble::rowid_to_column("idx") |>
-  dplyr::filter(variant == "6227T>C")
+  dplyr::filter(
+    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "7337G>A")
+  )
 # dplyr::filter(n == 3)
 
 # fn_merge_sc_list_variant(
