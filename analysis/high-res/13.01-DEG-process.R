@@ -36,7 +36,12 @@ outdirnotuse <- path(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
 )
 cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+scmergedir <- outdirnotuse / "scmerge"
+scintegrateddir <- outdirnotuse / "scintegrated"
 
+# Ensure output directories exist
+fs::dir_create(scmergedir)
+fs::dir_create(scintegrateddir)
 
 # load conn ---------------------------------------------------------------
 
@@ -338,59 +343,19 @@ fn_de_ <- function(
   # )
   meta.data <- sc@meta.data
 
-  .outdir <- path(
-    outdirnotuse / "deg" / thevariant / .tmpdir
-  )
-  # dir_create(.outdir)
+  .outdir <- outdirnotuse / "deg" / thevariant / .tmpdir
 
   if (!is.null(.celltype)) {
-    .outdir <- path(
-      outdirnotuse / "deg" / thevariant / .tmpdir / .celltype
-    )
-    # dir_create(.outdir)
+    .outdir <- outdirnotuse / "deg" / thevariant / .tmpdir / .celltype
   }
   dir_create(.outdir)
-  path_sc_prepsctfindmarker <- path(
-    .outdir,
-    glue::glue(
-      "sc_prepsctfindmarker.{thevariant}.{ifelse(is.null(.celltype), 'all', .celltype)}_.qs"
-    )
-  )
-  # if (file_exists(path_sc_prepsctfindmarker)) {
-  #   log_fatal(
-  #     "Load existing {path_sc_prepsctfindmarker}"
-  #   )
-  #   sc <- import(path_sc_prepsctfindmarker)
-  # } else {
-  sc <- Seurat::PrepSCTFindMarkers(
-    sc,
-  )
-
-  sc@meta.data <- meta.data
-  sc[["SCT"]]@SCTModel.list <- list(sc[["SCT"]]@SCTModel.list[[1]])
-  sc <- Seurat::PrepSCTFindMarkers(sc)
-
-  sc@meta.data |> count(.data[[.group.by]]) |> pull(n) -> n_groups
-  if (any(n_groups < 3)) {
-    log_warn("Some groups have fewer than 3 cells, skipping DE")
-    return(NULL)
-  }
-
-  export(
-    sc,
-    path_sc_prepsctfindmarker
-  )
-  # }
-
-  # sc <- Seurat::PrepSCTFindMarkers(
-  #   sc,
-  # )
+  DefaultAssay(sc) <- "RNA"
 
   markers_hetero_high_vs_low <- Seurat::FindMarkers(
     object = sc,
     ident.1 = .ident.1,
     ident.2 = .ident.2,
-    assay = "SCT",
+    assay = "RNA",
     slot = "data",
     test.use = "wilcox",
     group.by = .group.by,
@@ -694,7 +659,7 @@ fn_variant_vaf_ <- function(
       )
     ) -> sc@meta.data
 
-  DefaultAssay(sc) <- "SCT"
+  # DefaultAssay(sc) <- "SCT"
 
   sc@meta.data |>
     dplyr::count(cellvarianttype2) |>
@@ -816,6 +781,40 @@ fn_variant_cell_vaf_ <- function(thevariant, sc, .vs = 0.4) {
   )
 }
 
+
+fn_main <- function(thevariant) {
+  vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
+  log_info("Processing variant {thevariant}")
+
+  sc <- fn_load_sc(thevariant)
+  log_success("Loaded sc for variant {thevariant}")
+
+  log_info("Running variant analysis for {thevariant} with vss")
+  parallel::mclapply(
+    vaf_cutoff,
+    function(.vs) {
+      fn_variant_vaf_(
+        thevariant = thevariant,
+        sc = sc,
+        .vs = .vs,
+        .celltype = NULL
+      )
+    },
+    mc.cores = 1
+  )
+  log_success("Finished variant analysis for {thevariant} with vss")
+
+  purrr::map(
+    vaf_cutoff,
+    .f = \(.vs) {
+      fn_variant_cell_vaf_(
+        thevariant = thevariant,
+        sc = sc,
+        .vs = .vs
+      )
+    }
+  )
+}
 # body --------------------------------------------------------------------
 
 thevariants <- c(
@@ -837,10 +836,8 @@ thevariants <- c(
   "10398A>G"
 )
 
-vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
 
-
-thevariant <- "4175G>A"
+thevariant <- "9006A>G"
 
 # thevariants <- c(
 #   "4175G>A",
@@ -855,41 +852,12 @@ thevariants <- c(
 cli_alert_info(
   "Start analysis for variants: {paste(thevariants, collapse = ', ')}"
 )
-thevariants |>
-  purrr::map(
-    .f = \(thevariant) {
-      log_info("Processing variant {thevariant}")
-
-      sc <- fn_load_sc(thevariant)
-      log_success("Loaded sc for variant {thevariant}")
-
-      log_info("Running variant analysis for {thevariant} with vss")
-      parallel::mclapply(
-        vaf_cutoff,
-        function(.vs) {
-          fn_variant_vaf_(
-            thevariant = thevariant,
-            sc = sc,
-            .vs = .vs,
-            .celltype = NULL
-          )
-        },
-        mc.cores = 1
-      )
-      log_success("Finished variant analysis for {thevariant} with vss")
-
-      purrr::map(
-        vaf_cutoff,
-        .f = \(.vs) {
-          fn_variant_cell_vaf_(
-            thevariant = thevariant,
-            sc = sc,
-            .vs = .vs
-          )
-        }
-      )
-    }
-  ) -> res_all_variants
+# thevariants |>
+#   purrr::map(
+#     .f = \(thevariant) {
+#       fn_main(thevariant)
+#     }
+#   ) -> res_all_variants
 
 # footer ------------------------------------------------------------------
 

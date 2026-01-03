@@ -33,7 +33,7 @@ outdirnotuse <- path(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
 )
 scmergedir <- outdirnotuse / "scmerge"
-scintegrateddir <- outdirnotuse / "integrated"
+scintegrateddir <- outdirnotuse / "scintegrated"
 
 # Ensure output directories exist
 fs::dir_create(scmergedir)
