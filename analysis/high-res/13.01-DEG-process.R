@@ -793,24 +793,42 @@ fn_main <- function(thevariant) {
   parallel::mclapply(
     vaf_cutoff,
     function(.vs) {
-      fn_variant_vaf_(
-        thevariant = thevariant,
-        sc = sc,
-        .vs = .vs,
-        .celltype = NULL
+      tryCatch(
+        expr = {
+          fn_variant_vaf_(
+            thevariant = thevariant,
+            sc = sc,
+            .vs = .vs,
+            .celltype = NULL
+          )
+        },
+        error = function(e) {
+          log_error(
+            "Error in variant {thevariant} with vaf cutoff {.vs}: {e$message}"
+          )
+        }
       )
     },
-    mc.cores = 1
+    mc.cores = 3
   )
   log_success("Finished variant analysis for {thevariant} with vss")
 
   purrr::map(
     vaf_cutoff,
     .f = \(.vs) {
-      fn_variant_cell_vaf_(
-        thevariant = thevariant,
-        sc = sc,
-        .vs = .vs
+      tryCatch(
+        expr = {
+          fn_variant_cell_vaf_(
+            thevariant = thevariant,
+            sc = sc,
+            .vs = .vs
+          )
+        },
+        error = function(e) {
+          log_error(
+            "Error in celltype-specific variant {thevariant} with vaf cutoff {.vs}: {e$message}"
+          )
+        }
       )
     }
   )
@@ -838,7 +856,10 @@ thevariants <- c(
 
 
 thevariant <- "9006A>G"
+thevariant <- "6227T>C"
 
+fn_main(thevariant)
+m <- fn_load_sc("7702G>A")
 # thevariants <- c(
 #   "4175G>A",
 #   "9025G>A",
