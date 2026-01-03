@@ -204,17 +204,17 @@ fn_plot_go <- function(.go, .topn = Inf, .ont = c("BP", "CC", "MF")) {
   .ont_fill <- base_fill[.ont]
   x_label <- ont_fullname[.ont]
 
-  .go %>%
-    tibble::as_tibble() %>%
+  .go |>
+    tibble::as_tibble() |>
     dplyr::mutate(
       Description = stringr::str_wrap(
         stringr::str_to_sentence(string = Description),
         width = 60
       )
-    ) %>%
-    dplyr::mutate(adjp = -log10(p.adjust)) %>%
-    dplyr::select(ID, Description, adjp, Count, geneID) %>%
-    dplyr::arrange(adjp, Count) %>%
+    ) |>
+    dplyr::mutate(adjp = -log10(p.adjust)) |>
+    dplyr::select(ID, Description, adjp, Count, geneID) |>
+    dplyr::arrange(adjp, Count) |>
     dplyr::mutate(
       Description = factor(Description, levels = Description)
     ) -> .go_bp_for_plot
@@ -667,7 +667,7 @@ fn_variant_vaf_ <- function(
     tibble::deframe() -> n_cellvarianttype2
 
   log_info(
-    "Start DE for Heteroplasmy {thevariant}  high {.label_high} vs low {.label_low}"
+    "Start DE for Heteroplasmy {thevariant}  high {.label_high} (n={scales::label_comma()(n_cellvarianttype2[.label_high])}) vs low {.label_low} (n={scales::label_comma()(n_cellvarianttype2[.label_low])})"
   )
 
   p_hetero_high_vs_low <- fn_de_(
@@ -855,11 +855,11 @@ thevariants <- c(
 )
 
 
-thevariant <- "9006A>G"
-thevariant <- "6227T>C"
+# thevariant <- "9006A>G"
+# thevariant <- "6227T>C"
 
-fn_main(thevariant)
-m <- fn_load_sc("7702G>A")
+# fn_main(thevariant)
+# m <- fn_load_sc("7702G>A")
 # thevariants <- c(
 #   "4175G>A",
 #   "9025G>A",
@@ -873,12 +873,12 @@ thevariants <- c(
 cli_alert_info(
   "Start analysis for variants: {paste(thevariants, collapse = ', ')}"
 )
-# thevariants |>
-#   purrr::map(
-#     .f = \(thevariant) {
-#       fn_main(thevariant)
-#     }
-#   ) -> res_all_variants
+thevariants |>
+  purrr::map(
+    .f = \(thevariant) {
+      fn_main(thevariant)
+    }
+  ) -> res_all_variants
 
 # footer ------------------------------------------------------------------
 
