@@ -3,8 +3,11 @@
 load_pkg(
   ggdist
 )
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 dotenv(".env")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
 
 # thevariant <- "7428G>A"
 # thegseid <- "GSE161354"

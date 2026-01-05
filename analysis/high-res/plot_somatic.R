@@ -1,6 +1,9 @@
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
-
 dotenv(".env")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
+
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
   conn <- conn_db(
     Sys.getenv("DUCKDB_PATH"),
@@ -287,7 +290,10 @@ fn_plot_cell_number_of_cells <- function(forplot) {
 }
 
 fn_plot_cell_af_somatic_variant <- function(forplot) {
-  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+  source(path(
+    Sys.getenv("HIGHRESDIR"),
+    "00-colors.R"
+  ))
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
   thetheme <- theme(

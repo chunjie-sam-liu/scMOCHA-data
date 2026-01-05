@@ -1,5 +1,9 @@
+dotenv(".env")
 # pseudo-bulk
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
 ALLVARIANTSFORPLOT <- import(
   path("/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES") /
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"

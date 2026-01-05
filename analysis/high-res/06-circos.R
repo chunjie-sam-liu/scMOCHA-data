@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -78,7 +80,10 @@ allvariants |>
 
 # function ----------------------------------------------------------------
 
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
 fn_plot_circos <- function(
   color_circos_track = c(
     "phastCons100way" = "#FFD700",

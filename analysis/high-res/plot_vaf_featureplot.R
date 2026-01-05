@@ -1,3 +1,5 @@
+dotenv(".env")
+
 fn_umap_coord <- function(.x) {
   .col_names <- c("UMAP_1", "UMAP_2")
 
@@ -61,7 +63,10 @@ fn_plot_vaf_featureplot <- function(.thevariant, sc, .cell_annotation = NULL) {
     file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
   ) |>
     dplyr::arrange(cancer_types)
-  source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+  source(path(
+    Sys.getenv("HIGHRESDIR"),
+    "00-colors.R"
+  ))
   sc$cell_hetero_coverage |>
     dplyr::filter(variant == .thevariant) -> vhc
 

@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -118,7 +120,10 @@ METADATA <- import(
   ) |>
   dplyr::mutate(Sex = SEXPRED)
 
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
 
 # load conn ---------------------------------------------------------------
 

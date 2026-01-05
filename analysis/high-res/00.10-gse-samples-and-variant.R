@@ -25,9 +25,9 @@ GetoptLong("verbose!", "print messages")
 
 # load data ---------------------------------------------------------------
 
-basedir <- path("/home/liuc9/github/scMOCHA-data/data")
-foundation_out <- path(basedir, "scfoundation/out")
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz")
+basedir <- path(Sys.getenv("DATADIR"))
+foundation_out <- basedir / "scfoundation/out"
+outdir <- path(Sys.getenv("ZZZDIR"))
 
 
 #
@@ -242,7 +242,6 @@ gsmids_tobe_excluded <- c(
 
 
 #
-#
 # metadata --------------------------------------------------------------------
 #
 #
@@ -346,7 +345,7 @@ gse_dataset_metadata_full |>
 
 # save gse_dataset_metadata_full ----------------------------------------------------------
 {
-  outdir_clean <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+  outdir_clean <- Sys.getenv("CLEANDATADIR")
   export(
     gse_dataset_metadata_full,
     path(outdir_clean, "gse_dataset_metadata_full.csv"),
@@ -417,7 +416,7 @@ gse_data_loaded |>
 
 # save gse_data
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data"
+  outdir <- Sys.getenv("CLEANDATADIR")
   # data.table::fwrite(
   #   gse_data,
   #   file.path(outdir, "gse_data.csv"),

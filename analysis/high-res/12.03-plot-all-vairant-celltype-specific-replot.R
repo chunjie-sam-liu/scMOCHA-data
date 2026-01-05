@@ -42,11 +42,11 @@ workers <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", 8))
 
 # Use multicore (fork) on Linux for shared environment - much faster
 # multisession spawns separate R processes that don't share globals
-# if (.Platform$OS.type == "unix") {
-#   future::plan(future::multicore, workers = workers)
-# } else {
-#   future::plan(future::multisession, workers = workers)
-# }
+if (.Platform$OS.type == "unix") {
+  future::plan(future::multicore, workers = workers)
+} else {
+  future::plan(future::multisession, workers = workers)
+}
 
 logger::log_info(
   "Parallel workers: {workers}, plan: {class(future::plan())[1]}"
@@ -55,17 +55,16 @@ logger::log_info(
 # -----------------------------------------------------------------------------
 # Paths
 # -----------------------------------------------------------------------------
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+dotenv(".env")
+outdir <- path(Sys.getenv("OUTDIR"))
 
-outdirnotuse <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
-)
+outdirnotuse <- path(Sys.getenv("OUTDIRNOTUSE"))
 
 plot_dir <- outdirnotuse / "celltype-specific-each"
 unlink(plot_dir, recursive = TRUE)
 fs::dir_create(plot_dir)
 
-logger::log_info("Plot output dir: {plot_dir}")
+cli::cli_alert_info("Plot output dir: {plot_dir}")
 
 # -----------------------------------------------------------------------------
 # Load data
@@ -90,6 +89,8 @@ source(
 source(
   "/home/liuc9/github/scMOCHA-data/analysis/high-res/plot_individual_proportion.R"
 )
+
+DBI::dbIsValid(conn)
 
 # =============================================================================
 # Helper: safe PDF plotting with file lock
@@ -147,11 +148,11 @@ safe_pdf_with_lock <- function(file, width, height, plot_expr) {
 # =============================================================================
 # Parallel plotting
 # =============================================================================
-purrr::pwalk(
+furrr::future_pwalk(
   .l = list(
-    ALLVARIANTS_TEST_SIG$variant |> head(20),
-    ALLVARIANTS_TEST_SIG$gseid |> head(20),
-    ALLVARIANTS_TEST_SIG$srrid |> head(20)
+    ALLVARIANTS_TEST_SIG$variant,
+    ALLVARIANTS_TEST_SIG$gseid,
+    ALLVARIANTS_TEST_SIG$srrid
   ),
   .f = \(thevariant, thegseid, thesrrid) {
     # thevariant <- ALLVARIANTS_TEST_SIG$variant[[1]]
@@ -206,9 +207,11 @@ purrr::pwalk(
         print(fn_plot_hetero_pseudo_bulk(thevariant))
       }
     )
-  }
+  },
+  .options = furrr::furrr_options(seed = TRUE)
 )
 
+future::plan(future::sequential)
 # -----------------------------------------------------------------------------
 # Footer
 # -----------------------------------------------------------------------------

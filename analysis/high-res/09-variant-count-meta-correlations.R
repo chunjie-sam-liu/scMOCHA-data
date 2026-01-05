@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -32,7 +34,8 @@ outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 # source color
 source(path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R"
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
 ))
 
 # load conn ---------------------------------------------------------------

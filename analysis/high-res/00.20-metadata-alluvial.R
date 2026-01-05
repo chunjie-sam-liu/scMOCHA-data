@@ -1,3 +1,4 @@
+dotenv(".env")
 basedir <- "/home/liuc9/github/scMOCHA-data/data"
 # outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
 outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
@@ -18,7 +19,10 @@ gse_dataset_metadata_full <- import(
   )
 
 
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
+source(path(
+  Sys.getenv("HIGHRESDIR"),
+  "00-colors.R"
+))
 # ! Sankey plot for samples --------------------------------------------------------------------
 
 # meta --------------------------------------------------------------------

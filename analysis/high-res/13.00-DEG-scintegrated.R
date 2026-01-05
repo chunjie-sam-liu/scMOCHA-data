@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -68,7 +70,10 @@ dplyr::tbl(
 #' Very important function
 #' @example fn_plot_cell_af_depth_forplot("10398A>G", "GSM5494107")
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  source("/home/liuc9/github/scMOCHA-data/analysis/00-colors.R")
+  source(path(
+    Sys.getenv("HIGHRESDIR"),
+    "00-colors.R"
+  ))
 
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
