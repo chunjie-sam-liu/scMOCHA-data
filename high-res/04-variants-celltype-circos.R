@@ -9,7 +9,6 @@
 
 load_pkg(jutils)
 
-dotenv(".env")
 
 # args --------------------------------------------------------------------
 
@@ -30,8 +29,15 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+
+dotenv(".env")
+basedir <- path(Sys.getenv("BASEDIR"))
+outdir <- path(Sys.getenv("OUTDIR"))
+repodir <- path(Sys.getenv("REPODIR"))
+zzzdir <- path(Sys.getenv("ZZZDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 gse_data_variant_classification_clusteraf_bulkaf <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  outdir / "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 )
 # load conn ---------------------------------------------------------------
 
@@ -46,16 +52,16 @@ fn_plot_mtdna_circos <- function(
 ) {
   LENGTH <- 16569
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    repodir / "config/mtdna_genes_dloop.qs"
   )
 
   phastCons100way <- import(
-    "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"
+    repodir / "config/chrM.phastCons100way.wigFix.qs"
   )
 
   # af_hom is gnomad AF
   gnomad <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
+    zzzdir / "db/gnomad.qs"
   ) |>
     dplyr::filter(filters == "PASS") |>
     dplyr::select(position, af = af_hom, ac = ac_hom) |>
@@ -76,7 +82,7 @@ fn_plot_mtdna_circos <- function(
 
   # coverage
   coverage <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data_coverage.fst"
+    cleandatadir / "gse_data_coverage.fst"
   ) |>
     dplyr::mutate(
       seqnames = "MT",
@@ -95,7 +101,7 @@ fn_plot_mtdna_circos <- function(
 
   # all variants
   all_variant <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_variant.qs"
+    zzzdir / "clean-data/all_variant.qs"
   ) |>
     dplyr::mutate(
       paf = n / 577
@@ -477,7 +483,7 @@ fn_plot_mtdna_circos_celltype_variant_type <- function(
 
   # ! highlights --------------------------------------------------------------------
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    repodir / "config/mtdna_genes_dloop.qs"
   )
 
   gtf_gene_df |>
@@ -715,7 +721,7 @@ fn_plot_mtdna_circos_celltype_variant_type(
 # )
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- path(Sys.getenv("OUTDIR"))
   pdf(
     file = path(outdir, "circos-haplo-homo-hetero-somatic.pdf"),
     width = 13,

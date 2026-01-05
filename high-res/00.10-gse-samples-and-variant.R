@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -74,7 +76,7 @@ PUBLICATIONS = tibble::tribble(
 )
 
 SEXPRED = import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
+  path(Sys.getenv("CLEANDATADIR"), "gse_srrid_srrdir_sex.qs")
 ) |>
   dplyr::select(
     srrid,

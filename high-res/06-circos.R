@@ -32,7 +32,10 @@ logger::log_layout(logger::layout_glue_colors)
 # load data ---------------------------------------------------------------
 load_pkg(circlize)
 allvariants <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  )
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(
@@ -130,7 +133,7 @@ fn_plot_circos <- function(
 
   # ! track: phastCons100way --------------------------------------------------------------------
   phastCons100way <- import(
-    "/home/liuc9/github/scMOCHA-data/config/chrM.phastCons100way.wigFix.qs"
+    path(Sys.getenv("REPODIR"), "config/chrM.phastCons100way.wigFix.qs")
   )
 
   circos.genomicTrack(
@@ -154,7 +157,7 @@ fn_plot_circos <- function(
   # ! gnomad --------------------------------------------------------------------
 
   gnomad <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
+    path(Sys.getenv("ZZZDIR"), "db/gnomad.qs")
   ) |>
     dplyr::filter(filters == "PASS") |>
     dplyr::select(position, af = af_hom, ac = ac_hom) |>
@@ -305,7 +308,7 @@ fn_plot_circos <- function(
   # ! gene region --------------------------------------------------------------------
 
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.qs")
   )
 
   circos.genomicTrack(
@@ -439,7 +442,7 @@ fn_plot_circos <- function(
 
 # body --------------------------------------------------------------------
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/"
+  outdir <- path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/")
   pdf(
     file = path(
       outdir,
@@ -466,7 +469,7 @@ fn_plot_circos <- function(
   dev.off()
 }
 \() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/"
+  outdir <- path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/")
   pdf(
     file = path(
       outdir,

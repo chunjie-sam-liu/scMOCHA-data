@@ -40,10 +40,10 @@ log_layout(layout_glue_colors)
 # function ----------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES"
+dotenv(".env")
+basedir <- path(Sys.getenv("BASEDIR"))
+outdir <- path(Sys.getenv("OUTDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 # sex_pred <- import(
 #   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
 # ) |>
@@ -53,7 +53,7 @@ outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES"
 #   )
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs",
+  cleandatadir / "gse_dataset_metadata_full.qs",
   nthreads = 4
 ) |>
   # dplyr::left_join(
@@ -68,7 +68,7 @@ gse_dataset_metadata_full <- import(
 # thegseid <- "GSE168453"
 # body --------------------------------------------------------------------
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+  cleandatadir / "gse_data.qs"
 )
 # m |> dplyr::filter(srrid %in% c("GSM5335510", "GSM5335512"))
 # gse_dataset_metadata_full |> dplyr::filter(!srrid %in% gse_data$srrid)
@@ -486,8 +486,6 @@ ggsave(
   dpi = 300
 )
 
-
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES"
 
 ggsave(
   filename = path(outdir, "ALL_CELL_RATIO_METADATA.pdf"),

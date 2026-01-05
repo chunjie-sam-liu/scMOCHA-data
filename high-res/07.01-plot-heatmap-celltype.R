@@ -37,7 +37,7 @@ pcc <- import(
   dplyr::arrange(cancer_types)
 
 allvariants <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx")
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(
@@ -97,13 +97,13 @@ allvariants |>
   ) -> VARIANT_TYPE
 
 clusterlevel_dir <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel"
+  Sys.getenv("ZZZDIR"), "new-variant-cell/homo-hete/clusterlevel"
 )
 
 
 METADATA <- import(
   path(
-    "/home/liuc9/github/scMOCHA-data/data/zzz/clean-data",
+    Sys.getenv("CLEANDATADIR"),
     "gse_dataset_metadata_full.qs"
   )
 ) |>
@@ -157,11 +157,11 @@ source(path(
 
   export(
     variant_clusteraf_unlist,
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
+    path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx")
   )
 }
 variant_clusteraf_unlist <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
+  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx")
 )
 #
 #
@@ -360,9 +360,7 @@ col_fun = circlize::colorRamp2(
     )
   ) -> COMPLEXHEATMAP_AF
 
-  OUTDIR <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
-  )
+  OUTDIR <- path(\n    Sys.getenv(\"HIGHRESDIR\"), \"MANUSCRIPTFIGURES\"\n  )
   pdf(
     file = OUTDIR / "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW.pdf",
     width = 22,
@@ -428,7 +426,7 @@ col_fun = circlize::colorRamp2(
 
   # Save legend as PDF
   OUTDIR <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
+    Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES"
   )
   ggsave(
     filename = OUTDIR /

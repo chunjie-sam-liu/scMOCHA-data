@@ -400,10 +400,10 @@ fn_plot_mtdna <- function() {
 
   LENGTH <- 16569
   rCRS <- Biostrings::readDNAStringSet(
-    "/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta"
+    path(Sys.getenv("REPODIR"), "config/rCRS.MT.fasta")
   )
   gtf_gene_df <- readr::read_rds(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.rds.gz"
+    path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.rds.gz")
   )
 
   library(gggenes)
@@ -976,7 +976,7 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
     thevariants = thevariant
   ) -> p_vaf_feature
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+    Sys.getenv("OUTDIRNOTUSE")
   )
   ggsave(
     filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>
@@ -999,7 +999,7 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
     thevariants = thevariant
   ) -> p_vaf_feature
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+    Sys.getenv("OUTDIRNOTUSE")
   )
   ggsave(
     filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>

@@ -30,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 # source color
 source(path(

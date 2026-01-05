@@ -360,7 +360,7 @@ fn_plot_somatic <- function(thevariant, thesrrid) {
 }
 
 \() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- Sys.getenv("OUTDIRNOTUSE")
 
   pdf(
     path(
@@ -383,7 +383,7 @@ fn_plot_somatic <- function(thevariant, thesrrid) {
 }
 
 \() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- Sys.getenv("OUTDIRNOTUSE")
 
   thesrrid = "GSM7437874"
   thevariant <- "7757G>A"
@@ -408,7 +408,7 @@ fn_plot_somatic <- function(thevariant, thesrrid) {
 }
 
 \() {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- Sys.getenv("OUTDIRNOTUSE")
 
   thesrrid = "GSM7493835"
   thevariant <- "4175G>A"

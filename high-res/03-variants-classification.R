@@ -28,12 +28,16 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+dotenv(".env")
+basedir <- path(Sys.getenv("BASEDIR"))
+outdir <- path(Sys.getenv("OUTDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 gse_data <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_data.qs"
+  cleandatadir / "gse_data.qs"
 )
 
 gse_dataset_metadata_full <- import(
-  "analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
+  cleandatadir / "gse_dataset_metadata_full.qs"
 )
 # load conn ---------------------------------------------------------------
 
@@ -102,10 +106,7 @@ gse_data_haplo_variant |>
 
 export(
   gse_data_variant_heteroplasmic,
-  file = file.path(
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/",
-    "gse_data_variant_heteroplasmic.qs"
-  ),
+  file = cleandatadir / "gse_data_variant_heteroplasmic.qs",
   format = "qs",
 )
 
@@ -176,10 +177,9 @@ gse_data_variant_classification |>
   ) -> gse_data_variant_classification_wide
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
   export(
     gse_data_variant_classification_wide,
-    file = path(outdir, "SAMPLE-VARIANT-CLASSIFICATION-COUNT.xlsx"),
+    file = outdir / "SAMPLE-VARIANT-CLASSIFICATION-COUNT.xlsx",
   )
 }
 
@@ -231,10 +231,9 @@ gse_data_variant_classification |>
 
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
   export(
     gse_data_variant_classification_clusteraf_bulkaf,
-    file = path(outdir, "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"),
+    file = outdir / "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx",
   )
 }
 

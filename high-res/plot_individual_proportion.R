@@ -5,7 +5,7 @@ source(path(
   "00-colors.R"
 ))
 ALLVARIANTSFORPLOT <- import(
-  path("/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES") /
+  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES") /
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::filter(variant_type %in% c("homo", "hete"))

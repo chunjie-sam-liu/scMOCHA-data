@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -29,7 +31,10 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 allvariants <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  )
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(
@@ -74,7 +79,7 @@ allvariants |>
   unique() -> somatic_variants_list
 
 gnomad <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/gnomad.qs"
+  path(Sys.getenv("ZZZDIR"), "db/gnomad.qs")
 ) |>
   dplyr::filter(filters == "PASS") |>
   dplyr::mutate(
@@ -187,7 +192,8 @@ homo_variants |>
 
 ggsave(
   filename = path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES",
+    Sys.getenv("HIGHRESDIR"),
+    "MANUSCRIPTFIGURES",
     "gnomAD-HOMOPLASMIC-VARIANT-CORRELATION.pdf"
   ),
   plot = p_homo_corr_gnomad,
@@ -202,7 +208,7 @@ ggsave(
 # ? hete --------------------------------------------------------------------
 #
 #
-mtdna <- import("/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs")
+mtdna <- import(path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.qs"))
 
 
 allvariants |>
@@ -313,7 +319,8 @@ hete_variants |>
 
 ggsave(
   filename = path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES",
+    Sys.getenv("HIGHRESDIR"),
+    "MANUSCRIPTFIGURES",
     "gnomAD-HETEROPLASMIC-VARIANT-CORRELATION.pdf"
   ),
   plot = p_hete_corr_gnomad,

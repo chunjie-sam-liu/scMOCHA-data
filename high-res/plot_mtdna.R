@@ -1,10 +1,11 @@
+dotenv(".env")
 fn_plot_mtdna <- function() {
   # mt_exons_df <- "/home/liuc9/github/scMOCHA/fasta/mt_exons.df.rds.gz"
 
   LENGTH <- 16569
   # rCRS <- Biostrings::readDNAStringSet("/home/liuc9/github/scMOCHA-data/config/rCRS.MT.fasta")
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.qs")
   )
 
   library(gggenes)

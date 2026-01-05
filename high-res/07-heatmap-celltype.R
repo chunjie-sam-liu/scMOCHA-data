@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -30,7 +32,10 @@ logger::log_layout(logger::layout_glue_colors)
 # load data ---------------------------------------------------------------
 
 allvariants <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  )
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(
@@ -151,7 +156,10 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
   export(
     covall_thevariant,
     glue::glue(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/celllevel/{thevariant}.qs"
+      path(
+        Sys.getenv("ZZZDIR"),
+        "new-variant-cell/homo-hete/celllevel/{thevariant}.qs"
+      )
     )
   )
 
@@ -180,7 +188,10 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
   export(
     af,
     glue::glue(
-      "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel/{thevariant}.qs"
+      path(
+        Sys.getenv("ZZZDIR"),
+        "new-variant-cell/homo-hete/clusterlevel/{thevariant}.qs"
+      )
     )
   )
 }
@@ -189,11 +200,11 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
 
 # Create output directories if they don't exist
 fs::dir_create(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/celllevel",
+  path(Sys.getenv("ZZZDIR"), "new-variant-cell/homo-hete/celllevel"),
   recurse = TRUE
 )
 fs::dir_create(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel",
+  path(Sys.getenv("ZZZDIR"), "new-variant-cell/homo-hete/clusterlevel"),
   recurse = TRUE
 )
 

@@ -4,7 +4,7 @@ source(path(
   Sys.getenv("HIGHRESDIR"),
   "00-colors.R"
 ))
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 ALLVARIANTS <- import(
@@ -230,7 +230,7 @@ fn_plot_somatic_dist <- function() {
     ) -> p_haplogroup
 
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.qs")
   )
 
   forplot |>
@@ -411,7 +411,7 @@ fn_plot_somatic_dist <- function() {
 
   pdf(
     file = path(
-      "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+      Sys.getenv("OUTDIRNOTUSE")
     ) /
       "HOTSPOTS-SOMATIC-CLUSTER.pdf",
     width = 15,
@@ -422,7 +422,7 @@ fn_plot_somatic_dist <- function() {
 
   png(
     file = path(
-      "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+      Sys.getenv("OUTDIRNOTUSE")
     ) /
       "HOTSPOTS-SOMATIC-CLUSTER.png",
     width = 15,
@@ -498,7 +498,7 @@ fn_save_somatic_table <- function() {
   # Get gene annotation
 
   gtf_gene_df <- import(
-    "/home/liuc9/github/scMOCHA-data/config/mtdna_genes_dloop.qs"
+    path(Sys.getenv("REPODIR"), "config/mtdna_genes_dloop.qs")
   )
 
   # Prepare haplogroup colors
@@ -727,7 +727,7 @@ fn_save_somatic_table <- function() {
 
   # Save Excel
   excel_path <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+    Sys.getenv("OUTDIRNOTUSE")
   ) /
     "HOTSPOTS-SOMATIC-CLUSTER.xlsx"
   openxlsx::saveWorkbook(wb, excel_path, overwrite = TRUE)
@@ -839,7 +839,7 @@ fn_save_somatic_table <- function() {
 
   # Save gt table as HTML
   html_path <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+    Sys.getenv("OUTDIRNOTUSE")
   ) /
     "HOTSPOTS-SOMATIC-CLUSTER.html"
   gt::gtsave(gt_table, html_path)

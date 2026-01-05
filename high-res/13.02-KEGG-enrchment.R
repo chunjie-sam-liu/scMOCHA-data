@@ -35,11 +35,11 @@ GetoptLong(spec, template_control = list(opt_width = 21))
 
 # load data ---------------------------------------------------------------
 
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  Sys.getenv("OUTDIRNOTUSE")
 )
-cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 
 # load conn ---------------------------------------------------------------

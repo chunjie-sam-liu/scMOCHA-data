@@ -1,7 +1,8 @@
 dotenv(".env")
-basedir <- "/home/liuc9/github/scMOCHA-data/data"
+basedir <- path(Sys.getenv("DATADIR"))
 # outdir <- "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-basic"
-outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
+outdir <- path(Sys.getenv("OUTDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 # sex_pred <- import(
 #   "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_srrid_srrdir_sex.qs"
@@ -12,7 +13,7 @@ outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES"
 #   )
 
 gse_dataset_metadata_full <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/gse_dataset_metadata_full.qs"
+  cleandatadir / "gse_dataset_metadata_full.qs"
 ) |>
   dplyr::mutate(
     Gender = SEXPRED

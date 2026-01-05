@@ -1,9 +1,13 @@
+dotenv(".env")
 fn_plot_variant_celltype_af_haplogroup <- function(
   thevariant,
   vtype = NULL
 ) {
   df <- import(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+    path(
+      Sys.getenv("HIGHRESDIR"),
+      "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+    )
   )
   df |>
     dplyr::filter(variant == thevariant) |>

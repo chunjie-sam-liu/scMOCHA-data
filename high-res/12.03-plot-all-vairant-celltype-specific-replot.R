@@ -84,10 +84,10 @@ logger::log_info("Total tasks: {nrow(ALLVARIANTS_TEST_SIG)}")
 # Source plotting functions
 # -----------------------------------------------------------------------------
 source(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/plot_celltype_specific_variant.R"
+  path(Sys.getenv("HIGHRESDIR"), "plot_celltype_specific_variant.R")
 )
 source(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/plot_individual_proportion.R"
+  path(Sys.getenv("HIGHRESDIR"), "plot_individual_proportion.R")
 )
 
 DBI::dbIsValid(conn)

@@ -28,13 +28,21 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+dotenv(".env")
+outdir <- path(Sys.getenv("OUTDIR"))
+outdirnotuse <- path(Sys.getenv("OUTDIRNOTUSE"))
+repodir <- path(Sys.getenv("REPODIR"))
+zzzdir <- path(Sys.getenv("ZZZDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
+highresdir <- path(Sys.getenv("HIGHRESDIR"))
 gse_data_variant_classification_clusteraf_bulkaf <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+  outdir / "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 )
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
-source("/home/liuc9/github/scMOCHA-data/analysis/high-res/plot_somatic.R")
+
+source(highresdir / "plot_somatic.R")
 
 # function ----------------------------------------------------------------
 fn_plot_af_variant_type <- function(
@@ -437,7 +445,7 @@ plot(
 
 
 {
-  outdir = "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  # outdir = "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
   pdf(
     path(
       outdir,
@@ -455,8 +463,8 @@ plot(
 #
 #
 
-{
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+\() {
+  outdir <- Sys.getenv("OUTDIRNOTUSE")
   thevariant <- "2442T>C"
   ggsave(
     filename = glue::glue("Example-variant-{thevariant}-Hete-Homo.pdf"),
@@ -482,8 +490,8 @@ plot(
 #
 #
 
-fn_plot_af_variant_type("14082C>G")
-fn_plot_af_individual("GSM6793473")
+# fn_plot_af_variant_type("14082C>G")
+# fn_plot_af_individual("GSM6793473")
 
 dt_allvariants_euler |>
   dplyr::mutate(
@@ -537,7 +545,8 @@ dt_allvariants_euler |>
 
 {
   outdir <- path(
-    "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse/euler-intersection-variants"
+    Sys.getenv("OUTDIRNOTUSE"),
+    "euler-intersection-variants"
   )
   dir_create(outdir)
   df_variants_intersection_plot |>
@@ -568,7 +577,7 @@ dt_allvariants_euler |>
 #
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- Sys.getenv("OUTDIRNOTUSE")
   thevariant <- "9449C>T"
   fn_plot_af_variant_type(thevariant)
   ggsave(
@@ -717,7 +726,7 @@ df_variants |>
   ) -> p_multiple_variants_bulk
 
 {
-  outdir <- "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  outdir <- outdirnotuse
   ggsave(
     filename = glue::glue("Example-variant-multi.pdf"),
     plot = p_multiple_variants_bulk,

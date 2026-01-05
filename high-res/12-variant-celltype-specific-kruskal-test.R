@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -28,8 +30,8 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
-cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+outdir <- path(Sys.getenv("OUTDIR"))
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 ALLVARIANTS <- import(

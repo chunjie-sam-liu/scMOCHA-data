@@ -9,6 +9,8 @@
 
 load_pkg(jutils)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -28,13 +30,13 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  Sys.getenv("OUTDIRNOTUSE")
 )
 scmergedir <- outdirnotuse / "scmerge"
 
-cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 ALLVARIANTS <- import(
@@ -84,7 +86,7 @@ fn_norm <- function(thegseid, thesrrid) {
   # thesrrid <- VARIANT_GSEID_SRRID$srrid[[1]]
 
   .dir <- path(
-    "/home/liuc9/github/scMOCHA-data/data/",
+    Sys.getenv("DATADIR"),
     thegseid,
     "final",
     thesrrid

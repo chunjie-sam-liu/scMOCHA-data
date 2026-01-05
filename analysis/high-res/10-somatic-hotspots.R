@@ -30,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
@@ -83,13 +83,23 @@ HETE_VARIANTS <- ALLVARIANTS |>
 # load conn ---------------------------------------------------------------
 
 # src ---------------------------------------------------------------------
-source(path(
-  Sys.getenv("HIGHRESDIR"),
-  "00-colors.R"
-))
-source(path(Sys.getenv("HIGHRESDIR"), "plot_mtdna.R"))
 source(
-  path(Sys.getenv("HIGHRESDIR"), "plot_variant_celltype_af_haplogroup.R")
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "00-colors.R"
+  )
+)
+source(
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "plot_mtdna.R"
+  )
+)
+source(
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "plot_variant_celltype_af_haplogroup.R"
+  )
 )
 
 

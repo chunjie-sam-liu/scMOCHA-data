@@ -30,9 +30,9 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  Sys.getenv("OUTDIRNOTUSE")
 )
 scmergedir <- outdirnotuse / "scmerge"
 scintegrateddir <- outdirnotuse / "scintegrated"
@@ -41,7 +41,7 @@ scintegrateddir <- outdirnotuse / "scintegrated"
 fs::dir_create(scmergedir)
 fs::dir_create(scintegrateddir)
 
-cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 ALLVARIANTS <- import(
@@ -426,7 +426,7 @@ HOMO_HETE_VARIANTS |>
   dplyr::distinct() |>
   dplyr::mutate(
     sc_file = path(
-      "/home/liuc9/github/scMOCHA-data/data/",
+      Sys.getenv(\"DATADIR\"),
       gseid,
       "final",
       srrid,

@@ -11,6 +11,8 @@ load_pkg(jutils)
 load_pkg(magrittr)
 load_pkg(dplyr)
 
+dotenv(".env")
+
 # args --------------------------------------------------------------------
 
 # s: string, i: integer, f: float, !: boolean, @: array, %: list
@@ -31,11 +33,11 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
-outdir <- path("/home/liuc9/github/scMOCHA-data/analysis/zzz/MANUSCRIPTFIGURES")
+outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
-  "/home/liuc9/github/scMOCHA-data/analysis/high-res/MANUSCRIPTFIGURES-notuse"
+  Sys.getenv("OUTDIRNOTUSE")
 )
-cleandatadir <- path("/home/liuc9/github/scMOCHA-data/data/zzz/clean-data")
+cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 scmergedir <- outdirnotuse / "scmerge"
 scintegrateddir <- outdirnotuse / "scintegrated"
 
