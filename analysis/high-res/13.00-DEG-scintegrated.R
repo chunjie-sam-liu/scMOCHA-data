@@ -413,7 +413,8 @@ HOMO_HETE_VARIANTS |>
   dplyr::filter(variant_type == "hete") |>
   dplyr::count(variant) |>
   dplyr::arrange(n) |>
-  dplyr::filter(n > 30)
+  dplyr::filter(n > 30) |>
+  dplyr::pull(variant) -> variant_tobe_run
 
 HOMO_HETE_VARIANTS |>
   dplyr::select(gseid, srrid, variant, variant_type) |>
@@ -458,6 +459,7 @@ VARIANT_GSEID_SRRID_SCFILE |>
 # )
 
 VARIANT_GSEID_SRRID_SCFILE |>
+  dplyr::filter(variant %in% variant_tobe_run) |>
   dplyr::mutate(
     a = parallel::mcmapply(
       FUN = function(df, thevariant) {
