@@ -5,6 +5,7 @@ ALLVARIANTSFORPLOT <- import(
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
+dotenv(".env")
 
 # Connection will be opened inside functions for parallel safety
 # thevariant <- "3173G>A"
@@ -127,9 +128,8 @@ fn_plot_variant_ratio <- function(thevariant) {
 
   .srrids <- unique(.m$srrid)
 
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
   tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
@@ -141,7 +141,6 @@ fn_plot_variant_ratio <- function(thevariant) {
     ) |>
     as.data.table() -> .dt
 
-  DBI::dbDisconnect(conn)
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
   color_celltype_bulk <- c(

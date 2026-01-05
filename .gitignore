@@ -58,3 +58,4 @@ scMOCHA.collectvariant.R
 strandbias.R
 mtcars.xlsx
 *.nohup
+.env

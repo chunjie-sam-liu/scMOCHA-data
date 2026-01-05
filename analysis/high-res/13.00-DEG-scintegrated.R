@@ -50,10 +50,10 @@ HOMO_HETE_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
 
 # load conn ---------------------------------------------------------------
+dotenv(".env")
 
-conn <- DBI::dbConnect(
-  duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+conn <- conn_db(
+  Sys.getenv("DUCKDB_PATH"),
   read_only = TRUE
 )
 dplyr::tbl(

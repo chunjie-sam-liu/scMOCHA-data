@@ -1,11 +1,10 @@
 source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
 
-
+dotenv(".env")
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
-    read_only = TRUE
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
+    readonly = TRUE
   )
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
@@ -78,7 +77,7 @@ fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
         levels = forplot_$barcode
       )
     ) -> forplot
-  DBI::dbDisconnect(conn, shutdown = TRUE)
+
   forplot
 }
 fn_plot_cell_af_somatic_variant_af <- function(forplot, thetheme) {

@@ -4,7 +4,7 @@ load_pkg(
   ggdist
 )
 source("/home/liuc9/github/scMOCHA-data/analysis/high-res/00-colors.R")
-
+dotenv(".env")
 
 # thevariant <- "7428G>A"
 # thegseid <- "GSE161354"
@@ -15,6 +15,11 @@ fn_plot_ggdist <- function(
   thegseid,
   thesrrid
 ) {
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
+    readonly = TRUE
+  )
+  tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
   tbl_allvariants_cell |>
     dplyr::filter(
       srrid == thesrrid,
@@ -100,9 +105,8 @@ fn_plot_joy <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
   tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
@@ -114,8 +118,6 @@ fn_plot_joy <- function(
       variant_type %in% c("colorful", "black")
     ) |>
     as.data.table() -> .d
-
-  DBI::dbDisconnect(conn)
 
   .variant <- .d$variant[1]
   .gseid <- .d$gseid[1]
@@ -204,9 +206,8 @@ fn_plot_hist <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
   tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
@@ -220,7 +221,6 @@ fn_plot_hist <- function(
     ) |>
     dplyr::collect() -> .d
 
-  DBI::dbDisconnect(conn)
   .variant <- .d$variant[1]
   .gseid <- .d$gseid[1]
   .srrid <- .d$srrid[1]
@@ -331,9 +331,8 @@ fn_plot_cumulative_fraction <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
   tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
@@ -345,8 +344,6 @@ fn_plot_cumulative_fraction <- function(
       variant_type %in% c("colorful", "black")
     ) |>
     dplyr::collect() -> .d
-
-  DBI::dbDisconnect(conn)
 
   .variant <- .d$variant[1]
   .gseid <- .d$gseid[1]
@@ -454,9 +451,8 @@ fn_plot_joy_celltype_level2_level3 <- function(
       glue::glue()
   )
 
-  conn <- DBI::dbConnect(
-    duckdb::duckdb(),
-    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  conn <- conn_db(
+    Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
   tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
@@ -477,7 +473,6 @@ fn_plot_joy_celltype_level2_level3 <- function(
     dplyr::rename(
       plotcelltype = "celltype_{thecelltype_level}" |> glue::glue(),
     ) -> thevariant_data
-  DBI::dbDisconnect(conn)
 
   thevariant_data |>
     dplyr::filter(

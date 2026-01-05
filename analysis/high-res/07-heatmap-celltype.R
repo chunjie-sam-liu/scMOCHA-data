@@ -80,17 +80,18 @@ thevariants <- unique(allvariants_homohete$variant) |>
   sort() |>
   as.character()
 allsrrid <- unique(allvariants_homohete$srrid) |> as.character()
+dotenv(".env")
 # load conn ---------------------------------------------------------------
-
+dotenv(".env")
 conn <- DBI::dbConnect(
   duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/db/DUCKDB/cov.duckdb",
+  Sys.getenv("DUCKDB_PATH_COV"),
   read_only = TRUE
 )
 
 conn_all_hetero_af <- DBI::dbConnect(
   duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+  Sys.getenv("DUCKDB_PATH"),
   read_only = TRUE
 )
 
