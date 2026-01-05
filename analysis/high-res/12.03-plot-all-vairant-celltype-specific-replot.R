@@ -30,7 +30,7 @@ GetoptLong("verbose!", "print verbose log messages")
 # -----------------------------------------------------------------------------
 # Logger
 # -----------------------------------------------------------------------------
-logger::log_layout(logger::layout_glue_colors)
+logger::log_layout(logger::layout_simple)
 logger::log_threshold(if (verbose) logger::TRACE else logger::INFO)
 
 logger::log_info("Starting script (version: {VERSION})")
@@ -39,17 +39,18 @@ logger::log_info("Starting script (version: {VERSION})")
 # Parallel plan (REAL parallelism)
 # -----------------------------------------------------------------------------
 workers <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", 8))
-future::plan(multisession, workers = workers)
 
-# Always reset plan when exiting
-on.exit(
-  {
-    future::plan(sequential)
-  },
-  add = TRUE
+# Use multicore (fork) on Linux for shared environment - much faster
+# multisession spawns separate R processes that don't share globals
+# if (.Platform$OS.type == "unix") {
+#   future::plan(future::multicore, workers = workers)
+# } else {
+#   future::plan(future::multisession, workers = workers)
+# }
+
+logger::log_info(
+  "Parallel workers: {workers}, plan: {class(future::plan())[1]}"
 )
-
-logger::log_info("Parallel workers: {workers}")
 
 # -----------------------------------------------------------------------------
 # Paths
@@ -61,6 +62,7 @@ outdirnotuse <- path(
 )
 
 plot_dir <- outdirnotuse / "celltype-specific-each"
+unlink(plot_dir, recursive = TRUE)
 fs::dir_create(plot_dir)
 
 logger::log_info("Plot output dir: {plot_dir}")
@@ -73,6 +75,7 @@ ALLVARIANTS_TEST <- import(
 )
 
 ALLVARIANTS_TEST_SIG <- ALLVARIANTS_TEST |>
+  dplyr::filter(p.value < 0.05) |>
   dplyr::select(variant, gseid, srrid) |>
   dplyr::distinct()
 
@@ -120,8 +123,9 @@ safe_pdf_with_lock <- function(file, width, height, plot_expr) {
       force(plot_expr)
     },
     error = function(e) {
-      logger::log_error("FAILED: {file}")
-      logger::log_error(conditionMessage(e))
+      logger::log_error(
+        "FAILED: {file} - {skip_formatter(conditionMessage(e))}"
+      )
     },
     finally = {
       # Always close device if open
@@ -143,17 +147,21 @@ safe_pdf_with_lock <- function(file, width, height, plot_expr) {
 # =============================================================================
 # Parallel plotting
 # =============================================================================
-furrr::future_pwalk(
+purrr::pwalk(
   .l = list(
-    ALLVARIANTS_TEST_SIG$variant,
-    ALLVARIANTS_TEST_SIG$gseid,
-    ALLVARIANTS_TEST_SIG$srrid
+    ALLVARIANTS_TEST_SIG$variant |> head(20),
+    ALLVARIANTS_TEST_SIG$gseid |> head(20),
+    ALLVARIANTS_TEST_SIG$srrid |> head(20)
   ),
   .f = \(thevariant, thegseid, thesrrid) {
+    # thevariant <- ALLVARIANTS_TEST_SIG$variant[[1]]
+    # thegseid <- ALLVARIANTS_TEST_SIG$gseid[[1]]
+    # thesrrid <- ALLVARIANTS_TEST_SIG$srrid[[1]]
     base <- glue::glue("{thevariant}-{thegseid}-{thesrrid}")
 
     main_pdf <- plot_dir / glue::glue("JOY-HIST-CUMFRAC-{base}.pdf")
     detail_pdf <- plot_dir / glue::glue("DETAIL-{base}.pdf")
+    pseudo_bulk_pdf <- plot_dir / glue::glue("PSEUDO-BULK-{base}.pdf")
 
     # -------------------------------------------------------------------------
     # JOY + HIST + CUMFRAC (same PDF)
@@ -184,8 +192,21 @@ furrr::future_pwalk(
         ))
       }
     )
-  },
-  .options = furrr::furrr_options(seed = TRUE)
+
+    # -------------------------------------------------------------------------
+    # Pseudo bulk plot (separate PDF)
+    # -------------------------------------------------------------------------
+
+    safe_pdf_with_lock(
+      file = pseudo_bulk_pdf,
+      width = 15,
+      height = 8,
+      {
+        print(fn_plot_variant_ratio(thevariant))
+        print(fn_plot_hetero_pseudo_bulk(thevariant))
+      }
+    )
+  }
 )
 
 # -----------------------------------------------------------------------------

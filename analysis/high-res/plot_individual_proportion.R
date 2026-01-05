@@ -6,16 +6,7 @@ ALLVARIANTSFORPLOT <- import(
 ) |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
 
-conn <- DBI::dbConnect(
-  duckdb::duckdb(),
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
-  readonly = TRUE
-)
-
-tbl_allvariants_cell <- dplyr::tbl(
-  conn,
-  "allvariants_cell"
-)
+# Connection will be opened inside functions for parallel safety
 # thevariant <- "3173G>A"
 fn_plot_hetero_pseudo_bulk <- function(thevariant) {
   .d <- ALLVARIANTSFORPLOT |>
@@ -136,6 +127,13 @@ fn_plot_variant_ratio <- function(thevariant) {
 
   .srrids <- unique(.m$srrid)
 
+  conn <- DBI::dbConnect(
+    duckdb::duckdb(),
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/clean-data/all_hetero_af.cell.duckdb.1.2.1",
+    readonly = TRUE
+  )
+  tbl_allvariants_cell <- dplyr::tbl(conn, "allvariants_cell")
+
   tbl_allvariants_cell |>
     dplyr::filter(
       variant == thevariant,
@@ -143,6 +141,7 @@ fn_plot_variant_ratio <- function(thevariant) {
     ) |>
     as.data.table() -> .dt
 
+  DBI::dbDisconnect(conn)
   colorcode <- setNames(names(color_variantcell), color_variantcell)
 
   color_celltype_bulk <- c(

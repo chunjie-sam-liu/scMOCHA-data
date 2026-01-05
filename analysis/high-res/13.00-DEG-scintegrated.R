@@ -409,6 +409,11 @@ fn_merge_sc_list_variant <- function(df, thevariant) {
 }
 
 # body --------------------------------------------------------------------
+HOMO_HETE_VARIANTS |>
+  dplyr::filter(variant_type == "hete") |>
+  dplyr::count(variant) |>
+  dplyr::arrange(n) |>
+  dplyr::filter(n > 30)
 
 HOMO_HETE_VARIANTS |>
   dplyr::select(gseid, srrid, variant, variant_type) |>
@@ -437,16 +442,10 @@ HOMO_HETE_VARIANTS |>
 VARIANT_GSEID_SRRID_SCFILE |>
   tibble::rowid_to_column("idx") |>
   dplyr::filter(
-    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "4175G>A")
+    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "11914G>A")
   )
 
 # dplyr::filter(n == 3)
-
-#
-#
-# * TODO:  --------------------------------------------------------------------
-#
-#
 
 # fn_merge_sc_list_variant(
 #   VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[1]],
