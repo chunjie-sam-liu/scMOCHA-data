@@ -30,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
   Sys.getenv("OUTDIRNOTUSE")
@@ -427,7 +427,7 @@ HOMO_HETE_VARIANTS |>
   dplyr::distinct() |>
   dplyr::mutate(
     sc_file = path(
-      Sys.getenv(\"DATADIR\"),
+      Sys.getenv("DATADIR"),
       gseid,
       "final",
       srrid,
@@ -450,7 +450,7 @@ VARIANT_GSEID_SRRID_SCFILE |>
   tibble::rowid_to_column("idx") |>
   dplyr::filter(variant %in% variant_tobe_run) |>
   dplyr::filter(
-    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "1380G>T")
+    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "1382A>T")
   )
 
 # dplyr::filter(n == 3)
@@ -481,6 +481,8 @@ VARIANT_GSEID_SRRID_SCFILE |>
     )
   )
 
+
+close_all_db()
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
