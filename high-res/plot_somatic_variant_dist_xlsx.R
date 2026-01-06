@@ -434,8 +434,7 @@ fn_plot_somatic_dist <- function() {
   dev.off()
 }
 
-fn_plot_somatic_dist()
-
+# fn_plot_somatic_dist()
 
 fn_save_somatic_table <- function() {
   load_pkg(openxlsx, gt)
@@ -848,4 +847,4 @@ fn_save_somatic_table <- function() {
   return(list(excel = excel_path, html = html_path, data = table_data))
 }
 
-fn_save_somatic_table()
+# fn_save_somatic_table()
