@@ -5,11 +5,10 @@ source(path(
   "00-colors.R"
 ))
 ALLVARIANTSFORPLOT <- import(
-  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES") /
+  path(Sys.getenv("OUTDIR")) /
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
-dotenv(".env")
 
 # Connection will be opened inside functions for parallel safety
 # thevariant <- "3173G>A"

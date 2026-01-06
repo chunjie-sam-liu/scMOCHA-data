@@ -1,10 +1,8 @@
 dotenv(".env")
 source(path(Sys.getenv("HIGHRESDIR"), "plot_somatic.R"))
 gse_data_variant_classification_clusteraf_bulkaf <- import(
-  path(
-    Sys.getenv("HIGHRESDIR"),
-    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
-  )
+  path(Sys.getenv("OUTDIR")) /
+    "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 )
 
 

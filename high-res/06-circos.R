@@ -442,7 +442,7 @@ fn_plot_circos <- function(
 
 # body --------------------------------------------------------------------
 {
-  outdir <- path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/")
+  outdir <- Sys.getenv("OUTDIR")
   pdf(
     file = path(
       outdir,
@@ -469,7 +469,7 @@ fn_plot_circos <- function(
   dev.off()
 }
 \() {
-  outdir <- path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/")
+  outdir <- Sys.getenv("OUTDIR")
   pdf(
     file = path(
       outdir,

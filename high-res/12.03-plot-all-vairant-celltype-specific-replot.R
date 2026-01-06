@@ -38,6 +38,7 @@ logger::log_info("Starting script (version: {VERSION})")
 # -----------------------------------------------------------------------------
 # Parallel plan (REAL parallelism)
 # -----------------------------------------------------------------------------
+dotenv(".env")
 workers <- as.integer(Sys.getenv("SLURM_CPUS_PER_TASK", 8))
 
 # Use multicore (fork) on Linux for shared environment - much faster
@@ -64,7 +65,9 @@ plot_dir <- outdirnotuse / "celltype-specific-each"
 unlink(plot_dir, recursive = TRUE)
 fs::dir_create(plot_dir)
 
-cli::cli_alert_info("Plot output dir: {plot_dir}")
+cli::cli_alert_info(
+  "Plot output dir: {plot_dir}, file exists {file_exists(plot_dir)}"
+)
 
 # -----------------------------------------------------------------------------
 # Load data
@@ -84,13 +87,17 @@ logger::log_info("Total tasks: {nrow(ALLVARIANTS_TEST_SIG)}")
 # Source plotting functions
 # -----------------------------------------------------------------------------
 source(
-  path(Sys.getenv("HIGHRESDIR"), "plot_celltype_specific_variant.R")
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "plot_celltype_specific_variant.R"
+  )
 )
 source(
-  path(Sys.getenv("HIGHRESDIR"), "plot_individual_proportion.R")
+  path(
+    Sys.getenv("HIGHRESDIR"),
+    "plot_individual_proportion.R"
+  )
 )
-
-DBI::dbIsValid(conn)
 
 # =============================================================================
 # Helper: safe PDF plotting with file lock

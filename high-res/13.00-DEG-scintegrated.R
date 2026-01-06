@@ -30,6 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
   Sys.getenv("OUTDIRNOTUSE")

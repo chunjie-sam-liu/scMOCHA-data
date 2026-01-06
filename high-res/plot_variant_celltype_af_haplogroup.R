@@ -4,10 +4,8 @@ fn_plot_variant_celltype_af_haplogroup <- function(
   vtype = NULL
 ) {
   df <- import(
-    path(
-      Sys.getenv("HIGHRESDIR"),
-      "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
-    )
+    path(Sys.getenv("OUTDIR")) /
+      "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
   )
   df |>
     dplyr::filter(variant == thevariant) |>

@@ -31,10 +31,8 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 allvariants <- import(
-  path(
-    Sys.getenv("HIGHRESDIR"),
-    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
-  )
+  path(Sys.getenv("OUTDIR")) /
+    "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(

@@ -37,7 +37,8 @@ pcc <- import(
   dplyr::arrange(cancer_types)
 
 allvariants <- import(
-  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx")
+  path(Sys.getenv("OUTDIR")) /
+    "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
     coord = parallel::mclapply(
@@ -97,7 +98,8 @@ allvariants |>
   ) -> VARIANT_TYPE
 
 clusterlevel_dir <- path(
-  Sys.getenv("ZZZDIR"), "new-variant-cell/homo-hete/clusterlevel"
+  Sys.getenv("ZZZDIR"),
+  "new-variant-cell/homo-hete/clusterlevel"
 )
 
 
@@ -157,11 +159,11 @@ source(path(
 
   export(
     variant_clusteraf_unlist,
-    path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx")
+    path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
   )
 }
 variant_clusteraf_unlist <- import(
-  path(Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES/ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx")
+  path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
 )
 #
 #
@@ -360,7 +362,7 @@ col_fun = circlize::colorRamp2(
     )
   ) -> COMPLEXHEATMAP_AF
 
-  OUTDIR <- path(\n    Sys.getenv(\"HIGHRESDIR\"), \"MANUSCRIPTFIGURES\"\n  )
+  OUTDIR <- Sys.getenv("OUTDIR")
   pdf(
     file = OUTDIR / "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW.pdf",
     width = 22,
@@ -425,9 +427,7 @@ col_fun = circlize::colorRamp2(
     labs(y = "Allele Frequency")
 
   # Save legend as PDF
-  OUTDIR <- path(
-    Sys.getenv("HIGHRESDIR"), "MANUSCRIPTFIGURES"
-  )
+  OUTDIR <- Sys.getenv("OUTDIR")
   ggsave(
     filename = OUTDIR /
       "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW-LEGEND.pdf",
