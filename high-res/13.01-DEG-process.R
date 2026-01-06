@@ -9,9 +9,7 @@
 
 load_pkg(jutils)
 load_pkg(magrittr)
-load_pkg(dplyr)
 
-dotenv(".env")
 
 # args --------------------------------------------------------------------
 
@@ -32,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
   Sys.getenv("OUTDIRNOTUSE")
@@ -857,17 +855,10 @@ thevariants <- c(
 )
 
 
-# thevariant <- "9006A>G"
-# thevariant <- "6227T>C"
+thevariant <- "4175G>A"
 
-# fn_main(thevariant)
-# m <- fn_load_sc("7702G>A")
-# thevariants <- c(
-#   "4175G>A",
-#   "9025G>A",
-#   "10398A>G",
-#   "13271T>C"
-# )
+fn_main(thevariant)
+
 
 thevariants <- c(
   "4175G>A"
@@ -875,13 +866,16 @@ thevariants <- c(
 cli_alert_info(
   "Start analysis for variants: {paste(thevariants, collapse = ', ')}"
 )
-thevariants |>
-  purrr::map(
-    .f = \(thevariant) {
-      fn_main(thevariant)
-    }
-  ) -> res_all_variants
 
+# thats for all variants, don't run or run once
+\() {
+  thevariants |>
+    purrr::map(
+      .f = \(thevariant) {
+        fn_main(thevariant)
+      }
+    ) -> res_all_variants
+}
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------

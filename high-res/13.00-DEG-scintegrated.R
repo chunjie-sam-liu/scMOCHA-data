@@ -450,7 +450,7 @@ VARIANT_GSEID_SRRID_SCFILE |>
   tibble::rowid_to_column("idx") |>
   dplyr::filter(variant %in% variant_tobe_run) |>
   dplyr::filter(
-    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "1382A>T")
+    idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "3728C>T")
   )
 
 # dplyr::filter(n == 3)
@@ -465,22 +465,24 @@ VARIANT_GSEID_SRRID_SCFILE |>
 #   VARIANT_GSEID_SRRID_SCFILE$variant[[1250]]
 # )
 
-VARIANT_GSEID_SRRID_SCFILE |>
-  dplyr::filter(variant %in% variant_tobe_run) |>
-  dplyr::mutate(
-    a = parallel::mcmapply(
-      FUN = function(df, thevariant) {
-        fn_merge_sc_list_variant(
-          df,
-          thevariant
-        )
-      },
-      df = gseid_srrid,
-      thevariant = variant,
-      mc.cores = 10
+# only run once
+\() {
+  VARIANT_GSEID_SRRID_SCFILE |>
+    dplyr::filter(variant %in% variant_tobe_run) |>
+    dplyr::mutate(
+      a = parallel::mcmapply(
+        FUN = function(df, thevariant) {
+          fn_merge_sc_list_variant(
+            df,
+            thevariant
+          )
+        },
+        df = gseid_srrid,
+        thevariant = variant,
+        mc.cores = 10
+      )
     )
-  )
-
+}
 
 close_all_db()
 # footer ------------------------------------------------------------------
