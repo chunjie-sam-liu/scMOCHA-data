@@ -453,6 +453,19 @@ VARIANT_GSEID_SRRID_SCFILE |>
     idx > which(VARIANT_GSEID_SRRID_SCFILE$variant == "3728C>T")
   )
 
+VARIANT_GSEID_SRRID_SCFILE |>
+  tibble::rowid_to_column("idx") |>
+  dplyr::filter(variant %in% variant_tobe_run) |>
+  dplyr::mutate(
+    fileexists = file_exists(
+      path(
+        scintegrateddir,
+        glue::glue("sc.{variant}.integrated.qs")
+      )
+    )
+  ) |>
+  dplyr::filter(!fileexists)
+
 # dplyr::filter(n == 3)
 
 # fn_merge_sc_list_variant(
@@ -483,6 +496,34 @@ VARIANT_GSEID_SRRID_SCFILE |>
       )
     )
 }
+
+{
+  VARIANT_GSEID_SRRID_SCFILE |>
+    dplyr::filter(variant %in% variant_tobe_run) |>
+    dplyr::mutate(
+      fileexists = file_exists(
+        path(
+          scintegrateddir,
+          glue::glue("sc.{variant}.integrated.qs")
+        )
+      )
+    ) |>
+    dplyr::filter(!fileexists) |>
+    dplyr::mutate(
+      a = parallel::mcmapply(
+        FUN = function(df, thevariant) {
+          fn_merge_sc_list_variant(
+            df,
+            thevariant
+          )
+        },
+        df = gseid_srrid,
+        thevariant = variant,
+        mc.cores = 10
+      )
+    )
+}
+
 
 close_all_db()
 # footer ------------------------------------------------------------------
