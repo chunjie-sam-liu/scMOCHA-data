@@ -383,8 +383,7 @@ fn_de_ <- function(
   ggsave(
     filename = "markers.{.prefix}.{thevariant}.pdf" |>
       glue::glue() |>
-      fs::path_sanitize() |>
-      sanitize_filename(),
+      fs::path_sanitize(),
     plot = p_hetero_high_vs_low$p,
     path = .outdir,
     device = "pdf",
@@ -438,8 +437,7 @@ fn_go_ <- function(
           .p <- p_go_hetero_high_vs_low[[glue::glue("{.x}_{.y}_plot")]][[1]]
           .filename <- "markers.{.prefix}.{thevariant}.go.{.x}_{.y}_plot.pdf" |>
             glue::glue() |>
-            fs::path_sanitize() |>
-            sanitize_filename()
+            fs::path_sanitize()
           ggsave(
             filename = .filename,
             plot = .p +
@@ -788,6 +786,14 @@ fn_main <- function(thevariant) {
 
   sc <- fn_load_sc(thevariant)
   log_success("Loaded sc for variant {thevariant}")
+
+  # Seurat::DimPlot(
+  #   sc,
+  #   reduction = "pca",
+  #   group.by = "celltype",
+  #   shape.by = NULL,
+  #   raster = FALSE
+  # )
 
   log_info("Running variant analysis for {thevariant} with vss")
   parallel::mclapply(
