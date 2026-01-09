@@ -47,10 +47,10 @@ ALLVARIANTS_TEST <- import(
 
 # src ---------------------------------------------------------------------
 source(
-  path(Sys.getenv(\"HIGHRESDIR\"), \"plot_celltype_specific_variant.R\")
+  path(Sys.getenv("HIGHRESDIR"), "plot_celltype_specific_variant.R")
 )
 source(
-  path(Sys.getenv(\"HIGHRESDIR\"), \"plot_individual_proportion.R\")
+  path(Sys.getenv("HIGHRESDIR"), "plot_individual_proportion.R")
 )
 
 # function ----------------------------------------------------------------
