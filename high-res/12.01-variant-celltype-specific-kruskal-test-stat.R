@@ -30,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
   Sys.getenv("OUTDIRNOTUSE")
@@ -135,11 +135,11 @@ ggplot(
     shape = 16,
   ) +
   ggsci::scale_color_aaas() +
-  # geom_hline(
-  #   yintercept = -log10(0.05),
-  #   linetype = "dashed",
-  #   color = "red"
-  # ) +
+  geom_hline(
+    yintercept = -log10(0.05),
+    linetype = "dashed",
+    color = "red"
+  ) +
   # geom_abline(
   #   slope = 1,
   #   intercept = 0,

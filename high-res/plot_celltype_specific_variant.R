@@ -9,9 +9,9 @@ source(path(
   "00-colors.R"
 ))
 
-# thevariant <- "7428G>A"
-# thegseid <- "GSE161354"
-# thesrrid <- "GSM4905217"
+# thevariant <- "3727T>C"
+# thegseid <- "GSE235050"
+# thesrrid <- "GSM7493833"
 
 fn_plot_ggdist <- function(
   thevariant,
@@ -118,7 +118,8 @@ fn_plot_joy <- function(
     dplyr::filter(
       srrid == thesrrid,
       variant == thevariant,
-      variant_type %in% c("colorful", "black")
+      variant_type %in% c("colorful", "black"),
+      # af > 0
     ) |>
     as.data.table() -> .d
 

@@ -30,14 +30,14 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
-outdirnotuse <- path(
-  Sys.getenv("OUTDIRNOTUSE")
-)
+outdirnotuse <- path(Sys.getenv("OUTDIRNOTUSE"))
 cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
-METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
+METAFULL <- import(
+  outdir / "SAMPLES-METADATA-FULL.xlsx"
+)
 
 ALLVARIANTS_TEST <- import(
   outdir / "VARIANT-KRUSKAL-WALLIS-TEST.xlsx"
@@ -73,6 +73,8 @@ ALLVARIANTS_TEST_SIG |>
         #   thegseid = thegseid,
         #   thesrrid = thesrrid
         # )
+        # thevariant  <- "3727T>C"
+        # thesrrid <- "GSM7493833"
         pdf(
           file = outdirnotuse /
             "celltype-specific" /

@@ -30,6 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
@@ -40,7 +41,6 @@ ALLVARIANTS <- import(
 
 HOMO_HETE_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
-dotenv(".env")
 # load conn ---------------------------------------------------------------
 
 conn <- conn_db(
@@ -58,9 +58,9 @@ tbl_allvariants_cell <- dplyr::tbl(
 
 # function ----------------------------------------------------------------
 fn_kruskal_test <- function(.gseid, .srrid, .variant) {
-  # .gseid <- "GSE226602"
-  # .srrid <- "GSM7080053"
-  # .variant <- "11251A>G"
+  # .gseid <- "GSE235050"
+  # .srrid <- "GSM7493833"
+  # .variant <- "3727T>C"
   log_info(glue::glue("Processing {.gseid} - {.srrid} - {.variant}"))
 
   tbl_allvariants_cell |>
@@ -97,6 +97,12 @@ fn_kruskal_test <- function(.gseid, .srrid, .variant) {
     }
   )
 }
+
+# fn_kruskal_test(
+#   .gseid = "GSE235050",
+#   .srrid = "GSM7493833",
+#   .variant = "3727T>C"
+# )
 # body --------------------------------------------------------------------
 
 HOMO_HETE_VARIANTS |>
