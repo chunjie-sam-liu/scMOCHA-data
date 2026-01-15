@@ -130,5 +130,6 @@ m |>
   ) |>
   slice(
     match(allcells1$barcode, barcode)
-  )
+  ) |>
+  count(variant_type)
 allcells1
