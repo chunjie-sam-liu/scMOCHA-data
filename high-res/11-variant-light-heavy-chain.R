@@ -268,7 +268,7 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 fn_plot_bar <- function(.d) {
   .d |>
     dplyr::select(variant, variant_six, L_H_strand) |>
-    dplyr::distinct() |>
+    # dplyr::distinct() |> # don't use distinct here, count all variants
     dplyr::group_by(
       variant_six,
       L_H_strand
@@ -280,9 +280,17 @@ fn_plot_bar <- function(.d) {
       sigvar = variant_six,
       strand = L_H_strand,
     ) |>
-    ggplot(aes(x = sigvar, y = percent, fill = sigvar, alpha = strand)) +
+    ggplot(aes(
+      x = sigvar,
+      y = percent,
+      fill = sigvar,
+      alpha = strand
+    )) +
     geom_hline(yintercept = c(0, 0.2, 0.4), color = "gray90") +
-    geom_bar(stat = "identity", position = "dodge") +
+    geom_bar(
+      stat = "identity",
+      position = position_dodge(preserve = "single")
+    ) +
     # facet_wrap(~ factor(tissue2, levels = c("colon", "fibroblast", "blood"))) +
     theme_classic() +
     # geom_text(aes(label=round(percent,1)), position=position_dodge(width=1), vjust=-0.5) +
@@ -311,7 +319,7 @@ fn_plot_pie_nature_aging <- function(.d) {
       deamination_ros,
       variant_six
     ) |>
-    dplyr::distinct() |>
+    # dplyr::distinct() |> # don't use distinct here, count all variants
     dplyr::count(
       deamination_ros,
       variant_six
@@ -388,7 +396,7 @@ fn_plot_pie_nature_aging <- function(.d) {
       aes(
         y = pos,
         # label = glue::glue("{group}\n{n} ({scales::percent(percentage)})"),
-        label = glue::glue("{scales::percent(percentage)}"),
+        label = glue::glue("{scales::percent(percentage, accuracy = 0.01)}"),
         color = group,
       ),
       size = 6,
@@ -423,7 +431,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # somatic variants
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-SOMATIC-DISTINCT.pdf",
+    file = outdir / "PBMC-VARIANT-LIGHT-HEAVY-CHAIN-SOMATIC.pdf",
     width = 8,
     height = 6
   )
@@ -434,7 +442,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # hete
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HETE-DISTINCT.pdf",
+    file = outdir / "PBMC-VARIANT-LIGHT-HEAVY-CHAIN-HETE.pdf",
     width = 8,
     height = 6
   )
@@ -445,7 +453,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # homo
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO-DISTINCT.pdf",
+    file = outdir / "PBMC-VARIANT-LIGHT-HEAVY-CHAIN-HOMO.pdf",
     width = 8,
     height = 6
   )
@@ -456,7 +464,7 @@ fn_plot_pie_nature_aging <- function(.d) {
 {
   # homo_hete
   pdf(
-    file = outdir / "VARIANT-LIGHT-HEAVY-CHAIN-HOMO-HETE-DISTINCT.pdf",
+    file = outdir / "PBMC-VARIANT-LIGHT-HEAVY-CHAIN-HOMO-HETE.pdf",
     width = 8,
     height = 6
   )
