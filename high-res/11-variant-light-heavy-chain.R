@@ -30,7 +30,7 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
-
+dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
@@ -267,7 +267,9 @@ fn_plot_pie <- function(.d, .colors = NULL) {
 
 fn_plot_bar <- function(.d) {
   .d |>
-    dplyr::select(variant, variant_six, L_H_strand) |>
+    dplyr::select(variant, variant_six, L_H_strand) -> .m
+  .m |> distinct() -> .mm
+  .m |>
     # dplyr::distinct() |> # don't use distinct here, count all variants
     dplyr::group_by(
       variant_six,
@@ -279,6 +281,19 @@ fn_plot_bar <- function(.d) {
     dplyr::rename(
       sigvar = variant_six,
       strand = L_H_strand,
+    ) -> .dd
+
+  .dd |>
+    select(-n) |>
+    pivot_wider(
+      names_from = strand,
+      values_from = percent,
+      values_fill = 0
+    ) |>
+    pivot_longer(
+      cols = c("L", "H"),
+      names_to = "strand",
+      values_to = "percent"
     ) |>
     ggplot(aes(
       x = sigvar,
@@ -302,12 +317,17 @@ fn_plot_bar <- function(.d) {
     theme(
       axis.title.x = element_blank(),
       plot.title = element_text(hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5),
       axis.text.x = element_text(
         angle = 45,
         hjust = 1
       ),
     ) +
     labs(
+      title = "Variant Light/Heavy Chain Distribution",
+      subtitle = glue(
+        "Total variants: {nrow(.m)}, Unique variants: {nrow(.mm)}"
+      ),
       y = "Proportion"
     )
 }

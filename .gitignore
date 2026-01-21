@@ -59,3 +59,4 @@ strandbias.R
 mtcars.xlsx
 *.nohup
 .env
+test.xlsx
