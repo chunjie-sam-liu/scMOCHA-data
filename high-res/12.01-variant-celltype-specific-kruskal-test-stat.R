@@ -269,7 +269,25 @@ fn_xy_breaks_limits(
 
 ALLVARIANTS_TEST_logp_replot |>
   arrange(desc(mean_log10p)) |>
-  dplyr::filter(n > 10)
+  dplyr::filter(n == 1) |>
+  dplyr::filter(mean_log10p < 50) |>
+  dplyr::filter(mean_log10p >= 20) |>
+  arrange(desc(mean_statistic)) |>
+  print(n = Inf) -> m
+
+ALLVARIANTS_TEST_logp |>
+  select(gseid, srrid, variant_type, variant, statistic, log10p) |>
+  dplyr::filter(log10p > -log10(0.05), statistic > 20) |>
+  # dplyr::filter(variant == "15115T>C") |>
+  dplyr::filter(variant %in% m$variant) |>
+  arrange(log10p) |>
+  as_tibble() |>
+  print(n = Inf) |>
+  mutate(
+    label = gsub(".>.", "", "open JOY-HIST*{variant}*{srrid}*" |> glue())
+  ) |>
+  pull(label) |>
+  paste0(collapse = "; ")
 
 ggplot(
   ALLVARIANTS_TEST_logp_replot,
@@ -363,81 +381,6 @@ ggplot(
 #   height = 6
 # )
 
-plot_folder <- "https://chop365-my.sharepoint.com/:f:/r/personal/liuc9_chop_edu/Documents/01-CHOP/01-ProjectOn/Collaboration/01-Mito/Sharing-for-manuscript/Draft-figures/celltype-specific-each?csf=1&web=1&e=sUkCKq"
-
-ALLVARIANTS_TEST_logp |>
-  select(
-    gseid,
-    srrid,
-    Haplogroup,
-    Verbose_haplogroup,
-    variant_type,
-    variant,
-    statistic,
-    p.value,
-    log10p
-  ) |>
-  dplyr::mutate(
-    coord = parallel::mclapply(
-      X = variant,
-      FUN = \(.v) {
-        # .v <- gse_data_variant_classification_clusteraf_bulkaf$variant[[1]]
-        pos <- gsub(
-          pattern = "(\\d+)([A-Z])>([A-Z])",
-          replacement = "\\1",
-          x = .v
-        ) |>
-          as.integer()
-        ref <- gsub(
-          pattern = "(\\d+)([A-Z])>([A-Z])",
-          replacement = "\\2",
-          x = .v
-        )
-        alt <- gsub(
-          pattern = "(\\d+)([A-Z])>([A-Z])",
-          replacement = "\\3",
-          x = .v
-        )
-        data.table(
-          pos = pos,
-          ref = ref,
-          alt = alt
-        )
-      },
-      mc.cores = 10
-    )
-  ) |>
-  tidyr::unnest(
-    cols = coord
-  ) |>
-  mutate(
-    url = glue(
-      '=HYPERLINK("{plot_folder}", "DETAIL-{pos}{ref}>{alt}-{gseid}-{srrid}.pdf")'
-    )
-  ) -> dd
-load_pkg(openxlsx2)
-
-wb <- wb_workbook() |>
-  wb_add_worksheet(
-    sheet = "KWT"
-  ) |>
-  wb_add_data(
-    sheet = "KWT",
-    x = dd
-  )
-
-wb |>
-  wb_add_plot(
-    sheet = "KWT",
-    dims = anchor_cell,
-    width = 5,
-    file_type = "png",
-    units = "in",
-    res = 300,
-  ) |>
-  wb_save(
-    file = "test.xlsx"
-  )
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
