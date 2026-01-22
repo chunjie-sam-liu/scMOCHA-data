@@ -267,19 +267,26 @@ fn_xy_breaks_limits(
 ) -> ybl
 
 
-ALLVARIANTS_TEST_logp_replot |>
-  arrange(desc(mean_log10p)) |>
-  dplyr::filter(n == 1) |>
-  dplyr::filter(mean_log10p < 50) |>
-  dplyr::filter(mean_log10p >= 20) |>
-  arrange(desc(mean_statistic)) |>
-  print(n = Inf) -> m
+# ALLVARIANTS_TEST_logp_replot |>
+#   arrange(desc(mean_log10p)) |>
+#   dplyr::filter(n == 1) |>
+#   dplyr::filter(mean_log10p < 50) |>
+#   dplyr::filter(mean_log10p >= 20) |>
+#   arrange(desc(mean_statistic)) |>
+#   print(n = Inf) -> m
 
 ALLVARIANTS_TEST_logp |>
   select(gseid, srrid, variant_type, variant, statistic, log10p) |>
   dplyr::filter(log10p > -log10(0.05), statistic > 20) |>
-  # dplyr::filter(variant == "15115T>C") |>
-  dplyr::filter(variant %in% m$variant) |>
+  # dplyr::filter(variant == "6374T>C") |>
+  # dplyr::filter(grepl("8005", variant))
+  dplyr::filter(
+    variant %in%
+      c(
+        "8005T>C"
+      )
+  ) |>
+  # dplyr::filter(variant %in% m$variant) |>
   arrange(log10p) |>
   as_tibble() |>
   print(n = Inf) |>
@@ -289,20 +296,94 @@ ALLVARIANTS_TEST_logp |>
   pull(label) |>
   paste0(collapse = "; ")
 
-ggplot(
-  ALLVARIANTS_TEST_logp_replot,
-  aes(
-    x = mean_statistic,
-    y = mean_log10p,
-    size = n
+thevariants <- tibble(
+  variant = c(
+    "709G>A", # homo hetero
+    "14905G>A", # Bimodal
+    "8138A>G", # Bimodal
+    "2011G>A", # Bimodal
+    "7751T>C", # Bimodal
+    "7609T>C", # Bimodal
+    "4813T>C", # Mono
+    "7159T>C", # B cell
+    "7833T>C", # T cell
+    "10500G>A", # T cell
+    "10097A>G", # T cell
+    "8005T>C", # CD8 T
+    "7850G>A", # CD8 T
+    "9033A>G", # NK
+    "7757G>A", # NK
+    "9390A>G", # NK
+    "6374T>C", # NK
+    "10236A>G", # NK
+    "1474G>A", # NK
+    "9609T>C", # NK
+    "2636G>A", # NK
+    "15612G>A", # NK
+    "2343G>A", # NK
+    "7837T>C", # NK
+    "6928T>C", # NK
+    "2666T>C" # NK
+  ),
+  type = c(
+    "homo hetero", # homo hetero
+    "Bimodal",
+    "Bimodal",
+    "Bimodal",
+    "Bimodal",
+    "Bimodal", # Bimodal
+    "Mono", # Mono
+    "B", # B cell
+    "T cell",
+    "T cell",
+    "T cell", # T cell
+    "CD8 T",
+    "CD8 T", # CD8 T
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK",
+    "NK" # NK
   )
-) +
+)
+
+color_celltype <- c(
+  "homo hetero" = "blue",
+  "Bimodal" = "red",
+  "Mono" = "#A6D854FF",
+  "B" = "#66C2A5FF",
+  "T cell" = "#E5C494FF",
+  "CD8 T" = "#8DA0CBFF",
+  "NK" = "#FFD92FFF",
+  "other" = "black"
+)
+
+ALLVARIANTS_TEST_logp_replot |>
+  left_join(thevariants, by = "variant") |>
+  mutate(
+    type = ifelse(is.na(type), "other", type)
+  ) |>
+  mutate(type = factor(type, names(color_celltype))) |>
+  ggplot(
+    aes(
+      x = mean_statistic,
+      y = mean_log10p,
+      size = n
+    )
+  ) +
   geom_point(
-    # aes(size = parameter),
+    aes(color = type),
     alpha = 0.5,
     shape = 16,
   ) +
-  ggsci::scale_color_aaas() +
   geom_hline(
     yintercept = -log10(0.05),
     linetype = "dashed",
@@ -310,17 +391,19 @@ ggplot(
   ) +
   ggrepel::geom_text_repel(
     data = ALLVARIANTS_TEST_logp_replot |>
-      dplyr::filter(
-        mean_log10p > 60,
-        mean_statistic > 300
-        # variant %in% c("4175G>A", "3727T>C", "3728G>A", "3664G>A", "3243A>G")
-      ),
-    aes(label = variant),
+      left_join(thevariants, by = "variant") |>
+      dplyr::filter(!is.na(type)),
+    aes(label = variant, color = type),
     size = 3,
-    max.overlaps = 20,
+    # max.overlaps = 20,
     show.legend = FALSE,
     # nudge_x = 2,
-    nudge_y = 1
+    # nudge_y = 1
+  ) +
+  scale_size(name = "# of samples") +
+  scale_color_manual(
+    name = "Cell type specific",
+    values = color_celltype
   ) +
   scale_x_continuous(
     limits = xbl$limits,
@@ -354,7 +437,7 @@ ggplot(
       color = "black"
     ),
     plot.subtitle = element_text(hjust = 0.5),
-    legend.position = c(0.25, 0.75),
+    legend.position = "right",
     legend.background = element_rect(
       fill = NA,
       color = NA
@@ -371,15 +454,15 @@ ggplot(
     title = "Cell type specific variant",
   ) -> plot_ks_statistic_vs_logp_replot
 
-# ggsave(
-#   file.path(
-#     outdir,
-#     "VARIANT-KRUSKAL-WALLIS-STATISTIC-vs-LOG10P-VALUE.pdf"
-#   ),
-#   plot = plot_ks_statistic_vs_logp,
-#   width = 8,
-#   height = 6
-# )
+ggsave(
+  file.path(
+    outdir,
+    "VARIANT-KRUSKAL-WALLIS-STATISTIC-vs-LOG10P-VALUE-CANDIDATE.pdf"
+  ),
+  plot = plot_ks_statistic_vs_logp_replot,
+  width = 8,
+  height = 6
+)
 
 # footer ------------------------------------------------------------------
 
