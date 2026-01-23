@@ -1010,3 +1010,49 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
     height = 4,
   )
 }
+
+
+\() {
+  rawdir <- path("/mnt/isilon/u01_project/large-scale/liuc9/raw")
+  thgseid <- "GSE226602"
+  thesrrid <- "GSM7080059"
+  thevariant <- "10500G>A"
+  fn_plot_all(
+    thepath = rawdir / thgseid / "final" / thesrrid,
+    thevariants = thevariant
+  ) -> p_vaf_feature
+  outdir <- path(
+    Sys.getenv("OUTDIRNOTUSE")
+  )
+  ggsave(
+    filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>
+      glue::glue(),
+    path = outdir,
+    plot = p_vaf_feature,
+    width = 12,
+    height = 4,
+  )
+}
+
+
+\() {
+  rawdir <- path("/mnt/isilon/u01_project/large-scale/liuc9/raw")
+  thgseid <- "GSE226602"
+  thesrrid <- "GSM7080017"
+  thevariant <- "7833T>C"
+  fn_plot_all(
+    thepath = rawdir / thgseid / "final" / thesrrid,
+    thevariants = thevariant
+  ) -> p_vaf_feature
+  outdir <- path(
+    Sys.getenv("OUTDIRNOTUSE")
+  )
+  ggsave(
+    filename = "{thevariant}-{thgseid}-{thesrrid}.pdf" |>
+      glue::glue(),
+    path = outdir,
+    plot = p_vaf_feature,
+    width = 12,
+    height = 4,
+  )
+}

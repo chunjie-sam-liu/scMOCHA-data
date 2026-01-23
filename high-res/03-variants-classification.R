@@ -111,6 +111,46 @@ export(
 )
 
 
+gse_data_variant_heteroplasmic |>
+  select(anno) |>
+  unnest(cols = anno) |>
+  select(
+    variant,
+    Position,
+    Ref,
+    Alt,
+    Locus,
+    Disease,
+    Status,
+    ntchange,
+    aachange,
+    # `Mitomap Frequency`,
+    `Gnomad Frequency`
+  ) |>
+
+  mutate(
+    Disease = ifelse(Disease == "", NA_character_, Disease),
+    Status = ifelse(Status == "", NA_character_, Status),
+  ) |>
+  distinct() |>
+  dplyr::filter(
+    !(variant == "1382A>C" & Locus == "12S,MOTS-C")
+  ) |>
+  dplyr::filter(
+    !(variant == "9055G>A" & Status == "Reported [B*]")
+  ) |>
+  dplyr::filter(
+    !(variant == "12811T>C" & Status == "Reported [B*]")
+  ) |>
+  arrange(Position) -> variant_annotation_table
+
+{
+  variant_annotation_table |>
+    export(
+      file = outdir / "VARIANT-ANNOTATION-TABLE.xlsx",
+    )
+}
+
 #
 #
 # ? variant classification --------------------------------------------------------------------
