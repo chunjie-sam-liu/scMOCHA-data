@@ -31,6 +31,13 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
+load_pkg(jutils)
+
+dotenv(".env")
+
+conflicted::conflict_prefer("filter", "dplyr")
+
+
 outdir <- path(Sys.getenv("OUTDIR"))
 
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
@@ -96,26 +103,38 @@ source(
 # function ----------------------------------------------------------------
 fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
   fn_xy_breaks_limits(
-    df$n_individuals,
+    c(0, df$n_individuals),
   ) -> ybl_
 
   df |> dplyr::filter(variant %in% label_variants) -> forlabel
+
   df |>
+    dplyr::mutate(
+      point_color = ifelse(n_individuals > 1, "red", "black")
+    ) |>
     ggplot(aes(
       x = start,
       y = n_individuals
     )) +
     geom_segment(
-      aes(x = start, xend = start, y = 0, yend = n_individuals)
+      aes(x = start, xend = start, y = 0, yend = n_individuals),
+      linewidth = 0.5,
+      color = "grey50"
     ) +
     geom_point(
-      aes(size = n_individuals),
-      color = "red",
-      fill = "red",
+      aes(
+        size = n_individuals,
+        fill = point_color,
+        color = point_color
+      ),
+      # color = "red",
+      # fill = "red",
       # alpha = 0.7,
       shape = 21,
-      stroke = 1
+      stroke = 1,
     ) +
+    scale_fill_identity() +
+    scale_color_identity() +
     ggrepel::geom_text_repel(
       data = forlabel,
       aes(label = variant),
@@ -135,7 +154,7 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
       labels = c(seq(0, 17000, 1000), 16569),
     ) +
     scale_y_continuous(
-      expand = expansion(add = c(.05, 0.05), mult = c(0.01, 0.01)),
+      expand = expansion(add = c(.05, 0.05), mult = c(0.01, 0.05)),
       limits = ybl_$limits,
       breaks = ybl_$breaks,
       # labels = ybl_$limits,
@@ -214,7 +233,7 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
   wrap_plots(
     fn_plot_freq_mtdna(
       SOMATIC_VARIANT_N_INDIVIDUALS,
-      label_variants = c("14082C>G", "15169A>G", "3240C>G")
+      label_variants = c("14082C>G", "15169A>G", "3240C>G", "7757G>A")
     ),
     plot_spacer(),
     fn_plot_mtdna(),

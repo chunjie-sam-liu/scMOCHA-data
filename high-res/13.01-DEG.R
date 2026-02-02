@@ -818,8 +818,8 @@ fn_main <- function(thevariant) {
 
   cli_alert_success("Finished variant analysis for {thevariant} with vss")
   pbmclapply(
-    vaf_cutoff,
-    .f = \(.vs) {
+    X = vaf_cutoff,
+    FUN = \(.vs) {
       tryCatch(
         expr = {
           fn_variant_cell_vaf_(
@@ -859,14 +859,27 @@ thevariants <- c(
   "10398A>G"
 )
 
+thevariants <- c()
+
 
 thevariant <- "4175G>A"
 
-fn_main(thevariant)
-
+# fn_main(thevariant)
 
 thevariants <- c(
-  "4175G>A"
+  # "4175G>A",
+  c(
+    "14082C>G",
+    "15169A>G",
+    "3240C>G",
+    "7757G>A",
+    "3173G>A",
+    "3176A>T",
+    "3178T>A",
+    "9025G>A",
+    "9237G>A",
+    "10398A>G"
+  )
 )
 
 # thats for all variants, don't run or run once
