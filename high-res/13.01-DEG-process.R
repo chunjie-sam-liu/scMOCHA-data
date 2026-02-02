@@ -30,6 +30,10 @@ logger::log_layout(logger::layout_glue_colors)
 # header ------------------------------------------------------------------
 
 # load data ---------------------------------------------------------------
+load_pkg(jutils)
+
+conflicted::conflict_prefer("filter", "dplyr")
+
 dotenv(".env")
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(
@@ -717,7 +721,7 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
     "Start celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
   )
 
-  parallel::mclapply(
+  lapply(
     celltypes,
     function(.celltype) {
       sc_sub <- subset(
@@ -736,8 +740,7 @@ fn_variant_cell_ <- function(thevariant, sc, .vs = c(0.5, 0.5)) {
       log_success(
         "Finished celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]} in {.celltype}"
       )
-    },
-    mc.cores = 1
+    }
   )
   log_success(
     "Finished celltype-specific analysis for {thevariant} with {.vs[1]} and {.vs[2]}"
@@ -752,7 +755,7 @@ fn_variant_cell_vaf_ <- function(thevariant, sc, .vs = 0.4) {
     "Start celltype-specific analysis for {thevariant} with {.vs}"
   )
 
-  parallel::mclapply(
+  lapply(
     celltypes,
     function(.celltype) {
       sc_sub <- subset(
@@ -771,8 +774,7 @@ fn_variant_cell_vaf_ <- function(thevariant, sc, .vs = 0.4) {
       log_success(
         "Finished celltype-specific analysis for {thevariant} with {.vs} in {.celltype}"
       )
-    },
-    mc.cores = 1
+    }
   )
   log_success(
     "Finished celltype-specific analysis for {thevariant} with {.vs}"
@@ -782,23 +784,19 @@ fn_variant_cell_vaf_ <- function(thevariant, sc, .vs = 0.4) {
 
 fn_main <- function(thevariant) {
   vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
-  log_info("Processing variant {thevariant}")
+  cli_alert_info("Processing variant {thevariant}")
 
   sc <- fn_load_sc(thevariant)
-  log_success("Loaded sc for variant {thevariant}")
+  cli_alert_success("Loaded sc for variant {thevariant}")
 
-  # Seurat::DimPlot(
-  #   sc,
-  #   reduction = "pca",
-  #   group.by = "celltype",
-  #   shape.by = NULL,
-  #   raster = FALSE
-  # )
+  cli_alert_info("Running variant analysis for {thevariant} with vss")
 
-  log_info("Running variant analysis for {thevariant} with vss")
-  parallel::mclapply(
-    vaf_cutoff,
-    function(.vs) {
+  pbmclapply(
+    X = vaf_cutoff,
+    FUN = \(.vs) {
+      cli_alert_info(
+        "Processing variant {thevariant} with vaf cutoff {.strong {(.vs)}}"
+      )
       tryCatch(
         expr = {
           fn_variant_vaf_(
@@ -809,17 +807,17 @@ fn_main <- function(thevariant) {
           )
         },
         error = function(e) {
-          log_error(
-            "Error in variant {thevariant} with vaf cutoff {.vs}: {e$message}"
+          cli_alert_danger(
+            "Error in variant {thevariant} with vaf cutoff {.strong {(.vs)}}: {e$message}"
           )
         }
       )
     },
-    mc.cores = 3
+    mc.cores = 2
   )
-  log_success("Finished variant analysis for {thevariant} with vss")
 
-  purrr::map(
+  cli_alert_success("Finished variant analysis for {thevariant} with vss")
+  pbmclapply(
     vaf_cutoff,
     .f = \(.vs) {
       tryCatch(
@@ -831,12 +829,13 @@ fn_main <- function(thevariant) {
           )
         },
         error = function(e) {
-          log_error(
-            "Error in celltype-specific variant {thevariant} with vaf cutoff {.vs}: {e$message}"
+          cli_alert_danger(
+            "Error in celltype-specific variant {thevariant} with vaf cutoff {.strong {(.vs)}}: {e$message}"
           )
         }
       )
-    }
+    },
+    mc.cores = 2
   )
 }
 # body --------------------------------------------------------------------
@@ -868,9 +867,6 @@ fn_main(thevariant)
 
 thevariants <- c(
   "4175G>A"
-)
-cli_alert_info(
-  "Start analysis for variants: {paste(thevariants, collapse = ', ')}"
 )
 
 # thats for all variants, don't run or run once
