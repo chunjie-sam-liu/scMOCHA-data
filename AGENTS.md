@@ -1,29 +1,141 @@
-# Repository Guidelines
+# scMOCHA-data Developer Guidelines
 
-## Project Structure & Module Organization
-- `src/`: numbered R/Python/Bash pipeline steps (SRA metadata, downloads, variant collection, parsing). Keep numeric prefixes when adding new stages so order is clear.
-- `preprocessing/`: dataset-specific prep, QC, and plotting scripts; includes helper shells for muscle alignment and per-study checks.
-- `analysis/`, `large-scale/`, `misc/`: exploratory analyses, figures, and one-off experiments; store derived plots in `imgs/` and keep logs in `logs/`.
-- `config/` and `scmocha.yaml`: run-time settings and templates; `utils/utils.R` holds shared helpers; `data/` and `bak/` hold local inputs/backups (avoid committing large or sensitive files).
+This document provides instructions for AI agents and developers working on the `scMOCHA-data` repository.
+It merges project-specific conventions with general agentic coding best practices.
 
-## Build, Test, and Development Commands
-- Run R stages directly, e.g. `Rscript src/01-sra-metadata.R --help` or with arguments for new data pulls; mirror numbering when chaining steps.
-- Dataset prep examples: `Rscript preprocessing/02-load-variant.R` and `Rscript preprocessing/03-summarize-meta.R`.
-- Mixed-language steps: `python3 src/06.2-collect-variants-new.py`, `bash src/06.3-collect-variants-new.sh`. Keep scripts executable (`chmod +x`) and log outputs to `logs/`.
-- `task` is available but currently only echoes; prefer direct commands above or add new Taskfile entries if you standardize a workflow.
+## 1. Environment & Package Management
 
-## Coding Style & Naming Conventions
-- R: 2-space indentation, snake_case for objects, and numbered filenames for pipeline order. Favor `data.table` IO (`fwrite`, `fread`), `qs::qsave/qread` for RDS, and keep pipe-heavy chains readable. Use `logger` for progress and `GetoptLong` for CLI args.
-- Python: target Python 3.10; keep functions snake_case, modules lowercase, and run `ruff` (optional dev dependency) before committing. Shell scripts should be POSIX-compatible with `set -euo pipefail` where feasible.
+### Python
+*   **Manager**: Use `uv` (faster replacement for pip).
+    *   Add package: `uv add <package>`
+    *   Run script: `uv run python script.py`
+    *   Sync environment: `uv sync`
+    *   Lint/Format: `uv run ruff check .` / `uv run ruff format .`
 
-## Testing Guidelines
-- No formal test suite yet; validate changes by running the affected script on a small sample and comparing outputs in `data/` or derived tables/plots in `imgs/`.
-- Keep runs reproducible: pin random seeds when present, persist command-line arguments in commit messages or PR notes, and capture key log lines for reviewer context.
+### R
+*   **Manager**: Use Conda environment (typically named `renv` or `scmocha`).
+    *   Activate: `conda activate renv`
+    *   **Crucial**: Do NOT use `conda run -n renv Rscript`. Activate the environment first.
+    *   Dependencies: Managed via `scmocha.yaml`.
+*   **Package Loading**:
+    *   **Always** use `load_pkg(jutils)` as the first library call.
+    *   Use `load_pkg(pkg1, pkg2)` instead of `library(pkg1); library(pkg2)`.
 
-## Commit & Pull Request Guidelines
-- Commit messages are short and conventional (`feat: ...`, `fix: ...`, `docs: ...`, `chore: ...`); use imperative tone and scope-specific wording.
-- PRs should summarize intent, list commands executed, note data sources or paths touched, and attach representative artifacts (plots/tables). Link related issues or tickets and call out breaking changes or long-running steps.
+## 2. Build, Lint, and Test Commands
 
-## Data Handling & Security
-- Do not commit large raw datasets or credentials. Use symlinks for external storage when needed (see prior `feat: add symlink...` patterns).
-- Strip identifiers before sharing logs; prefer configuration files (`config/`, `*.yaml`) over hardcoded paths or secrets. Ensure output directories exist before writing to avoid leaking to unintended locations.
+### Linting & Formatting
+*   **Python**:
+    *   Lint: `uv run ruff check .` (Fix auto-fixable issues with `--fix`)
+    *   Format: `uv run ruff format .`
+*   **R**:
+    *   Follow tidyverse style (2-space indentation).
+    *   Ensure scripts are executable (`chmod +x`).
+
+### Testing
+*   **Python**:
+    *   Run all tests: `uv run pytest`
+    *   Run single test file: `uv run pytest tests/test_file.py`
+    *   Run single test case: `uv run pytest tests/test_file.py::test_function_name`
+    *   *Note*: If `pytest` is not configured, run the script directly to verify functionality.
+*   **R**:
+    *   **No formal test suite exists.**
+    *   **Verification Strategy**:
+        1.  Run the affected script on a small data sample (e.g., first 100 rows).
+        2.  Check output in `data/` or derived plots in `imgs/`.
+        3.  Compare outputs with previous runs to ensure reproducibility.
+    *   Example: `Rscript src/01-sra-metadata.R` (use flags if available).
+
+## 3. Code Style & Conventions
+
+### General Principles
+*   **Reliability First**: Do not implement features you cannot guarantee are reliable.
+*   **Simplicity**: Choose the simplest solution.
+*   **Focused Files**: Keep files under 200 lines with single responsibilities.
+*   **Naming**: Descriptive, unambiguous, snake_case (R/Python functions).
+
+### R Guidelines
+*   **Imports**: `load_pkg(jutils)` MUST be first. It provides pipes (`%>%`, `|>`) and utilities.
+*   **Syntax**:
+    *   Use `=` for assignment in function arguments, not `<-`.
+    *   Use `<-` for object assignment.
+    *   Use `fs::path()` for robust file path construction.
+*   **Data I/O**:
+    *   Internal data: `qs::qsave()` and `qs::qread()`.
+    *   Tabular data: `data.table::fread()` and `data.table::fwrite()`.
+*   **CLI**: Use `GetoptLong` with direct call pattern (no spec string).
+*   **Logging**: Use `logger` package (e.g., `log_info()`, `log_error()`).
+
+### Python Guidelines
+*   **Libraries**:
+    *   Dataframes: Prefer `polars` over `pandas` for performance.
+    *   Paths: Use `pathlib.Path` (NO string concatenation).
+    *   CLI: Use `typer`.
+    *   Output: Use `rich` for terminal output.
+*   **Type Hinting**: Mandatory for all function signatures.
+
+### File Header Template
+All scripts must start with this header (do not use "Generated by..."):
+```python
+# Author: Chunjie Liu
+# Contact: chunjie.sam.liu.at.gmail.com
+# Date: {today}
+# Description: {Brief description}
+# Version: 0.1
+```
+
+## 4. Project Structure
+
+*   `src/`: Numbered pipeline steps (R/Python/Bash). Maintain numeric order (e.g., `01-...`, `02-...`).
+    *   Keep prefixes when adding new stages.
+*   `preprocessing/`: Dataset-specific preparation and QC scripts.
+*   `analysis/`: Exploratory analyses and one-off experiments.
+*   `config/`: Configuration files and templates (`scmocha.yaml`).
+*   `utils/`: Shared helper functions (`utils.R`).
+*   `docs/logs/`: AI conversation logs.
+*   `imgs/`: Store derived plots here.
+
+## 5. Workflow for Agents
+
+1.  **Understand**: Read all context. Use `grep`/`glob` to explore. Read `AGENTS.md` and `scmocha.yaml`.
+2.  **Plan**: Break down tasks. Write 2-3 reasoning paragraphs before coding.
+3.  **Implement**:
+    *   Follow strict naming conventions.
+    *   Use existing patterns (look at `src/` files).
+    *   **Do not revert user changes** unless explicitly requested.
+4.  **Verify**:
+    *   Run `ruff check` (Python).
+    *   Execute the script.
+    *   Check output files.
+    *   *Self-Correction*: If error occurs, analyze symptoms -> consider causes -> minimal fix.
+
+## 6. Commit Guidelines
+
+*   **Format**: `type: description`
+    *   Types: `feat` (new feature), `fix` (bug fix), `docs` (documentation), `chore` (maintenance).
+*   **Content**: Summarize intent, commands executed, and data sources touched.
+*   **Safety**:
+    *   **NEVER** commit secrets (API keys, credentials).
+    *   **NEVER** commit large raw datasets (>100MB). Use symlinks or `.gitignore`.
+    *   Strip identifiers before sharing logs.
+
+## 7. Troubleshooting
+
+*   **R Env Issues**: Ensure you are in the correct conda env (`conda activate renv`). Check `scmocha.yaml` for missing dependencies.
+*   **Path Issues**: Always use absolute paths or `fs::path`/`pathlib.Path` relative to project root.
+*   **Missing `jutils`**: Ensure `load_pkg` is defined or sourced. If running independently, you may need to source `utils/utils.R` if `jutils` is not installed as a package.
+
+## 8. Specific Rules from Copilot Instructions
+
+*   **Templates**: Start from `.github/templates/`:
+    *   `template-analysis-numbered.R`
+    *   `template-utility-uppercase.R`
+    *   `template-processing.R`
+    *   `template-processing.py`
+*   **Pre-Flight Checklist**:
+    *   Header present?
+    *   `load_pkg(jutils)` first?
+    *   `=` for args?
+    *   Output directories created?
+
+---
+*Generated by opencode for scMOCHA-data development.*
