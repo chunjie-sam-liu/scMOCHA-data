@@ -1,348 +1,58 @@
 #!/usr/bin/env Rscript
-# Metainfo ----------------------------------------------------------------
-# @AUTHOR: Chun-Jie Liu
-# @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2025-11-19 15:10:42
-# @DESCRIPTION: filename
-# @VERSION: v0.0.1
+# Author: Chunjie Liu
+# Contact: chunjie.sam.liu.at.gmail.com
+# Date: 2026-02-02
+# Description: KEGG enrichment analysis for DEGs
+# Version: 0.3
 
 # Library -----------------------------------------------------------------
 
-load_pkg(jutils)
+library(conflicted)
+conflict_prefer("filter", "dplyr")
+conflict_prefer("path", "fs")
 
-dotenv(".env")
+# Use load_pkg for the rest
+if (!requireNamespace("jutils", quietly = TRUE)) {
+  # If jutils is not installed, we might need to source it or install it
+}
+library(magrittr)
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(ReactomePA)
+library(writexl)
+library(jutils)
 
 # args --------------------------------------------------------------------
 
-# s: string, i: integer, f: float, !: boolean
-# @: array
-# %: hash
-# default: default value specified here.
-verbose <- FALSE
-spec <- "
-Usage: Rscript foorbar.R [options]
-Options:
-
-<verbose!> Print messages
-"
-
 GetoptLong.options(help_style = "two-column")
-GetoptLong(spec, template_control = list(opt_width = 21))
+VERSION = "v0.0.1"
+
+verbose = TRUE
+GetoptLong("verbose!", "print messages")
+
+logger::log_threshold(logger::TRACE)
+logger::log_layout(logger::layout_glue_colors)
 
 # header ------------------------------------------------------------------
 
-# future: :plan(future: :multisession, workers = 10)
-
-# load data ---------------------------------------------------------------
-
-outdir <- path(Sys.getenv("OUTDIR"))
-outdirnotuse <- path(
-  Sys.getenv("OUTDIRNOTUSE")
-)
-cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
-
-
-# load conn ---------------------------------------------------------------
-
-# src ---------------------------------------------------------------------
+dotenv(".env")
+outdir <- fs::path(Sys.getenv("OUTDIR"))
+outdirnotuse <- fs::path(Sys.getenv("OUTDIRNOTUSE"))
+cleandatadir <- fs::path(Sys.getenv("CLEANDATADIR"))
+highresdir <- fs::path(Sys.getenv("HIGHRESDIR"))
 
 # function ----------------------------------------------------------------
 
-fn_gsea <- function(markers) {
-  markers |>
-    tibble::rownames_to_column(var = "GeneName") |>
-    dplyr::rename(log2FC = avg_log2FC) -> .de
-
-  .de %>%
-    dplyr::arrange(-log2FC) %>%
-    dplyr::select(GeneName, log2FC) %>%
-    tidyr::drop_na() %>%
-    tibble::deframe() -> geneList
-
-  .GSEA <- clusterProfiler::GSEA(
-    geneList = geneList,
-    pAdjustMethod = "BH",
-    TERM2GENE = msig_df_s,
-    verbose = FALSE
-  )
-
-  .GSEA |>
-    tibble::as_tibble() |>
-    tidyr::separate(
-      Description,
-      into = c("Cat", "Description"),
-      sep = "#"
-    ) -> .GSEA_sep
-
-  .GSEA_sep |>
-    dplyr::filter(
-      grepl("Atp", Description, ignore.case = TRUE)
-    )
-  # .GSEA_sep$Cat %>% table()
-
-  .GSEA_sep |>
-    dplyr::filter(
-      grepl("OX", Description, ignore.case = TRUE)
-    )
-
-  .GSEA_sep %>%
-    dplyr::filter(Cat == "C5") -> .GSEA_sep_C5
-
-  .GSEA_sep_C5 %>%
-    dplyr::mutate(adjp = -log10(p.adjust)) %>%
-    dplyr::select(ID, Description, adjp, NES) %>%
-    dplyr::filter(grepl(pattern = "gobp", Description, ignore.case = TRUE)) %>%
-    dplyr::mutate(
-      Description = gsub(pattern = "GOBP_", replacement = "", x = Description)
-    ) %>%
-    dplyr::mutate(
-      Description = gsub(pattern = "_", replacement = " ", x = Description)
-    ) %>%
-    dplyr::mutate(
-      Description = stringr::str_wrap(
-        stringr::str_to_sentence(string = Description),
-        width = 60
-      )
-    ) %>%
-    dplyr::arrange(NES) %>%
-    dplyr::mutate(color = ifelse(NES > 0, "P", "N")) %>%
-    dplyr::slice(1:10, (dplyr::n() - 9):dplyr::n()) %>%
-    dplyr::distinct() %>%
-    dplyr::arrange(NES, -adjp) %>%
-    dplyr::mutate(
-      Description = factor(Description, levels = Description)
-    ) -> .GSEA_sep_C5_for_plot
-
-  .GSEA_sep_C5_for_plot %>%
-    ggplot(aes(x = Description, y = NES)) +
-    geom_col(aes(fill = color)) +
-    scale_fill_manual(values = c("#54AE59", "#9F82B5")) +
-    scale_x_discrete(
-      limit = .GSEA_sep_C5_for_plot$Description,
-      labels = stringr::str_wrap(
-        stringr::str_replace_all(
-          string = .GSEA_sep_C5_for_plot$Description,
-          pattern = "_",
-          replacement = " "
-        ),
-        width = 50
-      )
-    ) +
-    labs(y = "Normalized Enrichment Score") +
-    coord_flip() +
-    theme(
-      panel.background = element_rect(fill = NA),
-      panel.grid = element_blank(),
-
-      axis.line.x = element_line(color = "black"),
-      axis.text.x = element_text(color = "black"),
-
-      axis.title.y = element_blank(),
-      axis.line.y = element_line(color = "black"),
-      legend.position = "none"
-    ) -> gseaplotc5
-
-  .GSEA_sep %>%
-    dplyr::filter(Cat == "H") -> .GSEA_sep_H
-
-  .GSEA_sep_H %>%
-    dplyr::mutate(adjp = -log10(p.adjust)) %>%
-    dplyr::select(ID, Description, adjp, NES) %>%
-    # dplyr::filter(grepl(pattern = "gobp", Description, ignore.case = TRUE)) %>%
-    # dplyr::mutate(Description = gsub(pattern = "GOBP_", replacement = "", x = Description)) %>%
-    dplyr::mutate(
-      Description = gsub(pattern = "_", replacement = " ", x = Description)
-    ) %>%
-    dplyr::mutate(
-      Description = stringr::str_wrap(
-        Description,
-        width = 60
-      )
-    ) %>%
-    dplyr::arrange(NES) %>%
-    dplyr::mutate(color = ifelse(NES > 0, "P", "N")) -> .GSEA_sep_H_d
-
-  .GSEA_sep_H_for_plot <- if (nrow(.GSEA_sep_H) > 20) {
-    .GSEA_sep_H_d %>%
-      dplyr::slice(1:10, (dplyr::n() - 9):dplyr::n()) %>%
-      dplyr::distinct() %>%
-      dplyr::arrange(NES, -adjp) %>%
-      dplyr::mutate(Description = factor(Description, levels = Description))
-  } else {
-    .GSEA_sep_H_d %>%
-      dplyr::arrange(NES, -adjp) %>%
-      dplyr::mutate(Description = factor(Description, levels = Description))
-  }
-
-  .GSEA_sep_H_for_plot %>%
-    ggplot(aes(x = Description, y = NES)) +
-    geom_col(aes(fill = color)) +
-    scale_fill_manual(values = c("#54AE59", "#9F82B5")) +
-    scale_x_discrete(
-      limit = .GSEA_sep_H_for_plot$Description,
-      labels = stringr::str_wrap(
-        stringr::str_replace_all(
-          string = .GSEA_sep_H_for_plot$Description,
-          pattern = "_",
-          replacement = " "
-        ),
-        width = 50
-      )
-    ) +
-    labs(y = "Normalized Enrichment Score") +
-    coord_flip() +
-    theme(
-      panel.background = element_rect(fill = NA),
-      panel.grid = element_blank(),
-
-      axis.line.x = element_line(color = "black"),
-      axis.text.x = element_text(color = "black"),
-
-      axis.title.y = element_blank(),
-      axis.line.y = element_line(color = "black"),
-      legend.position = "none"
-    ) -> gseaploth
-
-  tibble::tibble(
-    gsea = list(.GSEA_sep),
-    gseaplotc5 = list(gseaplotc5),
-    gseaploth = list(gseaploth)
-  )
+sanitize_filename <- function(x) {
+  x |>
+    gsub(">", "GT", x = _, fixed = TRUE) |>
+    gsub("<", "LT", x = _, fixed = TRUE) |>
+    gsub("%", "pct", x = _, fixed = TRUE) |>
+    gsub("=", "-", x = _, fixed = TRUE) |>
+    gsub("[()]", "", x = _) |>
+    gsub("[[:space:]]+", "_", x = _) |>
+    trimws()
 }
-
-fn_kegg <- function(
-  markers,
-  .cutoff_pval = 0.05,
-  .cutoff_log2fc = 0.25,
-  .pct = 0.05
-) {
-  markers |>
-    dplyr::mutate(
-      color = dplyr::case_when(
-        p_val_adj < .cutoff_pval &
-          (pct.1 >= .pct | pct.2 >= .pct) &
-          avg_log2FC > .cutoff_log2fc ~
-          "red",
-        p_val_adj < .cutoff_pval &
-          (pct.1 >= .pct | pct.2 >= .pct) &
-          avg_log2FC < -.cutoff_log2fc ~
-          "blue",
-        TRUE ~ "grey"
-      )
-    ) -> markers_de
-
-  markers_de |>
-    tibble::rownames_to_column(var = "GeneName") |>
-    dplyr::filter(color != "grey") -> .gs
-  # .gs
-
-  .gs_id <- clusterProfiler::bitr(
-    geneID = .gs$GeneName,
-    fromType = "SYMBOL",
-    toType = "ENTREZID",
-    OrgDb = org.Hs.eg.db::org.Hs.eg.db
-  )
-
-  .kegg <- clusterProfiler::enrichKEGG(
-    gene = .gs_id$ENTREZID,
-    organism = "hsa",
-    pvalueCutoff = 0.5
-  )
-
-  .kegg |>
-    as.data.table()
-}
-
-fn_gseGO <- function(geneList) {
-  .onts <- c("BP", "CC", "MF")
-  parallel::mclapply(
-    X = .onts,
-    FUN = function(.ont) {
-      clusterProfiler::gseGO(
-        geneList = geneList,
-        OrgDb = org.Hs.eg.db::org.Hs.eg.db,
-        keyType = "ENTREZID",
-        ont = .ont,
-        verbose = FALSE,
-      )
-    },
-    mc.cores = length(.onts)
-  ) -> .gsego_list
-  names(.gsego_list) <- .onts
-  .gsego_list
-}
-
-fn_gseKEGG <- function(geneList) {
-  tryCatch(
-    clusterProfiler::gseKEGG(
-      geneList = geneList,
-      organism = "hsa",
-      verbose = FALSE
-    ),
-    error = function(e) {
-      message("Error in gseKEGG: ", e$message)
-      return(NULL)
-    }
-  ) -> .gsekegg
-}
-
-fn_gseWP <- function(geneList) {
-  clusterProfiler::gseWP(
-    geneList = geneList,
-    organism = "Homo sapiens",
-  )
-}
-
-fn_gsePathway <- function(geneList) {
-  ReactomePA::gsePathway(
-    geneList = geneList,
-    pvalueCutoff = 0.2,
-    pAdjustMethod = "BH",
-    verbose = FALSE
-  ) -> .gsepathway
-}
-
-fn_enrichGO <- function(gene, geneList) {
-  .onts <- c("BP", "CC", "MF")
-  parallel::mclapply(
-    X = .onts,
-    FUN = function(.ont) {
-      clusterProfiler::enrichGO(
-        gene = names(gene),
-        universe = names(geneList),
-        OrgDb = org.Hs.eg.db::org.Hs.eg.db,
-        keyType = "ENTREZID",
-        ont = .ont,
-        pvalueCutoff = 0.05
-      )
-    },
-    mc.cores = length(.onts)
-  ) -> .gsego_list
-  names(.gsego_list) <- .onts
-  .gsego_list
-}
-
-fn_enrichKEGG <- function(gene) {
-  clusterProfiler::enrichKEGG(
-    gene = names(gene),
-    organism = "hsa"
-  ) -> .enrichkegg
-}
-
-fn_enrichWP <- function(gene) {
-  clusterProfiler::enrichWP(
-    gene = names(gene),
-    organism = "Homo sapiens"
-  ) -> .enrichwp
-}
-
-fn_enrichPathway <- function(gene) {
-  ReactomePA::enrichPathway(
-    gene = names(gene),
-    readable = TRUE
-  ) -> .enrichpathway
-}
-
 
 fn_markers_update <- function(
   markers,
@@ -363,10 +73,15 @@ fn_markers_update <- function(
           "blue",
         TRUE ~ "grey"
       )
-    ) |>
-    dplyr::rename(
-      SYMBOL = rn
-    ) |>
+    ) -> .d
+  
+  if (!"rn" %in% colnames(.d)) {
+    .d <- .d |> tibble::rownames_to_column(var = "SYMBOL")
+  } else {
+    .d <- .d |> dplyr::rename(SYMBOL = rn)
+  }
+
+  .d |>
     as.data.table() |>
     dplyr::arrange(-avg_log2FC) -> .d
 
@@ -392,78 +107,17 @@ fn_markers_update <- function(
     )
 }
 
-fn_enrich_all <- function(markers) {
-  ls_gses <- list(
-    fn_gseGO,
-    fn_gseKEGG,
-    fn_gseWP,
-    fn_gsePathway
-  )
-  ls_enrich <- list(
-    # fn_enrichGO,
-    fn_enrichKEGG,
-    fn_enrichWP,
-    fn_enrichPathway
-  )
-
-  markers |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> geneList
-
-  markers |>
-    dplyr::filter(color != "grey") |>
-    dplyr::select(ENTREZID, avg_log2FC) |>
-    dplyr::arrange(-avg_log2FC) |>
-    tibble::deframe() -> gene
-
-  tibble::tibble(
-    fn = c(ls_gses, ls_enrich),
-    type = c(
-      rep("gse", length(ls_gses)),
-      rep("enrich", length(ls_enrich))
+fn_gseKEGG <- function(geneList) {
+  tryCatch(
+    clusterProfiler::gseKEGG(
+      geneList = geneList,
+      organism = "hsa",
+      verbose = FALSE
     ),
-    name = c(
-      "gseGO",
-      "gseKEGG",
-      "gseWP",
-      "gsePathway",
-      # "enrichGO",
-      "enrichKEGG",
-      "enrichWP",
-      "enrichPathway"
-    ),
-    gene = c(
-      rep(list(geneList), length(ls_gses)),
-      rep(list(gene), length(ls_enrich))
-    )
-  ) -> .df
-
-  .df |>
-    dplyr::mutate(
-      res = parallel::mcmapply(
-        FUN = function(.fn, .gene) {
-          tryCatch(
-            expr = {
-              .fn(.gene)
-            },
-            error = function(e) {
-              log_info(glue::glue("Error in {.fn}: {e$message}"))
-              return(NULL)
-            }
-          )
-        },
-        .fn = fn,
-        .gene = gene,
-        mc.cores = nrow(.df),
-        SIMPLIFY = FALSE
-      )
-    ) -> .df_res
-
-  list(
-    df_res = .df_res,
-    geneList = geneList,
-    gene = gene
+    error = function(e) {
+      log_warn(glue::glue("Error in gseKEGG: {e$message}"))
+      return(NULL)
+    }
   )
 }
 
@@ -471,73 +125,76 @@ fn_enrich_kegg_only <- function(markers) {
   markers |>
     dplyr::filter(!is.na(ENTREZID)) |>
     dplyr::select(ENTREZID, avg_log2FC) |>
+    # Handle duplicates by taking the absolute maximum log2FC
+    dplyr::group_by(ENTREZID) |>
+    dplyr::summarize(avg_log2FC = avg_log2FC[which.max(abs(avg_log2FC))], .groups = "drop") |>
     dplyr::arrange(-avg_log2FC) |>
     tibble::deframe() -> geneList
+  
+  if (length(geneList) == 0) {
+    log_warn("No genes mapped to ENTREZID.")
+    return(NULL)
+  }
 
-  fn_gseKEGG(geneList) -> gse_kegg
-
-  gse_kegg
+  log_info(glue::glue("Running gseKEGG with {length(geneList)} genes."))
+  res <- fn_gseKEGG(geneList)
+  if (is.null(res)) {
+    log_warn("gseKEGG returned NULL.")
+  } else {
+    log_info(glue::glue("gseKEGG found {nrow(as.data.table(res))} pathways."))
+  }
+  return(res)
 }
 
-sanitize_filename <- function(x) {
-  x |>
-    gsub(">", "GT", x = _, fixed = TRUE) |>
-    gsub("<", "LT", x = _, fixed = TRUE) |>
-    gsub("%", "pct", x = _, fixed = TRUE) |>
-    gsub("=", "-", x = _, fixed = TRUE) |>
-    gsub("[()]", "", x = _) |>
-    gsub("[[:space:]]+", "_", x = _) |>
-    trimws()
-}
+fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
+  variant_dir <- fs::path(outdirnotuse, "deg", thevariant)
+  base_dir <- fs::path(variant_dir, tmpdir)
+  
+  if (!fs::dir_exists(base_dir)) {
+    log_warn(glue::glue("Directory {base_dir} does not exist. Skipping variant {thevariant}."))
+    return(NULL)
+  }
 
-fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
-  variant_dir <- fs::path(
-    outdirnotuse,
-    "deg",
-    thevariant
-  )
-
-  base_dir <- fs::path(
-    variant_dir,
-    tmpdir
-  )
   markers_list <- dir_ls(
     path = base_dir,
     recurse = TRUE,
-    regexp = "markers.*{thevariant}.qs" |> glue::glue()
+    regexp = glue::glue("markers.*{thevariant}.qs")
   )
-  tibble::tibble(
-    marker_path = markers_list
-  ) |>
+  
+  if (length(markers_list) == 0) {
+    log_warn(glue::glue("No markers files found for {thevariant} in {tmpdir}."))
+    return(NULL)
+  }
+
+  tibble::tibble(marker_path = markers_list) |>
     dplyr::mutate(
       celltype = fs::path_dir(marker_path) |> fs::path_file()
     ) |>
     dplyr::mutate(
-      celltype = ifelse(
-        celltype == tmpdir,
-        "all_cells",
-        celltype
-      )
+      celltype = ifelse(celltype == tmpdir, "all_cells", celltype)
     ) |>
     dplyr::mutate(
       filename = fs::path_file(marker_path)
     ) |>
     dplyr::mutate(
       filename = gsub(
-        pattern = "markers.|.qs|.{thevariant}" |> glue::glue(),
+        pattern = glue::glue("markers.|.qs|.{thevariant}"),
         replacement = "",
         x = filename
       )
     ) |>
-    # dplyr::select(filename) |>
     dplyr::mutate(
       markers = parallel::mclapply(
         X = marker_path,
         FUN = function(.path) {
-          import(.path) |>
-            fn_markers_update()
+          tryCatch({
+            import(.path) |> fn_markers_update()
+          }, error = function(e) {
+            log_error(glue::glue("Error reading or updating markers from {.path}: {e$message}"))
+            return(NULL)
+          })
         },
-        mc.cores = 8
+        mc.cores = min(length(marker_path), 8)
       )
     ) -> .df_variant
 
@@ -545,46 +202,33 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
     dplyr::mutate(
       kegg = parallel::mcmapply(
         FUN = function(.markers) {
+          if (is.null(.markers)) return(NULL)
           fn_enrich_kegg_only(markers = .markers)
         },
         .markers = markers,
-        mc.cores = nrow(.df_variant),
+        mc.cores = min(nrow(.df_variant), 8),
         SIMPLIFY = FALSE
       )
     ) -> .df_variant_res
 
-  outdir <- fs::path(
-    variant_dir,
-    gsub("deg", "kegg", tmpdir)
-  )
-  dir_create(outdir)
-
-  # export(
-  #   .df_variant_res,
-  #   fs::path(
-  #     outdir,
-  #     "kegg_enrich.{thevariant}.qs" |> glue::glue()
-  #   )
-  # )
-
-  fs::file_delete(
-    dir_ls(
-      outdir,
-      regexp = ".pdf$"
-    )
-  )
+  kegg_tmpdir <- gsub("deg", "kegg", tmpdir)
+  outdir_kegg <- fs::path(variant_dir, kegg_tmpdir)
+  dir_create(outdir_kegg)
 
   .df_variant_res |>
-    # dplyr::select(celltype, filename, kegg) |>
     dplyr::mutate(
       plot = parallel::mcmapply(
         FUN = function(.kegg) {
-          as.data.table(.kegg) |>
+          if (is.null(.kegg)) return(NULL)
+          .kegg_dt <- as.data.table(.kegg)
+          if (nrow(.kegg_dt) == 0) return(NULL)
+          
+          .kegg_dt |>
             dplyr::filter(p.adjust < 0.05) |>
             dplyr::mutate(FDR = -log10(qvalue)) |>
-            dplyr::mutate(
-              y = glue::glue("{ID}_{Description}")
-            ) -> .kegg_filtered
+            dplyr::mutate(y = glue::glue("{ID}_{Description}")) -> .kegg_filtered
+          
+          if (nrow(.kegg_filtered) == 0) return(NULL)
 
           .kegg_filtered |>
             ggplot(aes(
@@ -610,35 +254,23 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
             )
         },
         .kegg = kegg,
-        mc.cores = nrow(.df_variant_res),
+        mc.cores = min(nrow(.df_variant_res), 8),
         SIMPLIFY = FALSE
       )
     ) -> .df_variant_plots
 
+  # Export plots object
   export(
     .df_variant_plots,
-    fs::path(
-      outdir,
-      "kegg_enrich_plots.{thevariant}.qs" |> glue::glue()
-    )
+    fs::path(outdir_kegg, glue::glue("kegg_enrich_plots.{thevariant}.qs"))
   )
-  sanitize_filename <- function(x) {
-    x |>
-      gsub(">", "GT", x = _, fixed = TRUE) |>
-      gsub("<", "LT", x = _, fixed = TRUE) |>
-      gsub("%", "pct", x = _, fixed = TRUE) |>
-      gsub("=", "-", x = _, fixed = TRUE) |>
-      gsub("[()]", "", x = _) |>
-      gsub("[[:space:]]+", "_", x = _) |>
-      trimws()
-  }
 
+  # Save PDFs
   .df_variant_plots |>
     dplyr::mutate(
       ggsave_path = fs::path(
-        outdir,
-        "kegg_enrich_plot.{celltype}.{filename}.{thevariant}.pdf" |>
-          glue::glue() |>
+        outdir_kegg,
+        glue::glue("kegg_enrich_plot.{celltype}.{filename}.{thevariant}.pdf") |>
           fs::path_sanitize() |>
           sanitize_filename()
       )
@@ -646,6 +278,7 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
     dplyr::mutate(
       a = parallel::mcmapply(
         FUN = function(.plot, .ggsave_path) {
+          if (is.null(.plot)) return(NULL)
           ggsave(
             filename = .ggsave_path,
             plot = .plot,
@@ -655,136 +288,182 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_new") {
         },
         .plot = plot,
         .ggsave_path = ggsave_path,
-        mc.cores = nrow(.df_variant_plots),
+        mc.cores = min(nrow(.df_variant_plots), 8),
         SIMPLIFY = FALSE
       )
-    ) -> m
+    )
+
+  return(.df_variant_plots)
+}
+
+fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
+  log_info(glue::glue("Processing KEGG enrichment for variant {thevariant} in {tmpdir}"))
+  
+  kegg_tmpdir <- gsub("deg", "kegg", tmpdir)
+  excel_path <- fs::path(
+    outdirnotuse, "deg", thevariant, kegg_tmpdir, 
+    glue::glue("kegg_enrich_details.{thevariant}.vaf.xlsx")
+  )
+  
+  if (fs::file_exists(excel_path)) {
+    log_info(glue::glue("KEGG enrichment already processed for {thevariant}. Skipping."))
+    return(NULL)
+  }
+
+  vaf_kegg <- fn_variant_kegg(thevariant = thevariant, tmpdir = tmpdir)
+  if (is.null(vaf_kegg)) return(NULL)
+
+  kegg_url <- "https://www.kegg.jp/kegg-bin/show_pathway"
+  
+  colors_file <- fs::path(highresdir, "00-colors.R")
+  if (fs::file_exists(colors_file)) {
+    source(colors_file)
+  } else {
+    color_celltype <- NULL
+  }
+
+  vaf_kegg |>
+    dplyr::select(celltype, filename, kegg) |>
+    dplyr::mutate(
+      a = parallel::mclapply(
+        X = kegg,
+        FUN = function(.kegg) {
+          if (is.null(.kegg) || inherits(.kegg, "try-error")) {
+            return(NULL)
+          }
+
+          .kegg_dt <- as.data.table(.kegg)
+          if (nrow(.kegg_dt) == 0) return(NULL)
+
+          .kegg_dt |>
+            dplyr::filter(p.adjust < 0.05) -> .kegg_filtered
+          
+          if (nrow(.kegg_filtered) == 0) return(NULL)
+
+          .kegg_filtered |>
+            dplyr::mutate(
+              KEGG_URL = glue::glue("{kegg_url}?{ID}/{core_enrichment}")
+            ) |>
+            dplyr::mutate(
+              Symbol = purrr::map_chr(
+                .x = core_enrichment,
+                .f = function(.genes) {
+                  .genes_split <- strsplit(.genes, "/")[[1]]
+                  tryCatch({
+                    clusterProfiler::bitr(
+                      geneID = .genes_split,
+                      fromType = "ENTREZID",
+                      toType = "SYMBOL",
+                      OrgDb = org.Hs.eg.db::org.Hs.eg.db
+                    ) |>
+                      dplyr::pull(SYMBOL) |>
+                      paste(collapse = "/")
+                  }, error = function(e) {
+                    return("")
+                  })
+                }
+              )
+            ) -> .d
+          return(.d)
+        },
+        mc.cores = min(nrow(vaf_kegg), 8)
+      )
+    ) -> vaf_kegg_enrich_details
+
+  vaf_kegg_enrich_details_unnested <- vaf_kegg_enrich_details |>
+    dplyr::select(-kegg) |>
+    tidyr::unnest(cols = a, keep_empty = FALSE)
+  
+  if (nrow(vaf_kegg_enrich_details_unnested) == 0) {
+    log_info(glue::glue("No significant KEGG pathways found for {thevariant}."))
+    # Create empty excel with headers
+    empty_df <- tibble::tibble(
+      celltype = character(),
+      compare = character(),
+      kegg_id = character(),
+      description = character(),
+      nes = numeric(),
+      pvalue = numeric(),
+      p.adjust = numeric(),
+      KEGG_URL = character(),
+      Symbol = character(),
+      core_enrichment = character(),
+      setSize = integer(),
+      rank = integer(),
+      leading_edge = character()
+    )
+    writexl::write_xlsx(empty_df, path = excel_path)
+    return(NULL)
+  }
+
+  if (!is.null(color_celltype)) {
+    vaf_kegg_enrich_details_unnested |>
+      dplyr::mutate(
+        celltype = factor(
+          celltype,
+          levels = c("all_cells", names(color_celltype))
+        )
+      ) -> vaf_kegg_enrich_details_unnested
+  }
+
+  vaf_kegg_enrich_details_final <- vaf_kegg_enrich_details_unnested |>
+    dplyr::select(
+      celltype,
+      compare = filename,
+      kegg_id = ID,
+      description = Description,
+      nes = NES,
+      pvalue = pvalue,
+      p.adjust,
+      KEGG_URL,
+      Symbol,
+      core_enrichment,
+      setSize,
+      rank,
+      leading_edge
+    ) |>
+    dplyr::arrange(celltype, compare, p.adjust) |>
+    dplyr::mutate(
+      kegg_id = writexl::xl_hyperlink(
+        url = KEGG_URL,
+        name = kegg_id
+      )
+    )
+
+  writexl::write_xlsx(
+    vaf_kegg_enrich_details_final,
+    path = excel_path
+  )
+  
+  log_success(glue::glue("Finished KEGG enrichment for {thevariant}. Results in {excel_path}"))
 }
 
 # body --------------------------------------------------------------------
-thevariant <- "4175G>A"
 
-
-# fn_variant_kegg(thevariant = "4175G>A")
-# fn_variant_kegg(thevariant = "9025G>A")
-# fn_variant_kegg(thevariant = "13271T>C")
-
-vaf_kegg <- fn_variant_kegg(thevariant = "4175G>A", tmpdir = "deg_merge_vaf")
-
-
-kegg_url <- "https://www.kegg.jp/kegg-bin/show_pathway"
-
-
-vaf_kegg |>
-  dplyr::select(celltype, filename, kegg) |>
-  dplyr::mutate(
-    a = parallel::mclapply(
-      X = kegg,
-      FUN = function(.kegg) {
-        if (class(.kegg)[1] == "try-error" | is.null(.kegg)) {
-          return(tibble::tibble(
-            ID = character(),
-            Description = character(),
-            setSize = integer(),
-            enrichmentScore = numeric(),
-            NES = numeric(),
-            pvalue = numeric(),
-            p.adjust = numeric(),
-            qvalue = numeric(),
-            rank = integer(),
-            leading_edge = character(),
-            core_enrichment = character(),
-            KEGG_URL = character(),
-            Symbol = character()
-          ))
-        }
-
-        as.data.table(.kegg) -> .kegg_dt
-        if (nrow(.kegg_dt) == 0) {
-          return(NULL)
-        }
-        .kegg_dt |>
-          dplyr::filter(p.adjust < 0.05) -> .kegg_filtered
-
-        .kegg_filtered |>
-          dplyr::mutate(
-            KEGG_URL = glue::glue("{kegg_url}?{ID}/{core_enrichment}")
-          ) |>
-          dplyr::mutate(
-            Symbol = purrr::map_chr(
-              .x = core_enrichment,
-              .f = function(.genes) {
-                .genes_split <- strsplit(.genes, "/")[[1]]
-                clusterProfiler::bitr(
-                  geneID = .genes_split,
-                  fromType = "ENTREZID",
-                  toType = "SYMBOL",
-                  OrgDb = org.Hs.eg.db::org.Hs.eg.db
-                ) |>
-                  dplyr::pull(SYMBOL) |>
-                  paste(collapse = "/")
-              }
-            )
-          ) -> .d
-
-        .d
-      },
-      mc.cores = nrow(vaf_kegg)
-    )
-  ) -> vaf_kegg_enrich_details
-
-source(path(
-  Sys.getenv("HIGHRESDIR"),
-  "00-colors.R"
-))
-
-color_celltype
-
-vaf_kegg_enrich_details |>
-  dplyr::select(-kegg) |>
-  tidyr::unnest(cols = a, keep_empty = TRUE) |>
-  dplyr::mutate(
-    celltype = factor(
-      celltype,
-      levels = c("all_cells", names(color_celltype))
-    )
-  ) |>
-  dplyr::select(
-    celltype,
-    compare = filename,
-    kegg_id = ID,
-    description = Description,
-    nes = NES,
-    pvalue = pvalue,
-    p.adjust,
-    KEGG_URL,
-    Symbol,
-    core_enrichment,
-    setSize,
-    rank,
-    leading_edge
-  ) |>
-  dplyr::arrange(celltype, compare, p.adjust) |>
-  dplyr::mutate(
-    kegg_id = writexl::xl_hyperlink(
-      url = KEGG_URL,
-      name = kegg_id
-    )
-  ) -> vaf_kegg_enrich_details_final
-
-writexl::write_xlsx(
-  vaf_kegg_enrich_details_final,
-  path = fs::path(
-    outdirnotuse,
-    "deg",
-    "4175G>A",
-    "kegg_merge_vaf",
-    "kegg_enrich_details.4175G>A.vaf.xlsx"
-  )
+# List of variants to process
+thevariants <- c(
+  "14082C>G",
+  "15169A>G",
+  "3240C>G",
+  "7757G>A",
+  "3173G>A",
+  "3176A>T",
+  "3178T>A",
+  "9025G>A",
+  "9237G>A",
+  "10398A>G",
+  "4175G>A",
+  "6227T>C",
+  "9006A>G"
 )
-#
+
+# Process each variant
+for (thevariant in thevariants) {
+  tryCatch({
+    fn_main_kegg(thevariant = thevariant, tmpdir = "deg_merge_vaf")
+  }, error = function(e) {
+    log_error(glue::glue("Failed processing {thevariant}: {e$message}"))
+  })
+}
+
 # footer ------------------------------------------------------------------
-
-# future: :plan(future: :sequential)
-
-# save image --------------------------------------------------------------
