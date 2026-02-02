@@ -883,14 +883,12 @@ thevariants <- c(
 )
 
 # thats for all variants, don't run or run once
-\() {
-  thevariants |>
-    purrr::map(
-      .f = \(thevariant) {
-        fn_main(thevariant)
-      }
-    ) -> res_all_variants
-}
+thevariants |>
+  purrr::map(
+    .f = \(thevariant) {
+      fn_main(thevariant)
+    }
+  ) -> res_all_variants
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
