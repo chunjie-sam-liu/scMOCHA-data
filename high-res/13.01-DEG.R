@@ -784,6 +784,22 @@ fn_variant_cell_vaf_ <- function(thevariant, sc, .vs = 0.4) {
 
 fn_main <- function(thevariant) {
   vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
+
+  # Check if integrated file exists
+  sc_file <- outdirnotuse / "scintegrated" / glue::glue("sc.{thevariant}.integrated.qs")
+  if (!fs::file_exists(sc_file)) {
+    cli::cli_alert_danger("Integrated Seurat object for variant {thevariant} does not exist. Skipping.")
+    return(invisible(NULL))
+  }
+
+  # Check if already processed
+  check_file <- outdirnotuse / "deg" / thevariant / "go_merge_vaf" /
+    glue::glue("markers.High (AF>=0.80) vs Low (AF<0.80) and wildtype.{thevariant}.go.qs")
+  if (fs::file_exists(check_file)) {
+    cli::cli_alert_info("Variant {thevariant} already processed, skipping.")
+    return(invisible(NULL))
+  }
+
   cli_alert_info("Processing variant {thevariant}")
 
   sc <- fn_load_sc(thevariant)
@@ -841,45 +857,16 @@ fn_main <- function(thevariant) {
 # body --------------------------------------------------------------------
 
 thevariants <- c(
+  "14082C>G",
+  "15169A>G",
+  "3240C>G",
+  "7757G>A",
   "3173G>A",
   "3176A>T",
   "3178T>A",
-  "3727T>C",
-  "3728C>T",
-  "13271T>C",
-  "14063T>C",
-  "14831G>A",
-  "1643A>G",
-  "3667T>G",
-  "4175G>A",
-  "5513G>A",
-  "7065G>A",
   "9025G>A",
   "9237G>A",
   "10398A>G"
-)
-
-thevariants <- c()
-
-
-thevariant <- "4175G>A"
-
-# fn_main(thevariant)
-
-thevariants <- c(
-  # "4175G>A",
-  c(
-    "14082C>G",
-    "15169A>G",
-    "3240C>G",
-    "7757G>A",
-    "3173G>A",
-    "3176A>T",
-    "3178T>A",
-    "9025G>A",
-    "9237G>A",
-    "10398A>G"
-  )
 )
 
 # thats for all variants, don't run or run once
