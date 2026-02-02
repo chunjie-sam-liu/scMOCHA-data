@@ -60,3 +60,4 @@ mtcars.xlsx
 *.nohup
 .env
 test.xlsx
+*.log
