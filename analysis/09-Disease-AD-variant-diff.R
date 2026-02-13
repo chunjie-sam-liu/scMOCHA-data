@@ -66,6 +66,7 @@ all_variant <- import(
 
 all_hetero_af_cluster <- import(
   file.path(cleandatadir, "all_hetero_af.cluster.csv"),
+  lazy = FALSE
 ) |>
   tidyr::pivot_longer(
     cols = -c(gseid, srrid, barcode, num_variants),
@@ -75,6 +76,7 @@ all_hetero_af_cluster <- import(
 
 all_hetero_af_bulk <- import(
   file.path(cleandatadir, "all_hetero_af.bulk.csv"),
+  lazy = FALSE
 ) |>
   tidyr::pivot_longer(
     cols = -c(gseid, srrid, barcode, num_variants),
@@ -124,6 +126,7 @@ admeta_sc5p_variant |>
     variant_type = purrr::map(
       .x = anno,
       .f = function(.x) {
+        # .x <- admeta_sc5p_variant$anno[[1]]
         .x |>
           dplyr::mutate(
             variant = glue::glue("{Position}{Ref}>{Alt}")
