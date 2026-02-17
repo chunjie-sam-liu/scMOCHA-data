@@ -388,6 +388,11 @@ export(
   outdir / "VARIANT-ANNOTATION-TABLE-APOGEE2.xlsx"
 )
 
+export(
+  variant_annotation_grouped,
+  outdirnotuse / "variant-annotation" / "VARIANT-ANNOTATION-TABLE-APOGEE2.qs",
+)
+
 # Check the grouping
 variant_annotation_grouped |>
   count(Locus_group) |>
@@ -522,7 +527,7 @@ create_apogee_coverage_plot <- function(
   # Define colors
   color_prediction <- c(
     "Pathogenic" = "#d62728",
-    "Likely pathogenic" = "#ff7f0e",
+    "Likely pathogenic" = "#fc7373",
     "VUS+" = "#ffbb78",
     "VUS" = "#ffed6f",
     "VUS-" = "#fff7bc",
@@ -670,7 +675,7 @@ create_twolayer_pie <- function(
 
   color_prediction = c(
     "Pathogenic" = "#d62728",
-    "Likely pathogenic" = "#ff7f0e",
+    "Likely pathogenic" = "#fc7373",
     "VUS+" = "#ffbb78",
     "VUS" = "#ffed6f",
     "VUS-" = "#fff7bc",
@@ -843,6 +848,123 @@ create_twolayer_pie <- function(
   return(p)
 }
 
+#' Create one-layer pie chart for pathogenicity predictions
+#'
+#' @param data Variant annotation data with prediction columns
+#' @param title Plot title
+#'
+#' @return ggplot object
+create_onelayer_pie <- function(
+  data,
+  title = "Pathogenicity Distribution"
+) {
+  # Simplified color palette
+  color_prediction_simple <- c(
+    "Pathogenic" = "#ff0000",
+    "Likely pathogenic" = "#fc7373",
+    "VUS" = "#ffed6f",
+    "Likely benign" = "#98df8a",
+    "Benign" = "#2ca02c",
+    "No prediction" = "#d3d3d3"
+  )
+
+  # Prepare pie data with grouped categories
+  pie_data <- data |>
+    mutate(
+      prediction_class = case_when(
+        aachange_group == "Protein-coding" & !is.na(APOGEE2) ~ APOGEE2,
+        aachange_group == "Protein-coding" & is.na(APOGEE2) ~ "No prediction",
+        aachange_group %in%
+          c("Non-coding", "tRNA", "rRNA") &
+          !is.na(pathogenicity_assessment) ~ pathogenicity_assessment,
+        aachange_group %in%
+          c("Non-coding", "tRNA", "rRNA") &
+          is.na(pathogenicity_assessment) ~ "No prediction",
+        TRUE ~ "Not applicable"
+      ),
+      # Standardize and group classifications
+      prediction_class_grouped = case_when(
+        prediction_class %in% c("pathogenic", "Pathogenic") ~ "Pathogenic",
+        prediction_class %in%
+          c("likely pathogenic", "Likely-pathogenic") ~ "Likely pathogenic",
+        prediction_class %in% c("VUS-", "VUS", "VUS+") ~ "VUS",
+        prediction_class %in% c("benign", "Benign") ~ "Benign",
+        prediction_class %in%
+          c("likely benign", "Likely-benign") ~ "Likely benign",
+        prediction_class == "No prediction" ~ "No prediction",
+        TRUE ~ "Not applicable"
+      )
+    ) |>
+    filter(prediction_class_grouped != "Not applicable") |>
+    count(prediction_class_grouped) |>
+    mutate(
+      prediction_class_grouped = factor(
+        prediction_class_grouped,
+        levels = c(
+          "Pathogenic",
+          "Likely pathogenic",
+          "VUS",
+          "Likely benign",
+          "Benign",
+          "No prediction"
+        )
+      )
+    ) |>
+    arrange(prediction_class_grouped) |>
+    mutate(
+      fraction = n / sum(n),
+      ymax = cumsum(fraction),
+      ymin = c(0, head(ymax, n = -1)),
+      labelPosition = (ymax + ymin) / 2,
+      percentage = sprintf("%.1f%%", fraction * 100),
+      label = paste0(prediction_class_grouped, "\n", percentage)
+    )
+
+  # Create the plot
+  p <- ggplot(pie_data) +
+    geom_rect(
+      aes(
+        ymax = ymax,
+        ymin = ymin,
+        xmax = 4,
+        xmin = 3,
+        fill = prediction_class_grouped
+      ),
+      color = "white",
+      linewidth = 1
+    ) +
+    geom_text(
+      aes(x = 3.5, y = labelPosition, label = label),
+      size = 4,
+      fontface = "bold",
+      lineheight = 0.9
+    ) +
+    scale_fill_manual(
+      values = color_prediction_simple,
+      name = "Pathogenicity",
+      breaks = c(
+        "Pathogenic",
+        "Likely pathogenic",
+        "VUS",
+        "Likely benign",
+        "Benign",
+        "No prediction"
+      )
+    ) +
+    coord_polar(theta = "y") +
+    # xlim(c(0, 4)) +
+    theme_void() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 14),
+      legend.position = "right",
+      legend.text = element_text(size = 11),
+      legend.title = element_text(size = 12, face = "bold")
+    ) +
+    labs(title = title)
+
+  return(p)
+}
+
 # Generate the two-layer pie chart
 p_twolayer_pie <- create_twolayer_pie(
   data = variant_annotation_grouped,
@@ -855,6 +977,22 @@ ggsave(
     "two_layer_pie_aachange_apogee.pdf",
   plot = p_twolayer_pie,
   width = 12,
+  height = 8,
+  dpi = 300
+)
+
+# Generate the one-layer pie chart
+p_onelayer_pie <- create_onelayer_pie(
+  data = variant_annotation_grouped,
+  title = "Pathogenicity Distribution"
+)
+
+ggsave(
+  filename = outdirnotuse /
+    "variant-annotation" /
+    "one_layer_pie_pathogenicity.pdf",
+  plot = p_onelayer_pie,
+  width = 10,
   height = 8,
   dpi = 300
 )
@@ -879,6 +1017,22 @@ ggsave(
     "two_layer_pie_aachange_apogee_somatic.pdf",
   plot = p_twolayer_pie_somatic,
   width = 12,
+  height = 8,
+  dpi = 300
+)
+
+# One-layer pie chart for somatic variants
+p_onelayer_pie_somatic <- create_onelayer_pie(
+  data = variant_annotation_somatic,
+  title = "Somatic Variants: Pathogenicity Distribution"
+)
+
+ggsave(
+  filename = outdirnotuse /
+    "variant-annotation" /
+    "one_layer_pie_pathogenicity_somatic.pdf",
+  plot = p_onelayer_pie_somatic,
+  width = 10,
   height = 8,
   dpi = 300
 )
@@ -919,6 +1073,22 @@ ggsave(
     "two_layer_pie_aachange_apogee_hete.pdf",
   plot = p_twolayer_pie_hete,
   width = 12,
+  height = 8,
+  dpi = 300
+)
+
+# One-layer pie chart for heteroplasmic variants
+p_onelayer_pie_hete <- create_onelayer_pie(
+  data = variant_annotation_hete,
+  title = "Heteroplasmic Variants: Pathogenicity Distribution"
+)
+
+ggsave(
+  filename = outdirnotuse /
+    "variant-annotation" /
+    "one_layer_pie_pathogenicity_hete.pdf",
+  plot = p_onelayer_pie_hete,
+  width = 10,
   height = 8,
   dpi = 300
 )

@@ -74,7 +74,7 @@ fn_markers_update <- function(
         TRUE ~ "grey"
       )
     ) -> .d
-  
+
   if (!"rn" %in% colnames(.d)) {
     .d <- .d |> tibble::rownames_to_column(var = "SYMBOL")
   } else {
@@ -127,10 +127,13 @@ fn_enrich_kegg_only <- function(markers) {
     dplyr::select(ENTREZID, avg_log2FC) |>
     # Handle duplicates by taking the absolute maximum log2FC
     dplyr::group_by(ENTREZID) |>
-    dplyr::summarize(avg_log2FC = avg_log2FC[which.max(abs(avg_log2FC))], .groups = "drop") |>
+    dplyr::summarize(
+      avg_log2FC = avg_log2FC[which.max(abs(avg_log2FC))],
+      .groups = "drop"
+    ) |>
     dplyr::arrange(-avg_log2FC) |>
     tibble::deframe() -> geneList
-  
+
   if (length(geneList) == 0) {
     log_warn("No genes mapped to ENTREZID.")
     return(NULL)
@@ -149,9 +152,11 @@ fn_enrich_kegg_only <- function(markers) {
 fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
   variant_dir <- fs::path(outdirnotuse, "deg", thevariant)
   base_dir <- fs::path(variant_dir, tmpdir)
-  
+
   if (!fs::dir_exists(base_dir)) {
-    log_warn(glue::glue("Directory {base_dir} does not exist. Skipping variant {thevariant}."))
+    log_warn(glue::glue(
+      "Directory {base_dir} does not exist. Skipping variant {thevariant}."
+    ))
     return(NULL)
   }
 
@@ -160,7 +165,7 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
     recurse = TRUE,
     regexp = glue::glue("markers.*{thevariant}.qs")
   )
-  
+
   if (length(markers_list) == 0) {
     log_warn(glue::glue("No markers files found for {thevariant} in {tmpdir}."))
     return(NULL)
@@ -184,29 +189,34 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
       )
     ) |>
     dplyr::mutate(
-      markers = parallel::mclapply(
+      markers = lapply(
         X = marker_path,
         FUN = function(.path) {
-          tryCatch({
-            import(.path) |> fn_markers_update()
-          }, error = function(e) {
-            log_error(glue::glue("Error reading or updating markers from {.path}: {e$message}"))
-            return(NULL)
-          })
-        },
-        mc.cores = min(length(marker_path), 8)
+          tryCatch(
+            {
+              import(.path) |> fn_markers_update()
+            },
+            error = function(e) {
+              log_error(glue::glue(
+                "Error reading or updating markers from {.path}: {e$message}"
+              ))
+              return(NULL)
+            }
+          )
+        }
       )
     ) -> .df_variant
 
   .df_variant |>
     dplyr::mutate(
-      kegg = parallel::mcmapply(
+      kegg = mapply(
         FUN = function(.markers) {
-          if (is.null(.markers)) return(NULL)
+          if (is.null(.markers)) {
+            return(NULL)
+          }
           fn_enrich_kegg_only(markers = .markers)
         },
         .markers = markers,
-        mc.cores = min(nrow(.df_variant), 8),
         SIMPLIFY = FALSE
       )
     ) -> .df_variant_res
@@ -217,18 +227,26 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
 
   .df_variant_res |>
     dplyr::mutate(
-      plot = parallel::mcmapply(
+      plot = mapply(
         FUN = function(.kegg) {
-          if (is.null(.kegg)) return(NULL)
+          if (is.null(.kegg)) {
+            return(NULL)
+          }
           .kegg_dt <- as.data.table(.kegg)
-          if (nrow(.kegg_dt) == 0) return(NULL)
-          
+          if (nrow(.kegg_dt) == 0) {
+            return(NULL)
+          }
+
           .kegg_dt |>
             dplyr::filter(p.adjust < 0.05) |>
             dplyr::mutate(FDR = -log10(qvalue)) |>
-            dplyr::mutate(y = glue::glue("{ID}_{Description}")) -> .kegg_filtered
-          
-          if (nrow(.kegg_filtered) == 0) return(NULL)
+            dplyr::mutate(
+              y = glue::glue("{ID}_{Description}")
+            ) -> .kegg_filtered
+
+          if (nrow(.kegg_filtered) == 0) {
+            return(NULL)
+          }
 
           .kegg_filtered |>
             ggplot(aes(
@@ -254,7 +272,6 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
             )
         },
         .kegg = kegg,
-        mc.cores = min(nrow(.df_variant_res), 8),
         SIMPLIFY = FALSE
       )
     ) -> .df_variant_plots
@@ -276,9 +293,11 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
       )
     ) |>
     dplyr::mutate(
-      a = parallel::mcmapply(
+      a = mapply(
         FUN = function(.plot, .ggsave_path) {
-          if (is.null(.plot)) return(NULL)
+          if (is.null(.plot)) {
+            return(NULL)
+          }
           ggsave(
             filename = .ggsave_path,
             plot = .plot,
@@ -288,7 +307,6 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
         },
         .plot = plot,
         .ggsave_path = ggsave_path,
-        mc.cores = min(nrow(.df_variant_plots), 8),
         SIMPLIFY = FALSE
       )
     )
@@ -297,24 +315,33 @@ fn_variant_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
 }
 
 fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
-  log_info(glue::glue("Processing KEGG enrichment for variant {thevariant} in {tmpdir}"))
-  
+  log_info(glue::glue(
+    "Processing KEGG enrichment for variant {thevariant} in {tmpdir}"
+  ))
+
   kegg_tmpdir <- gsub("deg", "kegg", tmpdir)
   excel_path <- fs::path(
-    outdirnotuse, "deg", thevariant, kegg_tmpdir, 
+    outdirnotuse,
+    "deg",
+    thevariant,
+    kegg_tmpdir,
     glue::glue("kegg_enrich_details.{thevariant}.vaf.xlsx")
   )
-  
+
   if (fs::file_exists(excel_path)) {
-    log_info(glue::glue("KEGG enrichment already processed for {thevariant}. Skipping."))
+    log_info(glue::glue(
+      "KEGG enrichment already processed for {thevariant}. Skipping."
+    ))
     return(NULL)
   }
 
   vaf_kegg <- fn_variant_kegg(thevariant = thevariant, tmpdir = tmpdir)
-  if (is.null(vaf_kegg)) return(NULL)
+  if (is.null(vaf_kegg)) {
+    return(NULL)
+  }
 
   kegg_url <- "https://www.kegg.jp/kegg-bin/show_pathway"
-  
+
   colors_file <- fs::path(highresdir, "00-colors.R")
   if (fs::file_exists(colors_file)) {
     source(colors_file)
@@ -325,7 +352,7 @@ fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
   vaf_kegg |>
     dplyr::select(celltype, filename, kegg) |>
     dplyr::mutate(
-      a = parallel::mclapply(
+      a = lapply(
         X = kegg,
         FUN = function(.kegg) {
           if (is.null(.kegg) || inherits(.kegg, "try-error")) {
@@ -333,12 +360,16 @@ fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
           }
 
           .kegg_dt <- as.data.table(.kegg)
-          if (nrow(.kegg_dt) == 0) return(NULL)
+          if (nrow(.kegg_dt) == 0) {
+            return(NULL)
+          }
 
           .kegg_dt |>
             dplyr::filter(p.adjust < 0.05) -> .kegg_filtered
-          
-          if (nrow(.kegg_filtered) == 0) return(NULL)
+
+          if (nrow(.kegg_filtered) == 0) {
+            return(NULL)
+          }
 
           .kegg_filtered |>
             dplyr::mutate(
@@ -349,31 +380,33 @@ fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
                 .x = core_enrichment,
                 .f = function(.genes) {
                   .genes_split <- strsplit(.genes, "/")[[1]]
-                  tryCatch({
-                    clusterProfiler::bitr(
-                      geneID = .genes_split,
-                      fromType = "ENTREZID",
-                      toType = "SYMBOL",
-                      OrgDb = org.Hs.eg.db::org.Hs.eg.db
-                    ) |>
-                      dplyr::pull(SYMBOL) |>
-                      paste(collapse = "/")
-                  }, error = function(e) {
-                    return("")
-                  })
+                  tryCatch(
+                    {
+                      clusterProfiler::bitr(
+                        geneID = .genes_split,
+                        fromType = "ENTREZID",
+                        toType = "SYMBOL",
+                        OrgDb = org.Hs.eg.db::org.Hs.eg.db
+                      ) |>
+                        dplyr::pull(SYMBOL) |>
+                        paste(collapse = "/")
+                    },
+                    error = function(e) {
+                      return("")
+                    }
+                  )
                 }
               )
             ) -> .d
           return(.d)
-        },
-        mc.cores = min(nrow(vaf_kegg), 8)
+        }
       )
     ) -> vaf_kegg_enrich_details
 
   vaf_kegg_enrich_details_unnested <- vaf_kegg_enrich_details |>
     dplyr::select(-kegg) |>
     tidyr::unnest(cols = a, keep_empty = FALSE)
-  
+
   if (nrow(vaf_kegg_enrich_details_unnested) == 0) {
     log_info(glue::glue("No significant KEGG pathways found for {thevariant}."))
     # Create empty excel with headers
@@ -434,8 +467,10 @@ fn_main_kegg <- function(thevariant, tmpdir = "deg_merge_vaf") {
     vaf_kegg_enrich_details_final,
     path = excel_path
   )
-  
-  log_success(glue::glue("Finished KEGG enrichment for {thevariant}. Results in {excel_path}"))
+
+  log_success(glue::glue(
+    "Finished KEGG enrichment for {thevariant}. Results in {excel_path}"
+  ))
 }
 
 # body --------------------------------------------------------------------
@@ -457,13 +492,33 @@ thevariants <- c(
   "9006A>G"
 )
 
+
+fn_main_kegg(
+  thevariant = "6967G>A",
+  tmpdir = "deg_merge_vaf"
+)
+fn_main_kegg(
+  thevariant = "14831G>A",
+  tmpdir = "deg_merge_vaf"
+)
+
+fn_main_kegg(
+  thevariant = "7833T>C",
+  tmpdir = "deg_merge_vaf"
+)
+
+fn_main_kegg(
+  thevariant = "10500G>A",
+  tmpdir = "deg_merge_vaf"
+)
+
 # Process each variant
-for (thevariant in thevariants) {
-  tryCatch({
-    fn_main_kegg(thevariant = thevariant, tmpdir = "deg_merge_vaf")
-  }, error = function(e) {
-    log_error(glue::glue("Failed processing {thevariant}: {e$message}"))
-  })
-}
+# for (thevariant in thevariants) {
+#   tryCatch({
+#     fn_main_kegg(thevariant = thevariant, tmpdir = "deg_merge_vaf")
+#   }, error = function(e) {
+#     log_error(glue::glue("Failed processing {thevariant}: {e$message}"))
+#   })
+# }
 
 # footer ------------------------------------------------------------------

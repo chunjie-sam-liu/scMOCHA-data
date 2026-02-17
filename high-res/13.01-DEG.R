@@ -786,15 +786,24 @@ fn_main <- function(thevariant) {
   vaf_cutoff <- c(0.4, 0.5, 0.6, 0.7, 0.8)
 
   # Check if integrated file exists
-  sc_file <- outdirnotuse / "scintegrated" / glue::glue("sc.{thevariant}.integrated.qs")
+  sc_file <- outdirnotuse /
+    "scintegrated" /
+    glue::glue("sc.{thevariant}.integrated.qs")
   if (!fs::file_exists(sc_file)) {
-    cli::cli_alert_danger("Integrated Seurat object for variant {thevariant} does not exist. Skipping.")
+    cli::cli_alert_danger(
+      "Integrated Seurat object for variant {thevariant} does not exist. Skipping."
+    )
     return(invisible(NULL))
   }
 
   # Check if already processed
-  check_file <- outdirnotuse / "deg" / thevariant / "go_merge_vaf" /
-    glue::glue("markers.High (AF>=0.80) vs Low (AF<0.80) and wildtype.{thevariant}.go.qs")
+  check_file <- outdirnotuse /
+    "deg" /
+    thevariant /
+    "go_merge_vaf" /
+    glue::glue(
+      "markers.High (AF>=0.80) vs Low (AF<0.80) and wildtype.{thevariant}.go.qs"
+    )
   if (fs::file_exists(check_file)) {
     cli::cli_alert_info("Variant {thevariant} already processed, skipping.")
     return(invisible(NULL))
@@ -869,13 +878,19 @@ thevariants <- c(
   "10398A>G"
 )
 
+# fn_main(thevariant)
+# fn_main("6967G>A")
+# fn_main("14831G>A")
+# fn_main("7833T>C")
+fn_main("10500G>A")
+
 # thats for all variants, don't run or run once
-thevariants |>
-  purrr::map(
-    .f = \(thevariant) {
-      fn_main(thevariant)
-    }
-  ) -> res_all_variants
+# thevariants |>
+#   purrr::map(
+#     .f = \(thevariant) {
+#       fn_main(thevariant)
+#     }
+#   ) -> res_all_variants
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
