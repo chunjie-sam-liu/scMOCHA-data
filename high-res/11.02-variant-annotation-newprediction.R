@@ -48,7 +48,7 @@ source("00-colors.R")
 
 # Load data ---------------------------------------------------------------
 load_pkg(jutils)
-dotenv("../.env")
+dotenv(".env")
 suppressMessages({
   conflicted::conflict_prefer("filter", "dplyr")
 })
