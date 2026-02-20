@@ -101,10 +101,23 @@ source(
 
 
 # function ----------------------------------------------------------------
-fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
+fn_plot_freq_mtdna <- function(
+  df,
+  label_variants = NULL,
+  total_samples = length(unique(ALLVARIANTS$srrid))
+) {
   fn_xy_breaks_limits(
     c(0, df$n_individuals),
   ) -> ybl_
+
+  max_pct <- max(df$n_individuals) / total_samples * 100
+  sec_breaks_ <- if (max_pct >= 90) {
+    seq(0, 100, 20)
+  } else if (max_pct < 10) {
+    seq(0, 10, 1)
+  } else {
+    pretty(c(0, max_pct), n = 5)
+  }
 
   df |> dplyr::filter(variant %in% label_variants) -> forlabel
 
@@ -157,7 +170,12 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
       expand = expansion(add = c(.05, 0.05), mult = c(0.01, 0.05)),
       limits = ybl_$limits,
       breaks = ybl_$breaks,
-      # labels = ybl_$limits,
+      sec.axis = sec_axis(
+        ~ . / total_samples * 100,
+        name = "% of total samples",
+        breaks = sec_breaks_,
+        labels = function(x) paste0(round(x), "%")
+      )
     ) +
     theme(
       plot.margin = margin(t = 0, b = 0, unit = "cm"),
@@ -165,6 +183,14 @@ fn_plot_freq_mtdna <- function(df, label_variants = NULL) {
       panel.background = element_blank(),
       panel.grid = element_blank(),
       axis.line.y.left = element_line(color = "black"),
+      axis.line.y.right = element_line(color = "black"),
+      axis.title.y.right = element_text(
+        size = 16,
+        color = "black",
+        face = "bold",
+        angle = 90
+      ),
+      axis.text.y.right = element_text(color = "black", size = 12),
       # axis.line.x.bottom = element_line(color = "black"),
       axis.ticks.x = element_blank(),
       axis.text.x = element_blank(),

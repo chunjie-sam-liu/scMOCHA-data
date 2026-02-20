@@ -106,9 +106,6 @@ ALLVARIANTS <- import(
     cols = coord
   )
 
-variant_annotation <- import(
-  outdir / "VARIANT-ANNOTATION-TABLE.xlsx"
-)
 
 SOMATIC_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type == "somatic")
@@ -120,6 +117,12 @@ HOMO_HETE_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
 HAPLO <- ALLVARIANTS |>
   dplyr::filter(variant_type == "haplo")
+
+
+variant_annotation <- import(
+  outdir / "VARIANT-ANNOTATION-TABLE.xlsx"
+) |>
+  filter(variant %in% ALLVARIANTS$variant)
 
 # Conn ---------------------------------------------------------------
 
@@ -257,6 +260,7 @@ color_variant_type <- c(
 
 variant_annotation |> count(Locus) |> arrange(-n) |> print(n = Inf)
 variant_annotation |> count(aachange) |> arrange(-n)
+
 variant_annotation |>
   mutate(
     aachange_new = if_else(
@@ -353,7 +357,8 @@ variant_annotation |>
       ),
     by = "variant",
     suffix = c("", "_napogee")
-  ) -> variant_annotation_grouped
+  ) |>
+  distinct(variant, .keep_all = TRUE) -> variant_annotation_grouped
 
 export(
   variant_annotation_grouped |>
@@ -384,12 +389,42 @@ export(
         aachange_group %in% c("Non-coding", "tRNA", "rRNA") ~ "nAPOGEE",
         TRUE ~ "Not applicable"
       )
-    ),
+    ) |>
+    select(-c(aachange_new, Locus_new)),
   outdir / "VARIANT-ANNOTATION-TABLE-APOGEE2.xlsx"
 )
 
 export(
-  variant_annotation_grouped,
+  variant_annotation_grouped |>
+    mutate(
+      prediction_class = case_when(
+        aachange_group == "Protein-coding" & !is.na(APOGEE2) ~ APOGEE2,
+        aachange_group == "Protein-coding" & is.na(APOGEE2) ~ "No prediction",
+        aachange_group %in%
+          c("Non-coding", "tRNA", "rRNA") &
+          !is.na(pathogenicity_assessment) ~ pathogenicity_assessment,
+        aachange_group %in%
+          c("Non-coding", "tRNA", "rRNA") &
+          is.na(pathogenicity_assessment) ~ "No prediction",
+        TRUE ~ "Not applicable"
+      ),
+      # Standardize classification names
+      prediction_class = case_when(
+        prediction_class %in% c("pathogenic", "Pathogenic") ~ "Pathogenic",
+        prediction_class %in%
+          c("likely pathogenic", "Likely-pathogenic") ~ "Likely pathogenic",
+        prediction_class %in% c("benign", "Benign") ~ "Benign",
+        prediction_class %in%
+          c("likely benign", "Likely-benign") ~ "Likely benign",
+        TRUE ~ prediction_class
+      ),
+      prediction_category = case_when(
+        aachange_group == "Protein-coding" ~ "APOGEE2",
+        aachange_group %in% c("Non-coding", "tRNA", "rRNA") ~ "nAPOGEE",
+        TRUE ~ "Not applicable"
+      )
+    ) |>
+    select(-c(aachange_new, Locus_new)),
   outdirnotuse / "variant-annotation" / "VARIANT-ANNOTATION-TABLE-APOGEE2.qs",
 )
 
