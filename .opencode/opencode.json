@@ -20,7 +20,6 @@
       "enabled": true
     },
     "scroll_speed": 3
-    // "sidebar": "show"
   },
   "instructions": [".opencode/guidelines.md"],
   "keybinds": {
