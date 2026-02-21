@@ -31,10 +31,13 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 load_pkg(circlize)
+
+conflicted::conflict_prefer("filter", "dplyr")
+
 allvariants <- import(
   path(
-    Sys.getenv("HIGHRESDIR"),
-    "MANUSCRIPTFIGURES/SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
+    Sys.getenv("OUTDIR"),
+    "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
   )
 ) |>
   dplyr::mutate(
@@ -438,6 +441,41 @@ fn_plot_circos <- function(
   )
 
   circos.clear()
+
+  # ! legend ------------------------------------------------------------------
+  legend(
+    x = "bottomleft",
+    inset = c(0.01, 0.01),
+    legend = c(
+      "phastCons100way conservation",
+      "gnomAD populational AF",
+      "Homoplasmic populational AF",
+      "Heteroplasmic populational AF",
+      "Homoplasmic mean AF",
+      "Heteroplasmic mean AF",
+      "Somatic mean AF"
+    ),
+    col = c(
+      color_circos_track["phastCons100way"],
+      color_circos_track["gnomad"],
+      color_circos_track["homo_paf"],
+      color_circos_track["hete_paf"],
+      color_circos_track["homo_af"],
+      color_circos_track["hete_af"],
+      color_circos_track["somatic_af"]
+    ),
+    pch = c(NA, 15, 15, 15, 2, 3, 3),
+    lty = c(1, NA, NA, NA, NA, NA, NA),
+    lwd = c(2, NA, NA, NA, NA, NA, NA),
+    pt.cex = c(NA, 1.6, 1.6, 1.6, 1.2, 1.2, 1.2),
+    x.intersp = 0.8,
+    y.intersp = 1.4,
+    cex = 1.0,
+    bty = "n",
+    title = "Track Legend",
+    title.font = 2,
+    title.cex = 1.1
+  )
 }
 
 # body --------------------------------------------------------------------
@@ -468,6 +506,8 @@ fn_plot_circos <- function(
   )
   dev.off()
 }
+
+
 \() {
   outdir <- Sys.getenv("OUTDIR")
   pdf(
