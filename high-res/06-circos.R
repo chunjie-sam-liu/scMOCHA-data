@@ -478,6 +478,7 @@ fn_plot_circos <- function(
   )
 }
 
+
 # body --------------------------------------------------------------------
 {
   outdir <- Sys.getenv("OUTDIR")
