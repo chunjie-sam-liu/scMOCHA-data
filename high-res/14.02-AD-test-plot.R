@@ -3,7 +3,7 @@
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2026-02-23 12:30:01
-# @DESCRIPTION: this script is used for ...
+# @DESCRIPTION: AD variant t-test scatter and violin plots at cluster and cell level
 
 # Reproducibility ----------------------------------------------------------
 set.seed(1)
@@ -85,8 +85,6 @@ METAFULL |>
     disease = factor(disease, levels = c("Healthy", "Alzheimer's Disease"))
   ) -> admeta
 
-ad_srrid <- admeta$srrid
-
 admeta |>
   left_join(
     ALLVARIANTS,
@@ -99,184 +97,19 @@ admeta |>
     disease = factor(disease, levels = c("Healthy", "Alzheimer's Disease"))
   ) -> admeta_af
 
-ad_forttest_ttest <- import(
-  outdirnotuse / "AD" / "AD-variant-af-ttest.qs"
+ad_srrid <- admeta_af$srrid |> unique()
+ad_variant <- admeta_af$variant |> unique()
+
+
+ad_variant_ttest_cluster <- import(
+  outdirnotuse / "AD" / "AD-variant-af-ttest-cluster.qs"
+)
+ad_variant_ttest_cell <- import(
+  outdirnotuse / "AD" / "AD-variant-af-ttest-cell.qs"
 )
 
 
-# Conn ---------------------------------------------------------------
-conn <- db_conn(
-  Sys.getenv("DUCKDB_PATH"),
-  readonly = TRUE
-)
-tbl_ls(conn)
-tbl_allvariants_cell <- dplyr::tbl(
-  conn,
-  "allvariants_cell"
-) |>
-  filter(srrid %in% ad_srrid) |>
-  filter(variant_type %in% c("colorful", "black"))
-# Function ----------------------------------------------------------------
-
-# Main --------------------------------------------------------------------
-
-ad_forttest_ttest |>
-  select(-data) |>
-  filter(variant %in% admeta_af$variant) |>
-  unnest(t) |>
-  dplyr::filter(p.value < 0.05) |>
-  dplyr::mutate(
-    plog10p = -log10(p.value),
-    est = abs(estimate),
-  ) |>
-  dplyr::mutate(
-    rank = plog10p * est,
-  ) |>
-  dplyr::arrange(
-    desc(rank)
-  ) |>
-  dplyr::rename(
-    ad = "Alzheimer's Disease",
-  ) |>
-  dplyr::filter(
-    ad >= 5,
-    Healthy >= 5
-  ) -> top_variants
-
-
-top_variants
-
-library(ggh4x)
-library(ggbeeswarm)
-library(ggnewscale)
-
-color_celltype_bulk <- c(
-  # "Pseudo-bulk" = "red",
-  color_celltype
-)
-
-
-top_variants |>
-  dplyr::mutate(
-    log10p = -log10(p.value),
-  ) |>
-  dplyr::mutate(
-    celltype = gsub(celltype, pattern = "_", replacement = " "),
-    celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
-  ) |>
-  dplyr::mutate(
-    celltype = factor(
-      celltype,
-      levels = names(color_celltype_bulk)
-    ),
-  ) |>
-  dplyr::mutate(
-    point_color = ifelse(
-      p.value < 0.05 & abs(estimate) > 0.03,
-      "red",
-      "black"
-    ),
-  ) |>
-  dplyr::mutate(
-    label = ifelse(
-      p.value < 0.05 & abs(estimate) > 0.03,
-      variant,
-      NA
-    ),
-  ) -> forplot_test
-
-
-forplot_test |>
-  ggplot(aes(
-    x = estimate,
-    y = log10p,
-  )) +
-  geom_point(
-    aes(
-      color = point_color,
-    ),
-  ) +
-  scale_color_identity() +
-  ggrepel::geom_text_repel(
-    aes(
-      label = label,
-    ),
-    size = 3,
-    show.legend = FALSE,
-    # nudge_x = 0.1,
-    # nudge_y = 0.1,
-    # segment.size = 0.5,
-    segment.color = "black",
-    max.overlaps = Inf
-  ) +
-  geom_hline(
-    yintercept = -log10(0.05),
-    linetype = 20,
-    color = "red"
-  ) +
-  geom_vline(
-    xintercept = 0,
-    linetype = 20,
-    color = "red"
-  ) +
-  ggh4x::facet_grid2(
-    ~celltype,
-    strip = ggh4x::strip_themed(
-      background_x = ggh4x::elem_list_rect(
-        fill = color_celltype_bulk,
-        color = NA
-      ),
-      text_x = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
-      )
-    )
-  ) +
-  theme(
-    plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
-    # panel.background = element_blank(),
-    panel.background = element_rect(
-      fill = NA,
-      color = "black",
-      linewidth = 0.5
-    ),
-    panel.grid = element_blank(),
-    axis.line.y.left = element_line(color = "black"),
-    axis.line.x.bottom = element_line(color = "black"),
-    axis.ticks.x = element_blank(),
-    # axis.text.x = element_blank(),
-    # axis.line.x = element_blank(),
-    # axis.title.x = element_blank(),
-    legend.position = "top",
-    legend.key = element_blank(),
-    axis.title.y = element_text(color = "black", size = 16),
-    axis.text.y = element_text(color = "black"),
-    legend.text = element_text(
-      size = 14,
-      color = "black"
-    ),
-    legend.title = element_text(
-      size = 16,
-      colour = "black"
-    ),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      size = 8,
-      color = "black",
-      face = "bold"
-    )
-  ) +
-  labs(
-    y = "-log10(p-value)",
-    x = "Effect Size (AD - Healthy)",
-  ) -> p_variant_boxplot_af_sc_ttest
-
-ggsave(
-  p_variant_boxplot_af_sc_ttest,
-  filename = outdirnotuse / "AD" / "AD-variant-af-sc-ttest.pdf",
-  width = 13,
-  height = 3.5,
-)
+# Constants ---------------------------------------------------------------
 
 topvariants <- c(
   "263A>G",
@@ -290,97 +123,19 @@ topvariants <- c(
   "5513G>A",
   "11704C>T",
   "1397T>A",
-  "1397T>A",
   "1670A>G",
   "3173G>A",
   "3176A>T",
   "3178T>A"
 )
 
-ad_forttest_ttest |>
-  select(
-    variant,
-    celltype,
-    data
-  ) |>
-  filter(variant %in% topvariants) |>
-  unnest(data) |>
-  dplyr::mutate(
-    celltype = gsub(celltype, pattern = "_", replacement = " "),
-    celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
-  ) |>
-  dplyr::mutate(
-    celltype = factor(
-      celltype,
-      levels = names(color_celltype_bulk)
-    ),
-  ) -> forplot_
+color_celltype_bulk <- color_celltype
 
+# Shared theme ------------------------------------------------------------
 
-forplot_ |>
-  ggplot(aes(x = disease)) +
-  ggh4x::facet_grid2(
-    variant ~ celltype,
-    strip = ggh4x::strip_themed(
-      background_x = ggh4x::elem_list_rect(
-        fill = color_celltype_bulk,
-        color = NA
-      ),
-      text_x = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
-      ),
-      background_y = ggh4x::elem_list_rect(
-        fill = "black",
-        color = NA
-      ),
-      text_y = ggh4x::elem_list_text(
-        colour = "white",
-        face = c("bold")
-      )
-    )
-  ) +
-  geom_violin(
-    aes(
-      y = af,
-      fill = disease
-    ),
-    alpha = 0.7,
-    size = 1,
-    color = NA
-  ) +
-  scale_fill_manual(
-    values = color_disease,
-    name = "Disease",
-    # labels = c("AD", "Healthy")
-  ) +
-  ggbeeswarm::geom_quasirandom(
-    aes(
-      y = af,
-      color = disease
-    ),
-    size = 1,
-    dodge.width = .75,
-    alpha = 1,
-    show.legend = FALSE
-  ) +
-  scale_color_manual(
-    values = color_disease,
-    name = "Disease",
-    # labels = c("AD", "Healthy")
-  ) +
-  ggsignif::geom_signif(
-    aes(
-      y = af,
-    ),
-    comparisons = list(
-      c("Alzheimer's Disease", "Healthy")
-    ),
-    y_position = 0.8
-  ) +
+theme_ad_panel <- function() {
   theme(
     plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
-    # panel.background = element_blank(),
     panel.background = element_rect(
       fill = NA,
       color = "black",
@@ -389,44 +144,206 @@ forplot_ |>
     panel.grid = element_blank(),
     axis.line.y.left = element_line(color = "black"),
     axis.line.x.bottom = element_line(color = "black"),
-    axis.ticks.x = element_blank(),
-    axis.text.x = element_blank(),
-    # axis.line.x = element_blank(),
-    axis.title.x = element_blank(),
     legend.position = "top",
     legend.key = element_blank(),
     axis.title.y = element_text(color = "black", size = 16),
     axis.text.y = element_text(color = "black"),
-    legend.text = element_text(
-      size = 14,
-      color = "black"
-    ),
-    legend.title = element_text(
-      size = 16,
-      colour = "black"
-    ),
+    legend.text = element_text(size = 14, color = "black"),
+    legend.title = element_text(size = 16, colour = "black"),
     strip.background = element_blank(),
-    strip.text = element_text(
-      size = 8,
-      color = "black",
-      face = "bold"
-    )
-  ) +
-  labs(
-    y = "Allele Frequency",
-  ) -> p_variant_boxplot_af
+    strip.text = element_text(size = 8, color = "black", face = "bold")
+  )
+}
 
+strip_celltype <- function() {
+  ggh4x::strip_themed(
+    background_x = ggh4x::elem_list_rect(
+      fill = color_celltype_bulk,
+      color = NA
+    ),
+    text_x = ggh4x::elem_list_text(colour = "white", face = "bold")
+  )
+}
+
+# Function: ttest scatter plot (effect size vs -log10 p) ------------------
+
+plot_ttest_scatter <- function(ttest_data, ad_variant, label = "cluster") {
+  ttest_data |>
+    select(-data) |>
+    filter(variant %in% ad_variant) |>
+    unnest(t) |>
+    filter(p.value < 0.05) |>
+    mutate(
+      plog10p = -log10(p.value),
+      est = abs(estimate),
+      rank = plog10p * est,
+    ) |>
+    arrange(desc(rank)) |>
+    rename(ad = "Alzheimer's Disease") |>
+    filter(ad >= 5, Healthy >= 5) |>
+    mutate(
+      log10p = -log10(p.value),
+      celltype = gsub(celltype, pattern = "_", replacement = " "),
+      celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
+      celltype = factor(celltype, levels = names(color_celltype_bulk)),
+      point_color = ifelse(
+        p.value < 0.05 & abs(estimate) > 0.03,
+        "red",
+        "black"
+      ),
+      label = ifelse(p.value < 0.05 & abs(estimate) > 0.03, variant, NA),
+    ) -> forplot
+
+  forplot |>
+    ggplot(aes(x = estimate, y = log10p)) +
+    geom_point(aes(color = point_color)) +
+    scale_color_identity() +
+    ggrepel::geom_text_repel(
+      aes(label = label),
+      size = 3,
+      show.legend = FALSE,
+      segment.color = "black",
+      max.overlaps = Inf
+    ) +
+    geom_hline(yintercept = -log10(0.05), linetype = 20, color = "red") +
+    geom_vline(xintercept = 0, linetype = 20, color = "red") +
+    ggh4x::facet_grid2(~celltype, strip = strip_celltype()) +
+    theme_ad_panel() +
+    theme(axis.ticks.x = element_blank()) +
+    labs(
+      title = paste("AD variant t-test —", label, "level"),
+      y = "-log10(p-value)",
+      x = "Effect Size (AD - Healthy)",
+    )
+}
+
+# Function: violin + beeswarm AF plot per variant × celltype --------------
+
+plot_af_violin <- function(ttest_data, variants, label = "cluster") {
+  ttest_data |>
+    select(variant, celltype, data) |>
+    filter(variant %in% variants) |>
+    unnest(data) |>
+    mutate(
+      celltype = gsub(celltype, pattern = "_", replacement = " "),
+      celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
+      celltype = factor(celltype, levels = names(color_celltype_bulk)),
+    ) -> forplot
+
+  forplot |>
+    ggplot(aes(x = disease)) +
+    ggh4x::facet_grid2(
+      variant ~ celltype,
+      strip = ggh4x::strip_themed(
+        background_x = ggh4x::elem_list_rect(
+          fill = color_celltype_bulk,
+          color = NA
+        ),
+        text_x = ggh4x::elem_list_text(colour = "white", face = "bold"),
+        background_y = ggh4x::elem_list_rect(fill = "black", color = NA),
+        text_y = ggh4x::elem_list_text(colour = "white", face = "bold")
+      )
+    ) +
+    geom_violin(
+      aes(y = af, fill = disease),
+      alpha = 0.7,
+      color = NA
+    ) +
+    scale_fill_manual(values = color_disease, name = "Disease") +
+    ggbeeswarm::geom_quasirandom(
+      aes(y = af, color = disease),
+      size = 1,
+      dodge.width = 0.75,
+      alpha = 1,
+      show.legend = FALSE
+    ) +
+    scale_color_manual(values = color_disease, name = "Disease") +
+    ggsignif::geom_signif(
+      aes(y = af),
+      comparisons = list(c("Alzheimer's Disease", "Healthy")),
+      y_position = 0.8
+    ) +
+    theme_ad_panel() +
+    theme(
+      axis.ticks.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.title.x = element_blank(),
+    ) +
+    labs(
+      title = paste("AD variant AF distribution —", label, "level"),
+      y = "Allele Frequency",
+    )
+}
+
+# Packages ----------------------------------------------------------------
+
+suppressMessages({
+  load_pkg(ggh4x, ggbeeswarm, ggnewscale)
+})
+
+# Main: cluster level -----------------------------------------------------
+
+log_info("Plotting cluster-level t-test scatter")
+p_scatter_cluster <- plot_ttest_scatter(
+  ttest_data = ad_variant_ttest_cluster,
+  ad_variant = ad_variant,
+  label = "cluster"
+)
 ggsave(
-  p_variant_boxplot_af,
-  filename = outdirnotuse / "AD" / "AD-variant-af-boxplot.pdf",
+  p_scatter_cluster,
+  filename = outdirnotuse / "AD" / "AD-variant-af-ttest-cluster.pdf",
+  width = 13,
+  height = 3.5
+)
+
+log_info("Plotting cluster-level AF violin")
+p_violin_cluster <- plot_af_violin(
+  ttest_data = ad_variant_ttest_cluster,
+  variants = topvariants,
+  label = "cluster"
+)
+ggsave(
+  p_violin_cluster,
+  filename = outdirnotuse / "AD" / "AD-variant-af-violin-cluster.pdf",
   width = 16,
   height = 20,
   device = cairo_pdf
 )
 
-# Save  --------------------------------------------------------------
+# Main: cell level --------------------------------------------------------
 
-# Session info -------------------------------------------------------------
+log_info("Plotting cell-level t-test scatter")
+p_scatter_cell <- plot_ttest_scatter(
+  ttest_data = ad_variant_ttest_cell,
+  ad_variant = ad_variant,
+  label = "cell"
+)
+ggsave(
+  p_scatter_cell,
+  filename = outdirnotuse / "AD" / "AD-variant-af-ttest-cell.pdf",
+  width = 13,
+  height = 3.5
+)
+
+log_info("Plotting cell-level AF violin")
+p_violin_cell <- plot_af_violin(
+  ttest_data = ad_variant_ttest_cell,
+  variants = topvariants,
+  label = "cell"
+)
+ggsave(
+  p_violin_cell,
+  filename = outdirnotuse / "AD" / "AD-variant-af-violin-cell.pdf",
+  width = 16,
+  height = 20,
+  device = cairo_pdf
+)
+
+# Save  -------------------------------------------------------------------
+
+log_info("Done.")
+
+# Session info ------------------------------------------------------------
 if (isTRUE(verbose)) {
   sessionInfo()
 }

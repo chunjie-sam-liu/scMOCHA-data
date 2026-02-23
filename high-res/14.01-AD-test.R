@@ -95,6 +95,8 @@ admeta |>
     disease = factor(disease, levels = c("Healthy", "Alzheimer's Disease"))
   ) -> admeta_af
 
+ad_srrid <- admeta_af$srrid |> unique()
+ad_variant <- admeta_af$variant |> unique()
 
 # Conn ---------------------------------------------------------------
 
@@ -103,16 +105,30 @@ conn <- db_conn(
   readonly = TRUE
 )
 tbl_ls(conn)
-tbl_allvariants_cell <- dplyr::tbl(
+dt_allvariants_cell <- dplyr::tbl(
   conn,
   "allvariants_cell"
 ) |>
   filter(srrid %in% ad_srrid) |>
-  filter(variant_type %in% c("colorful", "black"))
+  filter(variant %in% ad_variant) |>
+  filter(variant_type %in% c("colorful", "black")) |>
+  as.data.table() |>
+  inner_join(
+    admeta |>
+      select(gseid, srrid, disease),
+    by = c("gseid", "srrid")
+  )
 
+db_disconn()
 # Function ----------------------------------------------------------------
 
 # Main --------------------------------------------------------------------
+
+dt_allvariants_cell |>
+  select(gseid, srrid, celltype, variant, af, disease, barcode) |>
+  nest(
+    .by = c(variant, celltype)
+  ) -> ad_forttest_cell
 
 cluster_variant |>
   filter(srrid %in% ad_srrid) |>
@@ -128,10 +144,9 @@ cluster_variant |>
   ) |>
   nest(
     .by = c(variant, celltype)
-  ) -> ad_forttest
+  ) -> ad_forttest_cluster
 
-ad_forttest |>
-  # head(20) |>
+ad_forttest_cluster |>
   mutate(
     t = pbmclapply(
       X = data,
@@ -182,54 +197,72 @@ ad_forttest |>
       },
       mc.cores = 20
     )
-  ) -> ad_forttest_ttest
+  ) -> ad_forttest_cluster_ttest
 
-
-# export(
-#   ad_forttest_ttest,
-#   outdirnotuse / "AD" / "AD-variant-af-ttest.qs"
-# )
-
-ad_forttest_ttest <- import(
-  outdirnotuse / "AD" / "AD-variant-af-ttest.qs"
+export(
+  ad_forttest_cluster_ttest,
+  outdirnotuse / "AD" / "AD-variant-af-ttest-cluster.qs"
 )
 
-ad_forttest_ttest |>
-  select(-data) |>
-  filter(variant %in% admeta_af$variant) |>
-  unnest(t) |>
-  dplyr::filter(p.value < 0.05) |>
-  dplyr::mutate(
-    plog10p = -log10(p.value),
-    est = abs(estimate),
-  ) |>
-  dplyr::mutate(
-    rank = plog10p * est,
-  ) |>
-  dplyr::arrange(
-    desc(rank)
-  ) |>
-  dplyr::rename(
-    ad = "Alzheimer's Disease",
-  ) |>
-  dplyr::filter(
-    ad >= 5,
-    Healthy >= 5
-  ) -> a
+ad_forttest_cell |>
+  mutate(
+    t = pbmclapply(
+      X = data,
+      FUN = function(.x) {
+        .x |>
+          dplyr::count(disease) |>
+          tidyr::pivot_wider(
+            names_from = disease,
+            values_from = n
+          ) -> .xx
+
+        tryCatch(
+          expr = {
+            t.test(
+              af ~ disease,
+              data = .x,
+              var.equal = TRUE
+            ) |>
+              broom::tidy() |>
+              dplyr::select(
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
+              ) |>
+              dplyr::bind_cols(
+                .xx
+              )
+          },
+          error = function(e) {
+            message("Error: ", conditionMessage(e))
+            return(
+              tibble::tibble(
+                estimate = NA_real_,
+                estimate1 = NA_real_,
+                estimate2 = NA_real_,
+                p.value = NA_real_,
+                conf.low = NA_real_,
+                conf.high = NA_real_,
+                Healthy = NA_integer_,
+                `Alzheimer's Disease` = NA_integer_
+              )
+            )
+          }
+        )
+      },
+      mc.cores = 20
+    )
+  ) -> ad_forttest_cell_ttest
 
 
-load_pkg(ggstatsplot)
-load_pkg(ggpubr)
+export(
+  ad_forttest_cell_ttest,
+  outdirnotuse / "AD" / "AD-variant-af-ttest-cell.qs"
+)
 
-# ad_forttest |>
-#   unnest(data) |>
-#   # filter(variant %in% c("16311T>C", "263A>G", "8794C>T")) |>
-#   filter(variant %in% a$variant) |>
-#   ggplot(aes(x = disease, y = af)) +
-#   geom_boxplot() +
-#   geom_point() +
-#   facet_grid(variant ~ celltype) +
-#   stat_compare_means(method = "t.test")
 
 # Save  --------------------------------------------------------------
 
