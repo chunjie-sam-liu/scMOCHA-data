@@ -43,7 +43,7 @@ HOMO_HETE_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type %in% c("homo", "hete"))
 # load conn ---------------------------------------------------------------
 
-conn <- conn_db(
+conn <- db_conn(
   Sys.getenv("DUCKDB_PATH"),
   read_only = TRUE
 )

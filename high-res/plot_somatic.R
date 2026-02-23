@@ -5,7 +5,7 @@ source(path(
 ))
 
 fn_plot_cell_af_depth_forplot <- function(thevariant, thesrrid) {
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )

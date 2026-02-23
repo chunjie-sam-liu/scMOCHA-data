@@ -512,6 +512,11 @@ fn_main_kegg(
   tmpdir = "deg_merge_vaf"
 )
 
+fn_main_kegg(
+  thevariant = "4175G>A",
+  tmpdir = "deg_merge_vaf"
+)
+
 # Process each variant
 # for (thevariant in thevariants) {
 #   tryCatch({

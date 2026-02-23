@@ -61,8 +61,14 @@ outdirnotuse <- path(
 ALLVARIANTS <- import(
   outdir / "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
-  filter(variant_type %in% c("hete"))
+  filter(variant_type %in% c("hete", "homo"))
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
+
+
+variant_annotation <- import(
+  path(Sys.getenv("OUTDIR")) /
+    "VARIANT-ANNOTATION-TABLE-APOGEE2.xlsx"
+)
 
 # Conn ---------------------------------------------------------------
 
@@ -92,7 +98,7 @@ admeta |>
 
 admeta_af |>
   nest(
-    .by = c(variant, variant_type, disease)
+    .by = c(variant, disease)
   ) |>
   mutate(
     nsamples = map_int(data, nrow),
@@ -110,8 +116,17 @@ variant_nsamples |>
     total = `Healthy` + `Alzheimer's Disease`
   ) |>
   arrange(-total) -> variant_nsamples_wide
+
 variant_nsamples_wide |>
   export(outdirnotuse / "AD" / "AD-variant-sample-counts.xlsx")
+admeta_af |>
+  export(
+    outdirnotuse / "AD" / "AD-variant-af.xlsx"
+  )
+admeta_af |>
+  export(
+    outdirnotuse / "AD" / "AD-variant-af.qs"
+  )
 
 
 variant_nsamples_wide |>
@@ -130,13 +145,56 @@ variant_nsamples_wide_sorted |> group_by(variant) |> count() |> filter(n > 1)
 variant_nsamples_wide_sorted |>
   filter(Healthy > 10 & `Alzheimer's Disease` > 10)
 
+load_pkg(stringr)
+variant_annotation |>
+  filter(
+    !is.na(Disease)
+  ) |>
+  filter(variant %in% admeta_af$variant) |>
+  mutate(
+    label = glue("{variant}\n{Disease}"),
+    disease_category = case_when(
+      str_detect(
+        Disease,
+        regex("\\bAD\\b|\\bPD\\b|Alzheimer|Parkinson", ignore_case = TRUE)
+      ) ~ "AD / PD",
+      str_detect(Disease, regex("LHON", ignore_case = TRUE)) ~ "LHON",
+      str_detect(
+        Disease,
+        regex("T2D|diabetes|metabolic", ignore_case = TRUE)
+      ) ~ "Metabolic / Diabetes",
+      str_detect(
+        Disease,
+        regex("altitude|VO2|exercise|EXIT|cyclic vomiting", ignore_case = TRUE)
+      ) ~ "Exercise / Altitude",
+      str_detect(
+        Disease,
+        regex(
+          "DEAF|SNHL|hearing|dystonia|encephalomyopathy|Mitochondrial|neuropathy|Respiratory Chain",
+          ignore_case = TRUE
+        )
+      ) ~ "Neurological",
+      TRUE ~ "Other"
+    )
+  ) -> ad_variant_annotation
+
+color_disease_category <- c(
+  "AD / PD" = "#ff1e05",
+  "LHON" = "#b300ff",
+  "Metabolic / Diabetes" = "#fe7702",
+  "Exercise / Altitude" = "#00d0ff",
+  "Neurological" = "#0099ff",
+  "Other" = "grey55"
+)
+
+
 fn_xy_breaks_limits(variant_nsamples_wide_sorted$total, step = 10) -> xyb
 
 variant_nsamples |>
   mutate(
     variant = factor(
       variant,
-      levels = variant_nsamples_wide_sorted$variant
+      levels = variant_nsamples_wide_sorted$variant |> unique()
     )
   ) |>
   ggplot(aes(
@@ -155,6 +213,45 @@ variant_nsamples |>
     color = "grey80",
     linetype = "dashed"
   ) +
+  ggrepel::geom_label_repel(
+    data = variant_nsamples_wide_sorted |>
+      inner_join(
+        ad_variant_annotation |> select(variant, label, disease_category),
+        by = "variant"
+      ) |>
+      mutate(
+        variant = factor(
+          variant,
+          levels = variant_nsamples_wide_sorted$variant |> unique()
+        )
+      ),
+    aes(
+      x = variant,
+      y = total,
+      label = label,
+      color = disease_category,
+      segment.colour = after_scale(colour)
+    ),
+    inherit.aes = FALSE,
+    size = 2.5,
+    lineheight = 0.9,
+    label.size = 0.2,
+    label.padding = unit(0.2, "lines"),
+    label.r = unit(0.1, "lines"),
+    box.padding = 0.4,
+    point.padding = 0.3,
+    min.segment.length = 0,
+    segment.size = 0.3,
+    segment.curvature = -0.2,
+    direction = "both",
+    nudge_y = max(xyb$breaks) * 0.15,
+    max.overlaps = Inf,
+    fill = alpha("white", 0.85)
+  ) +
+  scale_color_manual(
+    name = "Variant annotation",
+    values = color_disease_category
+  ) +
   scale_x_discrete(
     expand = expansion(add = c(3, 1)),
     name = "Variant"
@@ -163,8 +260,12 @@ variant_nsamples |>
     breaks = xyb$breaks,
     limits = xyb$limits,
     labels = scales::comma_format(),
-    expand = expansion(mult = c(0.01, 0.02)),
+    expand = expansion(mult = c(0.01, 0.05)),
     name = "Number of samples"
+  ) +
+  guides(
+    fill = guide_legend(ncol = 1, order = 1),
+    color = guide_legend(ncol = 1, order = 2)
   ) +
   theme(
     panel.grid = element_blank(),
@@ -172,7 +273,8 @@ variant_nsamples |>
     axis.text.x = element_blank(),
     axis.ticks.x = element_blank(),
     axis.line = element_line(color = "black"),
-    legend.position = c(0.8, 0.8)
+    legend.position = c(0.8, 0.8),
+    legend.box = "horizontal"
   ) -> p_ad_variant_dis
 
 
@@ -180,8 +282,8 @@ variant_nsamples |>
   ggsave(
     p_ad_variant_dis,
     filename = outdirnotuse / "AD" / "AD-variant-distribution.pdf",
-    width = 6,
-    height = 4
+    width = 17,
+    height = 8
   )
 }
 
@@ -191,43 +293,53 @@ variant_nsamples |>
 # ? test --------------------------------------------------------------------
 #
 #
-olddata <- import(
-  "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/admeta_sc5p_variant_type_af_ttest.qs"
-)
 
-# olddata |>
-#   filter(variant == "3173G>A") |>
-#   tidyr::unnest(data) |>
-#   rename(old_af = af) |>
-#   rename(celltype = barcode) |>
-#   mutate(celltype = ifelse(celltype == "bulk", "Bulk", celltype)) |>
-#   mutate(disease = as.character(disease)) -> olddata_3173
+\() {
+  olddata <- import(
+    "/home/liuc9/github/scMOCHA-data/analysis/zzz/plot-ad/admeta_sc5p_variant_type_af_ttest.qs"
+  )
 
-admeta_af |>
-  pivot_longer(
-    cols = c(B:Bulk),
-    names_to = "celltype",
-    values_to = "af"
-  ) |>
-  mutate(disease = as.character(disease)) |>
-  filter(variant == "3173G>A") -> admeta_af_long
+  olddata |>
+    filter(variant == "3173G>A") |>
+    tidyr::unnest(data) |>
+    rename(old_af = af) |>
+    rename(celltype = barcode) |>
+    mutate(celltype = ifelse(celltype == "bulk", "Bulk", celltype)) |>
+    mutate(disease = as.character(disease)) -> olddata_3173
 
+  admeta_af |>
+    pivot_longer(
+      cols = c(B:Bulk),
+      names_to = "celltype",
+      values_to = "af"
+    ) |>
+    mutate(disease = as.character(disease)) |>
+    filter(variant == "3173G>A") -> admeta_af_long
 
-admeta_af_long |>
-  left_join(
-    olddata_3173 |> select(gseid, srrid, celltype, old_af),
-    by = c("gseid", "srrid", "celltype")
-  ) -> admeta_af_long_joined
+  admeta_af_long |>
+    left_join(
+      olddata_3173 |> select(gseid, srrid, celltype, old_af),
+      by = c("gseid", "srrid", "celltype")
+    ) -> admeta_af_long_joined
 
-admeta_af_long_joined |> mutate(diff = abs(af - old_af)) |> arrange(-diff)
+  admeta_af_long_joined |> mutate(diff = abs(af - old_af)) |> arrange(-diff)
 
-admeta_af_long_joined |>
-  ggplot(aes(
-    x = old_af,
-    y = af
-  )) +
-  geom_point(aes(color = celltype)) +
-  geom_abline(slope = 1, intercept = 0, linetype = "dashed")
+  admeta_af_long_joined |>
+    ggplot(aes(
+      x = old_af,
+      y = af
+    )) +
+    geom_point(aes(color = celltype)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") -> p
+
+  ggsave(
+    p,
+    filename = outdirnotuse / "AD" / "AD-variant-af-comparison.pdf",
+    width = 6,
+    height = 6
+  )
+}
+
 
 admeta_af |>
   pivot_longer(
@@ -243,47 +355,47 @@ admeta_af_celltype
 
 
 admeta_af_celltype |>
-  filter(variant == "3173G>A")
-# head(2) |>
-dplyr::mutate(
-  t = map(
-    .x = data,
-    .f = \(.x) {
-      # .x <- a$data[[1]]
-      .x |>
-        dplyr::count(disease) |>
-        tidyr::pivot_wider(
-          names_from = disease,
-          values_from = n
-        ) -> .xx
-      tryCatch(
-        expr = {
-          t.test(
-            af ~ disease,
-            data = .x,
-            var.equal = TRUE
-          ) |>
-            broom::tidy() |>
-            dplyr::select(
-              estimate,
-              estimate1,
-              estimate2,
-              p.value,
-              conf.low,
-              conf.high
+  # filter(variant == "3173G>A")
+  # head(2) |>
+  dplyr::mutate(
+    t = map(
+      .x = data,
+      .f = \(.x) {
+        # .x <- a$data[[1]]
+        .x |>
+          dplyr::count(disease) |>
+          tidyr::pivot_wider(
+            names_from = disease,
+            values_from = n
+          ) -> .xx
+        tryCatch(
+          expr = {
+            t.test(
+              af ~ disease,
+              data = .x,
+              var.equal = TRUE
             ) |>
-            dplyr::bind_cols(
-              .xx
-            )
-        },
-        error = function(e) {
-          message("Error: ", conditionMessage(e))
-          return(NULL)
-        }
-      )
-    }
-  )
-) -> admeta_af_ttest
+              broom::tidy() |>
+              dplyr::select(
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
+              ) |>
+              dplyr::bind_cols(
+                .xx
+              )
+          },
+          error = function(e) {
+            message("Error: ", conditionMessage(e))
+            return(NULL)
+          }
+        )
+      }
+    )
+  ) -> admeta_af_ttest
 
 
 admeta_af_ttest |>
@@ -307,6 +419,8 @@ admeta_af_ttest |>
     ad >= 5,
     Healthy >= 5
   )
+
+
 # Save  --------------------------------------------------------------
 
 # Session info -------------------------------------------------------------

@@ -18,7 +18,7 @@ fn_plot_ggdist <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
@@ -108,7 +108,7 @@ fn_plot_joy <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
@@ -210,7 +210,7 @@ fn_plot_hist <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
@@ -335,7 +335,7 @@ fn_plot_cumulative_fraction <- function(
   thegseid,
   thesrrid
 ) {
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
@@ -455,7 +455,7 @@ fn_plot_joy_celltype_level2_level3 <- function(
       glue::glue()
   )
 
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )

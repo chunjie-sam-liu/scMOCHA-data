@@ -55,7 +55,7 @@ HOMO_HETE_VARIANTS <- ALLVARIANTS |>
 # load conn ---------------------------------------------------------------
 dotenv(".env")
 
-conn <- conn_db(
+conn <- db_conn(
   Sys.getenv("DUCKDB_PATH"),
   read_only = TRUE
 )

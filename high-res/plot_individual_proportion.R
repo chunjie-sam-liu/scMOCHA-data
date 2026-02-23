@@ -131,7 +131,7 @@ fn_plot_variant_ratio <- function(thevariant) {
 
   .srrids <- unique(.m$srrid)
 
-  conn <- conn_db(
+  conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )

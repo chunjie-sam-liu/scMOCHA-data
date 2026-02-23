@@ -598,7 +598,7 @@ fn_variant_ <- function(
       )
     ) -> sc@meta.data
 
-  DefaultAssay(sc) <- "SCT"
+  # DefaultAssay(sc) <- "SCT"
 
   sc@meta.data |>
     dplyr::count(cellvarianttype2) |>

@@ -363,7 +363,7 @@ fn_de_ <- function(
     slot = "data",
     test.use = "wilcox",
     group.by = .group.by,
-    latent.vars = "srrid",
+    # latent.vars = "srrid",
     features = Seurat::VariableFeatures(sc)
   )
 
@@ -797,17 +797,17 @@ fn_main <- function(thevariant) {
   }
 
   # Check if already processed
-  check_file <- outdirnotuse /
-    "deg" /
-    thevariant /
-    "go_merge_vaf" /
-    glue::glue(
-      "markers.High (AF>=0.80) vs Low (AF<0.80) and wildtype.{thevariant}.go.qs"
-    )
-  if (fs::file_exists(check_file)) {
-    cli::cli_alert_info("Variant {thevariant} already processed, skipping.")
-    return(invisible(NULL))
-  }
+  # check_file <- outdirnotuse /
+  #   "deg" /
+  #   thevariant /
+  #   "go_merge_vaf" /
+  #   glue::glue(
+  #     "markers.High (AF>=0.80) vs Low (AF<0.80) and wildtype.{thevariant}.go.qs"
+  #   )
+  # if (fs::file_exists(check_file)) {
+  #   cli::cli_alert_info("Variant {thevariant} already processed, skipping.")
+  #   return(invisible(NULL))
+  # }
 
   cli_alert_info("Processing variant {thevariant}")
 
@@ -883,7 +883,7 @@ thevariants <- c(
 # fn_main("14831G>A")
 # fn_main("7833T>C")
 fn_main("10500G>A")
-
+fn_main("4175G>A")
 # thats for all variants, don't run or run once
 # thevariants |>
 #   purrr::map(
