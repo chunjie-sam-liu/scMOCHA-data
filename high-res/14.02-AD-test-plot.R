@@ -112,16 +112,16 @@ ad_variant_ttest_cell <- import(
 # Constants ---------------------------------------------------------------
 
 topvariants <- c(
-  "263A>G",
-  "16311T>C",
-  "8794C>T",
-  "1736A>G",
-  "4824A>G",
-  "663A>G",
-  "8362T>G",
-  "4175G>A",
-  "5513G>A",
-  "11704C>T",
+  # "263A>G",
+  # "16311T>C",
+  # "8794C>T",
+  # "1736A>G",
+  # "4824A>G",
+  # "663A>G",
+  # "8362T>G",
+  # "4175G>A",
+  # "5513G>A",
+  # "11704C>T",
   "1397T>A",
   "1670A>G",
   "3173G>A",
@@ -304,9 +304,11 @@ p_violin_cluster <- plot_af_violin(
 )
 ggsave(
   p_violin_cluster,
-  filename = outdirnotuse / "AD" / "AD-variant-af-violin-cluster.pdf",
+  filename = outdirnotuse /
+    "AD" /
+    "AD-variant-af-violin-cluster-old-variant.pdf",
   width = 16,
-  height = 20,
+  height = 8,
   device = cairo_pdf
 )
 
@@ -333,9 +335,11 @@ p_violin_cell <- plot_af_violin(
 )
 ggsave(
   p_violin_cell,
-  filename = outdirnotuse / "AD" / "AD-variant-af-violin-cell.pdf",
+  filename = outdirnotuse /
+    "AD" /
+    "AD-variant-af-violin-cell-old-variant.pdf",
   width = 16,
-  height = 20,
+  height = 8,
   device = cairo_pdf
 )
 
