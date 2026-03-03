@@ -44,7 +44,7 @@ allvariants <- import(
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
-    coord = pbmclapply(
+    coord = parallel::mclapply(
       X = variant,
       FUN = \(.v) {
         # .v <- gse_data_variant_classification_clusteraf_bulkaf$variant[[1]]
@@ -72,7 +72,8 @@ allvariants <- import(
           alt = alt
         )
       },
-      mc.cores = 10
+      mc.cores = 10,
+      mc.preschedule = TRUE
     )
   ) |>
   tidyr::unnest(
