@@ -109,7 +109,7 @@ ad_variant_ttest_cell <- import(
 )
 
 
-color_celltype_bulk <- c(color_celltype, "Pseudo-bulk" = "grey30")
+color_celltype_bulk <- c("Pseudo-bulk" = "red", color_celltype)
 
 
 # Conn ---------------------------------------------------------------
@@ -159,7 +159,7 @@ plot_ttest_dotmatrix <- function(ttest_data, top_n = 20, label = "cluster") {
     filter(ad >= 5, Healthy >= 5) |>
     mutate(
       celltype = gsub(celltype, pattern = "_", replacement = " "),
-      celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
+      celltype = ifelse(celltype == "Bulk", "Pseudo-bulk", celltype),
       celltype = factor(celltype, levels = names(color_celltype_bulk))
     )
 
@@ -296,7 +296,7 @@ plot_ttest_scatter <- function(ttest_data, label = "cluster") {
     mutate(
       log10p = -log10(p.value),
       celltype = gsub(celltype, pattern = "_", replacement = " "),
-      celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
+      celltype = ifelse(celltype == "Bulk", "Pseudo-bulk", celltype),
       celltype = factor(celltype, levels = names(color_celltype_bulk)),
       point_color = ifelse(
         p.value < 0.05 & abs(estimate) > 0.05 | p.value < 10^-2.5,
@@ -331,7 +331,10 @@ plot_ttest_scatter <- function(ttest_data, label = "cluster") {
       y = "-log10(p-value)",
       x = "Effect Size (AD - Healthy)",
     ) -> p
-  forplot |> filter(point_color == "red") |> pull(variant) -> topvariants
+  forplot |>
+    filter(point_color == "red") |>
+    pull(variant) |>
+    unique() -> topvariants
   list(
     p = p,
     topvariants = topvariants
@@ -351,7 +354,7 @@ plot_af_violin <- function(
     unnest(data) |>
     mutate(
       celltype = gsub(celltype, pattern = "_", replacement = " "),
-      celltype = ifelse(celltype == "bulk", "Pseudo-bulk", celltype),
+      celltype = ifelse(celltype == "Bulk", "Pseudo-bulk", celltype),
       celltype = factor(celltype, levels = names(color_celltype_bulk)),
     ) -> forplot
 
@@ -374,6 +377,7 @@ plot_af_violin <- function(
       alpha = 0.7,
       color = NA
     ) +
+    scale_y_continuous(limits = c(0, 1)) +
     scale_fill_manual(values = color_disease, name = "Disease") +
     ggbeeswarm::geom_quasirandom(
       aes(y = af, color = disease),
