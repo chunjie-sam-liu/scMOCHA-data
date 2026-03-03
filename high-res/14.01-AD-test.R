@@ -57,7 +57,7 @@ suppressMessages({
 cleandatadir <- path(Sys.getenv("CLEANDATADIR"))
 
 cluster_variant <- import(
-  path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
+  path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.qs"
 )
 #
 

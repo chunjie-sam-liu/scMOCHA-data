@@ -3,17 +3,28 @@ linters: linters_with_defaults(
     cyclocomp_linter = cyclocomp_linter(complexity_limit = 25),
     T_and_F_symbol_linter = T_and_F_symbol_linter(),
     duplicate_argument_linter = duplicate_argument_linter(),
-    line_length_linter = NULL,
+    line_length_linter = line_length_linter(120),
+    # line_length_linter = NULL,
     infix_spaces_linter = NULL,
     spaces_left_parentheses_linter = NULL,
     spaces_inside_linter = NULL,
     indentation_linter = NULL,
+    # object_usage_linter = object_usage_linter(), # disabled: load_pkg(jutils) dynamically loads packages, causing false positives
     object_usage_linter = NULL,
     object_name_linter = NULL,
     assignment_linter = NULL,
     commented_code_linter = NULL,
     return_linter = NULL,
-    brace_linter = NULL
+    brace_linter = NULL,
+    object_length_linter = NULL
   )
 encoding: "UTF-8"
-
+exclusions: list(
+  "\\.R\\.git$",
+  "\\.git$",
+  "^\\.git/",
+  "^renv/",
+  "^logs/",
+  "^misc/",
+  "README\\.md"
+  )

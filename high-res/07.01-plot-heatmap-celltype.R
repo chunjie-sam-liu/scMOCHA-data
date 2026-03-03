@@ -44,7 +44,7 @@ allvariants <- import(
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
-    coord = parallel::mclapply(
+    coord = pbmclapply(
       X = variant,
       FUN = \(.v) {
         # .v <- gse_data_variant_classification_clusteraf_bulkaf$variant[[1]]
@@ -140,18 +140,20 @@ source(path(
 # body --------------------------------------------------------------------
 \() {
   # only run once.
-  variant_clusteraf <- dir_ls(clusterlevel_dir) |>
-    head(20) |>
-    pbmclapply(
-      F = \(.x) {
-        import(.x)
-      },
-      mc.cores = 10
-    ) |>
+  variant_clusteraf_load <- pbmclapply(
+    X = dir_ls(clusterlevel_dir),
+    FUN = \(.x) {
+      import(.x)
+    },
+    mc.cores = 10,
+    mc.preschedule = TRUE
+  )
+
+  variant_clusteraf_load |>
     purrr::reduce(
       dplyr::left_join,
       by = c("gseid", "srrid", "celltype")
-    )
+    ) -> variant_clusteraf
 
   lobstr::obj_size(variant_clusteraf)
 
@@ -160,16 +162,26 @@ source(path(
     # dplyr::select(1, 2, 3, 4, 5) |>
     dplyr::mutate_all(.funs = \(x) {
       if (is.list(x)) as.double(x) else x
-    }) -> variant_clusteraf_unlist
+    }) |>
+    select(-`9971C>T.x`) |>
+    rename(`9971C>T` = `9971C>T.y`) -> variant_clusteraf_unlist
+
+  lobstr::obj_size(variant_clusteraf_unlist)
 
   export(
     variant_clusteraf_unlist,
-    path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
+    path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.qs"
   )
+
+  # export(
+  #   variant_clusteraf_unlist,
+  #   path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.qs"
+  # )
 }
 variant_clusteraf_unlist <- import(
-  path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.xlsx"
-)
+  path(Sys.getenv("OUTDIR")) / "ALLVARIANT-ALLSAMPLES-CLUSTERAF.qs"
+) |>
+  filter(celltype != "Bulk")
 #
 #
 # ? plot --------------------------------------------------------------------
