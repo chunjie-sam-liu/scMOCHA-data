@@ -31,6 +31,9 @@ logger::log_layout(logger::layout_glue_colors)
 
 # load data ---------------------------------------------------------------
 
+load_pkg(jutils)
+
+dotenv(".env")
 pcc <- import(
   file = "https://raw.githubusercontent.com/chunjie-sam-liu/chunjie-sam-liu.life/master/public/data/pcc.tsv"
 ) |>
@@ -41,7 +44,7 @@ allvariants <- import(
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
-    coord = parallel::mclapply(
+    coord = pbmclapply(
       X = variant,
       FUN = \(.v) {
         # .v <- gse_data_variant_classification_clusteraf_bulkaf$variant[[1]]
@@ -137,11 +140,12 @@ source(path(
 \() {
   # only run once.
   variant_clusteraf <- dir_ls(clusterlevel_dir) |>
-    # head(20) |>
-    purrr::map(
-      .f = \(.x) {
+    head(20) |>
+    pbmclapply(
+      F = \(.x) {
         import(.x)
-      }
+      },
+      mc.cores = 10
     ) |>
     purrr::reduce(
       dplyr::left_join,

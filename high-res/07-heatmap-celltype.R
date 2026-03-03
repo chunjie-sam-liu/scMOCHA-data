@@ -36,7 +36,7 @@ allvariants <- import(
     "SAMPLE-VARIANT-CLASSIFICATION-CLUSTER-BULK-AF.xlsx"
 ) |>
   dplyr::mutate(
-    coord = parallel::mclapply(
+    coord = pbmclapply(
       X = variant,
       FUN = \(.v) {
         # .v <- gse_data_variant_classification_clusteraf_bulkaf$variant[[1]]
@@ -64,7 +64,8 @@ allvariants <- import(
           alt = alt
         )
       },
-      mc.cores = 10
+      mc.cores = 10,
+      mc.preschedule = TRUE
     )
   ) |>
   tidyr::unnest(
@@ -120,6 +121,17 @@ tbl_barcode |>
 fn_get_af_heatmap_celltype <- function(thevariant) {
   # return: a data.table contains af per celltype per srrid per gseid
   # thevariant <- "1004G>A"
+
+  cellfile <- glue::glue(
+    path(
+      Sys.getenv("ZZZDIR"),
+      "new-variant-cell/homo-hete/celllevel/{thevariant}.qs"
+    )
+  )
+
+  cell_torun <- !lubridate::now() - file_info(cellfile)$modification_time <
+    lubridate::days(30)
+
   thepos <- gsub(
     pattern = "(\\d+)([A-Z])>([A-Z])",
     replacement = "\\1",
@@ -151,15 +163,47 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
       by = c("gseid", "srrid", "barcode")
     ) -> covall_thevariant
 
-  export(
-    covall_thevariant,
-    glue::glue(
-      path(
-        Sys.getenv("ZZZDIR"),
-        "new-variant-cell/homo-hete/celllevel/{thevariant}.qs"
-      )
+  # export(
+  #   covall_thevariant,
+  #   cellfile
+  # )
+
+  outfile <- glue::glue(
+    path(
+      Sys.getenv("ZZZDIR"),
+      "new-variant-cell/homo-hete/clusterlevel/{thevariant}.qs"
     )
   )
+  torun <- lubridate::now() - file_info(outfile)$modification_time >
+    lubridate::days(7)
+
+  if (!torun) {
+    return(TRUE)
+  }
+
+  covall_thevariant |>
+    tidyr::nest(
+      .by = c(gseid, srrid)
+    ) |>
+    dplyr::mutate(
+      !!thevariant := purrr::map(
+        .x = data,
+        .f = \(.dt, thealt) {
+          .dt[, .(A, C, G, T)] |>
+            sum(na.rm = TRUE) -> total_depth
+          if (total_depth == 0) {
+            return(0)
+          } else {
+            af <- sum(.dt[, ..thealt], na.rm = TRUE) / total_depth
+            return(af)
+          }
+        },
+        thealt = thealt
+      )
+    ) |>
+    dplyr::select(-data) |>
+    mutate(celltype = "Bulk") |>
+    relocate(celltype, .after = srrid) -> af_bulk
 
   covall_thevariant |>
     tidyr::nest(
@@ -183,14 +227,11 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
     ) |>
     dplyr::select(-data) -> af
 
+  af |> bind_rows(af_bulk) -> af_final
+
   export(
-    af,
-    glue::glue(
-      path(
-        Sys.getenv("ZZZDIR"),
-        "new-variant-cell/homo-hete/clusterlevel/{thevariant}.qs"
-      )
-    )
+    af_final,
+    outfile
   )
 }
 
@@ -211,7 +252,7 @@ logger::log_info("Processing {length(thevariants)} variants with 50 cores...")
 logger::log_info("Variants: {paste(head(thevariants, 5), collapse = ', ')}...")
 
 # Use parallel processing with 50 cores
-results <- parallel::mclapply(
+results <- pbmclapply(
   X = thevariants,
   FUN = function(.variant) {
     tryCatch(
@@ -226,7 +267,8 @@ results <- parallel::mclapply(
       }
     )
   },
-  mc.cores = 50
+  mc.cores = 20,
+  mc.preschedule = TRUE
 )
 
 # Check results
@@ -242,12 +284,67 @@ if (failed > 0) {
   logger::log_warn("Failed variants: {paste(failed_variants, collapse = ', ')}")
 }
 
+
+data.table(
+  variant = thevariants
+) |>
+  mutate(
+    variant_path = path(
+      "/home/liuc9/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel",
+      paste0(variant, ".qs")
+    )
+  ) |>
+  mutate(
+    exists = file.exists(variant_path)
+  ) |>
+  # filter(!exists)
+  mutate(
+    mt = pbmclapply(
+      X = variant_path,
+      FUN = \(.path) {
+        fi <- file_info(.path)
+        data.table(
+          size = fi$size,
+          mt = fi$modification_time
+        )
+      },
+      mc.cores = 10,
+      mc.preschedule = TRUE
+    )
+  ) |>
+  unnest(cols = mt) |>
+  mutate(
+    torun = lubridate::now() - mt > lubridate::days(7)
+  ) |>
+  filter(torun) -> thevariants_torun
+
+
+# Use parallel processing with 50 cores
+results <- pbmclapply(
+  X = thevariants_torun$variant,
+  FUN = function(.variant) {
+    tryCatch(
+      {
+        fn_get_af_heatmap_celltype(.variant)
+        logger::log_success("Completed variant: {.variant}")
+        return(TRUE)
+      },
+      error = function(e) {
+        logger::log_error("Failed to process variant {.variant}: {e$message}")
+        return(FALSE)
+      }
+    )
+  },
+  mc.cores = 20,
+  mc.preschedule = TRUE
+)
+
+
 # Close database connections
 DBI::dbDisconnect(conn, shutdown = TRUE)
 DBI::dbDisconnect(conn_all_hetero_af, shutdown = TRUE)
 
 logger::log_success("All processing completed and connections closed")
-
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
