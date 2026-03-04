@@ -105,6 +105,10 @@ variants <- c(
   "8362T>G"
 )
 
+variants <- import(
+  outdirnotuse / "AD" / "AD-variant-top-ttest-cluster-variants.qs"
+)
+
 # Conn ---------------------------------------------------------------
 
 # Function ----------------------------------------------------------------

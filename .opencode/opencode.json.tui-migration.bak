@@ -15,9 +15,17 @@
     "git *": "allow",
     "npm *": "allow"
   },
-  "instructions": [
-    ".opencode/guidelines.md"
-  ],
+  "tui": {
+    "scroll_acceleration": {
+      "enabled": true
+    },
+    "scroll_speed": 3
+  },
+  "instructions": [".opencode/guidelines.md"],
+  "keybinds": {
+    "input_submit": "cmd+return",
+    "input_newline": "return,shift+return,ctrl+return,alt+return,ctrl+j"
+  },
   "formatter": {
     "ruff": {
       "command": ["ruff", "check", "--fix", "."],

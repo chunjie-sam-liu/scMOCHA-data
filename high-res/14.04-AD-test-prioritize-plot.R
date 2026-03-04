@@ -442,7 +442,10 @@ ggsave(
   device = cairo_pdf
 )
 
-
+export(
+  p_scatter_cluster$topvariants,
+  outdirnotuse / "AD" / "AD-variant-top-ttest-cluster-variants.qs"
+)
 p_scatter_cluster$topvariants |>
   map(
     ~ {
