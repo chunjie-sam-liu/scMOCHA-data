@@ -446,6 +446,8 @@ export(
   p_scatter_cluster$topvariants,
   outdirnotuse / "AD" / "AD-variant-top-ttest-cluster-variants.qs"
 )
+
+# cluster
 p_scatter_cluster$topvariants |>
   map(
     ~ {
@@ -503,6 +505,131 @@ p_scatter_cluster$topvariants |>
   dev.off()
 }
 
+# cell
+p_scatter_cell <- plot_ttest_scatter(
+  ttest_data = ad_variant_ttest_cell,
+  label = "cell"
+)
+
+ggsave(
+  p_scatter_cell$p,
+  filename = outdirnotuse / "AD" / "AD-variant-af-ttest-cell.pdf",
+  width = 13,
+  height = 3.5
+)
+
+p_violin_cell <- plot_af_violin(
+  ttest_data = ad_variant_ttest_cell,
+  variants = p_scatter_cell$topvariants,
+  label = "cell"
+)
+
+ggsave(
+  p_violin_cell,
+  filename = outdirnotuse /
+    "AD" /
+    "AD-variant-af-violin-cell.pdf",
+  width = 16,
+  height = 20,
+  device = cairo_pdf
+)
+
+export(
+  p_scatter_cell$topvariants,
+  outdirnotuse / "AD" / "AD-variant-top-ttest-cell-variants.qs"
+)
+
+p_scatter_cell$topvariants |>
+  map(
+    .f = \(.x) {
+      tryCatch(
+        {
+          anno <- variant_annotation |>
+            filter(variant == .x) |>
+            slice(1)
+          locus <- if (
+            nrow(anno) > 0 && !is.na(anno$Locus) && anno$Locus != ""
+          ) {
+            anno$Locus
+          } else {
+            NA_character_
+          }
+          pred <- if (
+            nrow(anno) > 0 &&
+              !is.na(anno$prediction_class) &&
+              anno$prediction_class != ""
+          ) {
+            anno$prediction_class
+          } else {
+            NA_character_
+          }
+          dis <- if (
+            nrow(anno) > 0 && !is.na(anno$Disease) && anno$Disease != ""
+          ) {
+            anno$Disease
+          } else {
+            NA_character_
+          }
+
+          var_label <- paste0(
+            .x,
+            if (!is.na(locus)) paste0(" [", locus, "]") else ""
+          )
+          anno_parts <- na.omit(c(pred, dis))
+          anno_title <- if (length(anno_parts) > 0) {
+            paste(anno_parts, collapse = " | ")
+          } else {
+            NULL
+          }
+
+          plot_af_violin(
+            ttest_data = ad_variant_ttest_cell,
+            variants = .x,
+            label = var_label,
+            anno_title = anno_title
+          )
+        },
+        error = function(e) {
+          log_error("Error processing variant {.x}: {conditionMessage(e)}")
+          NULL
+        }
+      )
+    }
+  ) -> p_list_cell
+
+
+{
+  pdf(
+    outdirnotuse / "AD" / "AD-variant-af-violin-cell-individual.pdf",
+    width = 8,
+    height = 4
+  )
+  p_list_cell |> map(print)
+  dev.off()
+}
+
+
+ggvenn::ggvenn(
+  list(
+    Cluster = p_scatter_cluster$topvariants,
+    Cell = p_scatter_cell$topvariants
+  ),
+  fill_color = c("#E41A1C", "#377EB8"),
+  stroke_size = 0.5,
+  set_name_size = 4
+) +
+  labs(
+    title = "Overlap of significant variants between cluster and cell level"
+  ) +
+  theme(
+    plot.title = element_text(size = 14, face = "bold"),
+    legend.position = "none"
+  ) -> p_venn
+
+intersect(
+  p_scatter_cluster$topvariants,
+  p_scatter_cell$topvariants
+) -> shared_variants
 # Save  --------------------------------------------------------------
 
 # Session info -------------------------------------------------------------

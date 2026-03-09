@@ -142,31 +142,37 @@ theme_cor <- function() {
 }
 
 fn_load_corr <- function(.variant) {
-  import(
-    outdirnotuse /
-      "AD" /
-      "corr" /
-      "ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue(),
-    lazy = FALSE
-  ) |>
+  import(fn_corr_path(.variant), lazy = FALSE) |>
     dplyr::filter(pval < 0.05) |>
     dplyr::arrange(dplyr::desc(corr)) |>
     dplyr::filter(abs(corr) > 0.3)
 }
 
 fn_load_corr_all <- function(.variant) {
-  import(
-    outdirnotuse /
-      "AD" /
-      "corr" /
-      "ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue(),
-    lazy = FALSE
-  )
+  import(fn_corr_path(.variant), lazy = FALSE)
 }
 
 # Main --------------------------------------------------------------------
 
-variants |>
+fn_corr_path <- function(.variant) {
+  outdirnotuse /
+    "AD" /
+    "corr" /
+    "ad-celltype-variant-af-{.variant}-corr.csv" |> glue::glue()
+}
+
+variants_available <- variants[
+  purrr::map_lgl(variants, \(.v) fs::file_exists(fn_corr_path(.v)))
+]
+
+if (length(variants_available) < length(variants)) {
+  missing_variants <- setdiff(variants, variants_available)
+  log_warn(
+    "Skipping {length(missing_variants)} variant(s) with no corr file: {paste(missing_variants, collapse=', ')}"
+  )
+}
+
+variants_available |>
   purrr::walk(\(.variant) {
     log_info("Processing variant: {.variant}")
     .safe_variant <- gsub(">", "_", .variant)
