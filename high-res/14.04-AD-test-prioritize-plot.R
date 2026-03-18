@@ -109,6 +109,13 @@ ad_variant_ttest_cell <- import(
 )
 
 
+# 15666T>C
+
+ad_variant_ttest_cluster |>
+  select(-data) |>
+  unnest(t) |>
+  filter(variant == "3572T>G")
+
 color_celltype_bulk <- c("Pseudo-bulk" = "red", color_celltype)
 
 

@@ -98,6 +98,69 @@ admeta |>
 ad_srrid <- admeta_af$srrid |> unique()
 ad_variant <- admeta_af$variant |> unique()
 
+
+admeta_af |>
+  filter(variant == "3572T>G") |>
+  pivot_longer(
+    cols = -c(gseid, srrid, disease, variant_type, variant),
+    names_to = "celltype",
+    values_to = "af"
+  ) |>
+  nest(
+    .by = c(variant, celltype)
+  ) |>
+  mutate(
+    t = pbmclapply(
+      X = data,
+      FUN = function(.x) {
+        .x |>
+          dplyr::count(disease) |>
+          tidyr::pivot_wider(
+            names_from = disease,
+            values_from = n
+          ) -> .xx
+
+        tryCatch(
+          expr = {
+            t.test(
+              af ~ disease,
+              data = .x,
+              var.equal = TRUE
+            ) |>
+              broom::tidy() |>
+              dplyr::select(
+                estimate,
+                estimate1,
+                estimate2,
+                p.value,
+                conf.low,
+                conf.high
+              ) |>
+              dplyr::bind_cols(
+                .xx
+              )
+          },
+          error = function(e) {
+            message("Error: ", conditionMessage(e))
+            return(
+              tibble::tibble(
+                estimate = NA_real_,
+                estimate1 = NA_real_,
+                estimate2 = NA_real_,
+                p.value = NA_real_,
+                conf.low = NA_real_,
+                conf.high = NA_real_,
+                Healthy = NA_integer_,
+                `Alzheimer's Disease` = NA_integer_
+              )
+            )
+          }
+        )
+      },
+      mc.cores = 4
+    )
+  ) |>
+  unnest(t)
 # Conn ---------------------------------------------------------------
 
 conn <- db_conn(

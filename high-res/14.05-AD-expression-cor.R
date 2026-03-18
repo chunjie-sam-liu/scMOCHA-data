@@ -108,6 +108,7 @@ variants <- c(
 variants <- import(
   outdirnotuse / "AD" / "AD-variant-top-ttest-cluster-variants.qs"
 )
+variants <- import(outdirnotuse / "AD" / "candidates" / "thevariants.qs")
 
 # Conn ---------------------------------------------------------------
 
@@ -217,7 +218,7 @@ variants[-1] |>
   purrr::walk(
     fn_cor_test_variant
   )
-
+fn_cor_test_variant("3572T>G")
 
 # Save  --------------------------------------------------------------
 

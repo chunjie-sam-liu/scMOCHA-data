@@ -352,9 +352,9 @@ admeta_af |>
 # -- Variant annotation labels --
 variant_annotation |>
   dplyr::filter(variant %in% admeta_af$variant) |>
-  filter(
-    prediction_class %in% c("pathogenic", "likely_pathogenic") | !is.na(Disease)
-  ) |>
+  # filter(
+  #   prediction_class %in% c("pathogenic", "likely_pathogenic") | !is.na(Disease)
+  # ) |>
   dplyr::mutate(
     label = glue::glue("{variant}\n{Disease}\n{prediction_class}"),
     disease_category = dplyr::case_when(
@@ -424,6 +424,117 @@ ggsave(
 )
 
 
+ad_variant_ttest_cluster <- import(
+  outdirnotuse / "AD" / "AD-variant-af-ttest-cluster.qs"
+) |>
+  select(-data) |>
+  unnest(cols = t) |>
+  filter(p.value < 0.05)
+
+
+ad_variant_ttest_cluster_filter <- ad_variant_ttest_cluster |>
+  select(variant, celltype, p.value) |>
+  pivot_wider(
+    names_from = celltype,
+    values_from = p.value
+  )
+
+
+variant_nsamples_wide |>
+  dplyr::arrange(-total) |>
+  dplyr::left_join(
+    ad_variant_annotation |>
+      dplyr::select(
+        variant,
+        Disease,
+        prediction_class,
+        disease_category,
+        label
+      ),
+    by = "variant"
+  ) |>
+  count(prediction_class)
+
+variant_nsamples_wide |>
+  dplyr::arrange(-total) |>
+  dplyr::mutate(
+    variant = factor(variant, levels = variant)
+  ) |>
+  dplyr::left_join(
+    ad_variant_annotation,
+    by = "variant"
+  ) |>
+  left_join(
+    ad_variant_ttest_cluster_filter,
+    by = "variant"
+  ) -> variant_nsamples_wide_annotated
+
+
+# ggvenn::ggvenn(list(
+#   variant_nsamples = unique(stats::na.omit(as.character(
+#     variant_nsamples_wide$variant
+#   ))),
+#   ad_annotation = unique(stats::na.omit(as.character(
+#     ad_variant_annotation$variant
+#   )))
+# ))
+
+variant_nsamples_wide_annotated |>
+  export(outdirnotuse / "AD" / "AD-variant-sample-counts-annotated.xlsx")
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Alzheimer's Disease` > 5,
+    `Healthy` > 5
+  ) |>
+  count(Disease, prediction_class)
+variant_nsamples_wide_annotated |>
+  filter(
+    `Alzheimer's Disease` > 5,
+    `Healthy` > 5
+  ) |>
+  filter(!is.na(Disease)) |>
+  glimpse()
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Alzheimer's Disease` > 5,
+    `Healthy` > 5
+  ) |>
+  filter(prediction_class == "Likely pathogenic")
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Healthy` == 0
+  )
+
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Healthy` == 0
+  ) |>
+  filter(
+    `Alzheimer's Disease` > 1
+  )
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Healthy` == 0
+  ) |>
+  filter(
+    `Alzheimer's Disease` > 1
+  ) |>
+  filter(!is.na(Disease)) |>
+  glimpse()
+
+variant_nsamples_wide_annotated |>
+  filter(
+    `Healthy` == 0
+  ) |>
+  filter(
+    `Alzheimer's Disease` > 1
+  ) |>
+  count(Disease, prediction_class)
 #
 #
 # ? don't run below --------------------------------------------------------------------

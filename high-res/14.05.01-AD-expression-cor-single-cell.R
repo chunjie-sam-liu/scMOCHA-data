@@ -109,6 +109,8 @@ variants <- import(
   outdirnotuse / "AD" / "AD-variant-top-ttest-cluster-variants.qs"
 )
 
+variants <- import(outdirnotuse / "AD" / "candidates" / "thevariants.qs")
+
 ad_srrid <- admeta_af$srrid |> unique()
 ad_variant <- admeta_af$variant |> unique()
 color_celltype_bulk <- c("Pseudo-bulk" = "red", color_celltype)
@@ -137,16 +139,16 @@ db_disconn()
 # Function ----------------------------------------------------------------
 
 fn_cor_test_variant <- function(.variant) {
-  .v <- cluster_variant |>
-    select(celltype, gseid, srrid, af = all_of(.variant)) |>
-    filter(srrid %in% admeta$srrid) |>
-    nest(.by = celltype, .key = "af")
+  # .v <- cluster_variant |>
+  #   select(celltype, gseid, srrid, af = all_of(.variant)) |>
+  #   filter(srrid %in% admeta$srrid) |>
+  #   nest(.by = celltype, .key = "af")
 
-  expr |>
-    dplyr::left_join(
-      .v,
-      by = c("celltype")
-    ) -> .expr_v
+  # expr |>
+  #   dplyr::left_join(
+  #     .v,
+  #     by = c("celltype")
+  #   ) -> .expr_v
 
   .expr_v |>
     # head(20) |>
@@ -232,6 +234,7 @@ fn_cor_test_variant <- function(.variant) {
       "ad-celltype-variant-af-{.variant}-corr.qs" |> glue()
   )
 }
+
 theme_ad_panel <- function() {
   theme(
     plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
@@ -310,6 +313,7 @@ fn_cor_single_cell <- function(.variant, anno_title = NULL) {
 }
 
 # Main --------------------------------------------------------------------
+fn_cor_single_cell(.variant)
 
 variants[-1] |>
   purrr::walk(

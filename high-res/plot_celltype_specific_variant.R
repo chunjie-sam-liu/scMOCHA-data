@@ -208,7 +208,8 @@ fn_plot_joy <- function(
 fn_plot_hist <- function(
   thevariant,
   thegseid,
-  thesrrid
+  thesrrid,
+  subtitle = NULL
 ) {
   conn <- db_conn(
     Sys.getenv("DUCKDB_PATH"),
@@ -280,10 +281,12 @@ fn_plot_hist <- function(
     ) +
     scale_x_continuous(
       # limits = .xbl$limits,
+      # limits = c(0, 1),
       breaks = seq(0, 1, 0.2),
       labels = scales::label_number(accuracy = 0.1),
       expand = expansion(add = c(0.01, 0.01)),
     ) +
+    coord_cartesian(xlim = c(0, 1)) +
     theme(
       legend.position = "none",
       # axis.text.y = element_blank(),
@@ -295,6 +298,12 @@ fn_plot_hist <- function(
       plot.title = element_text(
         hjust = 0.5,
         size = 14,
+        color = "black",
+        face = "bold"
+      ),
+      plot.subtitle = element_text(
+        hjust = 0.5,
+        size = 12,
         color = "black",
         face = "bold"
       ),
@@ -319,6 +328,7 @@ fn_plot_hist <- function(
     ) +
     labs(
       title = glue::glue("m.{.variant}\n({.gseid}-{.srrid})"),
+      subtitle = subtitle,
       x = glue::glue("Heteroplasmy Level"),
       y = "Cell Count"
     )
