@@ -181,31 +181,45 @@ forplots |>
   ) -> admeta_af_plot
 
 
+export(
+  admeta_af_plot,
+  outdirnotuse / "COVID19" / "candidates" / "admeta_af_plot.qs"
+)
 admeta_af_plot |>
+  head(2) |>
   mutate(
-    saveplot = pbmcmapply(
+    saveplot = mapply(
       FUN = \(.variant, .plot, .adspecific, .prediction_class, .disease) {
-        saveplot(
-          plot = .plot,
-          file = outdirnotuse /
-            "COVID19" /
-            "candidates" /
-            .adspecific /
-            glue(
-              "COVID19-{.variant}-{.adspecific}-{.prediction_class}-{.disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
-            ),
-          width = 20,
-          height = 10,
-          create.dir = TRUE
+        tryCatch(
+          expr = {
+            saveplot(
+              plot = .plot,
+              file = outdirnotuse /
+                "COVID19" /
+                "candidates" /
+                .adspecific /
+                glue(
+                  "COVID19-{.variant}-{.adspecific}-{.prediction_class}-{.disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
+                ),
+              width = 20,
+              height = 10,
+              create.dir = TRUE
+            )
+          },
+          error = function(e) {
+            log_error(
+              glue(
+                "Error saving plot for variant {.variant}: {e$message}"
+              )
+            )
+          }
         )
       },
       .variant = variant,
       .plot = plot,
       .adspecific = adspecific,
       .prediction_class = prediction_class,
-      .disease = Disease,
-      mc.cores = 20,
-      mc.preschedule = TRUE
+      .disease = Disease
     )
   )
 
