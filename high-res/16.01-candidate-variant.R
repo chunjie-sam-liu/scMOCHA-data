@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2026-03-23 01:51:14
+# @DATE: 2026-03-23 10:20:00
 # @DESCRIPTION: this script is used for ...
 
 # Reproducibility ----------------------------------------------------------
@@ -50,7 +50,6 @@ suppressMessages({
   conflicted::conflict_prefer("filter", "dplyr")
 })
 
-
 outdir <- path(Sys.getenv("OUTDIR"))
 outdirnotuse <- path(Sys.getenv("OUTDIRNOTUSE"))
 
@@ -61,62 +60,52 @@ ALLVARIANTS <- import(
 METAFULL <- import(outdir / "SAMPLES-METADATA-FULL.xlsx")
 variant_annotation <- import(outdir / "VARIANT-ANNOTATION-TABLE-APOGEE2.xlsx")
 
-
 variant_nsamples_wide_annotated <- import(
-  outdirnotuse / "COVID19" / "COVID19-variant-sample-counts-annotated.xlsx"
+  outdirnotuse /
+    "Other-disease" /
+    "Other-disease-variant-sample-counts-annotated.xlsx"
 )
 
-# Source ---------------------------------------------------------------------
+# Source ------------------------------------------------------------------
 source(
   path(Sys.getenv("HIGHRESDIR"), "plot_celltype_specific_variant.R")
 )
 source(
   path(Sys.getenv("HIGHRESDIR"), "plot_individual_proportion.R")
 )
-# Conn ---------------------------------------------------------------
-
-# Function ----------------------------------------------------------------
-
-sanitize_path_component <- function(x, missing = "NA") {
-  x <- as.character(x)
-  if (length(x) == 0 || is.na(x) || trimws(x) == "") {
-    return(missing)
-  }
-
-  x <- gsub("[/\\\\]+", "-", x)
-  x <- gsub("[:*?\"<>|]", "-", x)
-  trimws(x)
-}
 
 # Main --------------------------------------------------------------------
-
 METAFULL |>
-  filter(
-    disease %in% c("Healthy", "COVID-19"),
-    # Chemistry == "SC5P-PE"
+  mutate(
+    disease = dplyr::case_when(
+      disease == "Healthy" ~ "Healthy",
+      !is.na(disease) & !disease %in% c("Alzheimer's Disease", "COVID-19", "Unknown") ~
+        "Other disease",
+      TRUE ~ NA_character_
+    )
   ) |>
+  filter(!is.na(disease)) |>
   select(gseid, srrid, Chemistry, disease) -> disease_meta
 
 disease_meta |>
   dplyr::left_join(ALLVARIANTS, by = c("gseid", "srrid")) |>
   dplyr::select(-c(Chemistry, Haplogroup, Verbose_haplogroup)) |>
   dplyr::mutate(
-    disease = factor(disease, levels = c("Healthy", "COVID-19"))
+    disease = factor(disease, levels = c("Healthy", "Other disease"))
   ) -> meta_af
-
 
 variant_nsamples_wide_annotated |>
   filter(
     `Healthy` == 0
   ) |>
   filter(
-    `COVID-19` > 1
+    `Other disease` > 1
   ) |>
   pull(variant) -> variants_disease
 
 variant_nsamples_wide_annotated |>
   filter(
-    `COVID-19` > 5,
+    `Other disease` > 5,
     `Healthy` > 5
   ) |>
   pull(variant) -> variants_test
@@ -126,8 +115,10 @@ thevariants <- c(
   variants_test
 )
 
-export(thevariants, outdirnotuse / "COVID19" / "candidates" / "thevariants.qs")
-
+export(
+  thevariants,
+  outdirnotuse / "Other-disease" / "candidates" / "thevariants.qs"
+)
 
 meta_af |>
   filter(variant %in% thevariants) |>
@@ -136,7 +127,7 @@ meta_af |>
   mutate(
     adspecific = if_else(
       variant %in% variants_disease,
-      "COVID-19-specific",
+      "Other-disease-specific",
       "Test"
     ),
   ) |>
@@ -146,14 +137,10 @@ meta_af |>
     by = "variant"
   ) -> forplots
 
-
 forplots |>
   mutate(
     plot = mapply(
       FUN = \(.x, .y, aachange, prediction_class, Disease) {
-        # .x <- forplots$variant[1]
-        # .y <- forplots$meta[[1]]
-        # fn_plot_hist(thevariant, thegseid, thesrrid, subtitle = "cj")
         .y |>
           arrange(desc(disease), variant_type) |>
           mutate(
@@ -161,7 +148,6 @@ forplots |>
               "{disease} - {variant_type} - {aachange} - {prediction_class} - {Disease}"
             )
           ) |>
-          # head(2) |>
           mutate(
             plot = pmap(
               list(
@@ -186,41 +172,33 @@ forplots |>
       aachange = aachange,
       prediction_class = prediction_class,
       Disease = Disease,
-      # mc.cores = 10,
       SIMPLIFY = FALSE
     )
-  ) -> admeta_af_plot
+  ) -> othermeta_af_plot
 
-lobstr::obj_size(admeta_af_plot)
+lobstr::obj_size(othermeta_af_plot)
 export(
-  admeta_af_plot,
-  outdirnotuse / "COVID19" / "candidates" / "admeta_af_plot.rds"
+  othermeta_af_plot,
+  outdirnotuse / "Other-disease" / "candidates" / "othermeta_af_plot.qs"
 )
 
-admeta_af_plot |>
-  # head(2) |>
+othermeta_af_plot |>
   mutate(
     saveplot = mapply(
       FUN = \(.variant, .plot, .adspecific, .prediction_class, .disease) {
         tryCatch(
           expr = {
-            safe_variant <- sanitize_path_component(.variant)
-            safe_adspecific <- sanitize_path_component(.adspecific)
-            safe_prediction_class <- sanitize_path_component(.prediction_class)
-            safe_disease <- sanitize_path_component(.disease)
-
             saveplot(
               plot = .plot,
-              filename = outdirnotuse /
-                "COVID19" /
+              file = outdirnotuse /
+                "Other-disease" /
                 "candidates" /
-                safe_adspecific /
-                safe_prediction_class /
-                safe_disease /
+                .adspecific /
+                .prediction_class /
+                .disease /
                 glue(
-                  "COVID19-{safe_variant}-{safe_adspecific}-{safe_prediction_class}-{safe_disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
+                  "Other-disease-{.variant}-{.adspecific}-{.prediction_class}-{.disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
                 ),
-              device = "pdf",
               width = 20,
               height = 10,
               create.dir = TRUE
@@ -242,9 +220,6 @@ admeta_af_plot |>
       .disease = Disease
     )
   )
-
-
-# Save  --------------------------------------------------------------
 
 # Session info -------------------------------------------------------------
 if (isTRUE(verbose)) {
