@@ -138,7 +138,7 @@ meta_af |>
 
 forplots |>
   mutate(
-    plot = pbmcmapply(
+    plot = mapply(
       FUN = \(.x, .y, aachange, prediction_class, Disease) {
         # .x <- forplots$variant[1]
         # .y <- forplots$meta[[1]]
@@ -175,18 +175,18 @@ forplots |>
       aachange = aachange,
       prediction_class = prediction_class,
       Disease = Disease,
-      mc.cores = 10,
+      # mc.cores = 10,
       SIMPLIFY = FALSE
     )
   ) -> admeta_af_plot
 
-
+lobstr::obj_size(admeta_af_plot)
 export(
   admeta_af_plot,
   outdirnotuse / "COVID19" / "candidates" / "admeta_af_plot.qs"
 )
 admeta_af_plot |>
-  head(2) |>
+  # head(2) |>
   mutate(
     saveplot = mapply(
       FUN = \(.variant, .plot, .adspecific, .prediction_class, .disease) {
