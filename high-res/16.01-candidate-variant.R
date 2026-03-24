@@ -74,6 +74,18 @@ source(
   path(Sys.getenv("HIGHRESDIR"), "plot_individual_proportion.R")
 )
 
+# Function ----------------------------------------------------------------
+sanitize_path_component <- function(x, missing = "NA") {
+  x <- as.character(x)
+  if (length(x) == 0 || is.na(x) || trimws(x) == "") {
+    return(missing)
+  }
+
+  x <- gsub("[/\\\\]+", "-", x)
+  x <- gsub("[:*?\"<>|]", "-", x)
+  trimws(x)
+}
+
 # Main --------------------------------------------------------------------
 METAFULL |>
   mutate(
@@ -179,7 +191,7 @@ forplots |>
 lobstr::obj_size(othermeta_af_plot)
 export(
   othermeta_af_plot,
-  outdirnotuse / "Other-disease" / "candidates" / "othermeta_af_plot.qs"
+  outdirnotuse / "Other-disease" / "candidates" / "othermeta_af_plot.rds"
 )
 
 othermeta_af_plot |>
@@ -188,17 +200,23 @@ othermeta_af_plot |>
       FUN = \(.variant, .plot, .adspecific, .prediction_class, .disease) {
         tryCatch(
           expr = {
+            safe_variant <- sanitize_path_component(.variant)
+            safe_adspecific <- sanitize_path_component(.adspecific)
+            safe_prediction_class <- sanitize_path_component(.prediction_class)
+            safe_disease <- sanitize_path_component(.disease)
+
             saveplot(
               plot = .plot,
-              file = outdirnotuse /
+              filename = outdirnotuse /
                 "Other-disease" /
                 "candidates" /
-                .adspecific /
-                .prediction_class /
-                .disease /
+                safe_adspecific /
+                safe_prediction_class /
+                safe_disease /
                 glue(
-                  "Other-disease-{.variant}-{.adspecific}-{.prediction_class}-{.disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
+                  "Other-disease-{safe_variant}-{safe_adspecific}-{safe_prediction_class}-{safe_disease}-CELLTYPE-SPECIFIC-HIST-PLOT.pdf"
                 ),
+              device = "pdf",
               width = 20,
               height = 10,
               create.dir = TRUE

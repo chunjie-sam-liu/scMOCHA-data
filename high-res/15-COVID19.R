@@ -212,6 +212,8 @@ METAFULL |>
   ) |>
   select(gseid, srrid, Chemistry, disease) -> disease_meta
 
+disease_meta |> count(disease, Chemistry)
+
 disease_meta |>
   fn_plot_disease_chemistry() +
   labs(
