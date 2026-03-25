@@ -204,18 +204,66 @@ fn_plot_disease_variant_bar <- function(df_wide, annotation = NULL) {
     labs(title = "Other Disease Variant Distribution (ranked by frequency)")
 }
 
+fn_count_prediction_class <- function(df, dataname = "NA") {
+  df |>
+    mutate(
+      prediction_class = case_when(
+        prediction_class %in%
+          c("Likely pathogenic", "Pathogenic") ~ "Pathogenic",
+        prediction_class %in%
+          c("Benign", "Likely benign") ~ "Benign",
+        prediction_class %in% c("VUS", "VUS-", "VUS+") ~ "VUS",
+        TRUE ~ as.character(prediction_class)
+      )
+    ) |>
+    mutate(
+      prediction_class = if_else(
+        !is.na(Disease),
+        "MITOMAP reported disease",
+        as.character(prediction_class)
+      )
+    ) |>
+    # count(prediction_class)
+    mutate(
+      prediction_class = factor(
+        prediction_class,
+        levels = c(
+          "MITOMAP reported disease",
+          "Pathogenic",
+          "VUS",
+          "Benign",
+          "No prediction"
+        )
+      )
+    ) |>
+    count(prediction_class) |>
+    pivot_wider(
+      names_from = prediction_class,
+      values_from = n,
+      values_fill = 0
+    ) |>
+    add_column(
+      dataname = dataname,
+      .before = 1
+    )
+}
+
+
 # Main --------------------------------------------------------------------
 METAFULL |>
   mutate(
     disease = dplyr::case_when(
       disease == "Healthy" ~ "Healthy",
-      !is.na(disease) & !disease %in% c("Alzheimer's Disease", "COVID-19", "Unknown") ~
+      !is.na(disease) &
+        !disease %in% c("Alzheimer's Disease", "COVID-19", "Unknown") ~
         "Other disease",
       TRUE ~ NA_character_
     )
   ) |>
   filter(!is.na(disease)) |>
   select(gseid, srrid, Chemistry, disease) -> disease_meta
+
+disease_meta |> count(disease)
 
 disease_meta |>
   fn_plot_disease_chemistry() +
@@ -288,7 +336,9 @@ variant_annotation |>
 
 # -- Export intermediate data --
 variant_nsamples_wide |>
-  export(outdirnotuse / "Other-disease" / "Other-disease-variant-sample-counts.xlsx")
+  export(
+    outdirnotuse / "Other-disease" / "Other-disease-variant-sample-counts.xlsx"
+  )
 meta_af |>
   export(outdirnotuse / "Other-disease" / "Other-disease-variant-af.xlsx")
 meta_af |>
@@ -341,9 +391,13 @@ variant_nsamples_wide_annotated |>
   filter(!is.na(Disease)) |>
   glimpse()
 
+
 variant_nsamples_wide_annotated |>
   filter(
     `Healthy` == 0
+  ) |>
+  fn_count_prediction_class(
+    dataname = "Other disease variants with no healthy samples"
   )
 
 variant_nsamples_wide_annotated |>
@@ -352,6 +406,9 @@ variant_nsamples_wide_annotated |>
   ) |>
   filter(
     `Other disease` > 1
+  ) |>
+  fn_count_prediction_class(
+    dataname = "Other disease variants with >1 affected samples and no healthy samples"
   )
 
 variant_nsamples_wide_annotated |>
@@ -371,7 +428,24 @@ variant_nsamples_wide_annotated |>
   filter(
     `Other disease` > 1
   ) |>
-  count(Disease, prediction_class)
+  fn_count_prediction_class()
+
+
+# METAFULL |> glimpse()
+
+ALLVARIANTS |>
+  left_join(
+    METAFULL,
+    by = c("gseid", "srrid")
+  ) |>
+  nest(
+    .by = c(variant)
+  )
+
+variant_annotation |>
+  fn_count_prediction_class(
+    dataname = "All annotated variants"
+  )
 
 # Session info -------------------------------------------------------------
 if (isTRUE(verbose)) {
