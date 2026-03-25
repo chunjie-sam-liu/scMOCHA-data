@@ -92,7 +92,7 @@ sanitize_path_component <- function(x, missing = "NA") {
 
 # Main --------------------------------------------------------------------
 
-variant_annotation <- "Pathogenic"
+variant_annotation <- "VUS"
 
 variant_df <- variant_list[[variant_annotation]]
 
