@@ -215,7 +215,8 @@ fn_cor_vaf_gene_sc <- function(
   thevariant,
   thegseid,
   thesrrid,
-  min_cells = 10
+  min_cells = 10,
+  nthread = 8
 ) {
   # thevariant <- "961T>C"
   # thegseid <- "GSE235050"
@@ -426,7 +427,7 @@ variant_df |>
 
 
 # variant_df |>
-#   filter(variant == "13271T>C") |>
+#   filter(variant == "961T>C") |>
 #   left_join(
 #     ALLVARIANTS |>
 #       left_join(
@@ -446,22 +447,30 @@ variant_df |>
 #     by = "variant"
 #   ) -> a
 
-# a$meta[[1]]
+a$meta[[1]]
 
-# fn_cor_vaf_gene_sc(
-#   thevariant = "13271T>C",
-#   thegseid = "GSE226602",
-#   thesrrid = "GSM7080038"
-# ) -> res_cor
+fn_cor_vaf_gene_sc(
+  thevariant = "961T>C",
+  thegseid = "GSE235050",
+  thesrrid = "GSM7493836"
+) -> res_cor
 
 # res_cor |> filter(celltype != "other")
 
-# fn_plot_cor_vaf_gene_sc(
-#   thevariant = "13271T>C",
-#   thegseid = "GSE226602",
-#   thesrrid = "GSM7080038",
-#   thegene = "C21orf91"
-# )
+fn_plot_cor_vaf_gene_sc(
+  thevariant = "961T>C",
+  thegseid = "GSE235050",
+  thesrrid = "GSM7493836",
+  thegene = "UHRF1BP1L"
+) -> p
+
+saveplot(
+  plot = p,
+  filename = "test-961T_C-GSM7493836-UHRF1BP1L-scatter.pdf",
+  device = "pdf",
+  width = 18,
+  height = 5
+)
 
 variant_pathogenic <- c(
   "3572G>G",
@@ -492,9 +501,9 @@ variant_vus <- c(
 )
 
 thevariants <- c(
-  variant_disease_reported,
-  variant_pathogenic,
-  variant_vus
+  variant_disease_reported
+  # variant_pathogenic,
+  # variant_vus
 )
 
 # labeled data.table of all variants with group
@@ -511,6 +520,13 @@ variant_sample_map <- ALLVARIANTS |>
   dplyr::distinct() |>
   dplyr::left_join(thevariants_labeled, by = "variant") |>
   as.data.table()
+
+variant_sample_map |>
+  rowid_to_column() |>
+  filter(
+    variant == "13271T>C",
+    srrid == "GSM7493840"
+  )
 
 log_info("Total variant-sample combinations: {nrow(variant_sample_map)}")
 
@@ -559,53 +575,54 @@ all_cor_dt <- rbindlist(all_cor_results, use.names = TRUE, fill = TRUE)
 
 export(
   all_cor_dt,
-  cor_outdir / "all-variant-gene-correlation.qs"
+  cor_outdir / "all-variant-gene-correlation-disease-reported.qs"
 )
-
 log_info("Saved {nrow(all_cor_dt)} significant correlations to {cor_outdir}")
 
 # Scatter plots: one plot per (variant, gseid, srrid) using the top gene ---
 plot_jobs <- all_cor_dt |>
-  dplyr::filter(celltype == "ALL", !is.na(gene)) |>
-  dplyr::group_by(variant, gseid, srrid, group) |>
-  dplyr::slice_max(order_by = abs(cor.rho), n = 1, with_ties = FALSE) |>
-  dplyr::ungroup() |>
+  filter(abs(cor.rho) > 0.6) |>
+  filter(variant == "8362T>G") |>
+  filter(!celltype %in% c("other", "other T")) |>
+  filter(n_cells > 30) |>
+  distinct(variant, gene, .keep_all = TRUE) |>
   as.data.table()
 
 log_info("Generating {nrow(plot_jobs)} scatter plots")
 
-lapply(seq_len(nrow(plot_jobs)), function(i) {
-  .row <- plot_jobs[i]
-  log_info(
-    "[{i}/{nrow(plot_jobs)}] variant={.row$variant} srrid={.row$srrid} gene={.row$gene}"
-  )
-  tryCatch(
-    {
-      p <- fn_plot_cor_vaf_gene_sc(
-        thevariant = .row$variant,
-        thegseid = .row$gseid,
-        thesrrid = .row$srrid,
-        thegene = .row$gene
-      )
-      safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .row$variant)
-      saveplot(
-        plot = p,
-        filename = cor_outdir /
-          .row$group /
-          glue("{safe_variant}-{.row$srrid}-{.row$gene}-scatter.pdf"),
-        device = "pdf",
-        width = 14,
-        height = 4,
-        create.dir = TRUE
-      )
-    },
-    error = function(e) {
-      log_error(
-        "Plot failed for {.row$variant} | {.row$srrid}: {e$message}"
-      )
-    }
-  )
-})
+pbmclapply(
+  seq_len(nrow(plot_jobs)),
+  function(i) {
+    .row <- plot_jobs[i]
+    tryCatch(
+      {
+        p <- fn_plot_cor_vaf_gene_sc(
+          thevariant = .row$variant,
+          thegseid = .row$gseid,
+          thesrrid = .row$srrid,
+          thegene = .row$gene
+        )
+        safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .row$variant)
+        saveplot(
+          plot = p,
+          filename = cor_outdir /
+            .row$group /
+            glue("{safe_variant}-{.row$srrid}-{.row$gene}-scatter.pdf"),
+          device = "pdf",
+          width = 14,
+          height = 4,
+          create.dir = TRUE
+        )
+      },
+      error = function(e) {
+        log_error(
+          "Plot failed for {.row$variant} | {.row$srrid}: {e$message}"
+        )
+      }
+    )
+  },
+  mc.cores = nthread
+)
 
 # Save  --------------------------------------------------------------
 
