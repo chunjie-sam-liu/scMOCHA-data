@@ -385,6 +385,136 @@ fn_cor_vaf_gene_sc <- function(
   return(res)
 }
 
+# GO enrichment for a character vector of gene SYMBOLs (over-representation)
+fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
+  if (length(gene_symbols) < 3) {
+    return(NULL)
+  }
+  load_pkg(clusterProfiler, org.Hs.eg.db)
+
+  gene_ids <- suppressMessages(
+    clusterProfiler::bitr(
+      geneID = gene_symbols,
+      fromType = "SYMBOL",
+      toType = "ENTREZID",
+      OrgDb = org.Hs.eg.db::org.Hs.eg.db
+    )
+  )
+  if (nrow(gene_ids) == 0) {
+    return(NULL)
+  }
+
+  universe_ids <- if (
+    !is.null(universe_symbols) && length(universe_symbols) >= 10
+  ) {
+    suppressMessages(
+      clusterProfiler::bitr(
+        geneID = universe_symbols,
+        fromType = "SYMBOL",
+        toType = "ENTREZID",
+        OrgDb = org.Hs.eg.db::org.Hs.eg.db
+      )$ENTREZID
+    )
+  } else {
+    NULL
+  }
+
+  onts <- c("BP", "CC", "MF")
+  setNames(
+    lapply(onts, function(.ont) {
+      tryCatch(
+        clusterProfiler::enrichGO(
+          gene = gene_ids$ENTREZID,
+          universe = universe_ids,
+          OrgDb = org.Hs.eg.db::org.Hs.eg.db,
+          keyType = "ENTREZID",
+          ont = .ont,
+          pvalueCutoff = 0.05,
+          pAdjustMethod = "BH",
+          readable = TRUE
+        ),
+        error = function(e) NULL
+      )
+    }),
+    onts
+  )
+}
+
+# Plot a single enrichGO result as a horizontal bar chart
+fn_plot_go <- function(
+  .go,
+  .topn = 20,
+  .ont = c("BP", "CC", "MF"),
+  .title = NULL
+) {
+  .ont <- match.arg(.ont)
+
+  if (is.null(.go) || nrow(as.data.frame(.go)) == 0) {
+    return(NULL)
+  }
+
+  base_fill <- c("BP" = "#AE1700", "CC" = "#DF8F44FF", "MF" = "#00A1D5FF")
+  ont_fullname <- c(
+    "BP" = "Biological Process",
+    "CC" = "Cellular Component",
+    "MF" = "Molecular Function"
+  )
+  .ont_fill <- base_fill[.ont]
+  x_label <- ont_fullname[.ont]
+
+  tryCatch(
+    {
+      .go |>
+        tibble::as_tibble() |>
+        dplyr::mutate(
+          Description = stringr::str_wrap(
+            stringr::str_to_sentence(string = Description),
+            width = 60
+          )
+        ) |>
+        dplyr::mutate(adjp = -log10(p.adjust)) |>
+        dplyr::select(ID, Description, adjp, Count, geneID) |>
+        dplyr::arrange(adjp, Count) |>
+        dplyr::mutate(
+          Description = factor(Description, levels = Description)
+        ) -> .go_for_plot
+
+      if (!is.infinite(.topn)) {
+        .go_for_plot <- tail(.go_for_plot, .topn)
+      }
+      if (nrow(.go_for_plot) == 0) {
+        return(NULL)
+      }
+
+      p <- .go_for_plot |>
+        ggplot(aes(x = Description, y = adjp)) +
+        geom_col(fill = .ont_fill, color = NA, width = 0.7) +
+        geom_text(aes(label = Count), hjust = 1, color = "white", size = 5) +
+        labs(y = "-log10(Adj. P value)", x = x_label) +
+        scale_y_continuous(expand = expansion(mult = c(0, 0.05))) +
+        coord_flip() +
+        theme(
+          panel.background = element_rect(fill = NA),
+          panel.grid = element_blank(),
+          axis.line.x = element_line(color = "black"),
+          axis.line.y = element_line(color = "black"),
+          axis.text.y = element_text(color = "black", size = 13, hjust = 1),
+          axis.ticks.length.y = unit(3, units = "mm"),
+          axis.text.x = element_text(color = "black", size = 12),
+          axis.title = element_text(colour = "black", size = 16, face = "bold")
+        )
+
+      if (!is.null(.title)) {
+        p <- p +
+          labs(title = .title) +
+          theme(plot.title = element_text(size = 12, face = "bold"))
+      }
+      p
+    },
+    error = function(e) NULL
+  )
+}
+
 # Main --------------------------------------------------------------------
 variant_annotation <- "MITOMAP reported disease"
 
@@ -562,7 +692,225 @@ export(
   cor_outdir / "all-variant-gene-correlation.qs"
 )
 
-log_info("Saved {nrow(all_cor_dt)} significant correlations to {cor_outdir}")
+all_cor_dt |>
+  nest(.by = c("variant", "group", "gseid", "srrid"), .key = "cor_results") |>
+  arrange(group, variant) |>
+  left_join(
+    METAFULL |>
+      select(srrid, disease, status, SEXPRED, Chemistry, Haplogroup) |>
+      distinct() |>
+      mutate(
+        disease = factor(
+          disease,
+          levels = names(color_disease)
+        )
+      ),
+  ) |>
+  mutate(
+    n = pbmclapply(
+      cor_results,
+      \(.x) {
+        .xpos <- .x |> filter(cor.rho > 0.3 & padj < 0.05)
+        .xneg <- .x |> filter(cor.rho < -0.3 & padj < 0.05)
+        tibble(
+          n_total = nrow(.x),
+          n_pos = nrow(.xpos),
+          n_neg = nrow(.xneg),
+          gene_pos = list(.xpos$gene),
+          gene_neg = list(.xneg$gene)
+        )
+      },
+      mc.cores = 8
+    )
+  ) |>
+  unnest(n) -> all_cor_dt_nested
+# all_cor_dt_nested <- import(
+#   cor_outdir / "all-variant-gene-correlation-nested.qs"
+# )
+export(
+  all_cor_dt_nested,
+  cor_outdir / "all-variant-gene-correlation-nested.qs"
+)
+
+# GO enrichment for pos and neg correlated genes per (variant, gseid, srrid) -----
+log_info("Running GO enrichment for pos/neg correlated genes")
+
+# universe = all genes tested in that sample (from cor_results, before significance filter)
+all_cor_dt_universe <- all_cor_dt_nested |>
+  dplyr::mutate(
+    universe_genes = lapply(cor_results, function(.x) unique(.x$gene))
+  )
+
+all_cor_dt_enrich <- all_cor_dt_universe |>
+  dplyr::mutate(
+    enrich_pos = pbmclapply(
+      seq_len(nrow(all_cor_dt_universe)),
+      function(i) {
+        fn_enrichGO_symbols(
+          gene_symbols = all_cor_dt_universe$gene_pos[[i]],
+          universe_symbols = all_cor_dt_universe$universe_genes[[i]]
+        )
+      },
+      mc.cores = nthread
+    ),
+    enrich_neg = pbmclapply(
+      seq_len(nrow(all_cor_dt_universe)),
+      function(i) {
+        fn_enrichGO_symbols(
+          gene_symbols = all_cor_dt_universe$gene_neg[[i]],
+          universe_symbols = all_cor_dt_universe$universe_genes[[i]]
+        )
+      },
+      mc.cores = nthread
+    )
+  )
+
+export(
+  all_cor_dt_enrich,
+  cor_outdir / "all-variant-gene-correlation-enrich.qs"
+)
+log_info("GO enrichment done, saved to {cor_outdir}")
+
+# Build GO plot list column: pos/neg × BP, CC, MF per (variant, srrid) --------
+log_info("Building GO enrichment plots")
+
+all_cor_dt_enrich_plots <- all_cor_dt_enrich |>
+  dplyr::mutate(
+    go_plots = pbmclapply(
+      seq_len(nrow(all_cor_dt_enrich)),
+      function(i) {
+        .epos <- all_cor_dt_enrich$enrich_pos[[i]]
+        .eneg <- all_cor_dt_enrich$enrich_neg[[i]]
+        .variant <- all_cor_dt_enrich$variant[[i]]
+        .srrid <- all_cor_dt_enrich$srrid[[i]]
+        .label <- glue("{.variant} | {.srrid}")
+
+        plots <- list(
+          pos_BP = fn_plot_go(
+            .epos[["BP"]],
+            20,
+            "BP",
+            glue("Pos corr \u2013 Biological Process: {.label}")
+          ),
+          pos_CC = fn_plot_go(
+            .epos[["CC"]],
+            20,
+            "CC",
+            glue("Pos corr \u2013 Cellular Component: {.label}")
+          ),
+          pos_MF = fn_plot_go(
+            .epos[["MF"]],
+            20,
+            "MF",
+            glue("Pos corr \u2013 Molecular Function: {.label}")
+          ),
+          neg_BP = fn_plot_go(
+            .eneg[["BP"]],
+            20,
+            "BP",
+            glue("Neg corr \u2013 Biological Process: {.label}")
+          ),
+          neg_CC = fn_plot_go(
+            .eneg[["CC"]],
+            20,
+            "CC",
+            glue("Neg corr \u2013 Cellular Component: {.label}")
+          ),
+          neg_MF = fn_plot_go(
+            .eneg[["MF"]],
+            20,
+            "MF",
+            glue("Neg corr \u2013 Molecular Function: {.label}")
+          )
+        )
+        # keep only non-NULL panels
+        Filter(Negate(is.null), plots)
+      },
+      mc.cores = nthread
+    )
+  )
+
+export(
+  all_cor_dt_enrich_plots,
+  cor_outdir / "all-variant-gene-correlation-enrich-plots.qs"
+)
+log_info("GO enrichment plot object saved to {cor_outdir}")
+
+# Save GO plot PDFs -------------------------------------------------------
+# Directory layout: go-plots/{group}/{safe_variant}/{safe_variant}-{srrid}-GO.pdf
+go_plot_dir <- cor_outdir / "go-plots"
+log_info("Saving GO plot PDFs to {go_plot_dir}")
+
+pbmclapply(
+  seq_len(nrow(all_cor_dt_enrich_plots)),
+  function(i) {
+    .plots <- all_cor_dt_enrich_plots$go_plots[[i]]
+    if (length(.plots) == 0) {
+      return(invisible(NULL))
+    }
+
+    .variant <- all_cor_dt_enrich_plots$variant[[i]]
+    .srrid <- all_cor_dt_enrich_plots$srrid[[i]]
+    .group <- all_cor_dt_enrich_plots$group[[i]]
+    safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .variant)
+
+    tryCatch(
+      saveplot(
+        plot = .plots,
+        filename = go_plot_dir /
+          .group /
+          safe_variant /
+          glue("{safe_variant}-{.srrid}-GO.pdf"),
+        device = "pdf",
+        width = 10,
+        height = 7,
+        create.dir = TRUE
+      ),
+      error = function(e) {
+        log_error("GO plot save failed for {.variant} | {.srrid}: {e$message}")
+      }
+    )
+  },
+  mc.cores = nthread
+)
+log_info("GO plot PDFs saved to {go_plot_dir}")
+
+
+#
+#
+# ? don't run below --------------------------------------------------------------------
+#
+#
+
+all_cor_dt_nested |>
+  arrange(-n_total) |>
+  filter(variant == "8362T>G") |>
+  arrange(-n_total) -> m
+
+m$gene_neg[[1]]
+m$gene_neg[[2]]
+ggvenn::ggvenn(
+  list(
+    "8362T>G neg 1" = m$gene_pos[[1]],
+    "8362T>G neg 2" = m$gene_pos[[2]],
+    "8362T>G neg 3" = m$gene_pos[[3]],
+    "8362T>G neg 4" = m$gene_pos[[4]]
+  ),
+  fill_color = c("#D94841", "#2B6CB0", "#D94841", "#2B6CB0"),
+  stroke_size = 0.5,
+  set_name_size = 4
+) +
+  theme(legend.position = "none")
+
+#
+#
+# ? below is  --------------------------------------------------------------------
+#
+#
+
+log_info(
+  "Saved {nrow(all_cor_dt_nested )} significant correlations to {cor_outdir}"
+)
 
 # Scatter plots: one plot per (variant, gseid, srrid) using the top gene ---
 plot_jobs <- all_cor_dt |>
