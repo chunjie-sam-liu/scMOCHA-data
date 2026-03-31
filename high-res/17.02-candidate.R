@@ -732,33 +732,32 @@ export(
   cor_outdir / "all-variant-gene-correlation-nested.qs"
 )
 
-# GO enrichment for pos and neg correlated genes per (variant, gseid, srrid) -----
-log_info("Running GO enrichment for pos/neg correlated genes")
+# GO enrichment per celltype (pos and neg) per (variant, gseid, srrid) -----
+log_info("Running GO enrichment per celltype for pos/neg correlated genes")
 
-# universe = all genes tested in that sample (from cor_results, before significance filter)
-all_cor_dt_universe <- all_cor_dt_nested |>
+# enrich_by_ct: named list keyed by celltype, each element has $pos and $neg GO results
+all_cor_dt_enrich <- all_cor_dt_nested |>
   dplyr::mutate(
-    universe_genes = lapply(cor_results, function(.x) unique(.x$gene))
-  )
-
-all_cor_dt_enrich <- all_cor_dt_universe |>
-  dplyr::mutate(
-    enrich_pos = pbmclapply(
-      seq_len(nrow(all_cor_dt_universe)),
-      function(i) {
-        fn_enrichGO_symbols(
-          gene_symbols = all_cor_dt_universe$gene_pos[[i]],
-          universe_symbols = all_cor_dt_universe$universe_genes[[i]]
-        )
-      },
-      mc.cores = nthread
-    ),
-    enrich_neg = pbmclapply(
-      seq_len(nrow(all_cor_dt_universe)),
-      function(i) {
-        fn_enrichGO_symbols(
-          gene_symbols = all_cor_dt_universe$gene_neg[[i]],
-          universe_symbols = all_cor_dt_universe$universe_genes[[i]]
+    enrich_by_ct = pbmclapply(
+      cor_results,
+      function(.cr) {
+        celltypes <- sort(unique(.cr$celltype))
+        setNames(
+          lapply(celltypes, function(.ct) {
+            .ct_genes <- .cr[.cr$celltype == .ct, ]
+            universe <- unique(.ct_genes$gene)
+            pos_genes <- .ct_genes$gene[
+              .ct_genes$cor.rho > 0.3 & .ct_genes$padj < 0.05
+            ]
+            neg_genes <- .ct_genes$gene[
+              .ct_genes$cor.rho < -0.3 & .ct_genes$padj < 0.05
+            ]
+            list(
+              pos = fn_enrichGO_symbols(pos_genes, universe),
+              neg = fn_enrichGO_symbols(neg_genes, universe)
+            )
+          }),
+          celltypes
         )
       },
       mc.cores = nthread
@@ -771,62 +770,86 @@ export(
 )
 log_info("GO enrichment done, saved to {cor_outdir}")
 
-# Build GO plot list column: pos/neg × BP, CC, MF per (variant, srrid) --------
-log_info("Building GO enrichment plots")
+# Build GO plot list column: per celltype × pos/neg × BP, CC, MF --------
+log_info("Building GO enrichment plots per celltype")
 
 all_cor_dt_enrich_plots <- all_cor_dt_enrich |>
   dplyr::mutate(
-    go_plots = pbmclapply(
-      seq_len(nrow(all_cor_dt_enrich)),
-      function(i) {
-        .epos <- all_cor_dt_enrich$enrich_pos[[i]]
-        .eneg <- all_cor_dt_enrich$enrich_neg[[i]]
-        .variant <- all_cor_dt_enrich$variant[[i]]
-        .srrid <- all_cor_dt_enrich$srrid[[i]]
-        .label <- glue("{.variant} | {.srrid}")
+    go_plots = purrr::pmap(
+      list(
+        .ect = enrich_by_ct,
+        .variant = variant,
+        .srrid = srrid
+      ),
+      function(.ect, .variant, .srrid) {
+        .label <- glue::glue("{.variant} | {.srrid}")
+        .empty <- list(BP = NULL, CC = NULL, MF = NULL)
 
-        plots <- list(
-          pos_BP = fn_plot_go(
-            .epos[["BP"]],
-            20,
-            "BP",
-            glue("Pos corr \u2013 Biological Process: {.label}")
-          ),
-          pos_CC = fn_plot_go(
-            .epos[["CC"]],
-            20,
-            "CC",
-            glue("Pos corr \u2013 Cellular Component: {.label}")
-          ),
-          pos_MF = fn_plot_go(
-            .epos[["MF"]],
-            20,
-            "MF",
-            glue("Pos corr \u2013 Molecular Function: {.label}")
-          ),
-          neg_BP = fn_plot_go(
-            .eneg[["BP"]],
-            20,
-            "BP",
-            glue("Neg corr \u2013 Biological Process: {.label}")
-          ),
-          neg_CC = fn_plot_go(
-            .eneg[["CC"]],
-            20,
-            "CC",
-            glue("Neg corr \u2013 Cellular Component: {.label}")
-          ),
-          neg_MF = fn_plot_go(
-            .eneg[["MF"]],
-            20,
-            "MF",
-            glue("Neg corr \u2013 Molecular Function: {.label}")
+        # iterate each celltype
+        plots_per_ct <- lapply(names(.ect), function(.ct) {
+          .ct_enrich <- .ect[[.ct]]
+          .epos <- if (
+            is.list(.ct_enrich$pos) &&
+              all(c("BP", "CC", "MF") %in% names(.ct_enrich$pos))
+          ) {
+            .ct_enrich$pos
+          } else {
+            .empty
+          }
+          .eneg <- if (
+            is.list(.ct_enrich$neg) &&
+              all(c("BP", "CC", "MF") %in% names(.ct_enrich$neg))
+          ) {
+            .ct_enrich$neg
+          } else {
+            .empty
+          }
+
+          ct_label <- glue::glue("{.label} | {.ct}")
+          plots <- list(
+            pos_BP = fn_plot_go(
+              .epos[["BP"]],
+              20,
+              "BP",
+              glue::glue("Pos corr \u2013 Biological Process: {ct_label}")
+            ),
+            pos_CC = fn_plot_go(
+              .epos[["CC"]],
+              20,
+              "CC",
+              glue::glue("Pos corr \u2013 Cellular Component: {ct_label}")
+            ),
+            pos_MF = fn_plot_go(
+              .epos[["MF"]],
+              20,
+              "MF",
+              glue::glue("Pos corr \u2013 Molecular Function: {ct_label}")
+            ),
+            neg_BP = fn_plot_go(
+              .eneg[["BP"]],
+              20,
+              "BP",
+              glue::glue("Neg corr \u2013 Biological Process: {ct_label}")
+            ),
+            neg_CC = fn_plot_go(
+              .eneg[["CC"]],
+              20,
+              "CC",
+              glue::glue("Neg corr \u2013 Cellular Component: {ct_label}")
+            ),
+            neg_MF = fn_plot_go(
+              .eneg[["MF"]],
+              20,
+              "MF",
+              glue::glue("Neg corr \u2013 Molecular Function: {ct_label}")
+            )
           )
-        )
-        # keep only non-NULL panels
-        Filter(Negate(is.null), plots)
-      },
-      mc.cores = nthread
+          Filter(Negate(is.null), plots)
+        })
+        names(plots_per_ct) <- names(.ect)
+        # drop celltypes with no plots
+        Filter(function(.x) length(.x) > 0, plots_per_ct)
+      }
     )
   )
 
@@ -841,11 +864,20 @@ log_info("GO enrichment plot object saved to {cor_outdir}")
 go_plot_dir <- cor_outdir / "go-plots"
 log_info("Saving GO plot PDFs to {go_plot_dir}")
 
+# all_cor_dt_enrich_plots <- import(
+#   cor_outdir / "all-variant-gene-correlation-enrich-plots.qs"
+# )
+
+all_cor_dt_enrich_plots <- all_cor_dt_enrich_plots |>
+  dplyr::filter(purrr::map_lgl(go_plots, \(.x) {
+    length(.x) > 0
+  }))
+
 pbmclapply(
   seq_len(nrow(all_cor_dt_enrich_plots)),
   function(i) {
-    .plots <- all_cor_dt_enrich_plots$go_plots[[i]]
-    if (length(.plots) == 0) {
+    .plots_by_ct <- all_cor_dt_enrich_plots$go_plots[[i]]
+    if (length(.plots_by_ct) == 0) {
       return(invisible(NULL))
     }
 
@@ -854,22 +886,32 @@ pbmclapply(
     .group <- all_cor_dt_enrich_plots$group[[i]]
     safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .variant)
 
-    tryCatch(
-      saveplot(
-        plot = .plots,
-        filename = go_plot_dir /
-          .group /
-          safe_variant /
-          glue("{safe_variant}-{.srrid}-GO.pdf"),
-        device = "pdf",
-        width = 10,
-        height = 7,
-        create.dir = TRUE
-      ),
-      error = function(e) {
-        log_error("GO plot save failed for {.variant} | {.srrid}: {e$message}")
+    lapply(names(.plots_by_ct), function(.ct) {
+      .plots <- .plots_by_ct[[.ct]]
+      if (length(.plots) == 0) {
+        return(invisible(NULL))
       }
-    )
+      safe_ct <- gsub("[^A-Za-z0-9_-]", "_", .ct)
+      tryCatch(
+        saveplot(
+          plot = .plots,
+          filename = go_plot_dir /
+            .group /
+            safe_variant /
+            glue("{safe_variant}-{.srrid}-{safe_ct}-GO.pdf"),
+          device = "pdf",
+          width = 10,
+          height = 7,
+          create.dir = TRUE
+        ),
+        error = function(e) {
+          log_error(
+            "GO plot save failed for {.variant} | {.srrid} | {.ct}: {e$message}"
+          )
+        }
+      )
+    })
+    invisible(NULL)
   },
   mc.cores = nthread
 )
@@ -922,38 +964,43 @@ plot_jobs <- all_cor_dt |>
 
 log_info("Generating {nrow(plot_jobs)} scatter plots")
 
-lapply(seq_len(nrow(plot_jobs)), function(i) {
-  .row <- plot_jobs[i]
-  log_info(
-    "[{i}/{nrow(plot_jobs)}] variant={.row$variant} srrid={.row$srrid} gene={.row$gene}"
-  )
-  tryCatch(
-    {
-      p <- fn_plot_cor_vaf_gene_sc(
-        thevariant = .row$variant,
-        thegseid = .row$gseid,
-        thesrrid = .row$srrid,
-        thegene = .row$gene
-      )
-      safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .row$variant)
-      saveplot(
-        plot = p,
-        filename = cor_outdir /
-          .row$group /
-          glue("{safe_variant}-{.row$srrid}-{.row$gene}-scatter.pdf"),
-        device = "pdf",
-        width = 14,
-        height = 4,
-        create.dir = TRUE
-      )
-    },
-    error = function(e) {
-      log_error(
-        "Plot failed for {.row$variant} | {.row$srrid}: {e$message}"
-      )
-    }
-  )
-})
+pbmcmapply(
+  function(.variant, .gseid, .srrid, .gene, .group) {
+    tryCatch(
+      {
+        p <- fn_plot_cor_vaf_gene_sc(
+          thevariant = .variant,
+          thegseid = .gseid,
+          thesrrid = .srrid,
+          thegene = .gene
+        )
+        safe_variant <- gsub("[^A-Za-z0-9_-]", "_", .variant)
+        saveplot(
+          plot = p,
+          filename = cor_outdir /
+            .group /
+            glue("{safe_variant}-{.srrid}-{.gene}-scatter.pdf"),
+          device = "pdf",
+          width = 14,
+          height = 4,
+          create.dir = TRUE
+        )
+      },
+      error = function(e) {
+        log_error(
+          "Plot failed for {.variant} | {.srrid}: {e$message}"
+        )
+      }
+    )
+  },
+  plot_jobs$variant,
+  plot_jobs$gseid,
+  plot_jobs$srrid,
+  plot_jobs$gene,
+  plot_jobs$group,
+  mc.cores = nthread,
+  SIMPLIFY = FALSE
+)
 
 # Save  --------------------------------------------------------------
 
