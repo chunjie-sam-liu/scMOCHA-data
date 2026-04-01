@@ -462,6 +462,9 @@ fn_de_plot <- function(
     dplyr::count(color) |>
     tibble::deframe() -> n_color
 
+  n_up <- as.integer(dplyr::coalesce(n_color["red"], 0L))
+  n_down <- as.integer(dplyr::coalesce(n_color["blue"], 0L))
+
   p <- forplot |>
     ggplot(aes(x = avg_log2FC, y = fdr, color = color)) +
     geom_point(alpha = 0.7, size = 0.9) +
@@ -486,6 +489,28 @@ fn_de_plot <- function(
       linetype = "dashed",
       color = "grey50"
     ) +
+    annotate(
+      "text",
+      x = Inf,
+      y = Inf,
+      label = paste0("Up: ", n_up),
+      hjust = 1.1,
+      vjust = 1.5,
+      color = "red",
+      size = 4,
+      fontface = "bold"
+    ) +
+    annotate(
+      "text",
+      x = -Inf,
+      y = Inf,
+      label = paste0("Down: ", n_down),
+      hjust = -0.1,
+      vjust = 1.5,
+      color = "blue",
+      size = 4,
+      fontface = "bold"
+    ) +
     theme_classic(base_size = 12) +
     theme(
       plot.title = element_text(hjust = 0.5, face = "bold", size = 13),
@@ -505,29 +530,31 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
   # resolve path conflict introduced by BiocGenerics (loaded via org.Hs.eg.db)
   conflicted::conflicts_prefer(fs::path, dplyr::filter)
 
-  gene_ids <- suppressMessages(
+  gene_ids <- suppressMessages(tryCatch(
     clusterProfiler::bitr(
       geneID = gene_symbols,
       fromType = "SYMBOL",
       toType = "ENTREZID",
       OrgDb = org.Hs.eg.db::org.Hs.eg.db
-    )
-  )
-  if (nrow(gene_ids) == 0) {
+    ),
+    error = function(e) data.frame(SYMBOL = character(), ENTREZID = character())
+  ))
+  if (is.null(gene_ids) || nrow(gene_ids) == 0) {
     return(NULL)
   }
 
   universe_ids <- if (
     !is.null(universe_symbols) && length(universe_symbols) >= 10
   ) {
-    suppressMessages(
+    suppressMessages(tryCatch(
       clusterProfiler::bitr(
         geneID = universe_symbols,
         fromType = "SYMBOL",
         toType = "ENTREZID",
         OrgDb = org.Hs.eg.db::org.Hs.eg.db
-      )$ENTREZID
-    )
+      )$ENTREZID,
+      error = function(e) NULL
+    ))
   } else {
     NULL
   }
@@ -1106,6 +1133,296 @@ fn_plot_deg_result <- function(
 }
 
 
+# Build and cache merged Seurat of all variant-carrying cells for given diseases ----
+fn_build_variant_sc <- function(
+  a,
+  diseases,
+  cache_path,
+  min_variant_cells = 3
+) {
+  if (file.exists(cache_path)) {
+    log_info("Loading cached merged Seurat from {cache_path}")
+    return(import(cache_path))
+  }
+  load_pkg(Seurat, Matrix)
+  conflicted::conflicts_prefer(fs::path)
+  conflicted::conflicts_prefer(base::intersect)
+  conflicted::conflict_prefer("filter", "dplyr")
+
+  a_sub <- a |> dplyr::filter(disease %in% diseases)
+  sc_list <- list()
+
+  for (i in seq_len(nrow(a_sub))) {
+    gseid_i <- a_sub$gseid[i]
+    srrid_i <- a_sub$srrid[i]
+    disease_i <- as.character(a_sub$disease[i])
+    cell_dt <- a_sub$af_cell[[i]]
+
+    if (is.null(cell_dt) || nrow(cell_dt) == 0) {
+      next
+    }
+
+    sc_path <- glue(
+      "/mnt/isilon/u01_project/large-scale/liuc9/raw/{gseid_i}/final/{srrid_i}/for_integration/sc_azimuth.qs"
+    )
+    if (!file.exists(sc_path)) {
+      log_warn("Not found: {sc_path}")
+      next
+    }
+
+    sc <- tryCatch(
+      import(sc_path),
+      error = function(e) {
+        log_warn("Failed {srrid_i}: {e$message}")
+        NULL
+      }
+    )
+    if (is.null(sc)) {
+      next
+    }
+
+    sc <- NormalizeData(
+      sc,
+      assay = "RNA",
+      normalization.method = "LogNormalize",
+      scale.factor = 10000
+    )
+
+    valid_bc <- intersect(cell_dt$barcode, colnames(sc))
+    if (length(valid_bc) < min_variant_cells) {
+      log_warn("Too few variant cells in {srrid_i}: {length(valid_bc)}")
+      next
+    }
+
+    sc_sub <- sc[, valid_bc]
+    sc_sub$disease_group <- disease_i
+    sc_sub$srrid_orig <- srrid_i
+
+    # normalise metadata column names for L1/L2
+    meta_cols <- colnames(sc_sub@meta.data)
+    if (!"celltype_l1" %in% meta_cols) {
+      if ("celltype" %in% meta_cols) {
+        sc_sub$celltype_l1 <- sc_sub@meta.data$celltype
+      } else if ("predicted.celltype.l1" %in% meta_cols) {
+        sc_sub$celltype_l1 <- sc_sub@meta.data$predicted.celltype.l1
+      }
+    }
+    if (!"celltype_l2" %in% meta_cols) {
+      if ("predicted.celltype.l2" %in% meta_cols) {
+        sc_sub$celltype_l2 <- sc_sub@meta.data$predicted.celltype.l2
+      }
+    }
+
+    sc_list[[length(sc_list) + 1]] <- sc_sub
+    log_info("{srrid_i}: {length(valid_bc)} variant cells ({disease_i})")
+  }
+
+  if (length(sc_list) == 0) {
+    log_warn("No cells loaded for diseases: {paste(diseases, collapse = ', ')}")
+    return(NULL)
+  }
+
+  merged_sc <- if (length(sc_list) == 1) {
+    sc_list[[1]]
+  } else {
+    merge(sc_list[[1]], y = sc_list[-1], merge.data = TRUE) |> JoinLayers()
+  }
+
+  export(merged_sc, cache_path)
+  log_info("Merged Seurat cached ({ncol(merged_sc)} cells): {cache_path}")
+  merged_sc
+}
+
+
+# Plot volcano + GO PDFs for a single per-celltype DEG result -----------------
+fn_plot_deg_result_celltype <- function(
+  result,
+  label,
+  outdir,
+  variant_label = "8362T>G"
+) {
+  if (is.null(result)) {
+    return(invisible(NULL))
+  }
+  fs::dir_create(outdir)
+
+  d1 <- result$disease1
+  d2 <- result$disease2
+  ct <- result$celltype
+  n1 <- result$n_cells[d1]
+  n2 <- result$n_cells[d2]
+  safe_ct <- gsub("[^A-Za-z0-9]", "_", ct)
+
+  # volcano
+  p_vol <- fn_de_plot(result$markers)
+  p_vol$p <- p_vol$p +
+    labs(
+      title = glue("{variant_label} [{ct}]: {d2} vs {d1}"),
+      subtitle = glue("{d2} n={n2},  {d1} n={n1}"),
+      x = glue("avg log\u2082FC ({d2} vs {d1})"),
+      y = "-log\u2081\u2080(FDR)"
+    )
+  saveplot(
+    p_vol$p,
+    filename = fs::path(outdir, glue("{label}-{safe_ct}-volcano.pdf")),
+    width = 10,
+    height = 6,
+    device = "pdf"
+  )
+
+  # GO bar charts
+  purrr::walk(c("pos", "neg"), function(.dir) {
+    go_list <- result[[glue("go_{.dir}")]]
+    dir_label <- if (.dir == "pos") glue("UP in {d2}") else glue("DOWN in {d2}")
+    dir_file <- if (.dir == "pos") "up" else "down"
+    purrr::walk(c("BP", "CC", "MF"), function(.ont) {
+      p_go <- fn_plot_go(
+        go_list[[.ont]],
+        .topn = 20,
+        .ont = .ont,
+        .title = glue("{variant_label} [{ct}] {dir_label} \u2013 {.ont}")
+      )
+      if (!is.null(p_go)) {
+        saveplot(
+          p_go,
+          filename = fs::path(
+            outdir,
+            glue("{label}-{safe_ct}-go-{dir_file}-{tolower(.ont)}.pdf")
+          ),
+          width = 10,
+          height = 8,
+          device = "pdf"
+        )
+      }
+    })
+  })
+  invisible(NULL)
+}
+
+
+# DEG per celltype level from a pre-built merged Seurat -----------------------
+fn_deg_by_celltype_level <- function(
+  merged_sc,
+  disease1,
+  disease2,
+  celltype_col, # "celltype_l1" or "celltype_l2"
+  outdir,
+  label, # "AD" or "COVID"
+  variant_label = "8362T>G",
+  min_cells = 15
+) {
+  load_pkg(Seurat, clusterProfiler, org.Hs.eg.db)
+  conflicted::conflicts_prefer(fs::path)
+  conflicted::conflict_prefer("filter", "dplyr")
+  fs::dir_create(outdir)
+
+  if (!celltype_col %in% colnames(merged_sc@meta.data)) {
+    log_warn("Column '{celltype_col}' not in Seurat metadata – skipping")
+    return(invisible(NULL))
+  }
+
+  celltypes <- sort(unique(na.omit(merged_sc@meta.data[[celltype_col]])))
+  celltypes <- celltypes[celltypes != ""]
+  log_info(
+    "Per-{celltype_col} DEG ({disease2} vs {disease1}): {length(celltypes)} types"
+  )
+
+  for (ct in celltypes) {
+    safe_ct <- gsub("[^A-Za-z0-9]", "_", ct)
+    cache_file <- fs::path(outdir, glue("cache-{label}-{safe_ct}.qs"))
+
+    if (file.exists(cache_file)) {
+      log_info("  [{ct}] loading from cache")
+      ct_result <- import(cache_file)
+      fn_plot_deg_result_celltype(
+        ct_result,
+        label = label,
+        outdir = outdir,
+        variant_label = variant_label
+      )
+      next
+    }
+
+    # subset to this celltype + both diseases
+    keep <- which(
+      merged_sc@meta.data[[celltype_col]] == ct &
+        merged_sc$disease_group %in% c(disease1, disease2)
+    )
+    if (length(keep) < 3) {
+      log_warn("  [{ct}] too few cells: {length(keep)}")
+      next
+    }
+
+    sc_ct <- merged_sc[, keep]
+    n_d1 <- sum(sc_ct$disease_group == disease1, na.rm = TRUE)
+    n_d2 <- sum(sc_ct$disease_group == disease2, na.rm = TRUE)
+
+    if (n_d1 < min_cells || n_d2 < min_cells) {
+      log_info(
+        "  [{ct}] skip (min={min_cells}): {disease1}={n_d1}, {disease2}={n_d2}"
+      )
+      next
+    }
+
+    Idents(sc_ct) <- sc_ct$disease_group
+    markers <- tryCatch(
+      Seurat::FindMarkers(
+        sc_ct,
+        ident.1 = disease2,
+        ident.2 = disease1,
+        assay = "RNA",
+        test.use = "wilcox",
+        min.pct = 0.1,
+        logfc.threshold = 0.1
+      ),
+      error = function(e) {
+        log_warn("  [{ct}] FindMarkers failed: {e$message}")
+        NULL
+      }
+    )
+    if (is.null(markers) || nrow(markers) == 0) {
+      log_warn("  [{ct}] no markers found")
+      next
+    }
+
+    universe <- rownames(markers)
+    sig <- markers |>
+      tibble::rownames_to_column("gene") |>
+      dplyr::filter(
+        p_val_adj < 0.05,
+        abs(avg_log2FC) >= 0.25,
+        pct.1 >= 0.05 | pct.2 >= 0.05
+      )
+    pos_genes <- sig |> dplyr::filter(avg_log2FC > 0) |> dplyr::pull(gene)
+    neg_genes <- sig |> dplyr::filter(avg_log2FC < 0) |> dplyr::pull(gene)
+    log_info(
+      "  [{ct}] {nrow(sig)} DEGs ({disease2} n={n_d2}, {disease1} n={n_d1}): {length(pos_genes)} up, {length(neg_genes)} down"
+    )
+
+    go_pos <- fn_enrichGO_symbols(pos_genes, universe)
+    go_neg <- fn_enrichGO_symbols(neg_genes, universe)
+
+    ct_result <- list(
+      celltype = ct,
+      markers = markers,
+      n_cells = c(setNames(n_d1, disease1), setNames(n_d2, disease2)),
+      disease1 = disease1,
+      disease2 = disease2,
+      go_pos = go_pos,
+      go_neg = go_neg
+    )
+    export(ct_result, cache_file)
+    fn_plot_deg_result_celltype(
+      ct_result,
+      label = label,
+      outdir = outdir,
+      variant_label = variant_label
+    )
+  }
+  invisible(NULL)
+}
+
+
 # DEG analysis: Healthy vs Alzheimer's Disease in 8362T>G variant cells --------
 .cache_deg_AD <- path(
   outdirnotuse,
@@ -1142,6 +1459,78 @@ fn_plot_deg_result(
   label = "COVID",
   outdirnotuse = outdirnotuse
 )
+
+
+# Per-celltype DEG: build merged Seurat once per comparison, then loop --------
+outdir_8362 <- fs::path(
+  outdirnotuse,
+  "allvariants-prioritize/17.02-variant-gene-correlation/8362T_G"
+)
+fs::dir_create(outdir_8362)
+
+# ---- AD vs Healthy: build merged Seurat ----
+.cache_sc_AD <- fs::path(outdir_8362, "merged-sc-AD-vs-Healthy.qs")
+merged_sc_AD <- fn_build_variant_sc(
+  a,
+  diseases = c("Healthy", "Alzheimer's Disease"),
+  cache_path = .cache_sc_AD
+)
+
+if (!is.null(merged_sc_AD)) {
+  # L1 celltypes (e.g. B, CD4 T, CD8 T, Mono, NK, DC, other T, other)
+  fn_deg_by_celltype_level(
+    merged_sc_AD,
+    disease1 = "Healthy",
+    disease2 = "Alzheimer's Disease",
+    celltype_col = "celltype_l1",
+    outdir = fs::path(outdir_8362, "AD-vs-Healthy-by-L1"),
+    label = "AD",
+    min_cells = 15
+  )
+
+  # L2 subtypes (e.g. CD4 TCM, B naive, CD14 Mono, ...)
+  fn_deg_by_celltype_level(
+    merged_sc_AD,
+    disease1 = "Healthy",
+    disease2 = "Alzheimer's Disease",
+    celltype_col = "celltype_l2",
+    outdir = fs::path(outdir_8362, "AD-vs-Healthy-by-L2"),
+    label = "AD",
+    min_cells = 15
+  )
+}
+
+# ---- COVID-19 vs Healthy: build merged Seurat ----
+.cache_sc_COVID <- fs::path(outdir_8362, "merged-sc-COVID-vs-Healthy.qs")
+merged_sc_COVID <- fn_build_variant_sc(
+  a,
+  diseases = c("Healthy", "COVID-19"),
+  cache_path = .cache_sc_COVID
+)
+
+if (!is.null(merged_sc_COVID)) {
+  # L1
+  fn_deg_by_celltype_level(
+    merged_sc_COVID,
+    disease1 = "Healthy",
+    disease2 = "COVID-19",
+    celltype_col = "celltype_l1",
+    outdir = fs::path(outdir_8362, "COVID-vs-Healthy-by-L1"),
+    label = "COVID",
+    min_cells = 15
+  )
+
+  # L2
+  fn_deg_by_celltype_level(
+    merged_sc_COVID,
+    disease1 = "Healthy",
+    disease2 = "COVID-19",
+    celltype_col = "celltype_l2",
+    outdir = fs::path(outdir_8362, "COVID-vs-Healthy-by-L2"),
+    label = "COVID",
+    min_cells = 15
+  )
+}
 
 
 # Save  --------------------------------------------------------------
