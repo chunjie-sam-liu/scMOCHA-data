@@ -166,9 +166,10 @@ fn_de_plot <- function(
 }
 fn_go_enrich <- function(cancer_sgene, ont = c("BP", "CC", "MF")) {
   .ont <- match.arg(ont)
+  .genes <- unique(gsub("^MT-", "", cancer_sgene))
 
   gobp <- clusterProfiler::enrichGO(
-    gene = cancer_sgene |> unique(),
+    gene = .genes,
     OrgDb = "org.Hs.eg.db",
     keyType = "SYMBOL",
     # keyType = "ENSEMBL",

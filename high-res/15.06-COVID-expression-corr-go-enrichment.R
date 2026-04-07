@@ -68,8 +68,8 @@ normalize_qs2_output <- function(.path_qs2) {
 
 fn_go_enrich <- function(genes, universe, ont = c("BP", "CC", "MF")) {
   ont <- match.arg(ont)
-  genes <- unique(genes)
-  universe <- unique(universe)
+  genes <- unique(gsub("^MT-", "", genes))
+  universe <- unique(gsub("^MT-", "", universe))
   if (length(genes) == 0) {
     return(NULL)
   }

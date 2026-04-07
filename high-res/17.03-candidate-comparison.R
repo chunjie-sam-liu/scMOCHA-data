@@ -530,9 +530,12 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
   # resolve path conflict introduced by BiocGenerics (loaded via org.Hs.eg.db)
   conflicted::conflicts_prefer(fs::path, dplyr::filter)
 
+  gene_symbols_for_mapping <- gsub("^MT-", "", gene_symbols)
+  universe_symbols_for_mapping <- gsub("^MT-", "", universe_symbols)
+
   gene_ids <- suppressMessages(tryCatch(
     clusterProfiler::bitr(
-      geneID = gene_symbols,
+      geneID = gene_symbols_for_mapping,
       fromType = "SYMBOL",
       toType = "ENTREZID",
       OrgDb = org.Hs.eg.db::org.Hs.eg.db
@@ -548,7 +551,7 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
   ) {
     suppressMessages(tryCatch(
       clusterProfiler::bitr(
-        geneID = universe_symbols,
+        geneID = universe_symbols_for_mapping,
         fromType = "SYMBOL",
         toType = "ENTREZID",
         OrgDb = org.Hs.eg.db::org.Hs.eg.db

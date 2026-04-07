@@ -119,7 +119,7 @@ variants <- import(
 fn_go_enrich <- function(cancer_sgene, ont = c("BP", "CC", "MF")) {
   .ont <- match.arg(ont)
 
-  .genes <- unique(cancer_sgene)
+  .genes <- unique(gsub("^MT-", "", cancer_sgene))
   if (length(.genes) == 0) {
     return(NULL)
   }

@@ -68,6 +68,9 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
     return(NULL)
   }
 
+  gsub("^MT-", "", gene_symbols) -> gene_symbols
+  gsub("^MT-", "", universe_symbols) -> universe_symbols
+
   load_pkg(clusterProfiler, org.Hs.eg.db)
   conflicted::conflicts_prefer(fs::path, dplyr::filter)
 
@@ -154,7 +157,9 @@ fn_plot_go <- function(
         ) |>
         dplyr::select(ID, Description, adjp, Count, geneID) |>
         dplyr::arrange(adjp, Count) |>
-        dplyr::mutate(Description = factor(Description, levels = Description)) -> .go_for_plot
+        dplyr::mutate(
+          Description = factor(Description, levels = Description)
+        ) -> .go_for_plot
 
       if (!is.infinite(.topn)) {
         .go_for_plot <- tail(.go_for_plot, .topn)
@@ -280,6 +285,79 @@ fn_de_plot <- function(
     )
 
   list(p = p, markers = forplot)
+}
+
+
+fn_empty_go_table <- function() {
+  data.table(
+    ID = character(),
+    Description = character(),
+    GeneRatio = character(),
+    BgRatio = character(),
+    pvalue = numeric(),
+    p.adjust = numeric(),
+    qvalue = numeric(),
+    geneID = character(),
+    Count = integer()
+  )
+}
+
+
+fn_go_to_table <- function(.go) {
+  if (is.null(.go)) {
+    return(fn_empty_go_table())
+  }
+
+  .go_df <- tryCatch(
+    as.data.frame(.go),
+    error = function(e) NULL
+  )
+
+  if (is.null(.go_df) || nrow(.go_df) == 0) {
+    return(fn_empty_go_table())
+  }
+
+  as.data.table(.go_df)
+}
+
+
+fn_export_deg_excel <- function(deg_dt, outpath) {
+  load_pkg(writexl)
+
+  deg_export <- deg_dt |>
+    dplyr::rename(neg_log10_fdr = fdr, volcano_color = color) |>
+    dplyr::mutate(
+      deg_direction = dplyr::case_when(
+        volcano_color == "red" ~ "up_high_af",
+        volcano_color == "blue" ~ "up_low_af",
+        TRUE ~ "not_significant"
+      )
+    ) |>
+    as.data.frame()
+
+  writexl::write_xlsx(
+    x = list(DEG = deg_export),
+    path = outpath
+  )
+}
+
+
+fn_export_go_excel <- function(result, outpath) {
+  load_pkg(writexl)
+
+  go_sheets <- list(
+    up_high_af_BP = fn_go_to_table(result$go_pos$BP),
+    up_high_af_CC = fn_go_to_table(result$go_pos$CC),
+    up_high_af_MF = fn_go_to_table(result$go_pos$MF),
+    up_low_af_BP = fn_go_to_table(result$go_neg$BP),
+    up_low_af_CC = fn_go_to_table(result$go_neg$CC),
+    up_low_af_MF = fn_go_to_table(result$go_neg$MF)
+  )
+
+  writexl::write_xlsx(
+    x = lapply(go_sheets, as.data.frame),
+    path = outpath
+  )
 }
 
 
@@ -435,6 +513,10 @@ fn_plot_deg_result_celltype <- function(
     height = 6,
     device = "pdf"
   )
+  fn_export_deg_excel(
+    deg_dt = p_vol$markers,
+    outpath = fs::path(outdir, glue("{safe_ct}-volcano.xlsx"))
+  )
 
   purrr::walk(c("pos", "neg"), function(.dir) {
     go_list <- result[[glue("go_{.dir}")]]
@@ -470,6 +552,10 @@ fn_plot_deg_result_celltype <- function(
       }
     })
   })
+  fn_export_go_excel(
+    result = result,
+    outpath = fs::path(outdir, glue("{safe_ct}-go.xlsx"))
+  )
 
   invisible(NULL)
 }
@@ -542,7 +628,11 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
     n_low <- sum(ct_meta$af_group == "low_af", na.rm = TRUE)
     n_high <- sum(ct_meta$af_group == "high_af", na.rm = TRUE)
 
-    disease_summary_label <- if (is.null(disease_filter)) "all" else disease_filter
+    disease_summary_label <- if (is.null(disease_filter)) {
+      "all"
+    } else {
+      disease_filter
+    }
     base_summary <- data.table(
       disease = disease_summary_label,
       cutoff = cutoff,
@@ -822,7 +912,10 @@ main <- function() {
   diseases_to_run <- if (is.null(diseases_keep)) {
     diseases_available
   } else {
-    diseases_lookup <- setNames(diseases_available, fn_safe_name(diseases_available))
+    diseases_lookup <- setNames(
+      diseases_available,
+      fn_safe_name(diseases_available)
+    )
     unique(unlist(lapply(diseases_keep, function(.disease) {
       if (.disease %in% diseases_available) {
         return(.disease)
@@ -855,22 +948,33 @@ main <- function() {
     fs::dir_create(disease_outdir)
 
     disease_summary <- lapply(af_cutoffs, function(cutoff) {
-      rbindlist(lapply(names(level_jobs), function(level_name) {
-        fn_deg_by_af_cutoff_and_celltype_level(
-          merged_sc = merged_sc,
-          cutoff = cutoff,
-          celltype_col = level_jobs[[level_name]],
-          outdir = disease_outdir,
-          variant_label = the_variant,
-          min_cells = min_cells,
-          celltypes_keep = celltypes_keep,
-          disease_filter = disease_i
-        )
-      }), use.names = TRUE, fill = TRUE)
+      rbindlist(
+        lapply(names(level_jobs), function(level_name) {
+          fn_deg_by_af_cutoff_and_celltype_level(
+            merged_sc = merged_sc,
+            cutoff = cutoff,
+            celltype_col = level_jobs[[level_name]],
+            outdir = disease_outdir,
+            variant_label = the_variant,
+            min_cells = min_cells,
+            celltypes_keep = celltypes_keep,
+            disease_filter = disease_i
+          )
+        }),
+        use.names = TRUE,
+        fill = TRUE
+      )
     })
 
-    disease_summary_dt <- rbindlist(disease_summary, use.names = TRUE, fill = TRUE)
-    is_full_run <- identical(af_cutoffs, c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) &&
+    disease_summary_dt <- rbindlist(
+      disease_summary,
+      use.names = TRUE,
+      fill = TRUE
+    )
+    is_full_run <- identical(
+      af_cutoffs,
+      c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+    ) &&
       identical(sort(level_specs), c("L1", "L2")) &&
       is.null(celltypes_keep)
     celltype_tag <- if (!is.null(celltypes_keep)) {

@@ -392,9 +392,12 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
   }
   load_pkg(clusterProfiler, org.Hs.eg.db)
 
+  gene_symbols_for_mapping <- gsub("^MT-", "", gene_symbols)
+  universe_symbols_for_mapping <- gsub("^MT-", "", universe_symbols)
+
   gene_ids <- suppressMessages(
     clusterProfiler::bitr(
-      geneID = gene_symbols,
+      geneID = gene_symbols_for_mapping,
       fromType = "SYMBOL",
       toType = "ENTREZID",
       OrgDb = org.Hs.eg.db::org.Hs.eg.db
@@ -409,7 +412,7 @@ fn_enrichGO_symbols <- function(gene_symbols, universe_symbols = NULL) {
   ) {
     suppressMessages(
       clusterProfiler::bitr(
-        geneID = universe_symbols,
+        geneID = universe_symbols_for_mapping,
         fromType = "SYMBOL",
         toType = "ENTREZID",
         OrgDb = org.Hs.eg.db::org.Hs.eg.db

@@ -85,26 +85,35 @@ fn_markers_update <- function(
     as.data.table() |>
     dplyr::arrange(-avg_log2FC) -> .d
 
+  .d <- .d |>
+    dplyr::mutate(
+      SYMBOL_ORIG = SYMBOL,
+      SYMBOL_FOR_ENRICH = gsub("^MT-", "", SYMBOL)
+    )
+
   .gs_id <- clusterProfiler::bitr(
-    geneID = .d$SYMBOL,
+    geneID = .d$SYMBOL_FOR_ENRICH,
     fromType = "SYMBOL",
     toType = c("ENTREZID", "ENSEMBL"),
     OrgDb = org.Hs.eg.db::org.Hs.eg.db
   ) |>
+    dplyr::rename(SYMBOL_FOR_ENRICH = SYMBOL) |>
     as.data.table()
 
   .d |>
     dplyr::left_join(
       .gs_id,
-      by = "SYMBOL"
+      by = "SYMBOL_FOR_ENRICH"
     ) |>
     dplyr::mutate(
       ENSEMBL = ifelse(
-        stringr::str_detect(SYMBOL, "ENSG"),
-        SYMBOL,
+        stringr::str_detect(SYMBOL_ORIG, "ENSG"),
+        SYMBOL_ORIG,
         ENSEMBL
-      )
-    )
+      ),
+      SYMBOL = SYMBOL_ORIG
+    ) |>
+    dplyr::select(-SYMBOL_ORIG, -SYMBOL_FOR_ENRICH)
 }
 
 fn_gseKEGG <- function(geneList) {
