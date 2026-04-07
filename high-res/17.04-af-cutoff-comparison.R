@@ -286,6 +286,79 @@ fn_de_plot <- function(
 }
 
 
+fn_empty_go_table <- function() {
+  data.table(
+    ID = character(),
+    Description = character(),
+    GeneRatio = character(),
+    BgRatio = character(),
+    pvalue = numeric(),
+    p.adjust = numeric(),
+    qvalue = numeric(),
+    geneID = character(),
+    Count = integer()
+  )
+}
+
+
+fn_go_to_table <- function(.go) {
+  if (is.null(.go)) {
+    return(fn_empty_go_table())
+  }
+
+  .go_df <- tryCatch(
+    as.data.frame(.go),
+    error = function(e) NULL
+  )
+
+  if (is.null(.go_df) || nrow(.go_df) == 0) {
+    return(fn_empty_go_table())
+  }
+
+  as.data.table(.go_df)
+}
+
+
+fn_export_deg_excel <- function(deg_dt, outpath) {
+  load_pkg(writexl)
+
+  deg_export <- deg_dt |>
+    dplyr::rename(neg_log10_fdr = fdr, volcano_color = color) |>
+    dplyr::mutate(
+      deg_direction = dplyr::case_when(
+        volcano_color == "red" ~ "up_high_af",
+        volcano_color == "blue" ~ "up_low_af",
+        TRUE ~ "not_significant"
+      )
+    ) |>
+    as.data.frame()
+
+  writexl::write_xlsx(
+    x = list(DEG = deg_export),
+    path = outpath
+  )
+}
+
+
+fn_export_go_excel <- function(result, outpath) {
+  load_pkg(writexl)
+
+  go_sheets <- list(
+    up_high_af_BP = fn_go_to_table(result$go_pos$BP),
+    up_high_af_CC = fn_go_to_table(result$go_pos$CC),
+    up_high_af_MF = fn_go_to_table(result$go_pos$MF),
+    up_low_af_BP = fn_go_to_table(result$go_neg$BP),
+    up_low_af_CC = fn_go_to_table(result$go_neg$CC),
+    up_low_af_MF = fn_go_to_table(result$go_neg$MF)
+  )
+
+  writexl::write_xlsx(
+    x = lapply(go_sheets, as.data.frame),
+    path = outpath
+  )
+}
+
+
 fn_build_variant_sc <- function(
   candidate_dt,
   cache_path,
@@ -424,6 +497,10 @@ fn_plot_deg_result_celltype <- function(
     height = 6,
     device = "pdf"
   )
+  fn_export_deg_excel(
+    deg_dt = p_vol$markers,
+    outpath = fs::path(outdir, glue("{safe_ct}-volcano.xlsx"))
+  )
 
   purrr::walk(c("pos", "neg"), function(.dir) {
     go_list <- result[[glue("go_{.dir}")]]
@@ -455,6 +532,10 @@ fn_plot_deg_result_celltype <- function(
       }
     })
   })
+  fn_export_go_excel(
+    result = result,
+    outpath = fs::path(outdir, glue("{safe_ct}-go.xlsx"))
+  )
 
   invisible(NULL)
 }
