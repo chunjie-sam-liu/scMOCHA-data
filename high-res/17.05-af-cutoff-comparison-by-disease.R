@@ -16,17 +16,208 @@ suppressMessages({
 
 
 # Helpers ------------------------------------------------------------------
-fn_assign_af_group <- function(af_values, cutoff) {
+fn_format_cutoff <- function(cutoff) {
+  format(cutoff, nsmall = 1, trim = TRUE)
+}
+
+
+fn_make_cutoff_spec <- function(
+  high_cutoff,
+  low_cutoff = high_cutoff,
+  high_inclusive = FALSE,
+  low_inclusive = FALSE
+) {
+  high_cutoff <- as.numeric(high_cutoff)
+  low_cutoff <- as.numeric(low_cutoff)
+
+  if (is.na(high_cutoff) || is.na(low_cutoff)) {
+    stop("Cutoff values must be numeric")
+  }
+
+  is_symmetric <- identical(high_cutoff, low_cutoff) &&
+    !isTRUE(high_inclusive) &&
+    !isTRUE(low_inclusive)
+
+  if (!is_symmetric && high_cutoff < low_cutoff) {
+    stop("Asymmetric cutoff pairs require high_cutoff >= low_cutoff")
+  }
+
+  high_operator <- if (isTRUE(high_inclusive)) ">=" else ">"
+  low_operator <- if (isTRUE(low_inclusive)) "<=" else "<"
+  high_label <- glue("AF {high_operator} {fn_format_cutoff(high_cutoff)}")
+  low_label <- glue("AF {low_operator} {fn_format_cutoff(low_cutoff)}")
+
+  list(
+    cutoff = if (is_symmetric) high_cutoff else NA_real_,
+    high_cutoff = high_cutoff,
+    low_cutoff = low_cutoff,
+    high_inclusive = isTRUE(high_inclusive),
+    low_inclusive = isTRUE(low_inclusive),
+    is_symmetric = is_symmetric,
+    high_label = high_label,
+    low_label = low_label,
+    comparison_label = glue("{high_label} vs {low_label}"),
+    dir = if (is_symmetric) {
+      glue("cutoff-{fn_format_cutoff(high_cutoff)}")
+    } else {
+      glue(
+        "cutoff-high-{fn_format_cutoff(high_cutoff)}-low-{fn_format_cutoff(low_cutoff)}"
+      )
+    }
+  )
+}
+
+
+fn_parse_cutoff_specs <- function(cutoffs_raw = "", cutoff_pairs_raw = "") {
+  cutoff_specs <- list()
+  normalize_tokens <- function(raw_value) {
+    raw_value <- trimws(raw_value)
+    if (
+      length(raw_value) == 0 ||
+        is.na(raw_value) ||
+        tolower(raw_value) %in% c("", "none", "na", "null")
+    ) {
+      return(character())
+    }
+
+    tokens <- trimws(strsplit(raw_value, ",")[[1]])
+    tokens[tokens != ""]
+  }
+
+  cutoff_tokens <- normalize_tokens(cutoffs_raw)
+  if (length(cutoff_tokens) > 0) {
+    cutoff_values <- as.numeric(cutoff_tokens)
+    if (any(is.na(cutoff_values))) {
+      stop("All cutoffs must be numeric")
+    }
+    cutoff_specs <- c(
+      cutoff_specs,
+      lapply(cutoff_values, function(cutoff_i) {
+        fn_make_cutoff_spec(cutoff_i)
+      })
+    )
+  }
+
+  pair_tokens <- normalize_tokens(cutoff_pairs_raw)
+  if (length(pair_tokens) > 0) {
+    pair_specs <- lapply(pair_tokens, function(pair_i) {
+      pair_values <- trimws(strsplit(pair_i, ":", fixed = TRUE)[[1]])
+      if (length(pair_values) != 2) {
+        stop(
+          glue(
+            "Each cutoff pair must be formatted as high:low, got '{pair_i}'"
+          )
+        )
+      }
+
+      high_cutoff <- as.numeric(pair_values[[1]])
+      low_cutoff <- as.numeric(pair_values[[2]])
+      fn_make_cutoff_spec(
+        high_cutoff = high_cutoff,
+        low_cutoff = low_cutoff,
+        high_inclusive = TRUE,
+        low_inclusive = TRUE
+      )
+    })
+    cutoff_specs <- c(cutoff_specs, pair_specs)
+  }
+
+  cutoff_specs
+}
+
+
+fn_assign_af_group <- function(
+  af_values,
+  high_cutoff,
+  low_cutoff = high_cutoff,
+  high_inclusive = FALSE,
+  low_inclusive = FALSE
+) {
+  high_idx <- if (isTRUE(high_inclusive)) {
+    af_values >= high_cutoff
+  } else {
+    af_values > high_cutoff
+  }
+  low_idx <- if (isTRUE(low_inclusive)) {
+    af_values <= low_cutoff
+  } else {
+    af_values < low_cutoff
+  }
+
   dplyr::case_when(
-    af_values > cutoff ~ "high_af",
-    af_values < cutoff ~ "low_af",
+    high_idx ~ "high_af",
+    low_idx ~ "low_af",
     TRUE ~ NA_character_
   )
 }
 
 
-fn_cutoff_dir <- function(cutoff) {
-  as.character(glue("cutoff-{format(cutoff, nsmall = 1, trim = TRUE)}"))
+fn_cutoff_dir <- function(cutoff_spec) {
+  if (is.numeric(cutoff_spec) && length(cutoff_spec) == 1) {
+    return(as.character(glue("cutoff-{fn_format_cutoff(cutoff_spec)}")))
+  }
+
+  as.character(cutoff_spec$dir)
+}
+
+
+fn_cutoff_high_label <- function(cutoff_spec) {
+  as.character(cutoff_spec$high_label)
+}
+
+
+fn_cutoff_low_label <- function(cutoff_spec) {
+  as.character(cutoff_spec$low_label)
+}
+
+
+fn_cutoff_comparison_label <- function(cutoff_spec) {
+  as.character(cutoff_spec$comparison_label)
+}
+
+
+fn_result_cutoff_spec <- function(result) {
+  if (!is.null(result$cutoff_spec)) {
+    return(result$cutoff_spec)
+  }
+
+  if (!is.null(result$high_cutoff) && !is.null(result$low_cutoff)) {
+    high_inclusive <- if (!is.null(result$high_inclusive)) {
+      isTRUE(result$high_inclusive)
+    } else {
+      !identical(result$high_cutoff, result$low_cutoff)
+    }
+    low_inclusive <- if (!is.null(result$low_inclusive)) {
+      isTRUE(result$low_inclusive)
+    } else {
+      !identical(result$high_cutoff, result$low_cutoff)
+    }
+
+    return(fn_make_cutoff_spec(
+      high_cutoff = result$high_cutoff,
+      low_cutoff = result$low_cutoff,
+      high_inclusive = high_inclusive,
+      low_inclusive = low_inclusive
+    ))
+  }
+
+  fn_make_cutoff_spec(result$cutoff)
+}
+
+
+fn_cutoff_specs_tag <- function(cutoff_specs) {
+  paste(
+    vapply(cutoff_specs, function(cutoff_spec) {
+      if (isTRUE(cutoff_spec$is_symmetric)) {
+        glue("cutoff-{fn_format_cutoff(cutoff_spec$cutoff)}")
+      } else {
+        glue(
+          "pair-{fn_format_cutoff(cutoff_spec$high_cutoff)}-{fn_format_cutoff(cutoff_spec$low_cutoff)}"
+        )
+      }
+    }, character(1)),
+    collapse = "__"
+  )
 }
 
 
@@ -480,7 +671,8 @@ fn_plot_deg_result_celltype <- function(
 
   ct <- result$celltype
   safe_ct <- fn_safe_name(ct)
-  cutoff <- result$cutoff
+  cutoff_spec <- fn_result_cutoff_spec(result)
+  cutoff_label <- fn_cutoff_comparison_label(cutoff_spec)
   n_low <- result$n_cells["low_af"]
   n_high <- result$n_cells["high_af"]
   title_prefix <- if (is.null(disease_label)) {
@@ -497,12 +689,12 @@ fn_plot_deg_result_celltype <- function(
   p_vol <- fn_de_plot(result$markers)
   p_vol$p <- p_vol$p +
     labs(
-      title = glue("{title_prefix} [{ct}] AF > {cutoff} vs AF < {cutoff}"),
+      title = glue("{title_prefix} [{ct}] {cutoff_label}"),
       subtitle = paste(
         c(subtitle_prefix, glue("high_af n={n_high}, low_af n={n_low}")),
         collapse = " | "
       ),
-      x = glue("avg log2FC (AF > {cutoff} vs AF < {cutoff})"),
+      x = glue("avg log2FC ({cutoff_label})"),
       y = "-log10(FDR)"
     )
 
@@ -521,9 +713,9 @@ fn_plot_deg_result_celltype <- function(
   purrr::walk(c("pos", "neg"), function(.dir) {
     go_list <- result[[glue("go_{.dir}")]]
     dir_label <- if (.dir == "pos") {
-      glue("UP in AF > {cutoff}")
+      glue("UP in {fn_cutoff_high_label(cutoff_spec)}")
     } else {
-      glue("UP in AF < {cutoff}")
+      glue("UP in {fn_cutoff_low_label(cutoff_spec)}")
     }
     dir_file <- if (.dir == "pos") "up-high-af" else "up-low-af"
 
@@ -563,7 +755,7 @@ fn_plot_deg_result_celltype <- function(
 
 fn_deg_by_af_cutoff_and_celltype_level <- function(
   merged_sc,
-  cutoff,
+  cutoff_spec,
   celltype_col,
   outdir,
   variant_label = "8362T>G",
@@ -581,8 +773,9 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
   }
 
   level_dir <- if (celltype_col == "celltype_l1") "by-L1" else "by-L2"
-  result_dir <- fs::path(outdir, fn_cutoff_dir(cutoff), level_dir)
+  result_dir <- fs::path(outdir, fn_cutoff_dir(cutoff_spec), level_dir)
   fs::dir_create(result_dir)
+  cutoff_label <- fn_cutoff_comparison_label(cutoff_spec)
 
   meta <- merged_sc@meta.data |>
     as.data.table(keep.rownames = "barcode")
@@ -593,12 +786,18 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
     ]
   }
   meta[, celltype_value := as.character(get(celltype_col))]
-  meta[, af_group := fn_assign_af_group(af_cell, cutoff)]
+  meta[, af_group := fn_assign_af_group(
+    af_values = af_cell,
+    high_cutoff = cutoff_spec$high_cutoff,
+    low_cutoff = cutoff_spec$low_cutoff,
+    high_inclusive = cutoff_spec$high_inclusive,
+    low_inclusive = cutoff_spec$low_inclusive
+  )]
 
   if (nrow(meta) == 0) {
     disease_label <- if (is.null(disease_filter)) "all" else disease_filter
     log_warn(
-      "No cells available for cutoff {cutoff}, {level_dir}, disease={disease_label}"
+      "No cells available for {cutoff_label}, {level_dir}, disease={disease_label}"
     )
     return(data.table())
   }
@@ -614,7 +813,7 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
   }
 
   log_info(
-    "Running {level_dir} comparisons for cutoff {cutoff} across {length(celltypes)} celltypes{if (!is.null(disease_filter)) glue(' in {disease_filter}') else ''}"
+    "Running {level_dir} comparisons for {cutoff_label} across {length(celltypes)} celltypes{if (!is.null(disease_filter)) glue(' in {disease_filter}') else ''}"
   )
 
   summary_list <- lapply(celltypes, function(ct) {
@@ -635,7 +834,10 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
     }
     base_summary <- data.table(
       disease = disease_summary_label,
-      cutoff = cutoff,
+      cutoff = cutoff_spec$cutoff,
+      high_cutoff = cutoff_spec$high_cutoff,
+      low_cutoff = cutoff_spec$low_cutoff,
+      cutoff_label = cutoff_label,
       level = level_dir,
       celltype = ct,
       n_low_af = n_low,
@@ -646,14 +848,14 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
 
     if (n_low < min_cells || n_high < min_cells) {
       log_info(
-        "  [{ct}] skip for cutoff {cutoff} (min={min_cells}): low_af={n_low}, high_af={n_high}"
+        "  [{ct}] skip for {cutoff_label} (min={min_cells}): low_af={n_low}, high_af={n_high}"
       )
       base_summary$status <- "too_few_cells"
       return(base_summary)
     }
 
     if (file.exists(cache_file)) {
-      log_info("  [{ct}] loading cache for cutoff {cutoff}")
+      log_info("  [{ct}] loading cache for {cutoff_label}")
       ct_result <- import(cache_file)
       fn_plot_deg_result_celltype(
         ct_result,
@@ -697,7 +899,7 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
         logfc.threshold = 0.1
       ),
       error = function(e) {
-        log_warn("  [{ct}] FindMarkers failed at cutoff {cutoff}: {e$message}")
+        log_warn("  [{ct}] FindMarkers failed for {cutoff_label}: {e$message}")
         NULL
       }
     )
@@ -723,13 +925,18 @@ fn_deg_by_af_cutoff_and_celltype_level <- function(
       dplyr::pull(gene)
 
     log_info(
-      "  [{ct}] cutoff {cutoff}: {nrow(sig)} DEGs (high_af={n_high}, low_af={n_low})"
+      "  [{ct}] {cutoff_label}: {nrow(sig)} DEGs (high_af={n_high}, low_af={n_low})"
     )
 
     ct_result <- list(
       disease = disease_filter,
       celltype = ct,
-      cutoff = cutoff,
+      cutoff = cutoff_spec$cutoff,
+      high_cutoff = cutoff_spec$high_cutoff,
+      low_cutoff = cutoff_spec$low_cutoff,
+      high_inclusive = cutoff_spec$high_inclusive,
+      low_inclusive = cutoff_spec$low_inclusive,
+      cutoff_spec = cutoff_spec,
       markers = markers,
       n_cells = c(low_af = n_low, high_af = n_high),
       go_pos = fn_enrichGO_symbols(pos_genes, universe),
@@ -773,7 +980,10 @@ main <- function() {
   nthread <- 8
   min_cells <- 15
   variant <- "8362T>G"
-  cutoffs <- "0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9"
+  default_cutoffs <- "0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9"
+  default_cutoff_pairs <- "0.6:0.4,0.7:0.3,0.8:0.2"
+  cutoffs <- default_cutoffs
+  cutoff_pairs <- default_cutoff_pairs
   levels <- "L1,L2"
   celltypes <- ""
   diseases <- ""
@@ -782,7 +992,9 @@ main <- function() {
     "variant=s",
     "Variant to compare by AF cutoff",
     "cutoffs=s",
-    "Comma-separated AF cutoffs; default keeps all requested comparisons",
+    "Comma-separated symmetric AF cutoffs for AF > x vs AF < x comparisons",
+    "cutoff_pairs=s",
+    "Comma-separated AF cutoff pairs formatted as high:low for AF >= high vs AF <= low comparisons",
     "levels=s",
     "Comma-separated celltype levels to run: L1, L2, or both",
     "celltypes=s",
@@ -812,7 +1024,14 @@ main <- function() {
 
   outdir <- fs::path(Sys.getenv("OUTDIR"))
   outdirnotuse <- fs::path(Sys.getenv("OUTDIRNOTUSE"))
-  af_cutoffs <- as.numeric(trimws(strsplit(cutoffs, ",")[[1]]))
+  cutoff_specs <- fn_parse_cutoff_specs(
+    cutoffs_raw = cutoffs,
+    cutoff_pairs_raw = cutoff_pairs
+  )
+  default_cutoff_specs <- fn_parse_cutoff_specs(
+    cutoffs_raw = default_cutoffs,
+    cutoff_pairs_raw = default_cutoff_pairs
+  )
   level_specs <- trimws(strsplit(levels, ",")[[1]])
   celltypes_keep <- trimws(strsplit(celltypes, ",")[[1]])
   celltypes_keep <- celltypes_keep[celltypes_keep != ""]
@@ -824,9 +1043,8 @@ main <- function() {
   if (length(diseases_keep) == 0) {
     diseases_keep <- NULL
   }
-
-  if (any(is.na(af_cutoffs))) {
-    stop("All cutoffs must be numeric")
+  if (length(cutoff_specs) == 0) {
+    stop("At least one cutoff or cutoff pair must be provided")
   }
 
   the_variant <- variant
@@ -947,12 +1165,12 @@ main <- function() {
     disease_outdir <- fs::path(root_outdir, fn_safe_name(disease_i))
     fs::dir_create(disease_outdir)
 
-    disease_summary <- lapply(af_cutoffs, function(cutoff) {
+    disease_summary <- lapply(cutoff_specs, function(cutoff_spec) {
       rbindlist(
         lapply(names(level_jobs), function(level_name) {
           fn_deg_by_af_cutoff_and_celltype_level(
             merged_sc = merged_sc,
-            cutoff = cutoff,
+            cutoff_spec = cutoff_spec,
             celltype_col = level_jobs[[level_name]],
             outdir = disease_outdir,
             variant_label = the_variant,
@@ -972,8 +1190,8 @@ main <- function() {
       fill = TRUE
     )
     is_full_run <- identical(
-      af_cutoffs,
-      c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+      fn_cutoff_specs_tag(cutoff_specs),
+      fn_cutoff_specs_tag(default_cutoff_specs)
     ) &&
       identical(sort(level_specs), c("L1", "L2")) &&
       is.null(celltypes_keep)
@@ -990,7 +1208,7 @@ main <- function() {
     } else {
       paste0(
         "summary-cutoffs-",
-        gsub(",", "_", cutoffs),
+        fn_cutoff_specs_tag(cutoff_specs),
         "-levels-",
         gsub(",", "_", levels),
         celltype_tag
@@ -1007,7 +1225,10 @@ main <- function() {
 
   summary_all_dt <- rbindlist(summary_all, use.names = TRUE, fill = TRUE)
   is_full_disease_run <- is.null(diseases_keep) &&
-    identical(af_cutoffs, c(0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)) &&
+    identical(
+      fn_cutoff_specs_tag(cutoff_specs),
+      fn_cutoff_specs_tag(default_cutoff_specs)
+    ) &&
     identical(sort(level_specs), c("L1", "L2")) &&
     is.null(celltypes_keep)
   disease_tag <- if (!is.null(diseases_keep)) {
@@ -1031,7 +1252,7 @@ main <- function() {
   } else {
     paste0(
       "summary-disease-stratified-cutoffs-",
-      gsub(",", "_", cutoffs),
+      fn_cutoff_specs_tag(cutoff_specs),
       "-levels-",
       gsub(",", "_", levels),
       disease_tag,
