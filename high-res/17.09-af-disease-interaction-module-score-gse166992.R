@@ -553,10 +553,285 @@ fn_plot_module_violin <- function(
 }
 
 
+fn_plot_gene_expr_violin <- function(
+  plot_dt,
+  gene,
+  celltype_label,
+  variant_label,
+  comparisons = PAIRWISE_COMPARISONS
+) {
+  load_pkg(ggpubr)
+
+  plot_dt <- plot_dt |>
+    dplyr::filter(!is.na(disease_af_group)) |>
+    dplyr::mutate(
+      disease_af_group = factor(disease_af_group, levels = GROUP_ORDER)
+    )
+
+  group_counts <- plot_dt |>
+    dplyr::count(disease_af_group) |>
+    dplyr::mutate(
+      label = glue("{GROUP_LABELS[as.character(disease_af_group)]}\nn={n}")
+    )
+
+  x_labels <- setNames(group_counts$label, group_counts$disease_af_group)
+
+  p <- ggplot(
+    plot_dt,
+    aes(x = disease_af_group, y = .data[[gene]], fill = disease_af_group)
+  ) +
+    geom_violin(trim = FALSE, alpha = 0.7, scale = "width") +
+    geom_boxplot(width = 0.15, outlier.size = 0.3, alpha = 0.9) +
+    ggpubr::stat_compare_means(
+      comparisons = comparisons,
+      method = "wilcox.test",
+      label = "p.signif",
+      size = 3.5,
+      step.increase = 0.08,
+      tip.length = 0.01
+    ) +
+    scale_fill_manual(values = GROUP_COLORS, guide = "none") +
+    scale_x_discrete(labels = x_labels) +
+    labs(
+      title = glue("{gene} - {celltype_label}"),
+      subtitle = glue("Variant: {variant_label} | GSE166992"),
+      x = NULL,
+      y = "Expression"
+    ) +
+    theme_classic(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 10, color = "grey40"),
+      axis.text.x = element_text(size = 9)
+    )
+
+  p
+}
+
+
+fn_plot_geneset_expr_pages <- function(
+  merged_sc,
+  cell_barcodes,
+  genes,
+  gene_set_label,
+  celltype_label,
+  variant_label,
+  outpath
+) {
+  # Extract expression for genes from RNA assay
+  expr_mat <- Seurat::GetAssayData(
+    merged_sc,
+    assay = "RNA",
+    layer = "data"
+  )[genes, cell_barcodes, drop = FALSE]
+  expr_dt <- as.data.table(
+    as.matrix(t(expr_mat)),
+    keep.rownames = "barcode"
+  )
+
+  # Merge with metadata for group info
+  meta_dt <- merged_sc@meta.data[
+    cell_barcodes,
+    "disease_af_group",
+    drop = FALSE
+  ] |>
+    as.data.table(keep.rownames = "barcode")
+  expr_dt <- merge(expr_dt, meta_dt, by = "barcode")
+
+  # One violin plot per gene
+  plot_list <- lapply(genes, function(g) {
+    fn_plot_gene_expr_violin(
+      plot_dt = expr_dt,
+      gene = g,
+      celltype_label = celltype_label,
+      variant_label = variant_label
+    )
+  })
+
+  # Save list of plots as multi-page PDF
+  saveplot(
+    plot_list,
+    filename = outpath,
+    width = 7,
+    height = 6,
+    device = "pdf"
+  )
+}
+
+
+fn_wilcox_pairwise <- function(
+  dt,
+  value_col,
+  group_col = "disease_af_group",
+  comparisons = PAIRWISE_COMPARISONS
+) {
+  results <- lapply(comparisons, function(pair) {
+    g1 <- pair[1]
+    g2 <- pair[2]
+    vals1 <- dt[get(group_col) == g1][[value_col]]
+    vals2 <- dt[get(group_col) == g2][[value_col]]
+
+    base_row <- data.table(
+      group1 = g1,
+      group2 = g2,
+      comparison = paste(g1, "vs", g2),
+      n1 = length(vals1),
+      n2 = length(vals2),
+      mean1 = mean(vals1, na.rm = TRUE),
+      mean2 = mean(vals2, na.rm = TRUE),
+      median1 = median(vals1, na.rm = TRUE),
+      median2 = median(vals2, na.rm = TRUE)
+    )
+
+    if (length(vals1) < 3 || length(vals2) < 3) {
+      base_row[, `:=`(statistic = NA_real_, p_value = NA_real_)]
+      return(base_row)
+    }
+
+    wt <- wilcox.test(vals1, vals2, exact = FALSE)
+    base_row[, `:=`(
+      statistic = unname(wt$statistic),
+      p_value = wt$p.value
+    )]
+    base_row
+  })
+  rbindlist(results)
+}
+
+
+fn_export_module_tests_excel <- function(
+  module_test_list,
+  outpath
+) {
+  load_pkg(writexl)
+
+  all_dt <- rbindlist(module_test_list, use.names = TRUE, fill = TRUE)
+  if (nrow(all_dt) == 0) {
+    return(invisible(NULL))
+  }
+
+  gene_set_names <- unique(all_dt$gene_set)
+  sheets <- lapply(gene_set_names, function(gs) {
+    gs_dt <- all_dt[gene_set == gs]
+    gs_dt[, p_adjusted := p.adjust(p_value, method = "BH")]
+    gs_dt[,
+      significance := dplyr::case_when(
+        p_adjusted < 0.001 ~ "***",
+        p_adjusted < 0.01 ~ "**",
+        p_adjusted < 0.05 ~ "*",
+        p_adjusted < 0.1 ~ ".",
+        TRUE ~ "ns"
+      )
+    ]
+    gs_dt
+  })
+  labels <- vapply(
+    gene_set_names,
+    function(gs) {
+      MODULE_GENE_SETS[[gs]]$label
+    },
+    character(1)
+  )
+  # Sanitize sheet names (max 31 chars, no special chars)
+  labels <- substr(gsub("[^A-Za-z0-9_ -]", "", labels), 1, 31)
+  names(sheets) <- labels
+
+  writexl::write_xlsx(x = sheets, path = outpath)
+  log_info("Module score tests exported to {outpath}")
+}
+
+
+fn_export_gene_expr_tests_excel <- function(
+  merged_sc,
+  cell_barcodes,
+  filtered_gene_sets,
+  celltype,
+  outpath,
+  comparisons = PAIRWISE_COMPARISONS
+) {
+  load_pkg(writexl)
+
+  all_genes <- unique(unlist(filtered_gene_sets))
+  expr_mat <- Seurat::GetAssayData(
+    merged_sc,
+    assay = "RNA",
+    layer = "data"
+  )[all_genes, cell_barcodes, drop = FALSE]
+  expr_dt <- as.data.table(
+    as.matrix(t(expr_mat)),
+    keep.rownames = "barcode"
+  )
+
+  meta_dt <- merged_sc@meta.data[
+    cell_barcodes,
+    "disease_af_group",
+    drop = FALSE
+  ] |>
+    as.data.table(keep.rownames = "barcode")
+  expr_dt <- merge(expr_dt, meta_dt, by = "barcode")
+
+  sheets <- lapply(names(filtered_gene_sets), function(gs_name) {
+    gs <- MODULE_GENE_SETS[[gs_name]]
+    gs_genes <- filtered_gene_sets[[gs_name]]
+    gene_results <- lapply(gs_genes, function(gene) {
+      test_dt <- fn_wilcox_pairwise(expr_dt, gene, comparisons = comparisons)
+      test_dt[, gene := gene]
+      test_dt
+    })
+    result <- rbindlist(gene_results, use.names = TRUE)
+    result[, p_adjusted := p.adjust(p_value, method = "BH")]
+    result[,
+      significance := dplyr::case_when(
+        p_adjusted < 0.001 ~ "***",
+        p_adjusted < 0.01 ~ "**",
+        p_adjusted < 0.05 ~ "*",
+        p_adjusted < 0.1 ~ ".",
+        TRUE ~ "ns"
+      )
+    ]
+    # Reorder columns
+    setcolorder(
+      result,
+      c(
+        "gene",
+        "comparison",
+        "group1",
+        "group2",
+        "n1",
+        "n2",
+        "mean1",
+        "mean2",
+        "median1",
+        "median2",
+        "statistic",
+        "p_value",
+        "p_adjusted",
+        "significance"
+      )
+    )
+    result
+  })
+
+  labels <- vapply(
+    names(filtered_gene_sets),
+    function(gs) {
+      MODULE_GENE_SETS[[gs]]$label
+    },
+    character(1)
+  )
+  labels <- substr(gsub("[^A-Za-z0-9_ -]", "", labels), 1, 31)
+  names(sheets) <- labels
+
+  writexl::write_xlsx(x = sheets, path = outpath)
+  log_info("Gene expression tests for {celltype} exported to {outpath}")
+}
+
+
 fn_module_score_by_celltype <- function(
   merged_sc,
   celltype_col,
   outdir,
+  filtered_gene_sets = list(),
   variant_label = "8362T>G",
   min_cells = 15,
   celltypes_keep = NULL,
@@ -610,6 +885,8 @@ fn_module_score_by_celltype <- function(
   log_info(
     "Running module score analysis, {level_dir}: {length(celltypes)} celltypes"
   )
+
+  module_test_collector <- list()
 
   summary_list <- lapply(celltypes, function(ct) {
     safe_ct <- fn_safe_name(ct)
@@ -712,6 +989,57 @@ fn_module_score_by_celltype <- function(
       device = "pdf"
     )
 
+    # Gene expression plots per gene set (multi-page PDF)
+    for (gs_name in names(filtered_gene_sets)) {
+      gs <- MODULE_GENE_SETS[[gs_name]]
+      gs_genes <- filtered_gene_sets[[gs_name]]
+      fn_plot_geneset_expr_pages(
+        merged_sc = merged_sc,
+        cell_barcodes = ct_meta$barcode,
+        genes = gs_genes,
+        gene_set_label = gs$label,
+        celltype_label = ct,
+        variant_label = variant_label,
+        outpath = fs::path(
+          result_dir,
+          glue("{safe_ct}-{gs_name}-gene-expr.pdf")
+        )
+      )
+    }
+
+    # Wilcoxon tests for module scores — collect for level-wide Excel
+    module_test_dt <- lapply(names(MODULE_GENE_SETS), function(gs_name) {
+      gs <- MODULE_GENE_SETS[[gs_name]]
+      sc <- gs$score_col
+      if (!sc %in% colnames(ct_meta)) {
+        return(NULL)
+      }
+      test_dt <- fn_wilcox_pairwise(ct_meta, sc)
+      test_dt[, `:=`(
+        celltype = ct,
+        gene_set = gs_name,
+        gene_set_label = gs$label
+      )]
+      test_dt
+    })
+    module_test_dt <- rbindlist(
+      module_test_dt[!vapply(module_test_dt, is.null, logical(1))],
+      use.names = TRUE
+    )
+    module_test_collector[[ct]] <<- module_test_dt
+
+    # Gene expression Wilcoxon tests — one Excel per celltype
+    fn_export_gene_expr_tests_excel(
+      merged_sc = merged_sc,
+      cell_barcodes = ct_meta$barcode,
+      filtered_gene_sets = filtered_gene_sets,
+      celltype = ct,
+      outpath = fs::path(
+        result_dir,
+        glue("{safe_ct}-gene-expr-wilcox-tests.xlsx")
+      )
+    )
+
     # Export per-celltype stats
     export(stat_dt, fs::path(result_dir, glue("{safe_ct}-stats.qs")))
     fwrite(
@@ -756,6 +1084,12 @@ fn_module_score_by_celltype <- function(
     summary_dt,
     fs::path(result_dir, glue("summary-{level_dir}.tsv")),
     sep = "\t"
+  )
+
+  # Export module score Wilcoxon tests — one Excel per level
+  fn_export_module_tests_excel(
+    module_test_list = module_test_collector,
+    outpath = fs::path(result_dir, "module-score-wilcox-tests.xlsx")
   )
 
   # Combined multi-celltype faceted figure for celltypes with status=ok
@@ -1058,6 +1392,7 @@ main <- function() {
         merged_sc = merged_sc,
         celltype_col = level_jobs[[level_name]],
         outdir = root_outdir,
+        filtered_gene_sets = filtered_gene_sets,
         variant_label = the_variant,
         min_cells = min_cells,
         celltypes_keep = celltypes_keep,
