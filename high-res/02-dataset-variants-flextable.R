@@ -79,7 +79,7 @@ gse_dataset_metadata_full |>
     Chemistry = paste0(sort(unique(Chemistry)), collapse = ", "),
     Disease = paste0(sort(unique(disease)), collapse = ", "),
     Source = paste0(sort(unique(Source)), collapse = ", "),
-    Publication = paste0(sort(unique(Publication)), collapse = ", "),
+    Publication = paste0(sort(unique(Publication)), collapse = ", ")
   ) -> gse_dataset_metadata_full_sel
 
 
