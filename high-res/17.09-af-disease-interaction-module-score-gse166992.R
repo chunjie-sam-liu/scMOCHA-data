@@ -1302,6 +1302,58 @@ main <- function() {
     }
 
     candidate_dt <- candidate_dt |> as.data.table()
+    export(candidate_dt, fs::path(root_outdir, "candidate_dt.qs"))
+
+    candidate_dt |>
+      dplyr::select(
+        gseid,
+        srrid,
+        Haplogroup,
+        Verbose_haplogroup,
+        disease,
+        af_cell
+      ) |>
+      unnest(af_cell) |>
+      mutate(
+        af_group = if_else(
+          af_cell < af_cutoff,
+          "AF<0.5",
+          "AF>=0.5"
+        )
+      ) -> candidate_dt_af
+    candidate_dt_af |>
+      count(
+        gseid,
+        srrid,
+        Haplogroup,
+        Verbose_haplogroup,
+        disease,
+        af_group,
+        celltype
+      ) |>
+      pivot_wider(
+        names_from = celltype,
+        values_from = n,
+        values_fill = 0
+      ) |>
+      arrange(disease, af_group) -> candidate_dt_af_count1
+
+    candidate_dt_af |>
+      count(disease, af_group, celltype) |>
+      pivot_wider(
+        names_from = celltype,
+        values_from = n,
+        values_fill = 0
+      ) |>
+      arrange(disease, af_group) -> candidate_dt_af_count2
+
+    export(
+      list(
+        by_group = candidate_dt_af_count2,
+        by_sample = candidate_dt_af_count1
+      ),
+      fs::path(root_outdir, "candidate_dt_af_counts.xlsx")
+    )
 
     if (nrow(candidate_dt) == 0) {
       stop(glue("No GSE166992 sample records found for variant {the_variant}"))
