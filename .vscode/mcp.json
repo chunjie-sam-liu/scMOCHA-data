@@ -1,0 +1,13 @@
+{
+  "servers": {
+    "excalidraw": {
+      "type": "sse",
+      "url": "https://mcp.excalidraw.com/mcp"
+    },
+    "drawio": {
+      "type": "sse",
+      "url": "https://mcp.draw.io/mcp"
+    }
+  },
+  "inputs": []
+}
