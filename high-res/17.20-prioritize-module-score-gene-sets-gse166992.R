@@ -61,20 +61,39 @@ OUTPUT_ROOT <- fs::path(
 fs::dir_create(OUTPUT_ROOT)
 
 COMPARISON_LABELS <- c(
-  "Healthy_lowAF vs COVID19_lowAF" = "Healthy AF<0.5 vs COVID-19 AF<0.5",
-  "Healthy_highAF vs COVID19_highAF" = "Healthy AF\u22650.5 vs COVID-19 AF\u22650.5",
-  "Healthy_lowAF vs Healthy_highAF" = "Healthy AF<0.5 vs Healthy AF\u22650.5",
-  "COVID19_lowAF vs COVID19_highAF" = "COVID-19 AF<0.5 vs COVID-19 AF\u22650.5"
+  "COVID19_highAF vs COVID19_lowAF" = "COVID-19 AF >= 0.5 vs COVID-19 AF < 0.5",
+  "Healthy_highAF vs Healthy_lowAF" = "Health AF >= 0.5 vs Health AF < 0.5",
+  "COVID19_highAF vs Healthy_highAF" = "COVID-19 AF >= 0.5 vs Health AF >= 0.5",
+  "COVID19_lowAF vs Healthy_lowAF" = "COVID-19 AF < 0.5 vs Health AF < 0.5"
 )
 
 GROUP_LABELS <- c(
-  "Healthy_lowAF" = "Healthy AF<0.5",
-  "Healthy_highAF" = "Healthy AF\u22650.5",
-  "COVID19_lowAF" = "COVID-19 AF<0.5",
-  "COVID19_highAF" = "COVID-19 AF\u22650.5"
+  "Healthy_lowAF" = "Health AF < 0.5",
+  "Healthy_highAF" = "Health AF >= 0.5",
+  "COVID19_lowAF" = "COVID-19 AF < 0.5",
+  "COVID19_highAF" = "COVID-19 AF >= 0.5"
 )
 
 # function -----------------------------------------------------------------
+
+fn_apply_comparison_order <- function(dt, dt_name) {
+  observed <- unique(dt$comparison)
+  expected <- names(COMPARISON_LABELS)
+  missing_expected <- setdiff(expected, observed)
+  unexpected <- setdiff(observed, expected)
+
+  if (length(unexpected) > 0 || length(missing_expected) > 0) {
+    stop(glue(
+      "{dt_name}: comparison keys do not match expected direction.\n",
+      "Unexpected: {paste(unexpected, collapse = ', ')}\n",
+      "Missing: {paste(missing_expected, collapse = ', ')}\n",
+      "Re-run 17.09-af-disease-interaction-module-score-gse166992.R first."
+    ))
+  }
+
+  dt[, comparison := factor(comparison, levels = expected)]
+  dt
+}
 
 #' Read module-score Wilcoxon tests from 17.09 Excel output
 fn_read_module_tests <- function(input_dir) {
@@ -210,7 +229,11 @@ fn_plot_geneset_bubble <- function(module_dt, level_label) {
   plot_dt <- copy(module_dt)
   plot_dt[, neg_log10p := -log10(pmax(p_adjusted, 1e-300))]
   plot_dt[, mean_diff := mean1 - mean2]
-  plot_dt[, comparison_label := COMPARISON_LABELS[comparison]]
+  plot_dt[, comparison_label := COMPARISON_LABELS[as.character(comparison)]]
+  plot_dt[, comparison_label := factor(
+    comparison_label,
+    levels = unname(COMPARISON_LABELS)
+  )]
   plot_dt[, group1_label := GROUP_LABELS[group1]]
   plot_dt[, group2_label := GROUP_LABELS[group2]]
   plot_dt[, diff_label := paste0(group1_label, " - ", group2_label)]
@@ -275,7 +298,11 @@ fn_plot_geneset_barrank <- function(module_dt, priority_dt, level_label) {
     by = .(gene_set_label, comparison)
   ]
 
-  plot_dt[, comparison_label := COMPARISON_LABELS[comparison]]
+  plot_dt[, comparison_label := COMPARISON_LABELS[as.character(comparison)]]
+  plot_dt[, comparison_label := factor(
+    comparison_label,
+    levels = unname(COMPARISON_LABELS)
+  )]
   plot_dt[, sig_label := paste0(n_sig, "/", n_total)]
   plot_dt[, neg_log10p_cap := pmin(mean_neg_log10p, 50)]
 
@@ -339,7 +366,11 @@ fn_plot_gene_heatmaps <- function(gene_dt, top_n_sets = 6, level_label) {
   base_dt <- gene_dt[gene_set_label %in% top_sets]
   base_dt[, neg_log10p_adj := -log10(pmax(p_adjusted, 1e-300))]
   base_dt[, neg_log10p_cap := pmin(neg_log10p_adj, 30)]
-  base_dt[, comparison_label := COMPARISON_LABELS[comparison]]
+  base_dt[, comparison_label := COMPARISON_LABELS[as.character(comparison)]]
+  base_dt[, comparison_label := factor(
+    comparison_label,
+    levels = unname(COMPARISON_LABELS)
+  )]
 
   plots <- lapply(top_sets, function(gs) {
     plot_dt <- base_dt[gene_set_label == gs]
@@ -482,9 +513,13 @@ fn_process_level <- function(level_name, input_root, output_root) {
     log_warn("{level_name}: No module-score tests found — skipping")
     return(invisible(NULL))
   }
+  module_dt <- fn_apply_comparison_order(module_dt, dt_name = "module_dt")
 
   log_info("{level_name}: Reading gene-expression Wilcoxon tests")
   gene_dt <- fn_read_gene_expr_tests(input_dir)
+  if (nrow(gene_dt) > 0) {
+    gene_dt <- fn_apply_comparison_order(gene_dt, dt_name = "gene_dt")
+  }
   log_info(
     "{level_name}: Loaded {nrow(module_dt)} module tests, {nrow(gene_dt)} gene tests"
   )

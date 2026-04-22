@@ -418,10 +418,10 @@ GROUP_LABELS <- c(
 )
 
 PAIRWISE_COMPARISONS <- list(
-  c("Healthy_lowAF", "COVID19_lowAF"),
-  c("Healthy_highAF", "COVID19_highAF"),
-  c("Healthy_lowAF", "Healthy_highAF"),
-  c("COVID19_lowAF", "COVID19_highAF")
+  c("COVID19_highAF", "COVID19_lowAF"),
+  c("Healthy_highAF", "Healthy_lowAF"),
+  c("COVID19_highAF", "Healthy_highAF"),
+  c("COVID19_lowAF", "Healthy_lowAF")
 )
 
 
