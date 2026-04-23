@@ -311,6 +311,9 @@ fn_integrated <- function(sc_merge) {
   obj
 }
 fn_merge_sc_list_variant <- function(df, thevariant) {
+  df <- VARIANT_GSEID_SRRID_SCFILE$gseid_srrid[[600]]
+  thevariant <- VARIANT_GSEID_SRRID_SCFILE$variant[[600]]
+
   # VARIANT_GSEID_SRRID_SCFILE |>
   #   tibble::rowid_to_column("idx") |>
   #   dplyr::filter(variant == "3240C>G")

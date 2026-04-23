@@ -26,7 +26,7 @@ fn_cutoff_dir <- function(cutoff) {
 
 
 fn_cutoff_high_label <- function(cutoff) {
-  glue("AF > {fn_format_cutoff(cutoff)}")
+  glue("AF >= {fn_format_cutoff(cutoff)}")
 }
 
 
@@ -59,7 +59,7 @@ fn_parse_cutoffs <- function(cutoffs_raw) {
 
 fn_assign_af_group <- function(af_values, cutoff) {
   dplyr::case_when(
-    af_values > cutoff ~ "high_af",
+    af_values >= cutoff ~ "high_af",
     af_values < cutoff ~ "low_af",
     TRUE ~ NA_character_
   )
@@ -170,7 +170,7 @@ fn_load_vaf <- function(thevariant, thegseid, thesrrid) {
     Sys.getenv("DUCKDB_PATH"),
     readonly = TRUE
   )
-  on.exit(DBI::dbDisconnect(conn), add = TRUE)
+  on.exit(DBI::dbDisconnect(conn, shutdown = TRUE), add = TRUE)
 
   tbl(conn, "allvariants_cell") |>
     dplyr::filter(
@@ -287,7 +287,9 @@ fn_plot_go <- function(
         ) |>
         dplyr::select(ID, Description, adjp, Count, geneID) |>
         dplyr::arrange(adjp, Count) |>
-        dplyr::mutate(Description = factor(Description, levels = Description)) -> .go_for_plot
+        dplyr::mutate(
+          Description = factor(Description, levels = Description)
+        ) -> .go_for_plot
 
       if (!is.infinite(.topn)) {
         .go_for_plot <- tail(.go_for_plot, .topn)
@@ -547,8 +549,9 @@ fn_build_variant_sc <- function(
     )
   }
 
-  match_idx <- match(valid_bc, cell_dt$barcode)
   sc_sub <- sc[, valid_bc]
+  # match_idx <- match(valid_bc, cell_dt$barcode)
+  match_idx <- match(colnames(sc_sub), cell_dt$barcode)
   sc_sub$af_cell <- cell_dt$af_cell[match_idx]
   sc_sub$depth_cell <- cell_dt$depth[match_idx]
   sc_sub$gseid_orig <- gseid_i
@@ -595,7 +598,9 @@ fn_plot_deg_result_celltype <- function(
     if (!is.null(sample_label) && !is.na(sample_label) && sample_label != "") {
       glue("sample={sample_label}")
     },
-    if (!is.null(disease_label) && !is.na(disease_label) && disease_label != "") {
+    if (
+      !is.null(disease_label) && !is.na(disease_label) && disease_label != ""
+    ) {
       glue("disease={disease_label}")
     },
     glue("high_af n={n_high}, low_af n={n_low}")
@@ -685,6 +690,7 @@ fn_deg_by_af_cutoff_l1 <- function(
   fs::dir_create(result_dir)
 
   meta <- merged_sc@meta.data |>
+    rename(barcode_original = barcode) |>
     as.data.table(keep.rownames = "barcode")
   meta[, celltype_value := as.character(celltype_l1)]
   meta[, af_group := fn_assign_af_group(af_cell, cutoff)]
@@ -776,8 +782,8 @@ fn_deg_by_af_cutoff_l1 <- function(
         ident.2 = "low_af",
         assay = "RNA",
         test.use = "wilcox",
-        min.pct = 0.1,
-        logfc.threshold = 0.1
+        # min.pct = 0.1,
+        # logfc.threshold = 0.1
       ),
       error = function(e) {
         log_warn("  [{ct}] FindMarkers failed at cutoff {cutoff}: {e$message}")
@@ -846,7 +852,12 @@ fn_deg_by_af_cutoff_l1 <- function(
 }
 
 
-fn_write_variant_metadata <- function(candidate_dt, af_cell_dt, merged_sc, result_root) {
+fn_write_variant_metadata <- function(
+  candidate_dt,
+  af_cell_dt,
+  merged_sc,
+  result_root
+) {
   metadata_out <- copy(candidate_dt)
   metadata_out[, disease_label := fn_pick_disease_label(candidate_dt)]
   metadata_out[, n_variant_cells := nrow(af_cell_dt)]
@@ -873,7 +884,10 @@ fn_run_variant <- function(
   srrid <- candidate_dt$srrid[[1]]
   disease_label <- fn_pick_disease_label(candidate_dt)
   sample_label <- glue("{gseid}/{srrid}")
-  result_root <- fs::path(candidate_dt$variant_dir[[1]], "18-celltype-specific-candidates")
+  result_root <- fs::path(
+    candidate_dt$variant_dir[[1]],
+    "18-celltype-specific-candidates"
+  )
   fs::dir_create(result_root)
 
   log_info("Loading AF-positive cells for {variant} ({sample_label})")
@@ -949,7 +963,9 @@ fn_run_variant <- function(
     sep = "\t"
   )
 
-  log_success("Finished {variant} ({sample_label}); outputs saved to {result_root}")
+  log_success(
+    "Finished {variant} ({sample_label}); outputs saved to {result_root}"
+  )
   summary_all_dt
 }
 
