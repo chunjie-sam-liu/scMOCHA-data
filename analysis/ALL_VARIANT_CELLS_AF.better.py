@@ -16,15 +16,13 @@ from concurrent.futures import (
     as_completed,
 )
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional, Tuple
+from typing import Annotated, Dict, List, Optional, Tuple
 
 import polars as pl
 import typer
-from rich import print
 from rich.logging import RichHandler
-from rich.progress import Progress, TaskID
+from rich.progress import Progress
 
 FORMAT = "%(message)s"
 logging.basicConfig(

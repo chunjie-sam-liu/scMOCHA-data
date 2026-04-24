@@ -9,14 +9,11 @@
 
 import gc
 import logging
-import multiprocessing as mp
 import time
 from concurrent.futures import (
-    ProcessPoolExecutor,
     ThreadPoolExecutor,
     as_completed,
 )
-from dataclasses import dataclass
 from pathlib import Path
 from threading import Lock
 from typing import Annotated, List, Literal, Optional
@@ -24,14 +21,12 @@ from typing import Annotated, List, Literal, Optional
 import duckdb
 import polars as pl
 import typer
-from rich import print
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,
     Progress,
     SpinnerColumn,
-    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,

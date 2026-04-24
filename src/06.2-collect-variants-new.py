@@ -7,8 +7,6 @@
 # @VERSION: v0.0.1
 
 
-import os
-import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 

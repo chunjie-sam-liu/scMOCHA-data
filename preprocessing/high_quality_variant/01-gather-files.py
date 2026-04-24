@@ -6,8 +6,6 @@
 # @DESCRIPTION:
 # @VERSION: v0.0.1
 
-import os
-import shutil
 from pathlib import Path
 
 import polars as pl

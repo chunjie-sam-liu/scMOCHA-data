@@ -9,7 +9,6 @@
 import concurrent.futures
 import logging
 import multiprocessing as mp
-import os
 import sys
 import time
 import traceback
@@ -20,7 +19,7 @@ import polars as pl
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
-from rich.progress import Progress, TaskID
+from rich.progress import Progress
 from rich.table import Table
 
 # Configure enhanced logging

@@ -7,14 +7,11 @@
 # @VERSION: v0.0.1
 
 import logging
-import multiprocessing as mp
-from functools import partial
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 import polars as pl
 import typer
-from rich import print
 from rich.logging import RichHandler
 
 FORMAT = "%(message)s"

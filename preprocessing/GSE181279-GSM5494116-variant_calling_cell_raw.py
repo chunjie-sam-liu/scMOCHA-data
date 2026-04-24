@@ -9,12 +9,9 @@
 import concurrent.futures
 import glob
 import gzip
-import sys
 
-import matplotlib
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def process_base_file(base_file, mito_length):

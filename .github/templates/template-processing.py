@@ -7,8 +7,6 @@
 # @VERSION: v0.0.1
 
 # Standard library imports
-import os
-import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Annotated, Optional
@@ -16,7 +14,6 @@ from typing import Annotated, Optional
 # Third-party imports
 import polars as pl
 import typer
-from rich import print
 from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,

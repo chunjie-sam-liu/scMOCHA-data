@@ -52,7 +52,6 @@ import logging
 import multiprocessing as mp
 import time
 from concurrent.futures import (
-    ProcessPoolExecutor,
     ThreadPoolExecutor,
     as_completed,
 )
@@ -71,7 +70,6 @@ from rich.progress import (
     BarColumn,
     Progress,
     SpinnerColumn,
-    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,

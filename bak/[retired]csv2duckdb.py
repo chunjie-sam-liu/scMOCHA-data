@@ -6,14 +6,12 @@
 # @DESCRIPTION:
 # @VERSION: v0.0.1
 
-import concurrent.futures
 import functools
 import logging
 import time
 from pathlib import Path
 
 import duckdb
-import pandas as pd
 import polars as pl
 from rich.logging import RichHandler
 

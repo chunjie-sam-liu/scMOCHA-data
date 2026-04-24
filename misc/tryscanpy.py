@@ -10,7 +10,6 @@
 from pathlib import Path
 
 import anndata as ad
-import pooch
 import scanpy as sc
 from rich import print
 
