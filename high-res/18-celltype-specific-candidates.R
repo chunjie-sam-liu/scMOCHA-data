@@ -690,7 +690,7 @@ fn_deg_by_af_cutoff_l1 <- function(
   fs::dir_create(result_dir)
 
   meta <- merged_sc@meta.data |>
-    rename(barcode_original = barcode) |>
+    dplyr::rename(barcode_original = barcode) |>
     as.data.table(keep.rownames = "barcode")
   meta[, celltype_value := as.character(celltype_l1)]
   meta[, af_group := fn_assign_af_group(af_cell, cutoff)]
@@ -863,7 +863,7 @@ fn_write_variant_metadata <- function(
   metadata_out[, n_variant_cells := nrow(af_cell_dt)]
   metadata_out[, n_seurat_cells := ncol(merged_sc)]
   metadata_out[, result_dir := as.character(result_root)]
-  result_cols <- setdiff(colnames(metadata_out), "af_cell")
+  result_cols <- base::setdiff(colnames(metadata_out), "af_cell")
 
   fwrite(
     metadata_out[, ..result_cols],
