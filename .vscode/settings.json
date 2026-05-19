@@ -1,0 +1,22 @@
+{
+  "python-envs.defaultEnvManager": "renan-r-santos.pixi-code:pixi",
+  "python-envs.defaultPackageManager": "renan-r-santos.pixi-code:pixi",
+  // Let Pixi activate env automatically
+  "python.terminal.activateEnvironment": true,
+
+  // R executable (pixi environment)
+  "r.rpath.mac": "${workspaceFolder}/.pixi/envs/default/bin/R",
+  "r.rterm.mac": "${workspaceFolder}/.pixi/envs/default/bin/radian",
+  "terminal.integrated.env.osx": {
+    "R_HOME": "${workspaceFolder}/.pixi/envs/default/lib/R"
+  },
+
+  // Linux only if needed
+  "r.rpath.linux": "${workspaceFolder}/.pixi/envs/default/bin/R",
+  "r.rterm.linux": "${workspaceFolder}/.pixi/envs/default/bin/radian",
+  "terminal.integrated.env.linux": {
+    "R_HOME": "${workspaceFolder}/.pixi/envs/default/lib/R"
+  },
+
+  "r.rterm.option": ["--no-save", "--no-restore"]
+}

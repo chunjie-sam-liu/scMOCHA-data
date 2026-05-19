@@ -60,4 +60,6 @@ mtcars.xlsx
 *.nohup
 .env
 test.xlsx
-*.log
+*.log# pixi environments
+.pixi/*
+!.pixi/config.toml

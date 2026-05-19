@@ -1,0 +1,16 @@
+BIN=../.pixi/envs/default/bin
+
+CC=$(BIN)/arm64-apple-darwin20.0.0-clang
+CPP=$(BIN)/arm64-apple-darwin20.0.0-clang-cpp
+CXX=$(BIN)/arm64-apple-darwin20.0.0-clang++ -std=gnu++17
+CXX11=$(BIN)/arm64-apple-darwin20.0.0-clang++
+CXX14=$(BIN)/arm64-apple-darwin20.0.0-clang++
+CXX17=$(BIN)/arm64-apple-darwin20.0.0-clang++
+CXX20=$(BIN)/arm64-apple-darwin20.0.0-clang++
+CXX23=$(BIN)/arm64-apple-darwin20.0.0-clang++
+
+OBJC=$(BIN)/arm64-apple-darwin20.0.0-clang
+OBJCXX=$(BIN)/arm64-apple-darwin20.0.0-clang++ -std=gnu++17
+
+FC=$(BIN)/arm64-apple-darwin20.0.0-gfortran
+F77=$(BIN)/arm64-apple-darwin20.0.0-gfortran

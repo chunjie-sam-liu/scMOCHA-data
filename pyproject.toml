@@ -8,3 +8,12 @@ dependencies = [
     "polars>=1.38.1",
     "typer>=0.21.1",
 ]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64"]
+
+[tool.pixi.pypi-dependencies]
+scmocha-data = { path = ".", editable = true }
+
+[tool.pixi.tasks]
