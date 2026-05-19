@@ -59,10 +59,11 @@ df <- import("data.csv", lazy = FALSE, select = c("id", "value"))
 ## export() — write any file
 
 ```r
-export(x, file, format, lazy = TRUE, create.dir = TRUE, ...)
+export(x, file, format = NULL, lazy = TRUE, create.dir = TRUE, ...)
 ```
 
-Auto-detects format from extension. Creates output directory if needed.
+Auto-detects format from extension. `format` accepts a single format string
+or a character vector of multiple formats. Creates output directory if needed.
 
 ```r
 # Basic — format from extension
@@ -81,8 +82,12 @@ export(df, "out.fst")
 export(df, "out.csv.gz")
 export(df, "out.tsv.zst")
 
-# Both CSV + FST at once
-export(df, "out", format = "both")     # creates out.csv and out.fst
+# Multiple formats at once (uses same base filename)
+export(df, "out", format = c("csv", "fst"))
+export(df, "out", format = c("qs2", "tsv", "xlsx"))
+
+# Legacy shorthand for c("csv", "fst")
+export(df, "out", format = "both")
 
 # Named list of data.frames → multi-sheet Excel
 export(list(cars = mtcars, flowers = iris), "out.xlsx")
