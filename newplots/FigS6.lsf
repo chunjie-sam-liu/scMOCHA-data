@@ -1,0 +1,23 @@
+#!/bin/bash
+# Author: Chunjie Liu
+# Contact: chunjie.sam.liu.at.gmail.com
+# Date: 2026-05-19
+# Description: LSF job script to run plot_vaf_featureplot-for-2.R using pixi env
+# Version: 0.1
+
+#BSUB -J plot_vaf_featureplot_for_2
+#BSUB -o /home/cliu68/github/scMOCHA-data/logs/plot_vaf_featureplot-for-2.%J.out
+#BSUB -e /home/cliu68/github/scMOCHA-data/logs/plot_vaf_featureplot-for-2.%J.err
+#BSUB -W 0:30
+#BSUB -M 50000
+#BSUB -R "rusage[mem=50000]"
+#BSUB -n 1
+#BSUB -q large_mem
+
+set -euo pipefail
+
+REPO_DIR="/home/cliu68/github/scMOCHA-data"
+
+cd "$REPO_DIR"
+
+pixi run Rscript newplots/FigS6.R

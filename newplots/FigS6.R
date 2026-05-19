@@ -1,4 +1,5 @@
-dotenv(".env.example")
+library(jutils)
+dotenv("/home/cliu68/github/scMOCHA-data/.env.example")
 
 fn_umap_coord <- function(.x) {
   .col_names <- c("UMAP_1", "UMAP_2")
@@ -966,9 +967,9 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
   ) -> p_vaf_feature
 }
 
-\() {
+{
   rawdir <- path(
-    "/Users/cliu68/Library/CloudStorage/OneDrive-St.JudeChildren'sResearchHospital/Downloads/scmocha"
+    Sys.getenv("ISILON_BASE")
   )
   thgseid <- "GSE149313"
   thesrrid <- "GSM4497130"
@@ -990,9 +991,9 @@ fn_plot_all <- function(thepath, thevariants = thevariants) {
   )
 }
 
-\() {
+{
   rawdir <- path(
-    "/Users/cliu68/Library/CloudStorage/OneDrive-St.JudeChildren'sResearchHospital/Downloads/scmocha"
+    Sys.getenv("ISILON_BASE")
   )
   thgseid <- "GSE161354"
   thesrrid <- "GSM4905211"
