@@ -180,7 +180,7 @@ if (nzchar(zipcmd)) {
     suppressMessages({
       load_pkg(jutils)
     })
-    dotenv()
+    # dotenv()
     suppressMessages({
       conflicted::conflicts_prefer(dplyr::filter, fs::path)
     })
