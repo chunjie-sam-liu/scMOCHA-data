@@ -52,8 +52,15 @@ remotes::install_github(
 )
 
 remotes::install_github(
-  "satijalab/azimuth",
+  "duckdb/duckdb-r",
   upgrade = "never",
   dependencies = TRUE,
   force = TRUE
 )
+
+# remotes::install_github(
+#   "satijalab/azimuth",
+#   upgrade = "never",
+#   dependencies = TRUE,
+#   force = TRUE
+# )
