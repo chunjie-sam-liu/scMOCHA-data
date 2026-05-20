@@ -40,7 +40,7 @@ Do not let `runner` enter unbounded retry loops.
 
 ## Language-Specific Guidance
 
-- **R**: `source ~/tools/miniforge3/etc/profile.d/conda.sh && conda activate renv && Rscript ...`
+- **R**: run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, or use `pixi run <task>` when a Pixi task exists. Never use a globally created conda/mamba `renv`, Miniforge activation, or `conda run -n renv Rscript ...`
 - **Python**: prefer `uv run` or `python`
 - **TypeScript/JavaScript**: prefer existing package scripts
 - **Shell**: prefer the narrowest direct command

@@ -14,7 +14,7 @@ You are a command runner. Your job is to execute the narrowest useful command fo
 
 ## Language-Specific Guidance
 
-- **R**: Always activate conda environment first: `source ~/tools/miniforge3/etc/profile.d/conda.sh && conda activate renv && Rscript ...`. Never use `conda run -n renv Rscript ...`
+- **R**: Run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, or use `pixi run <task>` when a Pixi task exists. Never use a globally created conda/mamba `renv`, Miniforge activation, or `conda run -n renv Rscript ...`
 - **Python**: Prefer `uv run` or `python`
 - **TypeScript/JavaScript**: Prefer existing package scripts or project runtime commands
 - **Shell**: Prefer the narrowest direct command

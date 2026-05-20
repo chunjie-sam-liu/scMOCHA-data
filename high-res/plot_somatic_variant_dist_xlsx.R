@@ -847,4 +847,4 @@ fn_save_somatic_table <- function() {
   return(list(excel = excel_path, html = html_path, data = table_data))
 }
 
-# fn_save_somatic_table()
+fn_save_somatic_table()

@@ -77,7 +77,7 @@ When execution fails:
 
 ## Language-Specific Guidance
 
-- **R**: `source ~/tools/miniforge3/etc/profile.d/conda.sh && conda activate renv && Rscript ...`. Never use `conda run -n renv Rscript ...`
+- **R**: run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, or use `pixi run <task>` when a Pixi task exists. Never use a globally created conda/mamba `renv`, Miniforge activation, or `conda run -n renv Rscript ...`
 - **Python**: prefer `uv run` or `python`
 - **TypeScript/JavaScript**: prefer existing package scripts
 - **Shell**: prefer the narrowest direct command
@@ -111,6 +111,7 @@ After launching, always print:
 
 - pnpm
 - uv
+- pixi
 
 # MCP Configuration Guidelines
 
@@ -143,26 +144,7 @@ Track and document AI-generated instructions from various AI models using the fo
 2. Format content using standard Markdown syntax
 3. Get `today date` in `YYYY-MM-DD` format
 4. Store documentation in the following path:
-   `logs/{today}-{title-short-name}-{ai-model}.md`
-
-## Supported AI Models
-
-Format the AI model name using these conventions:
-
-- **ai-model**
-  - `copilot-gpt-5`
-  - `copilot-claude-sonnet`
-  - `gemini-2.5-flash`
-  - `gemini-2.5-pro`
-
-## File Naming Convention
-
-- Use lowercase with hyphens for title/short name
-- Include specific AI model identifier (including underlying model for Copilot)
-- Include full date in YYYY-MM-DD format
-- Examples:
-  - `code-review-copilot-gpt-4-{today}.workflow.md`
-  - `component-design-copilot-claude-sonnet-{today}.workflow.md`
+  - `docs/tasks/{today}-{title-short-name}-{ai-model}.md`
 
 ## Content Requirements
 
@@ -174,4 +156,4 @@ Format the AI model name using these conventions:
 - Reference related conversations or dependencies
 - Include conversation metadata (date, duration, context)
 
-## Generated other document in context should be save in path `./logs`
+## Generated other document in context should be save in path `./docs/logs`
