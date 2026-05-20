@@ -7,8 +7,8 @@ version = "0.1.0"
 
 [tasks]
 verify-r = "Rscript -e 'cat(R.version.string, \"\\n\")'"
-install-r-packages = "Rscript packages.R"
 update-jutils = "Rscript -e 'remotes::install_github(\"chunjie-sam-liu/jutils\")'"
+remote-install = "Rscript package.R"
 
 [dependencies]
 r-base = "4.4.*"
