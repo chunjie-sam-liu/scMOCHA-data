@@ -834,6 +834,15 @@ plot_af_violin_cell <- function(cell_data, the_variant, label = "cell") {
 
   ymax <- max(forplot$af_cell, na.rm = TRUE)
 
+  disease_present <- as.character(unique(forplot$disease))
+  all_comps <- list(
+    c("Healthy", "COVID-19"),
+    c("Healthy", "Alzheimer's Disease"),
+    c("COVID-19", "Alzheimer's Disease")
+  )
+  valid_comps <- Filter(function(p) all(p %in% disease_present), all_comps)
+  y_positions <- ymax * (1.05 + 0.10 * (seq_along(valid_comps) - 1))
+
   ggplot(forplot, aes(x = disease)) +
     ggh4x::facet_grid2(
       ~celltype,
@@ -861,13 +870,11 @@ plot_af_violin_cell <- function(cell_data, the_variant, label = "cell") {
     scale_color_manual(values = color_disease, name = "Disease") +
     ggsignif::geom_signif(
       aes(y = af_cell),
-      comparisons = list(
-        c("Healthy", "COVID-19"),
-        c("Healthy", "Alzheimer's Disease")
-      ),
-      y_position = c(ymax * 1.05, ymax * 1.15),
+      comparisons = valid_comps,
+      y_position = y_positions,
       tip_length = 0.01,
-      textsize = 3
+      textsize = 3,
+      test.args = list(exact = FALSE)
     ) +
     theme(
       plot.margin = margin(t = 0.2, b = 0.1, l = 0.1, r = 0.2, unit = "cm"),
@@ -977,8 +984,17 @@ a |> count(variant_type, disease, Haplogroup) |> print(n = Inf)
 a |>
   unnest(af_cell) -> a_cell
 
+export(
+  a,
+  fs::path(
+    Sys.getenv("OUTDIRNOTUSE"),
+    "allvariants-prioritize/17.02-variant-gene-correlation/AD-8362T-G-af-violin-cell.rds"
+  )
+)
 
-plot_af_violin_cell(a_cell, "8362T>G", "cell") +
+a_cell |>
+  # filter(disease != "Alzheimer's Disease") |>
+  plot_af_violin_cell("8362T>G", "cell") +
   labs(
     title = "8362T>G AF distribution in single cells",
     subtitle = "Faceted by cell type, colored by disease"
@@ -991,6 +1007,31 @@ saveplot(
   height = 6
 )
 
+
+a_cell |>
+  filter(disease != "Alzheimer's Disease") |>
+  plot_af_violin_cell("8362T>G", "cell") +
+  labs(
+    title = "8362T>G AF distribution in single cells",
+    subtitle = "Faceted by cell type, colored by disease"
+  ) -> p_m.8362T_G_cell
+
+saveplot(
+  filename = path(Sys.getenv("OUTDIRNOTUSE")) /
+    "StJude-New" /
+    "Fig3A-PBMC-WITHOUT-AD.pdf",
+  plot = p_m.8362T_G_cell,
+  width = 12,
+  height = 6
+)
+
+
+# saveplot(
+#   p_m.8362T_G_cell,
+#   filename = "/home/liuc9/github/scMOCHA-data/high-res-MANUSCRIPTFIGURES-notuse/allvariants-prioritize/17.02-variant-gene-correlation/AD-8362T-G-af-violin-cell.pdf",
+#   width = 12,
+#   height = 6
+# )
 
 # helper: compute or load cached DEG + GO for one disease comparison ----------
 fn_run_deg_and_go <- function(
