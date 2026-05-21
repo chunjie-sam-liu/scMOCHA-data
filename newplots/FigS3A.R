@@ -2,7 +2,7 @@
 # Metainfo ----------------------------------------------------------------
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
-# @DATE: 2026-05-21 15:04:31
+# @DATE: 2026-05-21 16:19:11
 # @DESCRIPTION: this script is used for ...
 
 # Reproducibility ----------------------------------------------------------
@@ -51,27 +51,9 @@ suppressMessages({
 })
 
 
-source(path(
-  Sys.getenv("HIGHRESDIR"),
-  "00-colors.R"
-))
-outdir <- path(Sys.getenv("OUTDIR"))
 # Source ---------------------------------------------------------------------
 
 # Conn ---------------------------------------------------------------
-conn <- db_conn(
-  Sys.getenv("DUCKDB_PATH")
-)
-
-
-tbl_ls(conn)
-
-
-tbl_meta <- tbl(conn, "meta")
-
-dt_meta <- tbl_meta |> collect() |> as.data.table()
-
-dt_meta |> count(disease)
 
 # Function ----------------------------------------------------------------
 
