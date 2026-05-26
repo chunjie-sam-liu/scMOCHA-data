@@ -203,6 +203,7 @@ saveplot(
   height = 26
 )
 
+
 table_s5 |>
   select(Variant, `Cell type`, `Exist variant`) |>
   group_by(
@@ -229,9 +230,14 @@ table_s5 |>
   ) +
   geom_text(
     aes(label = scales::percent(prop, accuracy = 0.1)),
-    vjust = -0.5,
+    vjust = -1.6,
     size = 3,
     fontface = "bold"
+  ) +
+  geom_text(
+    aes(label = paste0("n=", scales::comma(nmutated))),
+    vjust = -0.3,
+    size = 3
   ) +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
