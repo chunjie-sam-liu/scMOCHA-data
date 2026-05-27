@@ -163,10 +163,10 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
       by = c("gseid", "srrid", "barcode")
     ) -> covall_thevariant
 
-  # export(
-  #   covall_thevariant,
-  #   cellfile
-  # )
+  export(
+    covall_thevariant,
+    cellfile
+  )
 
   outfile <- glue::glue(
     path(
@@ -174,8 +174,8 @@ fn_get_af_heatmap_celltype <- function(thevariant) {
       "new-variant-cell/homo-hete/clusterlevel/{thevariant}.qs"
     )
   )
-  torun <- lubridate::now() - file_info(outfile)$modification_time >
-    lubridate::days(7)
+  torun <- !fs::file_exists(outfile) ||
+    lubridate::now() - file_info(outfile)$modification_time > lubridate::days(7)
 
   if (!torun) {
     return(TRUE)
