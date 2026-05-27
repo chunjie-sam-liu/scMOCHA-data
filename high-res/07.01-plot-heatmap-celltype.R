@@ -226,10 +226,35 @@ variant_clusteraf_unlist |>
   as.data.frame() |>
   tibble::column_to_rownames(var = "colname") -> PLOTCOLMETADATA
 
+PLOTROWDATA |> filter(Homoplasmic == 1) |> rownames() -> homoplasmic_variants
+
 variant_clusteraf_unlist |>
-  select(1, 2, 3, `2706A>G`) |>
-  ggplot(aes(x = `2706A>G`)) +
-  geom_histogram()
+  pivot_longer(
+    cols = -c(gseid, srrid, celltype),
+    names_to = "variant",
+    values_to = "AF"
+  ) |>
+  filter(variant %in% head(homoplasmic_variants, 50)) |>
+  ggplot(aes(x = AF, y = variant, fill = variant)) +
+  ggridges::geom_density_ridges(
+    scale = 1.2,
+    alpha = 0.8,
+    rel_min_height = 0.01,
+    bandwidth = 0.02
+  ) +
+  scale_x_continuous(
+    limits = c(0, 1),
+    labels = scales::percent_format(accuracy = 1),
+    expand = c(0, 0)
+  ) +
+  scale_fill_viridis_d(option = "turbo", guide = "none") +
+  labs(x = "Allele Frequency", y = "Variant") +
+  theme_classic() +
+  theme(
+    axis.text.y = element_text(size = 9),
+    axis.text.x = element_text(size = 9)
+  )
+
 
 variant_clusteraf_unlist |>
   dplyr::select(-c(gseid, srrid, celltype)) |>
