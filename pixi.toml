@@ -189,6 +189,7 @@ r-readxl = ">=1.5.0,<2"
 r-readr = ">=2.2.0,<3"
 r-fs = ">=2.1.0,<3"
 r-rcppparallel = ">=5.1.11_2,<6"
+r-scico = ">=1.5.0,<2"
 
 [target.linux-64.dependencies]
 r-ggalt = "*"

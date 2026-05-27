@@ -928,6 +928,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-sandwich-3.1_1-r44hc72bb7e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-scales-1.4.0-r44hc72bb7e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-scatterpie-0.2.6-r44hc72bb7e_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/r-scico-1.5.0-r44hc72bb7e_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-see-0.13.0-r44hc72bb7e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-segmented-2.2_1-r44hc72bb7e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-selectr-0.5_1-r44hc72bb7e_0.conda
@@ -1402,6 +1403,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-sandwich-3.1_1-r44hc72bb7e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-scales-1.4.0-r44hc72bb7e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-scatterpie-0.2.6-r44hc72bb7e_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/r-scico-1.5.0-r44hc72bb7e_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-see-0.13.0-r44hc72bb7e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-selectr-0.5_1-r44hc72bb7e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/r-sessioninfo-1.2.3-r44hc72bb7e_1.conda
@@ -17123,6 +17125,17 @@ packages:
   purls: []
   size: 160186
   timestamp: 1758702001606
+- conda: https://conda.anaconda.org/conda-forge/noarch/r-scico-1.5.0-r44hc72bb7e_2.conda
+  sha256: 141dc0f1cbb124fde572462c70b7bcfcac86f976c0f3c7d2639c234c1ee0283b
+  md5: 8344a06d061b986c09551f753ee2fc75
+  depends:
+  - r-base >=4.4,<4.5.0a0
+  - r-scales
+  license: MIT
+  license_family: MIT
+  purls: []
+  size: 331349
+  timestamp: 1757798627138
 - conda: https://conda.anaconda.org/conda-forge/noarch/r-see-0.13.0-r44hc72bb7e_0.conda
   sha256: 23601de169dc92c744f5c0944b95207fece1bd194eed3601e05ba0bbadd73d16
   md5: 9e5e71a36fa7e5500c1fd006f56cd39b

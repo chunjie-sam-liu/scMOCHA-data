@@ -100,8 +100,8 @@ ALLVARIANTS <- import(
 SOMATIC_VARIANTS <- ALLVARIANTS |>
   dplyr::filter(variant_type == "somatic")
 
-somatic_srrids <- SOMATIC_VARIANTS$srrid
-somatic_variants <- SOMATIC_VARIANTS$variant
+somatic_srrids <- SOMATIC_VARIANTS$srrid |> unique()
+somatic_variants <- SOMATIC_VARIANTS$variant |> unique()
 
 somatic_variants |> unique() |> length()
 
@@ -234,11 +234,11 @@ table_s5 |>
     size = 3,
     fontface = "bold"
   ) +
-  geom_text(
-    aes(label = paste0("n=", scales::comma(nmutated))),
-    vjust = -0.3,
-    size = 3
-  ) +
+  # geom_text(
+  #   aes(label = paste0("n=", scales::comma(nmutated))),
+  #   vjust = -0.3,
+  #   size = 3
+  # ) +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
     limits = c(0, 1),
@@ -274,9 +274,20 @@ tbl_barcode |>
   count(celltype) |>
   as.data.table() -> allcells
 
+dt_all_hetero_af_cell <- tbl(conn, "allvariants_cell") |>
+  # filter(srrid %in% somatic_srrids) |>
+  filter(variant %in% somatic_variants) |>
+  as.data.table()
+
+dt_all_hetero_af_cell |> filter(!srrid %in% somatic_srrids)
+
 dt_all_hetero_af_cell |>
   filter(variant_type == "colorful") |>
-  dplyr::distinct(srrid, celltype, barcode) |>
+  mutate(srrid_barcode = paste0(srrid, "_", barcode)) -> mutated_cells_info
+
+
+mutated_cells_info |>
+  dplyr::distinct(srrid_barcode, srrid, celltype, barcode) |>
   count(celltype, name = "nmutated") |>
   as.data.table() -> mutated_cells
 
@@ -353,8 +364,8 @@ forplot |>
   ) +
   scale_y_continuous(
     labels = scales::comma_format(accuracy = 1),
-    # limits = c(0, 1),
-    expand = expansion(mult = c(0.0, 0.05))
+    limits = c(0, 100000),
+    expand = expansion(mult = c(0.0, 0.0))
   ) +
   labs(
     x = "Cell type",
@@ -388,8 +399,8 @@ forplot |>
   ) +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
-    # limits = c(0, 1),
-    expand = expansion(add = c(0.0, 0.005))
+    limits = c(0, 0.1),
+    expand = expansion(add = c(0.0, 0.0))
   ) +
   labs(
     x = "Cell type",
@@ -405,11 +416,52 @@ p_bar_allcells_zoom +
   scale_y_continuous(
     labels = scales::percent_format(accuracy = 1),
     limits = c(0, 1),
-    expand = expansion(add = c(0.01, 0.05))
+    expand = expansion(add = c(0.01, 0.0))
   ) +
   labs(
     title = "Prone to accumulate mtDNA somatic mutations (PBMC) Scale to 100%"
   ) -> p_bar_allcells
+
+
+mutated_cells_info_n |>
+  mutate(
+    celltype = gsub("_", " ", celltype)
+  ) |>
+  mutate(
+    celltype = factor(celltype, levels = names(color_celltype))
+  ) |>
+  mutate(n = factor(n, levels = sort(unique(n), decreasing = TRUE))) |>
+  ggplot(aes(x = celltype, fill = n)) +
+  geom_bar() +
+  scale_fill_manual(
+    values = paletteer_dynamic("cartography::purple.pal", n = 8) |> rev(),
+    name = "# of variants in a cell"
+  ) +
+  geom_text(
+    data = \(.d) .d |> count(celltype, name = "total"),
+    aes(x = celltype, y = total, label = scales::comma(total)),
+    vjust = -0.5,
+    size = 3,
+    fontface = "bold",
+    inherit.aes = FALSE
+  ) +
+  scale_y_continuous(
+    labels = scales::comma_format(accuracy = 1),
+    limits = c(0, 100000),
+    expand = expansion(mult = c(0.0, 0.0))
+  ) +
+  labs(
+    x = "Cell type",
+    y = "Number of mutated cells",
+    title = "# of mutated cells (PBMC)"
+  ) +
+  theme_classic() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+
+    legend.title.position = "left",
+    legend.title = element_text(face = "bold", angle = -90),
+  ) -> p_bar_allcells_n_mutations
 
 saveplot(
   filename = path(Sys.getenv("OUTDIRNOTUSE")) /
@@ -418,6 +470,7 @@ saveplot(
   plot = list(
     p_allcells,
     p_mutatedcells,
+    p_bar_allcells_n_mutations,
     p_bar_allcells,
     p_bar_allcells_zoom
   ),
