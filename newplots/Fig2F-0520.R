@@ -105,6 +105,13 @@ somatic_variants <- SOMATIC_VARIANTS$variant |> unique()
 
 somatic_variants |> unique() |> length()
 
+SOMATIC_VARIANTS |>
+  select(gseid, srrid, variant) |>
+  distinct() |>
+  mutate(
+    gseid_srrid_variant = paste0(gseid, "_", srrid, "_", variant)
+  ) -> somatic_gseid_srrid_variant
+
 # Source ---------------------------------------------------------------------
 
 # Conn ---------------------------------------------------------------
@@ -264,6 +271,7 @@ saveplot(
   height = 4
 )
 
+
 tbl_ls(conn)
 tbl_barcode <- tbl(conn, "barcode") |>
   select(srrid, celltype = celltype_name, barcode) |>
@@ -275,14 +283,20 @@ tbl_barcode |>
   as.data.table() -> allcells
 
 dt_all_hetero_af_cell <- tbl(conn, "allvariants_cell") |>
-  # filter(srrid %in% somatic_srrids) |>
+  filter(srrid %in% somatic_srrids) |>
   filter(variant %in% somatic_variants) |>
   as.data.table()
 
-dt_all_hetero_af_cell |> filter(!srrid %in% somatic_srrids)
+# dt_all_hetero_af_cell |> filter(!srrid %in% somatic_srrids)
 
 dt_all_hetero_af_cell |>
   filter(variant_type == "colorful") |>
+  mutate(
+    gseid_srrid_variant = paste0(gseid, "_", srrid, "_", variant)
+  ) |>
+  filter(
+    gseid_srrid_variant %in% somatic_gseid_srrid_variant$gseid_srrid_variant
+  ) |>
   mutate(srrid_barcode = paste0(srrid, "_", barcode)) -> mutated_cells_info
 
 
@@ -364,7 +378,7 @@ forplot |>
   ) +
   scale_y_continuous(
     labels = scales::comma_format(accuracy = 1),
-    limits = c(0, 100000),
+    limits = c(0, 5000),
     expand = expansion(mult = c(0.0, 0.0))
   ) +
   labs(
@@ -398,8 +412,8 @@ forplot |>
     fontface = "bold"
   ) +
   scale_y_continuous(
-    labels = scales::percent_format(accuracy = 1),
-    limits = c(0, 0.1),
+    labels = scales::percent_format(accuracy = 0.01),
+    limits = c(0, 0.01),
     expand = expansion(add = c(0.0, 0.0))
   ) +
   labs(
@@ -423,7 +437,12 @@ p_bar_allcells_zoom +
   ) -> p_bar_allcells
 
 
-mutated_cells_info_n |>
+mutated_cells_info |>
+  count(
+    celltype,
+    srrid_barcode
+  ) |>
+  # mutated_cells_info_n |>
   mutate(
     celltype = gsub("_", " ", celltype)
   ) |>
@@ -434,7 +453,7 @@ mutated_cells_info_n |>
   ggplot(aes(x = celltype, fill = n)) +
   geom_bar() +
   scale_fill_manual(
-    values = paletteer_dynamic("cartography::purple.pal", n = 8) |> rev(),
+    values = paletteer_dynamic("cartography::purple.pal", n = 5) |> rev(),
     name = "# of variants in a cell"
   ) +
   geom_text(
@@ -447,7 +466,7 @@ mutated_cells_info_n |>
   ) +
   scale_y_continuous(
     labels = scales::comma_format(accuracy = 1),
-    limits = c(0, 100000),
+    limits = c(0, 5000),
     expand = expansion(mult = c(0.0, 0.0))
   ) +
   labs(
@@ -466,7 +485,7 @@ mutated_cells_info_n |>
 saveplot(
   filename = path(Sys.getenv("OUTDIRNOTUSE")) /
     "StJude-New" /
-    "Fig2F-PBMC-ALL-CELLS-SOMATIC-MUTATED-CELLS-AND-PROPORTION.pdf",
+    "Fig2F-PBMC-ALL-CELLS-SOMATIC-MUTATED-CELLS-AND-PROPORTION-0527.pdf",
   plot = list(
     p_allcells,
     p_mutatedcells,
