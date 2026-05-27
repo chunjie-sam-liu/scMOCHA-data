@@ -110,7 +110,7 @@ clusterlevel_dir <- path(
 METADATA <- import(
   path(
     Sys.getenv("CLEANDATADIR"),
-    "gse_dataset_metadata_full.csv"
+    "gse_dataset_metadata_full.qs"
   ),
   lazy = FALSE
 ) |>
@@ -189,7 +189,7 @@ variant_clusteraf_unlist <- import(
 #
 #
 
-variant_clusteraf_unlist[1:5, 1:6]
+# variant_clusteraf_unlist[1:5, 1:6]
 variant_clusteraf_unlist |>
   dplyr::select(c(gseid, srrid, barcode = celltype)) |>
   dplyr::mutate(
@@ -210,6 +210,9 @@ variant_clusteraf_unlist |>
         Haplogroup_s
       ),
     by = c("gseid", "srrid")
+  ) |>
+  dplyr::mutate(
+    Chemistry = factor(Chemistry, levels = names(color_chemistry))
   ) |>
   dplyr::select(-c(gseid, srrid, barcode)) |>
   dplyr::mutate(
@@ -323,6 +326,11 @@ col_fun = circlize::colorRamp2(
 
 
 {
+  set.seed(123)
+  target_values <- c(0, 0.01, 0.05, 0.1, 0.5, 1.0)
+  closest_positions <- sapply(target_values, function(x) {
+    which.min(abs(SEQAF - x))
+  })
   ComplexHeatmap::Heatmap(
     matrix = AFMTX,
     # col = circlize::colorRamp2(
@@ -342,7 +350,7 @@ col_fun = circlize::colorRamp2(
     # row
     cluster_rows = TRUE,
     # cluster_rows = FALSE, # disable row clustering
-    cluster_row_slices = T,
+    cluster_row_slices = TRUE,
     show_row_names = FALSE,
     show_row_dend = FALSE,
     clustering_distance_rows = "pearson",
@@ -362,7 +370,7 @@ col_fun = circlize::colorRamp2(
     #     dplyr::select(colname, Cluster) |>
     #     tibble::deframe()
     # ),
-    cluster_column_slices = T,
+    cluster_column_slices = TRUE,
     show_column_dend = FALSE,
     clustering_distance_columns = "pearson",
     clustering_method_columns = "ward.D",
@@ -380,7 +388,7 @@ col_fun = circlize::colorRamp2(
     )
   ) -> COMPLEXHEATMAP_AF
 
-  OUTDIR <- Sys.getenv("OUTDIR")
+  OUTDIR <- path(Sys.getenv("OUTDIR"))
   pdf(
     file = OUTDIR / "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW.pdf",
     width = 22,
@@ -445,7 +453,7 @@ col_fun = circlize::colorRamp2(
     labs(y = "Allele Frequency")
 
   # Save legend as PDF
-  OUTDIR <- Sys.getenv("OUTDIR")
+  OUTDIR <- path(Sys.getenv("OUTDIR"))
   ggsave(
     filename = OUTDIR /
       "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW-LEGEND.pdf",
