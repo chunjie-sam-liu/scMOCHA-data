@@ -406,7 +406,7 @@ forplot |>
     name = "Cell type"
   ) +
   geom_text(
-    aes(label = scales::percent(prop, accuracy = 0.1)),
+    aes(label = scales::percent(prop, accuracy = 0.01)),
     vjust = -0.5,
     size = 3,
     fontface = "bold"
