@@ -110,8 +110,9 @@ clusterlevel_dir <- path(
 METADATA <- import(
   path(
     Sys.getenv("CLEANDATADIR"),
-    "gse_dataset_metadata_full.qs"
-  )
+    "gse_dataset_metadata_full.csv"
+  ),
+  lazy = FALSE
 ) |>
   dplyr::mutate(
     Haplogroup_s = purrr::map_chr(

@@ -497,6 +497,74 @@ saveplot(
   height = 4
 )
 
+
+mutated_cells_info |>
+  count(
+    celltype,
+    srrid_barcode
+  ) |>
+  filter(n > 1) -> a
+
+mutated_cells_info |>
+  mutate(hasvariant = 1) |>
+  filter(srrid_barcode %in% a$srrid_barcode) |>
+  arrange(srrid_barcode) -> for_heatmap
+
+for_heatmap |> count(variant) |> arrange(-n) -> rank_variant
+
+for_heatmap |> count(srrid_barcode) |> arrange(-n) -> rank_cell
+
+# for_heatmap |>
+#   filter(variant == "12865A>G")
+
+top5_variants <- rank_variant$variant[1:100]
+variant_labels <- setNames(
+  ifelse(rank_variant$variant %in% top5_variants, rank_variant$variant, ""),
+  rank_variant$variant
+)
+
+n_variants <- nrow(rank_variant)
+n_cells <- nrow(rank_cell)
+plot_width <- max(8, n_variants * 0.25)
+plot_height <- max(6, n_cells * 0.08)
+
+for_heatmap |>
+  mutate(
+    variant = factor(variant, levels = rank_variant$variant),
+    srrid_barcode = factor(srrid_barcode, levels = rank_cell$srrid_barcode)
+  ) |>
+  ggplot(
+    aes(
+      x = variant,
+      y = srrid_barcode,
+      fill = hasvariant
+    )
+  ) +
+  geom_tile(color = NA) +
+  scale_x_discrete(labels = variant_labels, expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  theme_classic() +
+  theme(
+    axis.text.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 9),
+    axis.ticks.x = element_blank(),
+    plot.margin = margin(t = 20, r = 10, b = 5, l = 5)
+  ) +
+  labs(
+    x = "Variant",
+    y = "Cell"
+  ) -> p_multi_variant_heatmap
+
+saveplot(
+  filename = path(Sys.getenv("OUTDIRNOTUSE")) /
+    "StJude-New" /
+    "Fig2F-PBMC-MULTI-VARIANT-HEATMAP-0527.pdf",
+  plot = p_multi_variant_heatmap,
+  width = plot_width,
+  height = plot_height
+)
+
 # Save  --------------------------------------------------------------
 
 # Session info -------------------------------------------------------------
