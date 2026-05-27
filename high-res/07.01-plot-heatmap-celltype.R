@@ -226,35 +226,6 @@ variant_clusteraf_unlist |>
   as.data.frame() |>
   tibble::column_to_rownames(var = "colname") -> PLOTCOLMETADATA
 
-PLOTROWDATA |> filter(Homoplasmic == 1) |> rownames() -> homoplasmic_variants
-
-variant_clusteraf_unlist |>
-  pivot_longer(
-    cols = -c(gseid, srrid, celltype),
-    names_to = "variant",
-    values_to = "AF"
-  ) |>
-  filter(variant %in% head(homoplasmic_variants, 50)) |>
-  ggplot(aes(x = AF, y = variant, fill = variant)) +
-  ggridges::geom_density_ridges(
-    scale = 1.2,
-    alpha = 0.8,
-    rel_min_height = 0.01,
-    bandwidth = 0.02
-  ) +
-  scale_x_continuous(
-    limits = c(0, 1),
-    labels = scales::percent_format(accuracy = 1),
-    expand = c(0, 0)
-  ) +
-  scale_fill_viridis_d(option = "turbo", guide = "none") +
-  labs(x = "Allele Frequency", y = "Variant") +
-  theme_classic() +
-  theme(
-    axis.text.y = element_text(size = 9),
-    axis.text.x = element_text(size = 9)
-  )
-
 
 variant_clusteraf_unlist |>
   dplyr::select(-c(gseid, srrid, celltype)) |>
@@ -497,6 +468,112 @@ col_fun = circlize::colorRamp2(
   print(p_legend)
   cli_alert_success("Legend saved successfully.")
 }
+
+
+#
+#
+# ? confirm data --------------------------------------------------------------------
+#
+#
+{
+  PLOTROWDATA |>
+    filter(Heteroplasmic == 1) |>
+    arrange(-AVGAF) |>
+    rownames() -> hetero_variants
+
+  PLOTROWDATA |>
+    filter(Homoplasmic == 1) |>
+    arrange(-AVGAF) |>
+    rownames() -> homo_variants
+
+  PLOTROWDATA |>
+    filter(Somatic == 1) |>
+    arrange(-AVGAF) |>
+    rownames() -> somatic_variants
+
+  .make_joy <- function(variants, title) {
+    variant_clusteraf_unlist |>
+      pivot_longer(
+        cols = -c(gseid, srrid, celltype),
+        names_to = "variant",
+        values_to = "AF"
+      ) |>
+      filter(variant %in% variants) |>
+      mutate(variant = factor(variant, levels = rev(variants))) |>
+      ggplot(aes(x = AF, y = variant, fill = variant)) +
+      ggridges::geom_density_ridges(
+        scale = 1.2,
+        alpha = 0.8,
+        rel_min_height = 0.01,
+        bandwidth = 0.02
+      ) +
+      scale_x_continuous(
+        limits = c(0, 1),
+        labels = scales::percent_format(accuracy = 1),
+        expand = c(0, 0)
+      ) +
+      scale_fill_viridis_d(option = "turbo", guide = "none") +
+      labs(x = "Allele Frequency", y = "Variant", title = title) +
+      theme_classic() +
+      theme(
+        axis.text.y = element_text(size = 9),
+        axis.text.x = element_text(size = 9),
+        plot.title = element_text(face = "bold", size = 11)
+      )
+  }
+
+  p_joy_hetero <- .make_joy(hetero_variants, "Heteroplasmic variants")
+  p_joy_homo <- .make_joy(homo_variants, "Homoplasmic variants")
+  p_joy_somatic <- .make_joy(somatic_variants, "Somatic variants")
+
+  height_per_variant <- 0.35
+
+  saveplot(
+    filename = path(Sys.getenv("OUTDIR")) /
+      "1-ALLELEFREQ-DISTRIBUTION-HETEROPLASMIC-CLUSTERAF.pdf",
+    plot = p_joy_hetero,
+    width = 6,
+    height = max(4, length(hetero_variants) * height_per_variant)
+  )
+
+  saveplot(
+    filename = path(Sys.getenv("OUTDIR")) /
+      "1-ALLELEFREQ-DISTRIBUTION-HOMOPLASMIC-CLUSTERAF.pdf",
+    plot = p_joy_homo,
+    width = 6,
+    height = max(4, length(homo_variants) * height_per_variant)
+  )
+
+  saveplot(
+    filename = path(Sys.getenv("OUTDIR")) /
+      "1-ALLELEFREQ-DISTRIBUTION-SOMATIC-CLUSTERAF.pdf",
+    plot = p_joy_somatic,
+    width = 6,
+    height = max(4, length(somatic_variants) * height_per_variant)
+  )
+}
+
+variant_clusteraf_unlist |> select(1:3, `8999T>C`) |> filter(`8999T>C` > 0.9)
+
+variant_clusteraf_unlist |>
+  select(1:3, `8999T>C`) |>
+  filter(srrid == "GSM4446059")
+
+
+acluster <- import(
+  "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel/8999T>C.qs"
+)
+
+acluster |> filter(srrid == "GSM4446059")
+
+acell <- import(
+  "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/celllevel/8999T>C.qs"
+)
+
+acell |> filter(srrid == "GSM4446059")
+
+allvariants |> filter(variant == "8999T>C") |> glimpse()
+
 # footer ------------------------------------------------------------------
 
 # save image --------------------------------------------------------------
