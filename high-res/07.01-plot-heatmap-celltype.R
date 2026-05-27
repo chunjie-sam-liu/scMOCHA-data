@@ -227,6 +227,11 @@ variant_clusteraf_unlist |>
   tibble::column_to_rownames(var = "colname") -> PLOTCOLMETADATA
 
 variant_clusteraf_unlist |>
+  select(1, 2, 3, `2706A>G`) |>
+  ggplot(aes(x = `2706A>G`)) +
+  geom_histogram()
+
+variant_clusteraf_unlist |>
   dplyr::select(-c(gseid, srrid, celltype)) |>
   as.matrix() -> PLOTDATAMATRIX
 rownames(PLOTDATAMATRIX) <- rownames(PLOTCOLMETADATA)
