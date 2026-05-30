@@ -211,23 +211,14 @@ fn_eda_ggpubr <- function(
   p_gender <- tryCatch(
     expr = {
       anno_meta_info_clean |>
-        ggpubr::ggboxplot(
-          x = "SEXPRED",
-          y = varianttype,
-          xlab = "",
-          ylab = ylab_varianttype,
-          title = "Sex",
-          color = "SEXPRED",
-          # palette = color_chemistry,
-          add = "jitter",
-        ) +
-        scale_color_manual(
-          values = color_gender
-        ) +
-        ggpubr::stat_compare_means(
-          method = "t.test",
-          label = "p.format"
-        ) +
+        ggplot(aes(x = SEXPRED, y = .data[[varianttype]], color = SEXPRED)) +
+        geom_boxplot(outlier.shape = NA) +
+        geom_jitter(width = 0.2, height = 0, size = 1, alpha = 0.6) +
+        scale_color_manual(values = color_gender) +
+        ggpubr::stat_compare_means(method = "t.test", label = "p.format") +
+        coord_cartesian(ylim = c(0, NA)) +
+        labs(x = "", y = ylab_varianttype, title = "Sex") +
+        ggpubr::theme_pubr() +
         theme(
           plot.title = element_text(hjust = 0.5),
           legend.position = "none",
