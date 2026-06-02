@@ -228,7 +228,8 @@ fs::dir_create(OUTDIR_HEATMAP)
   .rowdata <- PLOTROWDATA[rownames(mat), , drop = FALSE]
   .rowdata$priority_group <- dplyr::case_when(
     !is.na(.rowdata$Homoplasmic) & .rowdata$Homoplasmic == 1 ~ "1_Homoplasmic",
-    !is.na(.rowdata$Heteroplasmic) & .rowdata$Heteroplasmic == 1 ~ "2_Heteroplasmic",
+    !is.na(.rowdata$Heteroplasmic) &
+      .rowdata$Heteroplasmic == 1 ~ "2_Heteroplasmic",
     !is.na(.rowdata$Somatic) & .rowdata$Somatic == 1 ~ "3_Somatic",
     TRUE ~ "4_Other"
   )
