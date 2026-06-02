@@ -128,7 +128,7 @@ colMeans(PLOTDATAMATRIX) |>
   tibble::column_to_rownames(var = "variant") -> PLOTROWDATA
 
 PLOTROWDATA |>
-  dplyr::arrange(Homoplasmic, Heteroplasmic, Somatic) |>
+  dplyr::arrange(desc(Homoplasmic), desc(Heteroplasmic), desc(Somatic)) |>
   rownames() -> .rownames_sorted
 AFMTX_ALL <- AFMTX_ALL[.rownames_sorted, ]
 PLOTROWDATA <- PLOTROWDATA[.rownames_sorted, ]
@@ -224,6 +224,25 @@ fs::dir_create(OUTDIR_HEATMAP)
     }
   }
 
+  # Build within-type row order: Homoplasmic -> Heteroplasmic -> Somatic -> Other
+  .rowdata <- PLOTROWDATA[rownames(mat), , drop = FALSE]
+  .rowdata$priority_group <- dplyr::case_when(
+    !is.na(.rowdata$Homoplasmic) & .rowdata$Homoplasmic == 1 ~ "1_Homoplasmic",
+    !is.na(.rowdata$Heteroplasmic) & .rowdata$Heteroplasmic == 1 ~ "2_Heteroplasmic",
+    !is.na(.rowdata$Somatic) & .rowdata$Somatic == 1 ~ "3_Somatic",
+    TRUE ~ "4_Other"
+  )
+  row_ord <- integer(0)
+  for (.grp in sort(unique(.rowdata$priority_group))) {
+    .ridx <- which(.rowdata$priority_group == .grp)
+    if (length(.ridx) == 1) {
+      row_ord <- c(row_ord, .ridx)
+    } else {
+      .hc <- hclust(dist(mat[.ridx, , drop = FALSE]), method = "ward.D2")
+      row_ord <- c(row_ord, .ridx[.hc$order])
+    }
+  }
+
   ComplexHeatmap::Heatmap(
     matrix = mat,
     col = col_fun_05white,
@@ -231,10 +250,9 @@ fs::dir_create(OUTDIR_HEATMAP)
     na_col = "white",
     rect_gp = gpar(col = NA),
     border = NA,
-    # rows
-    cluster_rows = TRUE,
-    clustering_distance_rows = "euclidean",
-    clustering_method_rows = "ward.D",
+    # rows: pre-computed within-type order (Homoplasmic -> Heteroplasmic -> Somatic)
+    cluster_rows = FALSE,
+    row_order = row_ord,
     show_row_names = nrow(mat) <= 80,
     row_names_gp = gpar(fontsize = 7),
     show_row_dend = FALSE,
