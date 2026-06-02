@@ -325,8 +325,37 @@ col_fun = circlize::colorRamp2(
   col_pick
 )
 
+# New color function: AF < 0.05 as white, AF >= 0.05 uses turbo palette
+{
+  n_turbo_05 <- 99
+  col_breaks_05white <- c(0, 0.0499, seq(0.05, 1, length.out = n_turbo_05))
+  col_colors_05white <- c(
+    "white",
+    "white",
+    viridis::viridis_pal(
+      alpha = 1,
+      begin = 0,
+      end = 1,
+      direction = 1,
+      option = col_option
+    )(n_turbo_05)
+  )
+  col_fun_05white <- circlize::colorRamp2(
+    col_breaks_05white,
+    col_colors_05white
+  )
+}
+
 
 {
+  # original plot with default settings
+
+  #
+  #
+  # ? original plot with default settings --------------------------------------------------------------------
+  #
+  #
+
   set.seed(123)
   target_values <- c(0, 0.01, 0.05, 0.1, 0.5, 1.0)
   closest_positions <- sapply(target_values, function(x) {
@@ -390,8 +419,11 @@ col_fun = circlize::colorRamp2(
   ) -> COMPLEXHEATMAP_AF
 
   OUTDIR <- path(Sys.getenv("OUTDIR"))
+  fs::dir_create(OUTDIR / "heatmap")
   pdf(
-    file = OUTDIR / "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW.pdf",
+    file = OUTDIR /
+      "heatmap" /
+      "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW.pdf",
     width = 22,
     height = 9
   )
@@ -399,8 +431,66 @@ col_fun = circlize::colorRamp2(
   dev.off()
 }
 
-
 {
+  # New plot: AF < 0.05 shown as white
+  set.seed(123)
+  target_values_05 <- c(0, 0.05, 0.1, 0.5, 1.0)
+  closest_positions_05 <- sapply(target_values_05, function(x) {
+    which.min(abs(col_breaks_05white - x))
+  })
+  ComplexHeatmap::Heatmap(
+    matrix = AFMTX,
+    col = col_fun_05white,
+    name = "Allele Freq",
+    na_col = "white",
+    color_space = "LAB",
+    rect_gp = gpar(col = NA),
+    border = NA,
+    cell_fun = NULL,
+    layer_fun = NULL,
+    jitter = FALSE,
+    # row
+    cluster_rows = TRUE,
+    cluster_row_slices = TRUE,
+    show_row_names = FALSE,
+    show_row_dend = FALSE,
+    clustering_distance_rows = "pearson",
+    clustering_method_rows = "ward.D",
+    # column
+    column_title_gp = gpar(fontsize = 40),
+    cluster_columns = TRUE,
+    cluster_column_slices = TRUE,
+    show_column_dend = FALSE,
+    clustering_distance_columns = "pearson",
+    clustering_method_columns = "ward.D",
+    show_column_names = FALSE,
+    row_names_side = "left",
+    top_annotation = CHM_TOP,
+    left_annotation = CHM_LEFT,
+    heatmap_legend_param = list(
+      title = "Allele Freq",
+      at = col_breaks_05white[closest_positions_05],
+      labels = c("0", "0.05", "0.1", "0.5", "1"),
+      legend_direction = "vertical",
+      title_gp = gpar(fontsize = 10)
+    )
+  ) -> COMPLEXHEATMAP_AF_05WHITE
+
+  OUTDIR <- path(Sys.getenv("OUTDIR"))
+  fs::dir_create(OUTDIR / "heatmap")
+  pdf(
+    file = OUTDIR /
+      "heatmap" /
+      "HEATMAP-COL-CELLTYPE-ROW-VARIANT-CLUSTERROW-AF05WHITE.pdf",
+    width = 22,
+    height = 9
+  )
+  ComplexHeatmap::draw(object = COMPLEXHEATMAP_AF_05WHITE)
+  dev.off()
+}
+
+
+\() {
   library(ggplot2)
 
   legend_df <- data.frame(
@@ -475,7 +565,7 @@ col_fun = circlize::colorRamp2(
 # ? confirm data --------------------------------------------------------------------
 #
 #
-{
+\() {
   PLOTROWDATA |>
     filter(Heteroplasmic == 1) |>
     arrange(-AVGAF) |>
@@ -553,26 +643,27 @@ col_fun = circlize::colorRamp2(
   )
 }
 
-variant_clusteraf_unlist |> select(1:3, `8999T>C`) |> filter(`8999T>C` > 0.9)
+\() {
+  variant_clusteraf_unlist |> select(1:3, `8999T>C`) |> filter(`8999T>C` > 0.9)
 
-variant_clusteraf_unlist |>
-  select(1:3, `8999T>C`) |>
-  filter(srrid == "GSM4446059")
+  variant_clusteraf_unlist |>
+    select(1:3, `8999T>C`) |>
+    filter(srrid == "GSM4446059")
 
+  acluster <- import(
+    "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel/8999T>C.qs"
+  )
 
-acluster <- import(
-  "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/clusterlevel/8999T>C.qs"
-)
+  acluster |> filter(srrid == "GSM4446059")
 
-acluster |> filter(srrid == "GSM4446059")
+  acell <- import(
+    "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/celllevel/8999T>C.qs"
+  )
 
-acell <- import(
-  "/home/cliu68/github/scMOCHA-data/analysis/zzz/new-variant-cell/homo-hete/celllevel/8999T>C.qs"
-)
+  acell |> filter(srrid == "GSM4446059")
 
-acell |> filter(srrid == "GSM4446059")
-
-allvariants |> filter(variant == "8999T>C") |> glimpse()
+  allvariants |> filter(variant == "8999T>C") |> glimpse()
+}
 
 # footer ------------------------------------------------------------------
 
