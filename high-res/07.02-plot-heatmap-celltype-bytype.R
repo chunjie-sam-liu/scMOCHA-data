@@ -229,9 +229,15 @@ fs::dir_create(OUTDIR_HEATMAP)
   .rowdata$priority_group <- dplyr::case_when(
     !is.na(.rowdata$Homoplasmic) & .rowdata$Homoplasmic == 1 ~ "1_Homoplasmic",
     !is.na(.rowdata$Heteroplasmic) &
-      .rowdata$Heteroplasmic == 1 ~ "2_Heteroplasmic",
-    !is.na(.rowdata$Somatic) & .rowdata$Somatic == 1 ~ "3_Somatic",
-    TRUE ~ "4_Other"
+      .rowdata$Heteroplasmic == 1 &
+      (is.na(.rowdata$Somatic) |
+        .rowdata$Somatic == 0) ~ "2_Heteroplasmic_only",
+    !is.na(.rowdata$Heteroplasmic) &
+      .rowdata$Heteroplasmic == 1 &
+      !is.na(.rowdata$Somatic) &
+      .rowdata$Somatic == 1 ~ "3_Heteroplasmic_somatic",
+    !is.na(.rowdata$Somatic) & .rowdata$Somatic == 1 ~ "4_Somatic_only",
+    TRUE ~ "5_Other"
   )
   row_ord <- integer(0)
   for (.grp in sort(unique(.rowdata$priority_group))) {
