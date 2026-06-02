@@ -6,17 +6,25 @@
 
   // R executable (pixi environment)
   "r.rpath.mac": "${workspaceFolder}/.pixi/envs/default/bin/R",
-  "r.rterm.mac": "${workspaceFolder}/.pixi/envs/default/bin/radian",
+  "r.rterm.mac": "/opt/homebrew/bin/arf",
   "terminal.integrated.env.osx": {
     "R_HOME": "${workspaceFolder}/.pixi/envs/default/lib/R"
   },
 
   // Linux only if needed
   "r.rpath.linux": "${workspaceFolder}/.pixi/envs/default/bin/R",
-  "r.rterm.linux": "${workspaceFolder}/.pixi/envs/default/bin/radian",
+  "r.rterm.linux": "/home/cliu68/.cargo/bin/arf",
   "terminal.integrated.env.linux": {
     "R_HOME": "${workspaceFolder}/.pixi/envs/default/lib/R"
   },
 
-  "r.rterm.option": ["--no-save", "--no-restore"]
+  "r.rterm.option": ["--no-save", "--no-restore"],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.pixi": true
+  }
 }
