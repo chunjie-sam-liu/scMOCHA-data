@@ -410,8 +410,8 @@ fn_plot_somatic <- function(thevariant, thesrrid) {
 \() {
   outdir <- Sys.getenv("OUTDIRNOTUSE")
 
-  thesrrid = "GSM7493835"
-  thevariant <- "4175G>A"
+  thesrrid = "GSM4509019"
+  thevariant <- "9540T>C"
 
   pdf(
     path(
