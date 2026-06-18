@@ -19,7 +19,9 @@ VERSION = "v0.0.1"
 
 verbose = TRUE
 # gseid = "GSE235050" # no default gseid, current gseid is for testing
-basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+gseid = "GSE16692"
+# basedir = "/mnt/isilon/u01_project/large-scale/liuc9/raw"
+basedir = "~/project/scmocha"
 
 GetoptLong(
   "gseid=s",
