@@ -64,3 +64,4 @@ test.xlsx
 .pixi/*
 !.pixi/config.toml
 logs/
+.DS_Store
