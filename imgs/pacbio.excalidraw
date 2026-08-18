@@ -28,7 +28,7 @@
       "version": 41,
       "versionNonce": 1293613545,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995085047,
       "link": null,
       "locked": false,
@@ -73,7 +73,7 @@
       "version": 63,
       "versionNonce": 493836583,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995089534,
       "link": null,
       "locked": false,
@@ -116,7 +116,7 @@
       "version": 6,
       "versionNonce": 985416777,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995101819,
       "link": null,
       "locked": false,
@@ -140,10 +140,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0078125,
-        0.37109375
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "ezbjKAN-Aigt3QcksXtss",
@@ -168,7 +165,7 @@
       "version": 3,
       "versionNonce": 1887493353,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995102402,
       "link": null,
       "locked": false,
@@ -184,10 +181,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "RQwQm7KVdYIzfEm0Wsj9B",
@@ -212,7 +206,7 @@
       "version": 6,
       "versionNonce": 1533848393,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995102819,
       "link": null,
       "locked": false,
@@ -236,10 +230,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.375,
-        0
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "oM8kPTEoIjeLE1UUNZfXV",
@@ -264,7 +255,7 @@
       "version": 3,
       "versionNonce": 647406569,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995103170,
       "link": null,
       "locked": false,
@@ -280,10 +271,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "eOdrySaxJT5WYi5WKG5uF",
@@ -308,7 +296,7 @@
       "version": 3,
       "versionNonce": 4186249,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995103653,
       "link": null,
       "locked": false,
@@ -324,10 +312,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "RHsTNZ3JdFZjQK9Iz42uQ",
@@ -352,7 +337,7 @@
       "version": 6,
       "versionNonce": 624257769,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995104187,
       "link": null,
       "locked": false,
@@ -376,10 +361,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.37890625,
-        0.01171875
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "JXsxnfSWs3woVUnNwU-tq",
@@ -404,7 +386,7 @@
       "version": 5,
       "versionNonce": 851904679,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995105672,
       "link": null,
       "locked": false,
@@ -424,10 +406,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        -0.3671875,
-        0.01171875
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "jD_d8ypcN9f2OD3pJt7lg",
@@ -452,7 +431,7 @@
       "version": 6,
       "versionNonce": 476692551,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995106305,
       "link": null,
       "locked": false,
@@ -476,10 +455,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        -0.2421875,
-        0.00390625
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "y3kKsNNm7IyadO_6YDHC5",
@@ -504,7 +480,7 @@
       "version": 3,
       "versionNonce": 21410215,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995107239,
       "link": null,
       "locked": false,
@@ -520,10 +496,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "S-bQtYoBA7WWbHCVJKD9Q",
@@ -531,7 +504,7 @@
       "x": 996.6953125,
       "y": 201.18359375,
       "width": 827.0636596679688,
-      "height": 90,
+      "height": 225,
       "angle": 0,
       "strokeColor": "#1971c2",
       "backgroundColor": "transparent",
@@ -545,20 +518,20 @@
       "index": "aB",
       "roundness": null,
       "seed": 806167049,
-      "version": 241,
-      "versionNonce": 1426932871,
+      "version": 363,
+      "versionNonce": 605341432,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 1786995541873,
+      "boundElements": [],
+      "updated": 1787070408499,
       "link": null,
       "locked": false,
-      "text": "Need Liming confirm:\nDo we need to consider variants less than 5%.",
+      "text": "Need Liming confirm:\nDo we need to consider variants less than 5%.\n\n1. look into the variants with low AF.\n2. look into papers why they use 5% ",
       "fontSize": 36,
       "fontFamily": 5,
       "textAlign": "left",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "Need Liming confirm:\nDo we need to consider variants less than 5%.",
+      "originalText": "Need Liming confirm:\nDo we need to consider variants less than 5%.\n\n1. look into the variants with low AF.\n2. look into papers why they use 5% ",
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -585,7 +558,7 @@
       "version": 11,
       "versionNonce": 788766345,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995167934,
       "link": null,
       "locked": false,
@@ -622,7 +595,7 @@
       "version": 8,
       "versionNonce": 1257237159,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995172850,
       "link": null,
       "locked": false,
@@ -661,7 +634,7 @@
       "version": 62,
       "versionNonce": 842909545,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995203269,
       "link": null,
       "locked": false,
@@ -706,7 +679,7 @@
       "version": 24,
       "versionNonce": 870286313,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995201017,
       "link": null,
       "locked": false,
@@ -749,7 +722,7 @@
       "version": 6,
       "versionNonce": 1699153353,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995216346,
       "link": null,
       "locked": false,
@@ -773,10 +746,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.00390625,
-        0.8515625
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "Z71RHxzKP-JRa8AoONB-y",
@@ -801,7 +771,7 @@
       "version": 3,
       "versionNonce": 81858153,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995216846,
       "link": null,
       "locked": false,
@@ -817,10 +787,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "cVXdnTSB7ttJWXZZZpOqO",
@@ -845,7 +812,7 @@
       "version": 6,
       "versionNonce": 637398217,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995217564,
       "link": null,
       "locked": false,
@@ -869,10 +836,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.00390625,
-        -0.375
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "SVoPEqHs5ZtM-JE3oSXA7",
@@ -897,7 +861,7 @@
       "version": 3,
       "versionNonce": 445470057,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995218181,
       "link": null,
       "locked": false,
@@ -913,10 +877,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "DbgnZgo28iHiW2EyQXUCh",
@@ -941,7 +902,7 @@
       "version": 3,
       "versionNonce": 2085749257,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995233260,
       "link": null,
       "locked": false,
@@ -957,10 +918,7 @@
       ],
       "pressures": [],
       "simulatePressure": true,
-      "lastCommittedPoint": [
-        0.0001,
-        0.0001
-      ]
+      "lastCommittedPoint": null
     },
     {
       "id": "bF16jX192Nv1bUCVw16w2",
@@ -985,7 +943,7 @@
       "version": 9,
       "versionNonce": 2028537863,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995238665,
       "link": null,
       "locked": false,
@@ -1022,7 +980,7 @@
       "version": 43,
       "versionNonce": 1046601,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995296153,
       "link": null,
       "locked": false,
@@ -1059,7 +1017,7 @@
       "version": 239,
       "versionNonce": 1170677193,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995409448,
       "link": null,
       "locked": false,
@@ -1094,7 +1052,7 @@
       "version": 33,
       "versionNonce": 311008137,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995422183,
       "link": null,
       "locked": false,
@@ -1131,7 +1089,7 @@
       "version": 7,
       "versionNonce": 1797998215,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995430030,
       "link": null,
       "locked": false,
@@ -1170,7 +1128,7 @@
       "version": 4,
       "versionNonce": 565982311,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995433968,
       "link": null,
       "locked": false
@@ -1198,7 +1156,7 @@
       "version": 8,
       "versionNonce": 1260224071,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995444413,
       "link": null,
       "locked": false,
@@ -1215,10 +1173,10 @@
     {
       "id": "nj7LvqIczr_iJB6Tq-nhe",
       "type": "text",
-      "x": 649.31640625,
-      "y": 448.3125,
-      "width": 671.5381330260527,
-      "height": 185.53515624999997,
+      "x": 568.8551492880745,
+      "y": 500.7407521373978,
+      "width": 737.1522827148438,
+      "height": 123.69010416666669,
       "angle": 0,
       "strokeColor": "#1971c2",
       "backgroundColor": "transparent",
@@ -1232,20 +1190,20 @@
       "index": "aS",
       "roundness": null,
       "seed": 101555687,
-      "version": 145,
-      "versionNonce": 250690919,
+      "version": 184,
+      "versionNonce": 1773473160,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 1786995664858,
+      "boundElements": [],
+      "updated": 1787070418408,
       "link": null,
       "locked": false,
-      "text": "Comphrensive: >5%\n\nExpected: 10/10000 = 0.1%",
+      "text": "Comphrensive: >5%\nExpected: 100/100000 = 0.1%",
       "fontSize": 49.476041666666674,
       "fontFamily": 5,
       "textAlign": "left",
       "verticalAlign": "top",
       "containerId": null,
-      "originalText": "Comphrensive: >5%\n\nExpected: 10/10000 = 0.1%",
+      "originalText": "Comphrensive: >5%\nExpected: 100/100000 = 0.1%",
       "autoResize": true,
       "lineHeight": 1.25
     },
@@ -1272,7 +1230,7 @@
       "version": 11,
       "versionNonce": 1879935305,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995690039,
       "link": null,
       "locked": false,
@@ -1309,7 +1267,7 @@
       "version": 63,
       "versionNonce": 1996585959,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995840475,
       "link": null,
       "locked": false,
@@ -1348,7 +1306,7 @@
       "version": 32,
       "versionNonce": 982814537,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995775682,
       "link": null,
       "locked": false
@@ -1356,8 +1314,8 @@
     {
       "id": "Eu8gX8AA3kZDgrI9NvFoc",
       "type": "ellipse",
-      "x": 445.484375,
-      "y": 781.05078125,
+      "x": 445.29877512695623,
+      "y": 781.0544932474609,
       "width": 114.0625,
       "height": 105.35546875,
       "angle": 0,
@@ -1375,11 +1333,11 @@
         "type": 2
       },
       "seed": 1370865193,
-      "version": 42,
-      "versionNonce": 2102268553,
+      "version": 44,
+      "versionNonce": 1766273784,
       "isDeleted": false,
-      "boundElements": null,
-      "updated": 1786995781137,
+      "boundElements": [],
+      "updated": 1787070425297,
       "link": null,
       "locked": false
     },
@@ -1406,7 +1364,7 @@
       "version": 33,
       "versionNonce": 508769705,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995832295,
       "link": null,
       "locked": false,
@@ -1443,7 +1401,7 @@
       "version": 22,
       "versionNonce": 383665065,
       "isDeleted": false,
-      "boundElements": null,
+      "boundElements": [],
       "updated": 1786995833947,
       "link": null,
       "locked": false,
