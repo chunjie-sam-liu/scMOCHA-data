@@ -44,6 +44,24 @@ results <- pbmclapply(1:100, function(i) {
 many small jobs, but a failure affects the whole batch on that core). `FALSE`
 isolates errors to individual jobs but has higher fork overhead.
 
+**Failures never abort.** Failed elements come back as `try-error` objects
+inside the result list and the call returns normally. Check explicitly:
+
+```r
+res <- pbmclapply(items, process_fn, mc.cores = 8)
+bad <- vapply(res, \(x) inherits(x, "try-error"), logical(1))
+if (any(bad)) cli::cli_abort("{sum(bad)} job{?s} failed")
+```
+
+**The progress bar needs a TTY.** The display is selected by
+`isatty(stdout())`. Under the tmux + log redirection workflow
+(`... > logs/job.log 2>&1`) there is no TTY, so you get only milestone lines
+at 50% and 90% plus a final summary. That is expected, not a hang.
+
+**`.progress = FALSE` bypasses the wrapper entirely** and calls
+`parallel::mclapply()` directly — no progress file, no monitor process, no
+completion summary.
+
 ---
 
 ## pbmcmapply() — parallel mapply with progress bar
@@ -60,7 +78,9 @@ pbmcmapply(FUN, ...,
            .progress = TRUE)
 ```
 
-Wraps `parallel::mcmapply()` with a cli progress bar.
+Wraps `parallel::mcmapply()` with a cli progress bar. Note there is no
+`mc.allow.recursive` argument here, unlike `pbmclapply()`. The same
+`try-error`, TTY, and `.progress = FALSE` notes above apply.
 
 ```r
 # Multiple vectorized arguments

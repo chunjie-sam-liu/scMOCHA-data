@@ -5,86 +5,57 @@ description: Guide for using the jutils R package - a personal utility toolkit f
 
 # jutils R Package
 
-jutils is a personal R utility toolkit. Calling `library(jutils)` auto-loads
-a curated set of common packages and resolves namespace conflicts via
-`conflicted`, so a single `library(jutils)` replaces dozens of
-`library()` calls.
+jutils is a personal R utility toolkit. Attaching it auto-loads a curated set
+of common packages and resolves namespace conflicts via `conflicted`, so one
+entry line replaces dozens of `library()` calls. That entry line is
+`suppressMessages({library(jutils)})`, placed in the `# Library` section at the
+top of the script. `jutils` is the only package ever loaded with `library()`;
+everything else goes through `load_pkg(...)`.
 
 ---
 
 ## Auto-loaded packages
 
-When you call `library(jutils)`, the following packages are automatically
-loaded and attached (via `load_pkg()` in `.onAttach`):
+Attaching jutils loads these 20 packages via `load_pkg()` in `.onAttach`.
+No extra `library()` or `load_pkg()` call is needed for any of them.
 
-### Plotting / visualization
+| Area           | Packages                                                              |
+| -------------- | --------------------------------------------------------------------- |
+| Data core      | data.table, dplyr, dtplyr, dbplyr, tidyr, purrr, tibble, rlang, arrow |
+| Plotting       | ggplot2, patchwork                                                    |
+| Colors         | prismatic, paletteer                                                  |
+| Infrastructure | here, glue, fs, parallel, GetoptLong                                  |
+| Logging / UX   | logger, cli                                                           |
 
-- **ggplot2** — grammar of graphics
-- **patchwork** — composing multiple ggplots
-
-### Colors
-
-- **prismatic** — color manipulation utilities
-- **paletteer** — comprehensive color palette collection
-
-### Data core
-
-- **data.table** — fast data manipulation (fread, fwrite, `:=`, .SD, etc.)
-- **dplyr** — data manipulation verbs (filter, select, mutate, etc.)
-- **dtplyr** — data.table backend for dplyr (lazy translation)
-- **dbplyr** — database backend for dplyr
-- **tidyr** — tidy data reshaping (pivot_longer, pivot_wider, etc.)
-- **purrr** — functional programming (map, walk, etc.)
-- **tibble** — modern data frames
-- **rlang** — tidy evaluation and metaprogramming
-- **arrow** — Apache Arrow for columnar data (Parquet, CSV, etc.)
-
-### Infrastructure
-
-- **here** — project-relative file paths
-- **glue** — string interpolation
-- **fs** — cross-platform filesystem operations
-- **parallel** — base R parallel computing
-- **GetoptLong** — command-line argument parsing
-
-### Logging / UX
-
-- **logger** — structured logging
-- **cli** — rich CLI output (progress bars, colors, etc.)
-
-### Summary
-
-After `library(jutils)`, you have 20 packages available without extra
-`library()` calls: ggplot2, patchwork, prismatic, paletteer, data.table,
-dplyr, dtplyr, dbplyr, tidyr, purrr, tibble, rlang, arrow, here, glue, fs,
-parallel, GetoptLong, logger, cli.
+13 of these are only in `Suggests`. If one is missing, attaching jutils does
+not fail and, under `Rscript`, does not even print a message — the error
+surfaces later at the first call. See [references/gotchas.md](references/gotchas.md).
 
 ---
 
 ## Conflict resolution
 
-jutils uses `conflicted` to set **deterministic** conflict winners. These
-are the resolved preferences:
+jutils uses `conflicted` to set **deterministic** conflict winners. There are
+12 rules, registered with `conflicted::conflict_prefer(name, pkg)`. No losers
+are specified, so the winner takes precedence over **every** other package:
 
-| Function      | Winner         | Losers                    |
-| ------------- | -------------- | ------------------------- |
-| `filter()`    | **dplyr**      | stats, data.table         |
-| `select()`    | **dplyr**      | MASS, data.table          |
-| `mutate()`    | **dplyr**      | data.table (hypothetical) |
-| `summarise()` | **dplyr**      | data.table (hypothetical) |
-| `arrange()`   | **dplyr**      | data.table (hypothetical) |
-| `lag()`       | **dplyr**      | stats                     |
-| `first()`     | **dplyr**      | data.table                |
-| `last()`      | **dplyr**      | data.table                |
-| `between()`   | **dplyr**      | data.table                |
-| `sql()`       | **dbplyr**     | DBI                       |
-| `transpose()` | **data.table** | purrr                     |
-| `set_names()` | **purrr**      | stats                     |
+| Function                                                   | Winner         |
+| ---------------------------------------------------------- | -------------- |
+| `filter()` `select()` `mutate()` `summarise()` `arrange()` | **dplyr**      |
+| `lag()` `first()` `last()` `between()`                     | **dplyr**      |
+| `sql()`                                                    | **dbplyr**     |
+| `transpose()`                                              | **data.table** |
+| `set_names()`                                              | **purrr**      |
 
 **Rule of thumb:** dplyr semantics are the default for common verbs.
 data.table wins for `transpose()`. purrr wins for `set_names()`.
 
-When writing scripts with `library(jutils)`, you do NOT need to prefix
+These rules are enforced by a `.conflicts` shim environment that `conflicted`
+puts at the top of the search path — note that `package:conflicted` itself is
+**not** attached. Conflicts outside this table remain ambiguous and raise an
+error at call time; use an explicit namespace prefix for those.
+
+When writing scripts that attach jutils, you do NOT need to prefix
 `dplyr::filter()` etc. — the conflicts are already resolved.
 
 ---
@@ -92,6 +63,9 @@ When writing scripts with `library(jutils)`, you do NOT need to prefix
 ## Exported functions
 
 Detailed signatures, parameters, and examples are in `references/`.
+
+**Read [references/gotchas.md](references/gotchas.md) before writing jutils
+code.** Several functions silently produce wrong files or wrong types.
 
 ### Data I/O — [references/io.md](references/io.md)
 
@@ -102,13 +76,19 @@ Detailed signatures, parameters, and examples are in `references/`.
 | `convert()` | Convert between formats      | `convert("data.csv", "data.parquet")`                                        |
 
 - Lazy by default for csv/tsv/parquet; call `collect()` to materialize
-- Use `.qs2` not `.qs` — qs format is deprecated
+- Eager types differ: csv/tsv → data.table, parquet/xlsx → tibble, fst →
+  data.frame. Call `setDT()` when you need data.table semantics
+- **Name qs files `.qs`, never `.qs2`** — `export(df, "out.qs2")` writes
+  `out.qs`, so the round trip breaks
+- **`.gz` is the only compression suffix that works** with `import()`/
+  `export()`, and only on the data.frame path. `.zst`/`.bz2`/`.xz`/`.zip` and
+  Arrow inputs all error. Use `tbl_export()` or parquet for zstd
 - Excel auto-styles; errors if > 1M rows or > 16K columns
-- Compressed files auto-detected (.gz, .zst, .bz2)
-- URLs supported for import (forces eager mode)
+- URLs supported for import (silently forces eager mode)
 - `export(format = c("csv", "fst"))` exports to multiple formats at once
 - `export(format = "both")` is legacy shorthand for `c("csv", "fst")`
 - Named list of data.frames → multi-sheet Excel
+- `convert()` forwards `...` to **both** `import()` and `export()`
 
 ### DuckDB database — [references/db.md](references/db.md)
 
@@ -126,9 +106,17 @@ Detailed signatures, parameters, and examples are in `references/`.
 | `tbl_analyze()`        | Update table statistics        | `tbl_analyze(conn, "big_table")`               |
 | `tbl_register_arrow()` | Register Arrow dataset as view | `tbl_register_arrow(conn, "v", ds)`            |
 
+- `db_conn()` defaults to `read_only = TRUE`
+- **`read_only` is not part of the connection pool key** — reusing a path
+  silently returns the existing connection in its original mode. Call
+  `db_disconn()` before switching modes
 - `tbl_drop()` requires `confirm = TRUE` in non-interactive sessions
 - Use `types =` (not `columns =`) in `tbl_import()` for partial type override
-- `tbl_export()` uses DuckDB COPY — more efficient than `collect()` + `export()`
+- `tbl_import()`'s parquet branch ignores `header`/`delim`/`columns`/`types`
+- `format = "auto"` falls back to `csv` for unknown extensions, it does not error
+- `tbl_ls()` enforces `check_dots_empty()`; use named arguments only
+- `tbl_export()` uses DuckDB COPY — more efficient than `collect()` + `export()`,
+  and the only writer that supports `.zst` for CSV/TSV
 - Connection pool is per-process; parallel workers get their own connections
 
 ### Parallel processing — [references/parallel.md](references/parallel.md)
@@ -142,6 +130,10 @@ Detailed signatures, parameters, and examples are in `references/`.
 - `mc.preschedule = TRUE` (default): faster but failure affects whole batch
 - `mc.preschedule = FALSE`: isolates errors per job
 - Default `mc.cores` is `getOption("mc.cores", 8L)`
+- **Failures never abort** — failed elements return as `try-error` objects in
+  the result list; check them explicitly
+- Progress bar requires a TTY. Redirected to a log file you get only 50%/90%
+  milestones — that is normal, not a hang
 
 ### Plotting helpers — [references/plot.md](references/plot.md)
 
@@ -153,23 +145,40 @@ Detailed signatures, parameters, and examples are in `references/`.
 | `saveplot()`              | Save plots (single/multi-page) | `saveplot("fig.pdf", p, width = 8)`          |
 
 - Pass `human_read_latex_pval()` directly to `label` (no `parse = TRUE`)
-- `saveplot()` multi-page for PDF/TIFF; numbered files for PNG/JPEG
+- `human_read()` **errors on `NA`** — filter before calling
+- `saveplot()` multi-page for PDF/TIFF; numbered files for PNG/JPEG,
+  zero-padded to the plot count (`fig_01.png` … `fig_10.png`)
+- `saveplot()` writes a blank page and only warns when a plot fails to render
 - `saveplot()` auto-creates output directories
+- `fn_xy_breaks_limits()` returns `limits, breaks, labels, step` — index by name
 
 ### Utilities — [references/utils.md](references/utils.md)
 
-| Function     | Purpose                       | Key example                             |
-| ------------ | ----------------------------- | --------------------------------------- |
-| `dotenv()`   | Load .env files               | `dotenv(".env.prod", override = FALSE)` |
-| `load_pkg()` | Load packages with CLI output | `load_pkg(ggplot2, dplyr, tidyr)`       |
+| Function     | Purpose                             | Key example                             |
+| ------------ | ----------------------------------- | --------------------------------------- |
+| `dotenv()`   | Load .env files                     | `dotenv(".env.prod", override = FALSE)` |
+| `load_pkg()` | Load extra packages with CLI output | `load_pkg(ComplexHeatmap, circlize)`    |
 
 - `dotenv()` supports comments, quoted values, multiline (`"""`), variable
   expansion (`${VAR}`), escape sequences, `export` prefix
+- `dotenv()` defaults to `override = TRUE` — it replaces existing environment
+  variables unless you pass `override = FALSE`
+- `dotenv()` skips malformed lines **silently**; a typo yields no error
 - `load_pkg()` accepts unquoted names, strings, character vectors, or any mix
+- `load_pkg()` is silent under `Rscript` and returns `FALSE` for a missing
+  package instead of erroring — use `rlang::check_installed()` for hard
+  dependencies in scripts
+
+### Developing jutils itself — [references/dev.md](references/dev.md)
+
+Use **pixi** for every command in this repository (`pixi run test`,
+`pixi run doc`, `pixi run check`, `pixi run format`). Never use conda or mamba.
 
 ---
 
 ## Deprecated — never use in new code
+
+All four are still exported and emit a `lifecycle::deprecate_warn()`.
 
 | Deprecated        | Replacement                           |
 | ----------------- | ------------------------------------- |
@@ -182,30 +191,59 @@ Detailed signatures, parameters, and examples are in `references/`.
 
 ## Coding style guide for jutils scripts
 
-When writing R scripts that use `library(jutils)`, follow these conventions:
+When writing R scripts that attach jutils, follow these conventions:
 
 ### Script setup
 
-- Start with `library(jutils)` — this is the ONLY `library()` call needed
-  for the 20 auto-loaded packages
-- Only add extra `library()` calls for packages NOT auto-loaded by jutils
+- Start every script with `suppressMessages({library(jutils)})` in the
+  `# Library` section. `jutils` is the only package ever loaded with
+  `library()`.
+- The `rmeta` snippet repeats a bare `library(jutils)` in the `# Load data`
+  section. That repeat is intentional and harmless — attaching is idempotent.
+  Keep it; do not delete it as a duplicate.
+- Load anything jutils does not auto-attach with `load_pkg(...)`, which takes
+  unquoted names, strings, or a character vector:
+  `load_pkg(ComplexHeatmap, circlize)`.
 - Use `dotenv()` to load environment variables from `.env` files
-- Use `here::here()` for project-relative paths (loaded by jutils)
+- Source the stage's `config.R` in the `Source` section, right after
+  `dotenv()`, then call `stage_paths()`. Stage constants, output paths, and
+  helpers shared by two or more steps live there, never inline in a step. The
+  full contract is in the `analysis-pipeline` skill,
+  `references/script-templates.md` section G.
+- Build every path from the env-file variable that owns that root, resolved
+  through `stage_paths()`. **Do not rebuild a path from the repository root**,
+  with `here::here()` or otherwise: the roots are configured per project and
+  are frequently symlinks pointing outside the repository, so
+  `here("data", ...)` and `${datadir}` are not the same directory. `here()` is
+  loaded by jutils and is fine for a throwaway interactive lookup, never in a
+  script that ships. -> `data-result-layout`
+- The `rmeta` editor snippet emits the full section skeleton: Metainfo /
+  Reproducibility / Library / Args / Logger / Load data / Source / Conn /
+  Function / Main / Save / Session info.
 
 ### Pipe and anonymous functions
 
-- Use base pipe `|>` (NOT magrittr pipe `%>%`)
+- Use the base pipe `|>` (never the magrittr pipe `%>%`)
 - Use `\() ...` for single-line anonymous functions
 - Use `function() { ... }` for multi-line anonymous functions
-- Do NOT use `_$x` or `_$[["x"]]` with pipe placeholder
+- Do NOT use `_$x` or `_[["x"]]` with the `_` pipe placeholder
 
 ### Data I/O patterns
 
-- Use `import()` / `export()` — never call `fread()`, `fwrite()`,
-  `read_parquet()`, etc. directly
+- Default to `import()` / `export()`. Do not reach for `read_parquet()`,
+  `read.csv()`, or `readxl` directly.
+- `fread()` / `fwrite()` are the one documented exception, for cases where the
+  exact delimiter, quoting, `na` string, or header form matters. PLINK2
+  `#FID IID ...` files are the standard case; see the `analysis-pipeline`
+  script templates.
 - Use `convert()` for format conversion (memory-efficient)
 - `import()` returns lazy arrow Datasets for csv/tsv/parquet by default —
   always `collect()` before using as data.table/data.frame
+- After an eager `import()`, only csv/tsv are data.tables. Call
+  `data.table::setDT()` for parquet, fst, and xlsx
+- Name qs files `.qs`, never `.qs2`
+- `.gz` is the only compression suffix `import()`/`export()` handle, and only
+  for data.frame input
 - For DuckDB workflows, prefer `tbl_import()` + dplyr over `import()` to
   keep data out of R memory
 
@@ -213,7 +251,13 @@ When writing R scripts that use `library(jutils)`, follow these conventions:
 
 - Use `snake_case` for all names
 - 2-space indentation, 80-character line width
-- Format all code with `air format .`
+- Format with the repository's own format task when it has one. In jutils that
+  is `pixi run format`, which runs `air format .` across the package — correct
+  here because the whole tree is the package. In an analysis repository
+  without such a task, run `air format <file>` on the files you touched and
+  never `air format .` on the whole tree
+- In this repository, run every command through **pixi**. Never use
+  `conda activate`, `mamba activate`, or `conda run -n renv`
 
 ### Error and messaging
 
@@ -227,6 +271,9 @@ When writing R scripts that use `library(jutils)`, follow these conventions:
 
 - Use `pbmclapply()` / `pbmcmapply()` instead of `parallel::mclapply()`
 - Wrap worker functions in `tryCatch()` for error isolation
+- Check the result for `try-error` elements — these functions never abort
+- Decide `read_only` once per process; `db_conn()` ignores it for an
+  already-pooled path
 - Always clean up DuckDB connections in parallel workers:
   `on.exit(db_disconn())`
 
@@ -237,24 +284,45 @@ When writing R scripts that use `library(jutils)`, follow these conventions:
 - Use `fn_xy_breaks_limits()` for axis scaling
 - Use `human_read_latex_pval()` for p-value annotations (pass directly to
   `label`, NOT with `parse = TRUE`)
+- Guard `NA` before calling `human_read()`
+- Do not ignore warnings from `saveplot()` — a failed plot becomes a blank page
 
 ---
 
-## Common patterns
+## Canonical patterns
 
-### Large file processing
+More worked examples (large-file streaming, parallel DuckDB, publication
+plots, multi-page export, `dotenv()`) are in `references/`. Known traps are
+collected in [references/gotchas.md](references/gotchas.md).
+
+### Typical analysis script
 
 ```r
-library(jutils)
-ds <- import("large.csv")
-result <- ds |> filter(category == "A") |> collect()
-convert("large.csv", "large.parquet")
+suppressMessages({library(jutils)})
+
+df <- import(paths$raw_experiment_csv, lazy = FALSE)
+
+result <- df |>
+  filter(!is.na(value)) |>
+  group_by(group) |>
+  summarise(
+    mean_val = mean(value),
+    sd_val = sd(value),
+    n = n()
+  )
+
+p <- ggplot(result, aes(group, mean_val)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val))
+
+export(result, fs::path(paths$tabledir, "summary.csv"))
+saveplot(fs::path(paths$figuredir, "figure.pdf"), p, width = 8, height = 6)
 ```
 
-### DuckDB analytics pipeline
+### DuckDB pipeline (keeps data out of R memory)
 
 ```r
-library(jutils)
+suppressMessages({library(jutils)})
 conn <- db_conn("analytics.duckdb", read_only = FALSE)
 tbl_import(conn, "sales", "sales.parquet")
 tbl_import(conn, "products", "products.csv",
@@ -266,99 +334,4 @@ result <- tbl(conn, "sales") |>
   collect()
 export(result, "revenue.xlsx")
 db_disconn()
-```
-
-### Parallel file processing
-
-```r
-library(jutils)
-files <- fs::dir_ls("data/", glob = "*.csv")
-results <- pbmclapply(files, function(f) {
-  df <- import(f, lazy = FALSE)
-  nrow(df)
-}, mc.cores = 8)
-```
-
-### Parallel DuckDB processing
-
-```r
-library(jutils)
-files <- fs::dir_ls("data/", glob = "*.parquet")
-results <- pbmclapply(files, function(f) {
-  conn <- db_conn("analysis.duckdb", read_only = TRUE)
-  on.exit(db_disconn())
-  tbl_import(conn, "tmp", f, overwrite = TRUE)
-  dplyr::tbl(conn, "tmp") |>
-    filter(pval < 5e-8) |>
-    collect()
-}, mc.cores = 8)
-```
-
-### Publication-ready plot
-
-```r
-library(jutils)
-data <- import("results.csv", lazy = FALSE)
-cor_result <- cor.test(data$x, data$y)
-p <- ggplot(data, aes(x, y)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  annotate("text", x = Inf, y = Inf,
-           label = human_read_latex_pval(
-             human_read(cor_result$p.value),
-             s = paste0("R = ", round(cor_result$estimate, 2))
-           ),
-           hjust = 1.1, vjust = 1.5)
-saveplot("correlation.pdf", p, width = 8, height = 6)
-```
-
-### Multi-page figure export
-
-```r
-library(jutils)
-plots <- lapply(unique(mtcars$cyl), function(c) {
-  ggplot(mtcars |> filter(cyl == c), aes(wt, mpg)) +
-    geom_point() +
-    labs(title = glue("Cylinders: {c}"))
-})
-saveplot("all_figures.pdf", plots, width = 8, height = 6)
-```
-
-### Environment variables
-
-```r
-library(jutils)
-dotenv(".env")
-db_host <- Sys.getenv("DB_HOST")
-api_key <- Sys.getenv("API_KEY")
-```
-
-### Typical data analysis script
-
-```r
-library(jutils)
-# jutils auto-loads: data.table, dplyr, ggplot2, arrow, patchwork,
-# purrr, tidyr, tibble, fs, glue, here, cli, logger, etc.
-
-# Load data
-df <- import(here("data", "raw", "experiment.csv"), lazy = FALSE)
-
-# Process
-result <- df |>
-  filter(!is.na(value)) |>
-  group_by(group) |>
-  summarise(
-    mean_val = mean(value),
-    sd_val = sd(value),
-    n = n()
-  )
-
-# Plot
-p <- ggplot(result, aes(group, mean_val)) +
-  geom_col() +
-  geom_errorbar(aes(ymin = mean_val - sd_val, ymax = mean_val + sd_val))
-
-# Save
-export(result, here("output", "summary.csv"))
-saveplot(here("output", "figure.pdf"), p, width = 8, height = 6)
 ```
