@@ -1,0 +1,5 @@
+s1_set	gate_applied	n_variants
+Original mgatk	Original mgatk	230
+Original mgatk	scMOCHA	269
+scMOCHA	Original mgatk	164
+scMOCHA	scMOCHA	216

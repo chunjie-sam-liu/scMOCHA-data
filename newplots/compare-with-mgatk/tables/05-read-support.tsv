@@ -1,0 +1,4 @@
+variant_set	median_alt_reads	n_detections
+scMOCHA only	38	81000
+Original mgatk only	9	905
+Both	48	33629

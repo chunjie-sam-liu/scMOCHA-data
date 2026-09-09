@@ -1,0 +1,18 @@
+arm	measured	af_bin	n_variants	fraction
+Original mgatk	all carrier cells	0.01-0.05	60	0.260869565217391
+Original mgatk	all carrier cells	0.05-0.10	38	0.165217391304348
+Original mgatk	all carrier cells	0.20-0.50	21	0.091304347826087
+Original mgatk	all carrier cells	0.10-0.20	26	0.11304347826087
+Original mgatk	all carrier cells	≥0.50	35	0.152173913043478
+Original mgatk	all carrier cells	<0.01	50	0.217391304347826
+scMOCHA variant call	all carrier cells	<0.01	291	0.395380434782609
+scMOCHA variant call	all carrier cells	0.01-0.05	220	0.298913043478261
+scMOCHA variant call	all carrier cells	0.05-0.10	69	0.09375
+scMOCHA variant call	all carrier cells	0.10-0.20	26	0.0353260869565217
+scMOCHA variant call	all carrier cells	0.20-0.50	29	0.0394021739130435
+scMOCHA variant call	all carrier cells	No detected cell	11	0.014945652173913
+scMOCHA variant call	all carrier cells	≥0.50	90	0.122282608695652
+scMOCHA AF>5%	cells at AF >= 0.05 only	0.10-0.20	56	0.259259259259259
+scMOCHA AF>5%	cells at AF >= 0.05 only	0.05-0.10	80	0.37037037037037
+scMOCHA AF>5%	cells at AF >= 0.05 only	≥0.50	63	0.291666666666667
+scMOCHA AF>5%	cells at AF >= 0.05 only	0.20-0.50	17	0.0787037037037037

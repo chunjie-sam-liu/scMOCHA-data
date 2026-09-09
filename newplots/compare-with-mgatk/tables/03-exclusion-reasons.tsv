@@ -1,0 +1,6 @@
+direction	excluded_by	n_variants
+in scMOCHA AF>5%, not in mgatk	strand r only	149
+in scMOCHA AF>5%, not in mgatk	VMR and strand r	17
+in scMOCHA AF>5%, not in mgatk	VMR only	5
+in mgatk, not in scMOCHA AF>5%	< 10 cells at AF >= 0.05	117
+in mgatk, not in scMOCHA AF>5%	< 3 confident cells	68

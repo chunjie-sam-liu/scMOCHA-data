@@ -1,0 +1,2 @@
+test	subset	background_alt_rate	n_passed	n_rejected	median_af_passed	median_af_rejected	location_shift	ci_low	ci_high	p_value
+Wilcoxon rank sum, median error-model carrier AF by mgatk gate call	variants passing the scMOCHA reliability gate	0.000258569111202702	54	215	0.205176767676768	0.0690141202763104	0.0519927913462841	0.0142666085738403	0.10298423637191	0.00294297878261062

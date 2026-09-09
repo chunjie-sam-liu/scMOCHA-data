@@ -1,0 +1,6 @@
+arm_label	n_variants
+Neither arm	445
+scMOCHA variant call only	403
+Original mgatk only	185
+scMOCHA AF>5% only	168
+Both arms	45

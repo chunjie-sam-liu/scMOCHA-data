@@ -1,0 +1,9 @@
+metric	value
+cells_total	7210
+cells_kept_mgatk	6724
+cells_dropped_mgatk	486
+detections_total	127998
+detections_in_dropped_cells	4130
+variants_ge10cells_all_cells	275
+variants_ge10cells_mgatk_cells	261
+variants_lost_by_cell_filter	14

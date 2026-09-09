@@ -1,0 +1,8 @@
+id	stage	original_mgatk	scmocha	direction
+C1	Cell inclusion	mean MT coverage > 10	no cell filter; all barcodes retained	scMOCHA more permissive
+C2	Confident detection in one cell	fwd alt >= 2 and rev alt >= 2	fwd alt >= 2, rev alt >= 2 and fwd + rev alt >= 10	scMOCHA more stringent
+C3	Variant retention	n_cells_conf_detected >= 3	n_cells_conf_detected >= 3 (identical)	same
+C4	Reliability gate	vmr > 0.01 and strand correlation > 0.65	no VMR filter, no strand-correlation filter	different basis
+C5	Cell-by-variant AF matrix	only variants passing C3 are written	a raw matrix with every candidate variant is also written	scMOCHA more permissive
+C6	Reliability gate, scMOCHA side	none beyond C4	mis-alignment and RNA-editing position blacklist, then >= 10 cells at cell AF >= 0.05 with cell depth >= 10	different basis
+C7	Downstream classification	none; mgatk stops at the variant list	homoplasmic / heteroplasmic / somatic from cross-cell-type AF at 0.05 and 0.95, cluster reads >= 10	different question

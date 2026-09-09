@@ -1,0 +1,9 @@
+arm	stage	n
+Original mgatk	S0 candidates	25580
+Original mgatk	S1 confident cells	1247
+Original mgatk	S2 reliability gate	230
+scMOCHA variant call	S0 candidates	25746
+scMOCHA variant call	S1 confident cells	736
+scMOCHA AF>5%	S0 candidates	25746
+scMOCHA AF>5%	S1 confident cells	736
+scMOCHA AF>5%	S2 reliability gate	216
