@@ -7,8 +7,8 @@
 #               each variant with the stage it survives under each rule set,
 #               and extract per-cell depth at candidate variant positions so
 #               the scMOCHA reliability gate can be evaluated downstream.
-#               Usage: pixi run Rscript newplots/compare-with-mgatk/01-load-harmonize.R
-# @VERSION: v0.1.0
+#               Usage: pixi run Rscript newplots/compare-with-mgatk/01-load-harmonize.R --sample=<id>
+# @VERSION: v0.2.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -36,7 +36,22 @@ source(fs::path(
   "config.R"
 ))
 
-paths <- stage_paths()
+# args --------------------------------------------------------------------
+# Parsed after config.R so the error message can list the valid sample ids.
+GetoptLong.options(help_style = "two-column")
+sample <- ""
+
+GetoptLong(
+  "sample=s",
+  "sample id; one of the ids in SAMPLES in config.R"
+)
+
+sample_id <- fn_check_sample(sample)
+rm(sample)
+SAMPLE_LABEL <- fn_sample_label(sample_id)
+log_info("sample {sample_id} ({SAMPLE_LABEL})")
+
+paths <- stage_paths(sample_id)
 inputs <- stage_inputs(paths)
 fs::dir_create(paths$cachedir)
 
@@ -57,16 +72,20 @@ fn_read_stats <- function(file, caller) {
 # The AF matrix header carries an empty first field, so header = TRUE would
 # consume the first barcode as the column name and lose a cell.
 fn_read_af_barcodes <- function(file) {
-  data.table::fread(
+  x <- data.table::fread(
     cmd = glue::glue("zcat {file} | cut -f1"),
     header = FALSE
   )[[1]]
+  x[nzchar(x)]
 }
 
 # Streams the per-cell coverage file through awk so only the positions that
 # carry a candidate variant ever reach R.
-fn_read_coverage_at <- function(file, positions) {
-  posfile <- fs::path(fs::path_expand("~/tmp/cmp-mgatk"), "positions.txt")
+fn_read_coverage_at <- function(file, positions, tag) {
+  posfile <- fs::path(
+    fs::path_expand(fs::path("~/tmp/cmp-mgatk", tag)),
+    "positions.txt"
+  )
   fs::dir_create(fs::path_dir(posfile))
   data.table::fwrite(
     data.table::data.table(pos = sort(unique(positions))),
@@ -97,8 +116,17 @@ fn_read_af_subset <- function(file, variants) {
   hdr <- strsplit(readLines(con, n = 1L), "\t")[[1]]
   close(con)
 
-  idx <- sort(unique(match(variants, hdr)))
-  stopifnot(!anyNA(idx))
+  idx <- match(variants, hdr)
+  absent <- variants[is.na(idx)]
+  if (length(absent) > 0) {
+    log_warn(
+      "{length(absent)} S1 variants absent from the raw AF matrix; ",
+      "treated as having no per-cell AF: ",
+      "{paste(utils::head(absent, 10), collapse = ', ')}"
+    )
+  }
+  idx <- sort(unique(idx[!is.na(idx)]))
+  stopifnot(length(idx) > 0)
 
   data.table::fread(
     cmd = glue::glue(
@@ -198,7 +226,7 @@ cell_depth <- data.table::fread(
   header = FALSE,
   col.names = c("barcode", "mean_coverage")
 )
-cell_depth[, kept_by_mgatk := mean_coverage > CUTOFF_CELL_MEANCOV]
+cell_depth[, meancov_over_cutoff := mean_coverage > CUTOFF_CELL_MEANCOV]
 
 barcodes_scmocha <- fn_read_af_barcodes(inputs$af_scmocha)
 barcodes_mgatk <- fn_read_af_barcodes(inputs$af_mgatk)
@@ -207,8 +235,27 @@ barcodes_mgatk <- fn_read_af_barcodes(inputs$af_mgatk)
 # set comparisons, not row-count comparisons.
 stopifnot(
   setequal(cell_depth$barcode, barcodes_scmocha),
-  setequal(cell_depth[kept_by_mgatk == TRUE, barcode], barcodes_mgatk)
+  all(barcodes_mgatk %in% cell_depth$barcode)
 )
+
+# depthTable rounds mean coverage to two decimals, so recomputing
+# mean_coverage > CUTOFF_CELL_MEANCOV disagrees with mgatk for cells that round
+# to exactly the cutoff. mgatk's own AF matrix is the only unambiguous record
+# of which cells it used, so the kept set is taken from there and the coverage
+# rule is kept only as the reported criterion.
+cell_depth[, kept_by_mgatk := barcode %in% barcodes_mgatk]
+
+disagree <- cell_depth[kept_by_mgatk != meancov_over_cutoff]
+if (nrow(disagree) > 0) {
+  log_warn(
+    "{nrow(disagree)} cells where the rounded coverage rule disagrees with ",
+    "mgatk's own cell set; coverage values ",
+    "{paste(sort(unique(disagree$mean_coverage)), collapse = ', ')}"
+  )
+  stopifnot(
+    all(abs(disagree$mean_coverage - CUTOFF_CELL_MEANCOV) <= 0.01)
+  )
+}
 
 log_info(
   "cells: {nrow(cell_depth)} total, {sum(cell_depth$kept_by_mgatk)} kept by ",
@@ -223,19 +270,30 @@ log_info(
   "{length(positions_needed)} positions"
 )
 
-cell_pos_coverage <- fn_read_coverage_at(inputs$coverage, positions_needed)
+cell_pos_coverage <- fn_read_coverage_at(
+  inputs$coverage,
+  positions_needed,
+  sample_id
+)
 log_info("coverage rows retained: {nrow(cell_pos_coverage)}")
 
-stopifnot(
-  data.table::uniqueN(cell_pos_coverage$position) == length(positions_needed)
-)
+# A position with no coverage row simply has depth 0 in every cell, which
+# fn_detection_long() already handles; it is reported rather than fatal.
+n_pos_found <- data.table::uniqueN(cell_pos_coverage$position)
+if (n_pos_found < length(positions_needed)) {
+  log_warn(
+    "{length(positions_needed) - n_pos_found} of {length(positions_needed)} ",
+    "candidate positions have no coverage row; depth treated as 0 there"
+  )
+}
+stopifnot(n_pos_found > 0)
 
 # The raw matrix is used, not the post-C3 one, so both rule sets' S1 variants
 # are present for every cell.
 cell_af <- fn_read_af_subset(inputs$af_raw, variants_s1)
 stopifnot(
   setequal(cell_af$barcode, cell_depth$barcode),
-  ncol(cell_af) == length(variants_s1) + 1L
+  ncol(cell_af) <= length(variants_s1) + 1L
 )
 log_info(
   "cell AF submatrix: {nrow(cell_af)} cells x {ncol(cell_af) - 1L} variants"

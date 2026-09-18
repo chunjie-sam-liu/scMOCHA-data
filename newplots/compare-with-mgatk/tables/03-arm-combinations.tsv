@@ -1,6 +1,0 @@
-combination	n_variants
-call	403
-call + AF>5%	171
-mgatk + call	117
-mgatk	68
-mgatk + call + AF>5%	45

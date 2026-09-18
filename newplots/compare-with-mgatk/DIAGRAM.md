@@ -1,12 +1,63 @@
 # DIAGRAM: three calling arms, their cutoffs, and their counts
 
-Sample: 7,210 cells, `SAMPLE_LABEL` pending. Every number below is read from
-`newplots/compare-with-mgatk/tables/`, generated 2026-09-09. Regenerate the
+Five samples. Every number below is read from
+`newplots/compare-with-mgatk/tables/`, generated 2026-09-17. Regenerate the
 stage before quoting them.
+
+Sections 2 to 4 are drawn for **GSE181279_GSM5494116_5PPE**, the only sample
+deep enough for original mgatk to return a set at all. Section 1 is the
+cross-sample view.
 
 ---
 
-## 1. The three arms end to end
+## 1. What each arm yields in each sample
+
+```mermaid
+flowchart TB
+    subgraph DEEP["Deep sample: GSE181279 / SC5P-PE / 7,210 cells"]
+        direction LR
+        D1["<b>Original mgatk</b><br/>230"]
+        D2["<b>scMOCHA call</b><br/>736"]
+        D3["<b>scMOCHA AF&gt;5%</b><br/>216"]
+    end
+
+    subgraph SHALLOW["Four shallow samples"]
+        direction TB
+        S1["GSE149689 / SC3Pv3 / 721 cells<br/>mgatk <b>0</b> &middot; call 20 &middot; AF&gt;5% 20"]
+        S2["GSE163314 / SC3Pv2 / 7,949 cells<br/>mgatk <b>0</b> &middot; call 9 &middot; AF&gt;5% 9"]
+        S3["GSE163668 / SC5P-R2 / 191 cells<br/>mgatk <b>0</b> &middot; call 20 &middot; AF&gt;5% 18"]
+        S4["GSE271107 / SC3Pv3 / 8,645 cells<br/>mgatk <b>0</b> &middot; call 2 &middot; AF&gt;5% 0"]
+    end
+
+    CAUSE["<b>Why mgatk returns nothing</b><br/>all 50 mgatk S1 variants in these four<br/>fail strand r &gt; 0.65<br/>highest value observed: <b>0.590</b><br/>45 fail VMR as well, 5 fail strand r alone"]
+
+    SHALLOW --> CAUSE
+
+    classDef mg fill:#F7DCC0,stroke:#E18727,stroke-width:2px
+    classDef sc fill:#CCE0EE,stroke:#0072B5,stroke-width:2px
+    classDef sc5 fill:#B3CBDB,stroke:#044A77,stroke-width:2px
+    classDef zero fill:#EFEFEF,stroke:#999,stroke-width:2px
+    classDef cause fill:#FFFFFF,stroke:#BC3C29,stroke-width:2px
+
+    class D1 mg
+    class D2 sc
+    class D3 sc5
+    class S1,S2,S3,S4 zero
+    class CAUSE cause
+```
+
+This is the five-sample claim: the gate the editor is describing does not bias
+the output in shallow data, it empties it. `figures/cross-sample/07a-arm-yield`
+is the plotted version.
+
+**What this does not show.** It does not explain *why* the floor collapses in
+shallow data. Spearman rho between strand correlation and per-variant coverage
+is -0.013, P = 0.66 in the only sample large enough to test it, so no mechanism
+is claimed. See `M4` in the campaign decision log.
+
+---
+
+## 2. The three arms end to end (GSE181279)
 
 ```mermaid
 flowchart TB
@@ -57,7 +108,7 @@ Arm 3 is a strict subset of arm 2: the AF&gt;5% rule is applied downstream in
 
 ---
 
-## 2. Where the criteria differ
+## 3. Where the criteria differ
 
 ```mermaid
 flowchart LR
@@ -111,7 +162,7 @@ flowchart LR
 
 ---
 
-## 3. Why the two reported sets differ
+## 4. Why the two reported sets differ (GSE181279)
 
 Comparing arm 1 (230) against arm 3 (216): 45 shared, 185 mgatk only,
 171 scMOCHA AF&gt;5% only.
@@ -151,15 +202,18 @@ Read this as the summary of the whole stage:
 
 ---
 
-## 4. Notes
+## 5. Notes
 
-- Every count comes from `03-funnel-counts.tsv`, `03-exclusion-reasons.tsv`,
-  `02-cell-inclusion.tsv` and `05-read-support.tsv`.
+- Cross-sample counts come from `tables/cross-sample/07-sample-overview.tsv`,
+  `07-arm-yield.tsv`, `07-exclusion-reasons.tsv` and `07-strand-support.tsv`.
+- Per-sample counts come from `tables/GSE181279_GSM5494116_5PPE/`:
+  `03-funnel-counts.tsv`, `03-exclusion-reasons.tsv`, `02-cell-inclusion.tsv`
+  and `05-read-support.tsv`.
 - Exclusion reasons are assigned by first failed criterion in each arm's own
   order, so each excluded variant is attributed to exactly one cutoff. The
   order is set in `fn_exclusion_*` in `config.R`.
 - The mgatk S1 -> S2 breakdown (628 / 319 / 70) counts all 1,247 mgatk S1
-  variants, not only those scMOCHA also reports.
+  variants in GSE181279, not only those scMOCHA also reports.
 - Colours match `color_arm` in `high-res/00-colors.R`: mgatk `#E18727`,
   scMOCHA call `#0072B5`, scMOCHA AF&gt;5% `#044A77`. The fills above are
   lightened versions for readability behind black text.

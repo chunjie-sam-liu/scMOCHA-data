@@ -8,8 +8,8 @@
 #               panel c, minimum detectable AF per cell under each confident
 #               detection rule; panel d, variant detections lost with the
 #               cells mgatk discards.
-#               Usage: pixi run Rscript newplots/compare-with-mgatk/02-cell-inclusion.R
-# @VERSION: v0.1.0
+#               Usage: pixi run Rscript newplots/compare-with-mgatk/02-cell-inclusion.R --sample=<id>
+# @VERSION: v0.2.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -38,7 +38,22 @@ stagedir <- fs::path(
 )
 source(fs::path(stagedir, "config.R"))
 
-paths <- stage_paths()
+# args --------------------------------------------------------------------
+# Parsed after config.R so the error message can list the valid sample ids.
+GetoptLong.options(help_style = "two-column")
+sample <- ""
+
+GetoptLong(
+  "sample=s",
+  "sample id; one of the ids in SAMPLES in config.R"
+)
+
+sample_id <- fn_check_sample(sample)
+rm(sample)
+SAMPLE_LABEL <- fn_sample_label(sample_id)
+log_info("sample {sample_id} ({SAMPLE_LABEL})")
+
+paths <- stage_paths(sample_id)
 source(paths$colorfile)
 fs::dir_create(c(paths$figdir, paths$tabdir))
 
@@ -277,7 +292,7 @@ d_out <- data.table::data.table(
     n_var_lost
   )
 )
-export(d_out, as.character(fs::path(paths$tabdir, "02-cell-inclusion.tsv")))
+fn_export_tab(d_out, paths, "02-cell-inclusion.tsv", sample_id)
 
 saveplot(
   as.character(fs::path(paths$figdir, "02a-cell-coverage.pdf")),

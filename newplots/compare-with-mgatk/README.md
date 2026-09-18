@@ -1,52 +1,88 @@
 # Reading this stage
 
 A criterion-by-criterion comparison of three mitochondrial variant-calling
-arms on one sample, built to answer the Cell Metabolism editorial concern in
-`EDITOR.md`:
+arms across **five samples**, built to answer the Cell Metabolism editorial
+concern in `EDITOR.md`:
 
 > "...concerns regarding the reliance on mgatk, which is biased toward
 > detecting higher-heteroplasmy mutations ... and missing many mutations that
 > would be tolerated at lower heteroplasmy."
 
 Start here, then open `DIAGRAM.md` for the Mermaid version of the three arms.
-`AGENTS.md` says how to run the code, `PLAN.md` the design intent,
-`PROGRESS.md` the current state, `DECISION.md` why each choice was made.
-
-Sample: 7,210 cells, median per-cell MT coverage 38.9. Identity still pending;
-figure subtitles read `SAMPLE_LABEL` from `config.R` and currently say
-`<pending>`.
+`AGENTS.md` says how to run the code. The active campaign is
+`2026-09-17-multi-sample-comparison`: read its `.PROGRESS.md`, then
+`.DECISION.md`, then `.PLAN.md`. The stage-level `PLAN.md` and `DECISION.md`
+hold the original single-sample design and the criterion audit.
 
 ---
 
 ## 1. The one-paragraph answer
 
 The manuscript does not use original mgatk. It uses a modified caller whose
-criteria differ at four points. Two of them bear on the editor's concern, and
-one runs the other way.
+criteria differ at four points, and the difference the editor is describing is
+mgatk's post-hoc gate, `vmr > 0.01 AND strand correlation > 0.65`. **scMOCHA
+does not apply it at all.**
 
-The filter the editor is describing is mgatk's post-hoc gate,
-`vmr > 0.01 AND strand correlation > 0.65`. **scMOCHA does not apply it at
-all.** Of the 171 variants that scMOCHA AF>5% reports and mgatk does not,
-**149 (87%) are lost to the strand-correlation cutoff alone** - not to VMR, not
-to read depth. Among variants both pipelines consider reliable, the ones
-mgatk's gate discards sit at median carrier heteroplasmy 0.069 against 0.205
-for the ones it keeps (Wilcoxon P = 0.0029).
+Across five samples that gate does not merely bias the output, it eliminates
+it: **original mgatk retains zero variants in four of the five samples**, while
+scMOCHA reports 2 to 736. In the one deep sample where mgatk does return a set,
+the variants its gate discards sit at median carrier heteroplasmy 0.069 against
+0.205 for the ones it keeps (Wilcoxon P = 0.0029), and of the 171 variants
+scMOCHA AF>5% reports and mgatk does not, **149 (87%) are lost to the
+strand-correlation cutoff alone**.
 
 Running the other way: scMOCHA requires 10 alt reads in a cell where mgatk
-requires 4, which is why scMOCHA's call set is smaller at the S1 stage
-(736 vs 1,247). The variants only mgatk reports carry a median of **9** alt
-reads per carrier cell against **48** for the shared ones, so what that
-criterion removes is weak read support, not low heteroplasmy.
+requires 4, which is why scMOCHA's call set is smaller at the S1 stage in the
+deep sample (736 vs 1,247). The variants only mgatk reports there carry a
+median of **9** alt reads per carrier cell against **48** for the shared ones,
+so what that criterion removes is weak read support, not low heteroplasmy.
 
 ---
 
-## 2. The three arms
+## 2. The five samples
 
-| Arm | What it is | Variants |
-| --- | --- | --- |
-| **Original mgatk** | cell filter, then the VMR/strand gate | **230** |
-| **scMOCHA variant call** | what the caller emits; no AF filter, no VMR, no strand filter | **736** |
-| **scMOCHA AF>5%** | the call plus the downstream gate in `src/06.1-collect-variants-new.R` | **216** |
+Read from `tables/cross-sample/07-sample-overview.tsv`.
+
+| Sample | Chemistry | Cells | Dropped by mgatk | S1 scMOCHA | S1 mgatk | **mgatk final** | scMOCHA call | scMOCHA AF>5% |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| GSE149689_GSM4509019_3PV3 | SC3Pv3 | 721 | 389 (54%) | 20 | 19 | **0** | 20 | 20 |
+| GSE163314_GSM4976997_3PV2 | SC3Pv2 | 7,949 | 7,673 (97%) | 9 | 4 | **0** | 9 | 9 |
+| GSE163668_GSM4995445_5PR2 | SC5P-R2 | 191 | 21 (11%) | 20 | 21 | **0** | 20 | 18 |
+| GSE181279_GSM5494116_5PPE | SC5P-PE | 7,210 | 486 (6.7%) | 736 | 1,247 | **230** | 736 | 216 |
+| GSE271107_GSM8369876_3PV3 | SC3Pv3 | 8,645 | 7,155 (83%) | 2 | 6 | **0** | 2 | 0 |
+
+GSE181279 is the only deep sample and the only one that can carry a
+distribution comparison. The other four are shallow 10x libraries where 11% to
+97% of cells fail mgatk's own coverage filter. **Treat the two groups as
+answering different questions** - see section 8.
+
+### Why mgatk returns nothing in four samples
+
+Not missing data. Every one of the 50 mgatk S1 variants in those four samples
+fails the strand-correlation floor:
+
+| Sample | mgatk S1 | median strand r | max strand r | reaching r > 0.65 |
+| --- | ---: | ---: | ---: | ---: |
+| GSE149689 | 19 | 0.078 | 0.569 | 0 |
+| GSE163314 | 4 | -0.106 | 0.006 | 0 |
+| GSE163668 | 21 | 0.007 | 0.590 | 0 |
+| GSE181279 | 1,247 | 0.229 | 1.000 | 300 |
+| GSE271107 | 6 | -0.206 | 0.048 | 0 |
+
+The highest strand correlation seen anywhere in the four shallow samples is
+**0.590**, and many values are negative. Both `vmr` and `strand_correlation`
+are populated, so this is a real rejection, not an `NA` artefact. Of those 50
+variants, 45 fail **both** cutoffs and 5 fail strand correlation alone.
+
+---
+
+## 3. The three arms
+
+| Arm | What it is |
+| --- | --- |
+| **Original mgatk** | cell filter, then the VMR/strand gate |
+| **scMOCHA variant call** | what the caller emits; no AF filter, no VMR, no strand filter |
+| **scMOCHA AF>5%** | the call plus the downstream gate in `src/06.1-collect-variants-new.R` |
 
 Arm 3 is a strict subset of arm 2. The 5% AF rule belongs to the downstream
 analysis, not to variant calling, which is why it is a separate arm.
@@ -55,14 +91,52 @@ analysis, not to variant calling, which is why it is a separate arm.
 
 | Step | Original mgatk | scMOCHA variant call | scMOCHA AF>5% |
 | --- | --- | --- | --- |
-| Cell inclusion | mean MT cov > 10 (6,724 / 7,210) | none (7,210) | none |
+| Cell inclusion | mean MT cov > 10 | none | none |
 | Confident cell | fwd >= 2 AND rev >= 2 | plus fwd+rev >= 10 | same |
 | Variant retention | n_cells_conf >= 3 | same | same |
 | Reliability gate | vmr > 0.01 AND strand r > 0.65 | **none** | blacklist, then >= 10 cells at AF >= 0.05 with depth >= 10 |
 
 ---
 
-## 3. How heteroplasmy is measured, and why it matters
+## 4. Cross-sample figures
+
+5 PDFs in `figures/cross-sample/`. **These carry the five-sample claim.**
+
+| Figure | Shows | Read it as |
+| --- | --- | --- |
+| **`07a-arm-yield`** | variants retained per arm per sample | the headline: mgatk 0 in four of five samples, scMOCHA 2 to 736 |
+| `07b-cell-filter` | fraction of cells mgatk's coverage filter discards, per sample | 6.7% in the deep sample, 54% to 97% in three of the four shallow ones |
+| `07c-strand-correlation` | distribution of mgatk strand correlation per sample, floor drawn | **descriptive only** - see the caveat below |
+| `07d-exclusion-reasons` | which mgatk cutoff rejects each S1 variant, per sample | strand correlation is implicated in every rejection in all five samples |
+| **`07e-gate-rejected-af`** | carrier AF of gate-rejected vs gate-passed variants, per sample | testable in GSE181279 only; the other four have no passed group |
+
+**The `07c` caveat.** The plan expected this panel to show the strand floor
+tracking read depth, which would explain the bias mechanically. **The data do
+not support that.** In the only sample large enough to test it, Spearman rho
+between strand correlation and per-variant coverage is **-0.013, P = 0.66**
+(`07-strand-support.tsv`). The two small samples where rho is positive have
+n = 19 and n = 21. So `07c` documents *that* the floor rejects everything in
+shallow data; it does **not** establish *why*. Do not quote it as a mechanism.
+See `M4` in the campaign decision log.
+
+**The `07e` caveat.** Four samples have zero variants passing mgatk's gate, so
+the split has one level and the Wilcoxon is undefined. Those panels show the
+rejected group only and are labelled as having no comparison group. There is
+**no pooled or combined test across samples** - with one sample contributing
+both groups, a stratified test collapses to that sample and a combined p-value
+would be one p-value wearing a meta-analysis label (`M2`).
+
+| Sample | Passed | Rejected | Median AF passed | Median AF rejected | P |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| GSE149689 | 0 | 20 | - | 1.000 | not testable |
+| GSE163314 | 0 | 11 | - | 1.000 | not testable |
+| GSE163668 | 0 | 18 | - | 1.000 | not testable |
+| **GSE181279** | 54 | 215 | **0.205** | **0.069** | **0.0029** |
+| GSE271107 | 0 | 0 | - | - | not testable |
+
+---
+
+## 5. How heteroplasmy is measured, and why it matters
 
 The single thing most likely to be misread. Every measure below is a "median
 AF across the cells carrying the variant". They differ only in **which cells
@@ -70,7 +144,7 @@ count as carriers**, and that choice changes the answer.
 
 | Column | Carrier definition | Status |
 | --- | --- | --- |
-| `mean` (either caller) | all 7,210 cells | measures **prevalence**, not heteroplasmy |
+| `mean` (either caller) | all cells | measures **prevalence**, not heteroplasmy |
 | `af_gate_*` | cell AF >= 0.05 and depth >= 10 | **censored at 0.05** |
 | `af_loose_*` | depth >= 10 and >= 2 alt reads | **background-dominated** |
 | `af_carrier_*` | alt count inconsistent with the background error rate | **adopted** |
@@ -83,18 +157,24 @@ carrier definition. Using it for an AF distribution deletes the region under
 study.
 
 `af_loose_*` removes the AF floor but replaces it with one so weak that
-background reads take over. The measured background alt rate is **0.026%**, so
-two alt reads in a cell of depth 1,000 is expected by chance. Variant
-`1801A>G` has 19 genuine carriers above 5% and 876 background cells; its
-`af_loose_median` is 0.0017, which is the background rate, not the variant.
+background reads take over. In GSE181279 the measured background alt rate is
+**0.026%**, so two alt reads in a cell of depth 1,000 is expected by chance.
+Variant `1801A>G` has 19 genuine carriers above 5% and 876 background cells;
+its `af_loose_median` is 0.0017, which is the background rate, not the variant.
 
 `af_carrier_*` keeps a cell when its alt count is inconsistent with that
 background rate under a binomial test, Bonferroni-corrected across all
-9,005,290 cell-by-variant observations. The threshold scales with depth, so it
-excludes background without imposing an AF floor.
+cell-by-variant observations (9,005,290 of them in GSE181279). The threshold
+scales with depth, so it excludes background without imposing an AF floor.
+
+**A shallow sample can have no qualifying background cell at all**, which makes
+the rate `0 / 0`. It is floored at one alt read over all observed depth rather
+than allowed to reach 1, which would make every cell a non-carrier and silently
+delete the sample from the gate table. This was a real defect, caught on
+GSE163314; see `M5` in the campaign decision log.
 
 **`04f-measure-sensitivity` reports the headline test under all four
-definitions**, so the choice is auditable rather than asserted:
+definitions** (GSE181279), so the choice is auditable rather than asserted:
 
 | Carrier definition | median rejected | median passed | P |
 | --- | --- | --- | --- |
@@ -106,7 +186,7 @@ definitions**, so the choice is auditable rather than asserted:
 The direction is identical in all four. Only the censored measure fails to
 resolve it, and it fails for a structural reason rather than a biological one.
 Both wrong measures were adopted first and both returned a clean null; see
-`D12` and `D17` in `DECISION.md`.
+`D12` and `D17` in the stage `DECISION.md`.
 
 ### Why an AF>5% variant can still have a carrier median below 0.05
 
@@ -120,9 +200,16 @@ this measure; all six have a carrier maximum between 0.09 and 0.53.
 
 ---
 
-## 4. Figure guide
+## 6. Per-sample figures
 
-20 PDFs in `figures/`. Panel letters follow the step that produced them.
+24 PDFs in `figures/<sample_id>/`, the same set for every sample. Panel letters
+follow the step that produced them. **Every number quoted below is GSE181279**,
+the only sample where these panels are well populated; the same panels exist
+for the other four and are mostly near-empty by construction.
+
+In the four shallow samples `03b`, `03d`, `03e` and `04e` are drawn with an
+explicit "no variants in this arm" annotation rather than left blank, so a
+missing comparison is distinguishable from a failed run.
 
 ### 02 - what the cell filter costs (criteria C1, C2)
 
@@ -191,23 +278,55 @@ them. That is what makes this plane readable.
 | **`05d-arm-in-mgatk-plane`** | mgatk's own coordinates, coloured by which arm reports the variant | orange sits in the upper-right quadrant by construction; the informative points are the **dark blue scMOCHA AF>5% variants to the left of the strand r = 0.65 line but above the VMR line** - high VMR, discarded purely for strand correlation |
 | `05e-arm-plane-facets` | `05d` split one facet per arm, all variants repeated in grey | the same, easier to compare densities |
 | `05c-read-support` | alt reads per carrier cell by variant class | mgatk-only 9, scMOCHA-only 38, shared 48 |
+| **`05f-arm-in-scmocha-plane`** | the mirror of `05d`: **scMOCHA's** decision plane, x = cells at AF >= 0.05 with depth >= 10, y = median alt reads per carrying cell | where **mgatk's** variants land under scMOCHA's criteria: **176 of the 185 mgatk-only variants fall short of the 10-cell gate** |
+| `05g-scmocha-plane-facets` | `05f` split one facet per arm, all variants repeated in grey | the readable version of `05f`; see the caveat below |
 
 `05d` is the figure to put next to `03d`: one shows the count, the other shows
 the geometry behind it.
 
 `05d` and `05e` drop variants with no mgatk `vmr`, so "scMOCHA AF>5% only" is
 168 there against 171 in `03b`. The three missing variants are ones mgatk never
-proposed as candidates.
+proposed as candidates. `05f` and `05g` use no mgatk coordinate, so all 171 are
+present there.
+
+**`05f` and `05g` are the diagnostic pair.** `05d` asks where scMOCHA's
+variants sit in mgatk's plane; `05f` asks the reverse, which is the question to
+put to anyone who wants to know what scMOCHA's criteria do to mgatk's output.
+Arm counts reconcile with `03b` exactly: 45 both arms, 185 mgatk only (173
+short on both axes, 9 on read support alone, 3 on the cell gate alone), and 171
+AF>5% only, every one of them right of the cell gate by construction.
+
+**Read the y axis carefully.** The x axis *is* scMOCHA's reliability gate, so
+that vertical line is a real cutoff. The y axis is only a **summary** of the
+read support the per-cell rule acts on - that rule asks for >= 3 individual
+cells each at >= 10 alt reads, which a median cannot express. The horizontal
+line is orientation, not a criterion; `03e` carries the attribution. `05g`
+exists because the median puts most low-support variants on y = 1 or 2, where
+the arms occlude each other in `05f`, and jittering a median would move points
+off their own value.
 
 ---
 
-## 5. Tables
+## 7. Tables
 
-13 files in `tables/`. `06-compare-with-mgatk.xlsx` collects all of them into
-13 sheets and is the one to send out; `00_Criteria` and `01_Definitions` make
-it self-contained.
+**14 per sample** in `tables/<sample_id>/`, **7 cross-sample** in
+`tables/cross-sample/`. Every table carries a leading `sample` column.
 
-| File | Contents |
+`tables/cross-sample/06-compare-with-mgatk.xlsx` collects all of them into
+**23 sheets** and is the one to send out. `00_Samples`, `01_Criteria` and
+`02_Definitions` make it self-contained.
+
+| Cross-sample file | Contents |
+| --- | --- |
+| `07-sample-overview.tsv` | the registry plus every headline count per sample |
+| `07-arm-yield.tsv` | variants retained per arm per sample |
+| `07-cell-filter.tsv` | cells, detections and variants lost to the cell filter |
+| `07-strand-support.tsv` | strand-correlation summary and the rho that failed to show a mechanism |
+| `07-exclusion-reasons.tsv` | which mgatk cutoff rejects each S1 variant |
+| `07-gate-test.tsv` | the gate test per sample, with a `testable` flag |
+| `06-criteria-comparison.tsv` | the criterion table, machine-readable |
+
+| Per-sample file | Contents |
 | --- | --- |
 | `02-cell-inclusion.tsv` | cell counts, detections, variants lost to the cell filter |
 | `03-funnel-counts.tsv` | the three-arm funnel |
@@ -221,38 +340,53 @@ it self-contained.
 | `04-measure-sensitivity.tsv` | the same test under four carrier definitions |
 | `05-vmr-strand-rejected.tsv` | gate outcome by AF bin |
 | `05-arm-in-mgatk-plane.tsv` | arm counts in `05d` |
+| `05-arm-in-scmocha-plane.tsv` | arm counts in `05f`, split by which scMOCHA axis the variant clears |
 | `05-read-support.tsv` | median alt reads per carrier cell |
-| `06-criteria-comparison.tsv` | the criterion table, machine-readable |
 
 `03-variant-membership.tsv` is the lookup table: to ask why one specific
 variant appears in one arm and not another, find it there.
 
 ---
 
-## 6. What this stage does not claim
+## 8. What this stage does not claim
 
 - **No sensitivity, recall, or false-negative rate.** There is no orthogonal
   truth set - no matched bulk mtDNA-seq, no simulation - so every result is
   criterion-to-criterion on identical reads. Any recall number would use one
-  caller as a stand-in for truth, which is circular.
-- **One sample.** The editor's criticism is about the whole resource.
-  P = 0.0029 is stable across carrier definitions but rests on a single sample;
-  treat it as a demonstration of direction, not as an established effect size.
+  caller as a stand-in for truth, which is circular (`D4`).
+- **No mechanism for the strand floor.** rho = -0.013, P = 0.66 in the only
+  sample large enough to test it, so `07c` is descriptive only (`M4`).
+- **No pooled or combined test across samples.** Four of the five have no
+  comparison group, so a stratified test collapses to GSE181279 (`M2`).
+- **The four shallow samples do not answer the editor's question.** They answer
+  a simpler and different one: original mgatk returns nothing at all on them.
+  Do not present the two results as the same result.
+- **P = 0.0029 rests on one sample.** Stable across carrier definitions, but
+  treat it as a demonstration of direction, not an established effect size.
 - **Neither caller was re-run.** Both output sets already existed and came from
   the same allele-count matrices, so the two differ only in filtering logic.
+  The archives come from Ting; the pipeline versions and written confirmation
+  that both arms used identical allele counts in all five samples are still
+  outstanding (`DATA.md`, Unknowns).
 
 ---
 
-## 7. Rebuilding
+## 9. Rebuilding
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
-for s in 01-load-harmonize 02-cell-inclusion 03-variant-funnel-overlap \
-         04-heteroplasmy-spectrum 05-vmr-strand 06-summary-workbook; do
-  pixi run Rscript "newplots/compare-with-mgatk/${s}.R" || break
-done
+bash newplots/compare-with-mgatk/run-all.sh
 ```
 
-Order matters: 02-05 read step 01's cache, 04 and 05 read step 03's, and 06
-reads the `.tsv` files the others wrote. The whole stage takes about a minute.
-Per-step contracts are in the paired `NN-*.md` files.
+That extracts the archives if they are not already extracted, runs steps 01 to
+05 for each of the five samples, then `07-cross-sample.R` and
+`06-summary-workbook.R`. To rebuild one sample:
+
+```bash
+pixi run Rscript newplots/compare-with-mgatk/01-load-harmonize.R \
+  --sample=GSE181279_GSM5494116_5PPE
+```
+
+Order matters: 02-05 read step 01's cache, 04 and 05 read step 03's, 07 reads
+the per-sample tables, and 06 must run last. Per-step contracts are in the
+paired `NN-*.md` files.

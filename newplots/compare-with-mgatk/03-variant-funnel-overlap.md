@@ -41,48 +41,77 @@ not arbitrarily assigned to one.
 
 ## Inputs
 
-- `${ISILON_BASE}/compare-with-mgatk/derived/01-variant-joined.qs`
-- `${ISILON_BASE}/compare-with-mgatk/derived/01-cell-af-s1.qs`
-- `${ISILON_BASE}/compare-with-mgatk/derived/01-cell-pos-coverage.qs`
+All under `${ISILON_BASE}/compare-with-mgatk/derived/<sample_id>`:
+
+- `01-variant-joined.qs`
+- `01-cell-af-s1.qs`
+- `01-cell-pos-coverage.qs`
 
 ## Outputs
 
-- `newplots/compare-with-mgatk/figures/03a-variant-funnel.pdf`
-- `newplots/compare-with-mgatk/figures/03b-variant-overlap.pdf`
-- `newplots/compare-with-mgatk/figures/03c-gate-crossapplied.pdf`
-- `newplots/compare-with-mgatk/figures/03d-excluded-from-mgatk.pdf`
-- `newplots/compare-with-mgatk/figures/03e-excluded-from-scmocha-af5.pdf`
-- `newplots/compare-with-mgatk/figures/03f-arm-combinations.pdf`
-- `newplots/compare-with-mgatk/tables/03-funnel-counts.tsv`
-- `newplots/compare-with-mgatk/tables/03-gate-crossapplied.tsv`
-- `newplots/compare-with-mgatk/tables/03-exclusion-reasons.tsv`
-- `newplots/compare-with-mgatk/tables/03-arm-combinations.tsv`
-- `newplots/compare-with-mgatk/tables/03-variant-membership.tsv`
-- `${ISILON_BASE}/compare-with-mgatk/derived/03-variant-gated.qs`
+Figures in `newplots/compare-with-mgatk/figures/<sample_id>/`:
+
+- `03a-variant-funnel.pdf`
+- `03b-variant-overlap.pdf`
+- `03c-gate-crossapplied.pdf`
+- `03d-excluded-from-mgatk.pdf`
+- `03e-excluded-from-scmocha-af5.pdf`
+- `03f-arm-combinations.pdf`
+
+Tables in `newplots/compare-with-mgatk/tables/<sample_id>/`, each with
+`sample` as its first column:
+
+- `03-funnel-counts.tsv`
+- `03-gate-crossapplied.tsv`
+- `03-exclusion-reasons.tsv`
+- `03-arm-combinations.tsv`
+- `03-variant-membership.tsv`
+
+Cache: `${ISILON_BASE}/compare-with-mgatk/derived/<sample_id>/03-variant-gated.qs`.
+Steps 04 and 05 read it for this sample, and step 07 reads all five.
 
 ## Run
 
 ```bash
 cd "$(git rev-parse --show-toplevel)"
-pixi run Rscript newplots/compare-with-mgatk/03-variant-funnel-overlap.R
+pixi run Rscript newplots/compare-with-mgatk/03-variant-funnel-overlap.R --sample=GSE181279_GSM5494116_5PPE
 ```
+
+`--sample` is required and must be one of the `sample_id` values in `SAMPLES`
+in `config.R`.
 
 ## Verify
 
 ```bash
-cat newplots/compare-with-mgatk/tables/03-funnel-counts.tsv
-cat newplots/compare-with-mgatk/tables/03-exclusion-reasons.tsv
-cat newplots/compare-with-mgatk/tables/03-arm-combinations.tsv
+sample=GSE181279_GSM5494116_5PPE
+cat newplots/compare-with-mgatk/tables/"${sample}"/03-funnel-counts.tsv
+cat newplots/compare-with-mgatk/tables/"${sample}"/03-exclusion-reasons.tsv
+cat newplots/compare-with-mgatk/tables/"${sample}"/03-arm-combinations.tsv
 ```
 
-Expected arms: mgatk 25,580 -> 1,247 -> 230; scMOCHA call 25,746 -> 736;
-scMOCHA AF>5% 25,746 -> 736 -> 216. Arm 1 against arm 3: 45 shared, 185 mgatk
-only, 171 AF>5% only. Of those 171, **149 (87%) fail strand correlation
-alone**; of the 185, 117 fail the 10-cell rule and 68 fail the 10-alt-read
-rule.
+Expected arms **for GSE181279_GSM5494116_5PPE**: mgatk 25,580 -> 1,247 -> 230;
+scMOCHA call 25,746 -> 736; scMOCHA AF>5% 25,746 -> 736 -> 216. Arm 1 against
+arm 3: 45 shared, 185 mgatk only, 171 AF>5% only. Of those 171, **149 (87%)
+fail strand correlation alone**; of the 185, 117 fail the 10-cell rule and 68
+fail the 10-alt-read rule.
+
+In the other four samples the original-mgatk arm ends at **zero**, so
+`03-exclusion-reasons.tsv` there attributes every mgatk S1 variant to a failed
+cutoff and no row is `Retained`. Retained counts per sample, mgatk / scMOCHA
+call / scMOCHA AF>5%, in registry order: 0 / 20 / 20, 0 / 9 / 9, 0 / 20 / 18,
+230 / 736 / 216, 0 / 2 / 0.
 
 ## Notes
 
-The scMOCHA gate is evaluated on **all 7,210 cells for every arm**, so panel
-03c isolates the gate. Folding the cell filter in as well would conflate C1
-with C4/C6; C1 is quantified on its own in step 02.
+The scMOCHA gate is evaluated on **all cells of the sample for every arm**, so
+panel 03c isolates the gate. Folding the cell filter in as well would conflate
+C1 with C4/C6; C1 is quantified on its own in step 02.
+
+Four of the five samples have an **empty original-mgatk arm**. Every panel
+that groups or tests here goes through `fn_or_empty()`, so an empty arm is
+drawn as a panel that states why it is empty rather than skipped - a missing
+figure reads as a failed run, while the zero is the result.
+
+The 03a funnel uses `scales::transform_pseudo_log(base = 10)` rather than a
+log scale. A count of zero on a log scale drops the bar and its label
+silently, and in four samples that zero is the headline.

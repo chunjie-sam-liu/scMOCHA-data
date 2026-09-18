@@ -3,11 +3,11 @@
 # @AUTHOR: Chun-Jie Liu
 # @CONTACT: chunjie.sam.liu.at.gmail.com
 # @DATE: 2026-09-09
-# @DESCRIPTION: Assemble every table this stage produced into one styled
-#               workbook for the response letter, plus a rendered criterion
-#               comparison table.
+# @DESCRIPTION: Assemble every table this stage produced, for every sample,
+#               into one styled workbook for the response letter, plus a
+#               rendered criterion comparison table. Runs after 07.
 #               Usage: pixi run Rscript newplots/compare-with-mgatk/06-summary-workbook.R
-# @VERSION: v0.1.0
+# @VERSION: v0.2.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -132,28 +132,69 @@ definitions <- data.table::data.table(
 read_tab <- function(name) {
   f <- fs::path(paths$tabdir, name)
   if (!fs::file_exists(f)) {
-    log_warn("missing table, sheet skipped: {f}")
+    log_warn("missing cross-sample table, sheet skipped: {f}")
     return(NULL)
   }
   data.table::as.data.table(import(as.character(f)))
 }
 
+# One sheet per topic with a sample column, rather than one workbook per
+# sample: five workbooks of the same 15 sheets would not be opened.
+read_sample_tab <- function(name) {
+  parts <- lapply(SAMPLE_IDS, function(s) {
+    f <- fs::path(stage_paths(s)$tabdir, name)
+    if (!fs::file_exists(f)) {
+      log_warn("missing table for {s}, sample omitted from sheet: {name}")
+      return(NULL)
+    }
+    d <- data.table::as.data.table(import(as.character(f)))
+    # A header-only file reads back with every column typed logical, which
+    # collides with the other samples on rbind. Those samples contribute no
+    # rows anyway; the zero itself is recorded in the count tables.
+    if (nrow(d) == 0L) {
+      log_info("empty table for {s}, no rows contributed to sheet: {name}")
+      return(NULL)
+    }
+    d[, sample := as.character(sample)]
+    d[]
+  })
+  parts <- parts[!vapply(parts, is.null, logical(1))]
+  if (length(parts) == 0L) {
+    return(NULL)
+  }
+  # A column that is whole-numbered in a shallow sample and fractional in a
+  # deep one comes back with a different class from each file.
+  data.table::rbindlist(parts, fill = TRUE, ignore.attr = TRUE)
+}
+
 sheets <- list(
-  "00_Criteria" = criteria,
-  "01_Definitions" = definitions,
-  "02_Cell_inclusion" = read_tab("02-cell-inclusion.tsv"),
-  "03_Funnel_counts" = read_tab("03-funnel-counts.tsv"),
-  "04_Gate_crossapplied" = read_tab("03-gate-crossapplied.tsv"),
-  "05_Exclusion_reasons" = read_tab("03-exclusion-reasons.tsv"),
-  "06_Arm_combinations" = read_tab("03-arm-combinations.tsv"),
-  "07_AF_bins" = read_tab("04-af-bins.tsv"),
-  "08_AF_bins_own_definition" = read_tab("04-af-bins-own-definition.tsv"),
-  "09_Gate_test" = read_tab("04-tests.tsv"),
-  "10_Measure_sensitivity" = read_tab("04-measure-sensitivity.tsv"),
-  "11_VMR_strand_rejected" = read_tab("05-vmr-strand-rejected.tsv"),
-  "12_Arm_in_mgatk_plane" = read_tab("05-arm-in-mgatk-plane.tsv"),
-  "13_Read_support" = read_tab("05-read-support.tsv"),
-  "14_Variant_membership" = read_tab("03-variant-membership.tsv")
+  "00_Samples" = SAMPLES,
+  "01_Criteria" = criteria,
+  "02_Definitions" = definitions,
+  "03_Overview" = read_tab("07-sample-overview.tsv"),
+  "04_Arm_yield" = read_tab("07-arm-yield.tsv"),
+  "05_Cell_filter" = read_tab("07-cell-filter.tsv"),
+  "06_Strand_correlation" = read_tab("07-strand-support.tsv"),
+  "07_Exclusion_pooled" = read_tab("07-exclusion-reasons.tsv"),
+  "08_Gate_test_per_sample" = read_tab("07-gate-test.tsv"),
+  "09_Cell_inclusion" = read_sample_tab("02-cell-inclusion.tsv"),
+  "10_Funnel_counts" = read_sample_tab("03-funnel-counts.tsv"),
+  "11_Gate_crossapplied" = read_sample_tab("03-gate-crossapplied.tsv"),
+  "12_Exclusion_reasons" = read_sample_tab("03-exclusion-reasons.tsv"),
+  "13_Arm_combinations" = read_sample_tab("03-arm-combinations.tsv"),
+  "14_AF_bins" = read_sample_tab("04-af-bins.tsv"),
+  "15_AF_bins_own_definition" = read_sample_tab(
+    "04-af-bins-own-definition.tsv"
+  ),
+  "16_Gate_test" = read_sample_tab("04-tests.tsv"),
+  "17_Measure_sensitivity" = read_sample_tab("04-measure-sensitivity.tsv"),
+  "18_VMR_strand_rejected" = read_sample_tab("05-vmr-strand-rejected.tsv"),
+  "19_Arm_in_mgatk_plane" = read_sample_tab("05-arm-in-mgatk-plane.tsv"),
+  "20_Arm_in_scmocha_plane" = read_sample_tab(
+    "05-arm-in-scmocha-plane.tsv"
+  ),
+  "21_Read_support" = read_sample_tab("05-read-support.tsv"),
+  "22_Variant_membership" = read_sample_tab("03-variant-membership.tsv")
 )
 sheets <- sheets[!vapply(sheets, is.null, logical(1))]
 
@@ -161,6 +202,8 @@ P_COLS <- c("p_value")
 NUM_COLS <- c(
   "fraction",
   "frac",
+  "frac_dropped",
+  "rho",
   "background_alt_rate",
   "median_af_passed",
   "median_af_rejected",
@@ -178,7 +221,18 @@ INT_COLS <- c(
   "n_cells",
   "n_detections",
   "n_passed",
-  "n_rejected"
+  "n_rejected",
+  "cells_total",
+  "cells_dropped_mgatk",
+  "detections_in_dropped_cells",
+  "variants_lost_by_cell_filter",
+  "s0_scmocha",
+  "s0_mgatk",
+  "s1_scmocha",
+  "s1_mgatk",
+  "retained_mgatk",
+  "retained_scmocha_call",
+  "retained_scmocha_af5"
 )
 
 wb <- wb_workbook()

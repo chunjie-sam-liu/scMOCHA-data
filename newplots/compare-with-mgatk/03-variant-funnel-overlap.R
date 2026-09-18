@@ -10,8 +10,8 @@
 #               each S1 set; panels d and e, the cutoff that excludes each
 #               arm-specific variant from the other arm; panel f, every arm
 #               membership combination.
-#               Usage: pixi run Rscript newplots/compare-with-mgatk/03-variant-funnel-overlap.R
-# @VERSION: v0.2.0
+#               Usage: pixi run Rscript newplots/compare-with-mgatk/03-variant-funnel-overlap.R --sample=<id>
+# @VERSION: v0.3.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -40,7 +40,22 @@ stagedir <- fs::path(
 )
 source(fs::path(stagedir, "config.R"))
 
-paths <- stage_paths()
+# args --------------------------------------------------------------------
+# Parsed after config.R so the error message can list the valid sample ids.
+GetoptLong.options(help_style = "two-column")
+sample <- ""
+
+GetoptLong(
+  "sample=s",
+  "sample id; one of the ids in SAMPLES in config.R"
+)
+
+sample_id <- fn_check_sample(sample)
+rm(sample)
+SAMPLE_LABEL <- fn_sample_label(sample_id)
+log_info("sample {sample_id} ({SAMPLE_LABEL})")
+
+paths <- stage_paths(sample_id)
 source(paths$colorfile)
 fs::dir_create(c(paths$figdir, paths$tabdir))
 
@@ -171,8 +186,10 @@ p_a <- d_a |>
     vjust = -0.4,
     size = 2.8
   ) +
-  scale_y_log10(
+  scale_y_continuous(
+    transform = scales::transform_pseudo_log(base = 10),
     labels = scales::comma,
+    breaks = c(0, 10, 100, 1000, 10000),
     expand = expansion(mult = c(0, 0.15))
   ) +
   scale_fill_manual(values = color_arm) +
@@ -198,25 +215,36 @@ venn_input <- stats::setNames(
   ARM_LEVELS
 )
 
-p_b <- ggvenn::ggvenn(
-  venn_input,
-  fill_color = unname(color_arm[ARM_LEVELS]),
-  fill_alpha = 0.4,
-  stroke_size = 0.4,
-  set_name_size = 3.6,
-  text_size = 3.4
-) +
-  labs(
-    title = "Variant sets of the three arms",
-    subtitle = glue::glue(
-      "{length(set_mgatk)} mgatk \u00b7 {length(set_call)} scMOCHA call ",
-      "\u00b7 {length(set_af5)} scMOCHA AF>5% \u00b7 {fn_sample_note()}"
-    )
+# ggvenn computes its regions when the plot is built, so an empty arm has to
+# be caught here rather than at save time.
+p_b <- fn_or_empty(
+  min(lengths(venn_input)) > 0L,
+  ggvenn::ggvenn(
+    venn_input,
+    fill_color = unname(color_arm[ARM_LEVELS]),
+    fill_alpha = 0.4,
+    stroke_size = 0.4,
+    set_name_size = 3.6,
+    text_size = 3.4
   ) +
-  theme(
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5, color = "grey40", size = 10)
+    labs(
+      title = "Variant sets of the three arms",
+      subtitle = glue::glue(
+        "{length(set_mgatk)} mgatk \u00b7 {length(set_call)} scMOCHA call ",
+        "\u00b7 {length(set_af5)} scMOCHA AF>5% \u00b7 {fn_sample_note()}"
+      )
+    ) +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5),
+      plot.subtitle = element_text(hjust = 0.5, color = "grey40", size = 10)
+    ),
+  "Variant sets of the three arms",
+  glue::glue(
+    "No overlap diagram: at least one arm is empty. ",
+    "Original mgatk {length(set_mgatk)}, scMOCHA call {length(set_call)}, ",
+    "scMOCHA AF>5% {length(set_af5)}."
   )
+)
 
 # c: gates cross-applied ----------------------------------------------------
 d_c <- data.table::CJ(
@@ -294,6 +322,13 @@ p_d <- d_d |>
     y = "Variants"
   )
 
+p_d <- fn_or_empty(
+  nrow(d_d) > 0L,
+  p_d,
+  "Why original mgatk misses the scMOCHA AF>5% variants",
+  "No variant is reported by scMOCHA AF>5% and missed by original mgatk in this sample."
+)
+
 # mgatk variants that scMOCHA AF>5% does not report, and why.
 d_e <- stats_joined[
   arm_mgatk == TRUE & arm_scmocha_af5 == FALSE,
@@ -323,6 +358,13 @@ p_e <- d_e |>
     x = NULL,
     y = "Variants"
   )
+
+p_e <- fn_or_empty(
+  nrow(d_e) > 0L,
+  p_e,
+  "Why scMOCHA AF>5% misses the original mgatk variants",
+  "Original mgatk reports no variant at all in this sample, so there is nothing for scMOCHA AF>5% to miss."
+)
 
 # f: arm membership combinations --------------------------------------------
 d_f <- stats_joined[
@@ -362,13 +404,22 @@ p_f <- d_f |>
     y = "Variants"
   )
 
-# save ---------------------------------------------------------------------
-export(d_a, as.character(fs::path(paths$tabdir, "03-funnel-counts.tsv")))
-export(
-  d_c[, .(s1_set = s1, gate_applied = gate, n_variants = n)],
-  as.character(fs::path(paths$tabdir, "03-gate-crossapplied.tsv"))
+p_f <- fn_or_empty(
+  nrow(d_f) > 0L,
+  p_f,
+  "Every arm membership combination",
+  "No arm reports a variant in this sample."
 )
-export(
+
+# save ---------------------------------------------------------------------
+fn_export_tab(d_a, paths, "03-funnel-counts.tsv", sample_id)
+fn_export_tab(
+  d_c[, .(s1_set = s1, gate_applied = gate, n_variants = n)],
+  paths,
+  "03-gate-crossapplied.tsv",
+  sample_id
+)
+fn_export_tab(
   stats_joined[
     s1_scmocha == TRUE | s1_mgatk == TRUE,
     .(
@@ -399,9 +450,11 @@ export(
       strand_mgatk
     )
   ],
-  as.character(fs::path(paths$tabdir, "03-variant-membership.tsv"))
+  paths,
+  "03-variant-membership.tsv",
+  sample_id
 )
-export(
+fn_export_tab(
   data.table::rbindlist(list(
     d_d[, .(
       direction = "in scMOCHA AF>5%, not in mgatk",
@@ -414,11 +467,15 @@ export(
       n_variants = N
     )]
   )),
-  as.character(fs::path(paths$tabdir, "03-exclusion-reasons.tsv"))
+  paths,
+  "03-exclusion-reasons.tsv",
+  sample_id
 )
-export(
+fn_export_tab(
   d_f[, .(combination, n_variants = N)],
-  as.character(fs::path(paths$tabdir, "03-arm-combinations.tsv"))
+  paths,
+  "03-arm-combinations.tsv",
+  sample_id
 )
 export(
   stats_joined,

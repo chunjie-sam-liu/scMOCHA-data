@@ -1,0 +1,59 @@
+{
+  // /home is a symlink to /research/rgs01/home/clusterHome. Copilot resolves each
+  // file's real path and refuses to read it when that real path falls outside every
+  // workspace folder, so both roots are listed by their resolved real path.
+  "folders": [
+    {
+      "name": "scMOCHA-data",
+      "path": "/research/rgs01/home/clusterHome/cliu68/github/scMOCHA-data",
+    },
+    {
+      // Target of the data/, high-res-MANUSCRIPTFIGURES and
+      // high-res-MANUSCRIPTFIGURES-notuse symlinks (ISILON_BASE in .env).
+      "name": "scmocha-project-data",
+      "path": "/research/rgs01/home/clusterHome/cliu68/project/scmocha",
+    },
+  ],
+
+  // Window-scoped settings are ignored in a folder's .vscode/settings.json once the
+  // window is multi-root, so every window-scoped entry is repeated here.
+  "settings": {
+    "python-envs.defaultEnvManager": "renan-r-santos.pixi-code:pixi",
+    "python-envs.defaultPackageManager": "renan-r-santos.pixi-code:pixi",
+    "python.terminal.activateEnvironment": true,
+
+    // Absolute rather than ${workspaceFolder}: the R extension expands that token to
+    // one folder only, which is ambiguous in a multi-root window.
+    "r.rpath.linux": "/research/rgs01/home/clusterHome/cliu68/github/scMOCHA-data/.pixi/envs/default/bin/R",
+    "r.rterm.linux": "/home/cliu68/.cargo/bin/arf",
+    "r.rterm.option": ["--no-save", "--no-restore"],
+
+    "terminal.integrated.env.linux": {
+      "R_HOME": "/research/rgs01/home/clusterHome/cliu68/github/scMOCHA-data/.pixi/envs/default/lib/R",
+    },
+
+    "files.exclude": {
+      "**/.git": true,
+      "**/.svn": true,
+      "**/.hg": true,
+      "**/.DS_Store": true,
+      "**/Thumbs.db": true,
+      "**/.pixi": true,
+    },
+
+    // Only consulted for paths that are not inside a workspace folder, so the
+    // target of the large-scale/ symlink is listed by its own real path.
+    "github.copilot.chat.additionalReadAccessPaths": [
+      "/mnt/isilon/u01_project/large-scale",
+    ],
+
+    // .pixi and the raw manuscript-figure archives under the second root are
+    // large and irrelevant to search/watch.
+    "files.watcherExclude": {
+      "**/.pixi/**": true,
+    },
+    "search.exclude": {
+      "**/.pixi": true,
+    },
+  },
+}

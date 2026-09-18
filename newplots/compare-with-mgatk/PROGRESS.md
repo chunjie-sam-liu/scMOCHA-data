@@ -23,9 +23,21 @@ sample, three arms.
 
 Last full pass ran clean: no warnings, no errors, all sources ASCII.
 
+## Campaigns
+
+| Campaign | Question | Status |
+| --- | --- | --- |
+| `2026-09-17-multi-sample-comparison` | Extend the comparison from one sample to five | **done 2026-09-17** |
+
+Everything below this line describes GSE181279 only and is still accurate for
+it; the campaign reproduced every number. For the other four samples, and for
+any statement about the resource rather than one sample, read the campaign
+progress file.
+
 ## Results
 
-Sample: 7,210 cells, median per-cell MT coverage 38.9. Identity pending (Q1).
+Sample: 7,210 cells, median per-cell MT coverage 38.9. GSE181279 GSM5494116
+(SC5P-PE).
 
 **Cell inclusion, C1.** Original mgatk discards 486 of 7,210 cells (6.74%) for
 mean coverage <= 10. Those cells hold 4,130 of 127,998 cell-level detections,
@@ -78,12 +90,12 @@ its S1 set is smaller. The variants only mgatk reports carry a median of
 
 ## Open
 
-- **Q1, sample identity.** `SAMPLE_LABEL` in `config.R` is `<pending>`. Every
-  figure subtitle reads it; one edit relabels the stage. Needed before the
-  figures go into a response letter.
-- **One sample only.** The editor's criticism is about the whole resource.
-  Extending to more samples needs paired `*_mgatk_original.tsv.gz` outputs,
-  which currently exist for this sample alone.
+- ~~**Q1, sample identity.**~~ Resolved: the `SAMPLES` registry in `config.R`
+  carries GSE, GSM and chemistry for every sample, and `fn_sample_label()`
+  builds the subtitle from it. No figure says `<pending>`.
+- ~~**One sample only.**~~ Closed by campaign
+  `2026-09-17-multi-sample-comparison`: five samples, three chemistries.
+  Original mgatk retains zero variants in four of them.
 - **No orthogonal truth set.** Nothing here is a sensitivity or recall
   measurement, and the figures must not be described as one.
 - **P = 0.044 on one sample.** The gate test is nominally significant but not

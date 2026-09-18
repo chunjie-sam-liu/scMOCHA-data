@@ -7,9 +7,11 @@
 #               plane for each rule set with mgatk's cutoffs drawn; panel b,
 #               AF-bin composition of the region mgatk's gate rejects versus
 #               the region it accepts; panel c, per-cell alt-read support of
-#               the variants only mgatk reports.
-#               Usage: pixi run Rscript newplots/compare-with-mgatk/05-vmr-strand.R
-# @VERSION: v0.1.0
+#               the variants only mgatk reports; panels d and e, arm
+#               membership in mgatk's decision plane; panel f, the mirror of
+#               d in scMOCHA's decision plane.
+#               Usage: pixi run Rscript newplots/compare-with-mgatk/05-vmr-strand.R --sample=<id>
+# @VERSION: v0.3.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -38,7 +40,22 @@ stagedir <- fs::path(
 )
 source(fs::path(stagedir, "config.R"))
 
-paths <- stage_paths()
+# args --------------------------------------------------------------------
+# Parsed after config.R so the error message can list the valid sample ids.
+GetoptLong.options(help_style = "two-column")
+sample <- ""
+
+GetoptLong(
+  "sample=s",
+  "sample id; one of the ids in SAMPLES in config.R"
+)
+
+sample_id <- fn_check_sample(sample)
+rm(sample)
+SAMPLE_LABEL <- fn_sample_label(sample_id)
+log_info("sample {sample_id} ({SAMPLE_LABEL})")
+
+paths <- stage_paths(sample_id)
 source(paths$colorfile)
 fs::dir_create(c(paths$figdir, paths$tabdir))
 
@@ -133,6 +150,13 @@ p_a <- d_a |>
     color = "Carrier AF"
   )
 
+p_a <- fn_or_empty(
+  nrow(d_a) > 0L,
+  p_a,
+  "The VMR and strand-correlation plane",
+  "No S1 variant has a usable vmr and strand correlation in this sample."
+)
+
 # b: what the gate rejects, by AF bin ---------------------------------------
 d_b <- d[gate_scmocha == TRUE, .N, by = .(gate_mgatk, af_bin)]
 d_b[,
@@ -147,12 +171,16 @@ d_b[,
 ]
 d_b[, frac := N / sum(N), by = gate_call]
 
-tab_b <- data.table::dcast(
-  d_b,
-  af_bin ~ gate_call,
-  value.var = "N",
-  fill = 0L
-)
+tab_b <- if (nrow(d_b) == 0L) {
+  data.table::data.table(af_bin = character(0))
+} else {
+  data.table::dcast(
+    d_b,
+    af_bin ~ gate_call,
+    value.var = "N",
+    fill = 0L
+  )
+}
 
 p_b <- d_b |>
   ggplot(aes(x = gate_call, y = frac, fill = af_bin)) +
@@ -173,6 +201,13 @@ p_b <- d_b |>
     y = "Fraction of variants",
     fill = "Carrier AF"
   )
+
+p_b <- fn_or_empty(
+  nrow(d_b) > 0L,
+  p_b,
+  "Heteroplasmy of what mgatk's gate keeps and discards",
+  "No variant passes the scMOCHA reliability gate in this sample."
+)
 
 # c: read support of the mgatk-only variants --------------------------------
 # Alt reads per cell are reconstructed as AF x depth; the callers store AF and
@@ -236,6 +271,13 @@ p_c <- d_c |>
     y = "Alt reads in the cell (log scale)"
   )
 
+p_c <- fn_or_empty(
+  nrow(d_c) >= 2L,
+  p_c,
+  "Read support behind each variant class",
+  "No cell-level detection belongs to a final variant class in this sample."
+)
+
 log_info(
   "median alt reads per detected cell: ",
   "{paste(med_c$variant_set, signif(med_c$median_alt_reads, 3), sep = '=', collapse = ', ')}"
@@ -245,8 +287,9 @@ log_info(
 # mgatk's own vmr and strand correlation are what its gate acts on, so the
 # question "where do the variants only scMOCHA reports sit in mgatk's plane"
 # is asked on mgatk's coordinates.
-d_d <- d[!is.na(vmr_mgatk) & !is.na(strand_mgatk) & vmr_mgatk > 0]
-d_d[,
+# Assigned on every S1 variant, not only those carrying usable mgatk
+# coordinates, because panel f plots the variants mgatk never scored.
+d[,
   arm_label := data.table::fcase(
     arm_mgatk & arm_scmocha_af5  , "Both arms"                 ,
     arm_mgatk & !arm_scmocha_af5 , "Original mgatk only"       ,
@@ -255,7 +298,7 @@ d_d[,
     default = "Neither arm"
   )
 ]
-d_d[,
+d[,
   arm_label := factor(
     arm_label,
     levels = c(
@@ -267,6 +310,8 @@ d_d[,
     )
   )
 ]
+
+d_d <- d[!is.na(vmr_mgatk) & !is.na(strand_mgatk) & vmr_mgatk > 0]
 
 arm_label_colors <- c(
   "Both arms" = unname(color_variant_set["Both"]),
@@ -306,6 +351,13 @@ p_d <- d_d[order(-as.integer(arm_label))] |>
     color = NULL
   )
 
+p_d <- fn_or_empty(
+  nrow(d_d) > 0L,
+  p_d,
+  "Which arm reports each variant, in mgatk's decision plane",
+  "No variant has a usable mgatk vmr and strand correlation in this sample."
+)
+
 # e: the same plane, faceted by arm membership ------------------------------
 p_e <- d_d |>
   ggplot(aes(x = strand_mgatk, y = vmr_mgatk)) +
@@ -341,24 +393,178 @@ p_e <- d_d |>
     y = "VMR (original mgatk, log scale)"
   )
 
+p_e <- fn_or_empty(
+  nrow(d_d) > 0L,
+  p_e,
+  "Arm membership across mgatk's decision plane",
+  "No variant has a usable mgatk vmr and strand correlation in this sample."
+)
+
 log_info(
   "arm membership in mgatk plane: ",
   "{paste(names(table(d_d$arm_label)), table(d_d$arm_label), sep = '=', collapse = ', ')}"
 )
 
+# f: the same question in scMOCHA's decision plane --------------------------
+# Mirror of panel d. mgatk's plane is built from vmr and strand correlation
+# because those are what its gate thresholds; scMOCHA acts on two different
+# per-variant quantities, so those are the axes here:
+#   x  cells carrying the variant at AF >= 0.05 with depth >= 10. This is
+#      exactly the quantity the reliability gate thresholds at
+#      CUTOFF_NOTRELIABLE, so the vertical line is that gate.
+#   y  median alt reads per cell where the variant is seen at all. This is a
+#      SUMMARY of the read support the per-cell confident-call rule acts on,
+#      not the rule itself: the rule asks for >= 3 cells each carrying
+#      CUTOFF_ALT_READS alt reads, which a median cannot express. The
+#      horizontal line marks the per-cell read requirement for orientation;
+#      first-failed-criterion attribution lives in 03e, not here.
+# Reading it is the inverse of 05d: scMOCHA AF>5% variants sit right of the
+# cell-count line by construction, so the informative points are the mgatk
+# variants outside that region.
+read_support <- detection[
+  depth >= CUTOFF_MIN_READS & !is.na(alt_reads) & alt_reads >= 1,
+  .(alt_median = stats::median(alt_reads)),
+  by = variant
+]
+
+d[read_support, on = "variant", alt_median := i.alt_median]
+d_f <- d[!is.na(alt_median)]
+d_f[, `:=`(
+  cells_ok = n_cells_gate >= CUTOFF_NOTRELIABLE,
+  reads_ok = alt_median >= CUTOFF_ALT_READS
+)]
+
+# n_cells_gate is 0 for a variant no cell carries above the AF floor, which a
+# log axis cannot show; pseudo-log keeps those points on the panel.
+p_f <- d_f[order(-as.integer(arm_label))] |>
+  ggplot(aes(x = n_cells_gate, y = alt_median, color = arm_label)) +
+  geom_point(size = 1.1, alpha = 0.8) +
+  geom_vline(
+    xintercept = CUTOFF_NOTRELIABLE,
+    linetype = "dashed",
+    color = "grey30"
+  ) +
+  geom_hline(
+    yintercept = CUTOFF_ALT_READS,
+    linetype = "dashed",
+    color = "grey30"
+  ) +
+  scale_x_continuous(
+    transform = scales::transform_pseudo_log(base = 10),
+    breaks = c(0, 1, 3, 10, 30, 100, 300, 1000, 3000),
+    labels = scales::label_number(big.mark = ",")
+  ) +
+  scale_y_log10(labels = scales::label_number(big.mark = ",")) +
+  scale_color_manual(values = arm_label_colors) +
+  guides(color = guide_legend(override.aes = list(size = 2.5))) +
+  fn_theme() +
+  labs(
+    title = "Which arm reports each variant, in scMOCHA's decision plane",
+    subtitle = glue::glue(
+      "the vertical line is scMOCHA's reliability gate, \u2265 ",
+      "{CUTOFF_NOTRELIABLE} cells at AF \u2265 {CUTOFF_HETEROPLASMIC} with ",
+      "depth \u2265 {CUTOFF_MIN_READS}, and every scMOCHA AF>5% variant lies ",
+      "right of it by construction \u00b7 the horizontal line marks the ",
+      "{CUTOFF_ALT_READS}-alt-read per-cell requirement for orientation only; ",
+      "a median cannot express a rule about \u2265 {CUTOFF_NCELLS_CONF} ",
+      "individual cells, so read 03e for the attribution \u00b7 the ",
+      "informative points are the original mgatk variants left of the ",
+      "vertical line \u00b7 {fn_sample_note()}"
+    ),
+    x = glue::glue(
+      "Cells at AF \u2265 {CUTOFF_HETEROPLASMIC} and depth \u2265 ",
+      "{CUTOFF_MIN_READS} (pseudo-log scale)"
+    ),
+    y = "Median alt reads per cell carrying the variant (log scale)",
+    color = NULL
+  )
+
+p_f <- fn_or_empty(
+  nrow(d_f) > 0L,
+  p_f,
+  "Which arm reports each variant, in scMOCHA's decision plane",
+  "No S1 variant has a cell with alt-read support in this sample."
+)
+
+tab_f <- d_f[,
+  .N,
+  by = .(arm_label, cells_ok, reads_ok)
+][order(arm_label, -N)][, .(arm_label, cells_ok, reads_ok, n_variants = N)]
+
+log_info(
+  "scMOCHA plane: {nrow(d_f)} variants plotted, ",
+  "{d_f[, sum(!is.na(alt_median))]} with read support; ",
+  "mgatk-only variants failing the cell gate ",
+  "{d_f[arm_label == 'Original mgatk only' & !cells_ok, .N]}, ",
+  "failing the read requirement ",
+  "{d_f[arm_label == 'Original mgatk only' & !reads_ok, .N]}"
+)
+
+# g: the same plane, faceted by arm membership ------------------------------
+# A median over small integer counts lands most low-support variants on y = 1
+# or 2, so in the combined panel the arms occlude each other. Faceting is the
+# only honest fix: jittering a median would move points off their own value.
+p_g <- d_f |>
+  ggplot(aes(x = n_cells_gate, y = alt_median)) +
+  geom_point(
+    data = d_f[, .(n_cells_gate, alt_median)],
+    color = "grey88",
+    size = 0.7
+  ) +
+  geom_point(aes(color = arm_label), size = 1.1, alpha = 0.85) +
+  geom_vline(
+    xintercept = CUTOFF_NOTRELIABLE,
+    linetype = "dashed",
+    color = "grey30"
+  ) +
+  geom_hline(
+    yintercept = CUTOFF_ALT_READS,
+    linetype = "dashed",
+    color = "grey30"
+  ) +
+  facet_wrap(~arm_label, nrow = 1) +
+  scale_x_continuous(
+    transform = scales::transform_pseudo_log(base = 10),
+    breaks = c(0, 10, 100, 1000),
+    labels = scales::label_number(big.mark = ",")
+  ) +
+  scale_y_log10(labels = scales::label_number(big.mark = ",")) +
+  scale_color_manual(values = arm_label_colors) +
+  fn_theme() +
+  theme(legend.position = "none") +
+  labs(
+    title = "Arm membership across scMOCHA's decision plane",
+    subtitle = glue::glue(
+      "grey points are all S1 variants, repeated in every panel \u00b7 ",
+      "dashed lines are scMOCHA's \u2265 {CUTOFF_NOTRELIABLE}-cell gate and ",
+      "the {CUTOFF_ALT_READS}-alt-read per-cell requirement \u00b7 the ",
+      "original mgatk panel is the one to read against 05e \u00b7 ",
+      "{fn_sample_note()}"
+    ),
+    x = glue::glue(
+      "Cells at AF \u2265 {CUTOFF_HETEROPLASMIC} and depth \u2265 ",
+      "{CUTOFF_MIN_READS} (pseudo-log scale)"
+    ),
+    y = "Median alt reads per cell (log scale)"
+  )
+
+p_g <- fn_or_empty(
+  nrow(d_f) > 0L,
+  p_g,
+  "Arm membership across scMOCHA's decision plane",
+  "No S1 variant has a cell with alt-read support in this sample."
+)
+
 # save ---------------------------------------------------------------------
-export(
-  tab_b,
-  as.character(fs::path(
-    paths$tabdir,
-    "05-vmr-strand-rejected.tsv"
-  ))
-)
-export(med_c, as.character(fs::path(paths$tabdir, "05-read-support.tsv")))
-export(
+fn_export_tab(tab_b, paths, "05-vmr-strand-rejected.tsv", sample_id)
+fn_export_tab(med_c, paths, "05-read-support.tsv", sample_id)
+fn_export_tab(
   d_d[, .N, by = arm_label][order(-N)][, .(arm_label, n_variants = N)],
-  as.character(fs::path(paths$tabdir, "05-arm-in-mgatk-plane.tsv"))
+  paths,
+  "05-arm-in-mgatk-plane.tsv",
+  sample_id
 )
+fn_export_tab(tab_f, paths, "05-arm-in-scmocha-plane.tsv", sample_id)
 
 saveplot(
   as.character(fs::path(paths$figdir, "05a-vmr-strand-plane.pdf")),
@@ -395,5 +601,19 @@ saveplot(
   height = 4.2,
   device = cairo_pdf
 )
+saveplot(
+  as.character(fs::path(paths$figdir, "05f-arm-in-scmocha-plane.pdf")),
+  fn_wrap_labs(p_f, width = 85),
+  width = 8.5,
+  height = 5.5,
+  device = cairo_pdf
+)
+saveplot(
+  as.character(fs::path(paths$figdir, "05g-scmocha-plane-facets.pdf")),
+  fn_wrap_labs(p_g, width = 115),
+  width = 13,
+  height = 4.2,
+  device = cairo_pdf
+)
 
-log_info("saved 5 figures to {paths$figdir} and 3 tables to {paths$tabdir}")
+log_info("saved 7 figures to {paths$figdir} and 4 tables to {paths$tabdir}")

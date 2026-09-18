@@ -22,15 +22,23 @@ None. Sourcing this file defines objects only.
 ### Identity
 
 - `STAGE` - directory name of this stage.
-- `SAMPLE_LABEL` - the GSE/GSM/SRR identifier of the compared sample, currently
-  `<pending>`. Every figure subtitle reads it through `fn_sample_note()`, so
-  one edit here relabels the whole stage.
+- `SAMPLES` - the sample registry, and the single source of truth for which
+  samples exist: `sample_id`, `archive`, `gse`, `gsm`, `chemistry`. `sample_id`
+  normalises the `-` that two archive names carry between GSE and GSM, so one
+  token is safe as a path, a factor level and a file name.
+- `SAMPLE_IDS` - `SAMPLES$sample_id`, the accepted values of `--sample`.
+- `CROSS_SAMPLE` - the output leaf used by anything that spans samples.
+- `SAMPLE_LABEL` - set per run by each step from `fn_sample_label()`. Every
+  figure subtitle reads it through `fn_sample_note()`.
+- `ARCHIVE_MEMBERS` - the seven files extracted from each archive. The same
+  list appears in `00-extract-archives.sh`; keep them in step.
 
 ### Paths
 
-`stage_paths()` returns `repodir`, `indir`, `cachedir`, `stagedir`, `figdir`,
-`tabdir`, `colorfile`. `stage_inputs()` returns the eight input files for a
-given sample prefix, defaulting to `cell`.
+`stage_paths(sample_id)` returns `repodir`, `root`, `indir`, `cachedir`,
+`stagedir`, `figroot`, `tabroot`, `figdir`, `tabdir`, `colorfile`. Passing
+`NULL`, the default, selects the `cross-sample` leaf instead of a sample.
+`stage_inputs()` returns the seven input files under a given `paths$indir`.
 
 ### Criterion constants
 
@@ -57,13 +65,35 @@ for the uncensored AF measure and appears in neither caller.
 - `fn_af_bin()` - AF binning, with an explicit `No detected cell` level so a
   variant with no carrier cell is shown rather than silently dropped.
 - `fn_sample_note()` - the sample clause used in every figure subtitle.
+- `fn_check_sample()` - validates `--sample`, stopping with the valid list.
+- `fn_sample_label()` - the `GSE GSM (chemistry)` caption for one sample. It
+  looks the row up with `match()` rather than a data.table `i` expression,
+  because `i` cannot see a function argument through `..name`.
+- `fn_empty_panel()` / `fn_or_empty()` - the placeholder drawn when an arm or a
+  group is empty. `fn_or_empty()` takes the real plot as a promise, so a panel
+  that would fail on an empty group is never evaluated. Four of the five
+  samples retain no original-mgatk variant at all, and a zero there is a result
+  that has to be drawn rather than skipped.
+- `fn_testable()` - TRUE when a two-group comparison has at least
+  `CUTOFF_MIN_GROUP` variants on both sides. Below that the medians are still
+  reported and the p-value is `NA`.
+- `fn_export_tab()` - writes a per-sample table with `sample` as its first
+  column, so the cross-sample step can bind the five files without re-deriving
+  provenance.
 - `fn_is_blacklisted()` - position blacklist test.
 - `fn_detection_long()` - melts the cell-by-variant AF matrix, attaches the
   cell's depth at the variant position, and flags scMOCHA detections. A
   `(position, barcode)` pair absent from the coverage file means no reads, so
   its depth is set to 0 rather than left `NA`.
 - `fn_scmocha_gate()` - the scMOCHA reliability gate.
-- `fn_carrier_stats()` - carrier-level heteroplasmy on two definitions.
+- `fn_background_rate()` - the background alt-read rate. A shallow sample can
+  carry no background alt read, or no qualifying background cell at all, which
+  makes the estimate 0 or undefined. Either value breaks the carrier test in
+  opposite directions - rate 0 calls every cell holding one alt read a carrier,
+  rate 1 calls nothing a carrier - so it is floored at one alt read over all
+  observed depth, with a warning. Three of the five samples hit that floor;
+  GSE181279 does not.
+- `fn_carrier_stats()` - carrier-level heteroplasmy on three definitions.
 
 ## The three heteroplasmy measures
 

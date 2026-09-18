@@ -8,8 +8,8 @@
 #               panel c, AF-bin composition of each final set; panel d,
 #               cell-level AF distribution; panel e, AF of the variants
 #               mgatk's VMR/strand gate rejects but the scMOCHA gate keeps.
-#               Usage: pixi run Rscript newplots/compare-with-mgatk/04-heteroplasmy-spectrum.R
-# @VERSION: v0.1.0
+#               Usage: pixi run Rscript newplots/compare-with-mgatk/04-heteroplasmy-spectrum.R --sample=<id>
+# @VERSION: v0.2.0
 
 # Reproducibility ----------------------------------------------------------
 set.seed(9527)
@@ -38,7 +38,22 @@ stagedir <- fs::path(
 )
 source(fs::path(stagedir, "config.R"))
 
-paths <- stage_paths()
+# args --------------------------------------------------------------------
+# Parsed after config.R so the error message can list the valid sample ids.
+GetoptLong.options(help_style = "two-column")
+sample <- ""
+
+GetoptLong(
+  "sample=s",
+  "sample id; one of the ids in SAMPLES in config.R"
+)
+
+sample_id <- fn_check_sample(sample)
+rm(sample)
+SAMPLE_LABEL <- fn_sample_label(sample_id)
+log_info("sample {sample_id} ({SAMPLE_LABEL})")
+
+paths <- stage_paths(sample_id)
 source(paths$colorfile)
 fs::dir_create(c(paths$figdir, paths$tabdir))
 
@@ -114,6 +129,16 @@ p_a <- d_af |>
     color = NULL
   )
 
+p_a <- fn_or_empty(
+  nrow(d_af) >= 2L,
+  p_a,
+  "Heteroplasmy of each variant class in the cells that carry it",
+  glue::glue(
+    "Only {nrow(d_af)} final variants have a carrier cell in this sample, ",
+    "too few to draw a distribution."
+  )
+)
+
 # b: maximum heteroplasmy ---------------------------------------------------
 p_b <- d_af |>
   ggplot(aes(x = af_carrier_max, fill = variant_set)) +
@@ -130,6 +155,16 @@ p_b <- d_af |>
     y = "Density",
     fill = NULL
   )
+
+p_b <- fn_or_empty(
+  nrow(d_af) >= 2L,
+  p_b,
+  "Maximum per-cell heteroplasmy of each variant class",
+  glue::glue(
+    "Only {nrow(d_af)} final variants have a carrier cell in this sample, ",
+    "too few to draw a density."
+  )
+)
 
 # c: AF-bin composition of each arm -----------------------------------------
 d_c <- data.table::rbindlist(list(
@@ -160,6 +195,13 @@ p_c <- d_c |>
     y = "Fraction of variants",
     fill = "Carrier AF"
   )
+
+p_c <- fn_or_empty(
+  nrow(d_c) > 0L,
+  p_c,
+  "Heteroplasmy composition of each arm",
+  "No arm reports a variant in this sample."
+)
 
 # g: each arm measured on its own terms -------------------------------------
 # The AF>5% arm is defined by cells at AF >= 0.05, so it is summarised on those
@@ -222,6 +264,13 @@ p_g <- d_g |>
     y = "Fraction of variants",
     fill = "AF over the arm's\nown cells"
   )
+
+p_g <- fn_or_empty(
+  nrow(d_g) > 0L,
+  p_g,
+  "Each arm on its own AF definition",
+  "No arm reports a variant in this sample."
+)
 
 log_info(
   "own-definition view: {paste(unique(d_g[, .(arm, measured)])$arm, ",
@@ -287,6 +336,17 @@ p_d <- d_d |>
     color = NULL
   )
 
+p_d <- fn_or_empty(
+  nrow(d_d) > 0L && min(d_d[, .N, by = caller]$N) >= 2L,
+  p_d,
+  "Cell-level heteroplasmy of the detections each set carries",
+  glue::glue(
+    "{d_d[caller == 'Original mgatk', .N]} mgatk and ",
+    "{d_d[caller == 'scMOCHA', .N]} scMOCHA carrier-cell observations, ",
+    "too few to draw a density."
+  )
+)
+
 # e: what the mgatk gate rejects --------------------------------------------
 # Restricted to variants that reach the scMOCHA reliability gate, so the
 # comparison is between two decisions about the same reliable variants. That
@@ -302,11 +362,6 @@ d_e[,
 ]
 d_e[, gate_call := factor(gate_call, levels = names(color_mgatk_gate))]
 
-wt <- stats::wilcox.test(
-  af_carrier_median ~ gate_call,
-  data = d_e,
-  conf.int = TRUE
-)
 med <- d_e[,
   .(
     median_af = stats::median(af_carrier_median),
@@ -315,10 +370,37 @@ med <- d_e[,
   keyby = gate_call
 ]
 
-af_pass <- med[gate_call == "Passes mgatk VMR/strand gate", median_af]
-af_rej <- med[gate_call == "Rejected by mgatk VMR/strand gate", median_af]
-n_pass <- med[gate_call == "Passes mgatk VMR/strand gate", n]
-n_rej <- med[gate_call == "Rejected by mgatk VMR/strand gate", n]
+# In four of the five samples mgatk's gate passes nothing, so one side of this
+# comparison is empty. That is the result, not a failure: the medians are still
+# reported and the test is left undefined.
+fn_pick <- function(col, level, empty) {
+  v <- med[gate_call == level][[col]]
+  if (length(v) == 0L) empty else v
+}
+
+af_pass <- fn_pick("median_af", "Passes mgatk VMR/strand gate", NA_real_)
+af_rej <- fn_pick("median_af", "Rejected by mgatk VMR/strand gate", NA_real_)
+n_pass <- fn_pick("n", "Passes mgatk VMR/strand gate", 0L)
+n_rej <- fn_pick("n", "Rejected by mgatk VMR/strand gate", 0L)
+
+testable <- nrow(d_e) > 0L && fn_testable(d_e$gate_call)
+wt <- if (testable) {
+  stats::wilcox.test(
+    af_carrier_median ~ gate_call,
+    data = d_e,
+    conf.int = TRUE
+  )
+} else {
+  log_warn(
+    "gate test skipped: {n_pass} variants pass and {n_rej} are rejected, ",
+    "fewer than {CUTOFF_MIN_GROUP} on one side"
+  )
+  list(
+    p.value = NA_real_,
+    estimate = NA_real_,
+    conf.int = c(NA_real_, NA_real_)
+  )
+}
 
 log_info(
   "gate test on error-model carrier AF: rejected n={n_rej} ",
@@ -326,27 +408,35 @@ log_info(
   "P={signif(wt$p.value, 3)}"
 )
 
-p_e <- d_e |>
-  ggplot(aes(x = gate_call, y = af_carrier_median, fill = gate_call)) +
-  geom_violin(color = NA, alpha = 0.6, scale = "width") +
-  geom_boxplot(width = 0.15, outlier.size = 0.4, fill = "white") +
-  scale_x_discrete(labels = scales::label_wrap(20)) +
-  scale_y_log10(labels = scales::label_number()) +
-  scale_fill_manual(values = color_mgatk_gate) +
-  fn_theme() +
-  theme(legend.position = "none") +
-  labs(
-    title = "Heteroplasmy of the variants mgatk's gate discards",
-    subtitle = glue::glue(
-      "variants passing the scMOCHA reliability gate, split by mgatk's ",
-      "vmr > {CUTOFF_VMR_MGATK} and strand r > {CUTOFF_STRAND_MGATK} \u00b7 ",
-      "median carrier AF {signif(af_pass, 3)} (n = {n_pass}) vs ",
-      "{signif(af_rej, 3)} (n = {n_rej}) \u00b7 Wilcoxon P = ",
-      "{format.pval(wt$p.value, digits = 3)}"
-    ),
-    x = NULL,
-    y = "Median allele frequency across carrier cells (log scale)"
+p_e <- if (nrow(d_e) == 0L) {
+  fn_empty_panel(
+    "Heteroplasmy of the variants mgatk's gate discards",
+    fn_sample_note(),
+    "No variant passes the scMOCHA reliability gate in this sample."
   )
+} else {
+  d_e |>
+    ggplot(aes(x = gate_call, y = af_carrier_median, fill = gate_call)) +
+    geom_violin(color = NA, alpha = 0.6, scale = "width") +
+    geom_boxplot(width = 0.15, outlier.size = 0.4, fill = "white") +
+    scale_x_discrete(labels = scales::label_wrap(20), drop = FALSE) +
+    scale_y_log10(labels = scales::label_number()) +
+    scale_fill_manual(values = color_mgatk_gate, drop = FALSE) +
+    fn_theme() +
+    theme(legend.position = "none") +
+    labs(
+      title = "Heteroplasmy of the variants mgatk's gate discards",
+      subtitle = glue::glue(
+        "variants passing the scMOCHA reliability gate, split by mgatk's ",
+        "vmr > {CUTOFF_VMR_MGATK} and strand r > {CUTOFF_STRAND_MGATK} \u00b7 ",
+        "median carrier AF {signif(af_pass, 3)} (n = {n_pass}) vs ",
+        "{signif(af_rej, 3)} (n = {n_rej}) \u00b7 Wilcoxon P = ",
+        "{if (testable) format.pval(wt$p.value, digits = 3) else 'not testable, one side empty'}"
+      ),
+      x = NULL,
+      y = "Median allele frequency across carrier cells (log scale)"
+    )
+}
 
 # f: does the conclusion survive a different carrier definition? ------------
 # The choice of carrier definition changed the answer once already, so all
@@ -372,7 +462,11 @@ measures <- list(
 
 d_f <- data.table::rbindlist(lapply(measures, function(m) {
   x <- d_e[!is.na(get(m$col))]
-  w <- stats::wilcox.test(x[[m$col]] ~ x$gate_call)
+  p <- if (nrow(x) > 0L && fn_testable(x$gate_call)) {
+    stats::wilcox.test(x[[m$col]] ~ x$gate_call)$p.value
+  } else {
+    NA_real_
+  }
   data.table::data.table(
     measure = m$label,
     n = nrow(x),
@@ -382,7 +476,7 @@ d_f <- data.table::rbindlist(lapply(measures, function(m) {
     median_passed = stats::median(
       x[gate_call == "Passes mgatk VMR/strand gate", get(m$col)]
     ),
-    p_value = w$p.value
+    p_value = p
   )
 }))
 d_f[,
@@ -446,39 +540,55 @@ p_f <- data.table::melt(
     color = NULL
   )
 
+p_f <- fn_or_empty(
+  nrow(d_e) > 0L,
+  p_f,
+  "The conclusion under four carrier definitions",
+  "No variant passes the scMOCHA reliability gate in this sample."
+)
+
 log_info(
   "measure sensitivity: ",
   "{paste(d_f$measure, signif(d_f$p_value, 2), sep = ' P=', collapse = '; ')}"
 )
 
 # save ---------------------------------------------------------------------
-export(
+fn_export_tab(
   d_c[, .(arm, af_bin, n_variants = N, fraction = frac)],
-  as.character(fs::path(paths$tabdir, "04-af-bins.tsv"))
+  paths,
+  "04-af-bins.tsv",
+  sample_id
 )
-export(
+fn_export_tab(
   d_g[, .(arm, measured, af_bin = af_bin_own, n_variants = N, fraction = frac)],
-  as.character(fs::path(paths$tabdir, "04-af-bins-own-definition.tsv"))
+  paths,
+  "04-af-bins-own-definition.tsv",
+  sample_id
 )
-export(
+fn_export_tab(
   data.table::data.table(
     test = "Wilcoxon rank sum, median error-model carrier AF by mgatk gate call",
     subset = "variants passing the scMOCHA reliability gate",
+    testable = testable,
     background_alt_rate = background_rate,
     n_passed = n_pass,
     n_rejected = n_rej,
     median_af_passed = af_pass,
     median_af_rejected = af_rej,
-    location_shift = unname(wt$estimate),
+    location_shift = unname(wt$estimate)[1],
     ci_low = wt$conf.int[1],
     ci_high = wt$conf.int[2],
     p_value = wt$p.value
   ),
-  as.character(fs::path(paths$tabdir, "04-tests.tsv"))
+  paths,
+  "04-tests.tsv",
+  sample_id
 )
-export(
+fn_export_tab(
   d_f[, .(measure, n, median_rejected, median_passed, p_value)],
-  as.character(fs::path(paths$tabdir, "04-measure-sensitivity.tsv"))
+  paths,
+  "04-measure-sensitivity.tsv",
+  sample_id
 )
 
 saveplot(

@@ -6,30 +6,82 @@
 # @DESCRIPTION: Stage constants, paths and shared helpers for the comparison
 #               between scMOCHA-updated mgatk and original mgatk variant
 #               calling. Sourced by every step in this stage.
-# @VERSION: v0.1.0
+# @VERSION: v0.2.0
 
 # Stage identity -----------------------------------------------------------
 STAGE <- "compare-with-mgatk"
 
-# Set once the GSE/GSM/SRR identifier of the compared sample is known; every
-# figure subtitle reads it from here.
-SAMPLE_LABEL <- "<pending>"
+# Every sample compared by this stage. The single source of truth for which
+# samples exist: the extraction step, the per-sample steps and the
+# cross-sample step all read this table. sample_id normalises the "-" that two
+# archive names carry, so one token is safe as a path, a factor level and a
+# file name; archive keeps the real filename.
+SAMPLES <- data.table::data.table(
+  sample_id = c(
+    "GSE149689_GSM4509019_3PV3",
+    "GSE163314_GSM4976997_3PV2",
+    "GSE163668_GSM4995445_5PR2",
+    "GSE181279_GSM5494116_5PPE",
+    "GSE271107_GSM8369876_3PV3"
+  ),
+  archive = c(
+    "GSE149689_GSM4509019_3PV3.zip",
+    "GSE163314_GSM4976997_3PV2.zip",
+    "GSE163668-GSM4995445_5PR2.zip",
+    "GSE181279-GSM5494116_5PPE.zip",
+    "GSE271107_GSM8369876_3PV3.zip"
+  ),
+  gse = c("GSE149689", "GSE163314", "GSE163668", "GSE181279", "GSE271107"),
+  gsm = c(
+    "GSM4509019",
+    "GSM4976997",
+    "GSM4995445",
+    "GSM5494116",
+    "GSM8369876"
+  ),
+  chemistry = c("SC3Pv3", "SC3Pv2", "SC5P-R2", "SC5P-PE", "SC3Pv3")
+)
+
+SAMPLE_IDS <- SAMPLES$sample_id
+
+# Output leaf for everything that spans samples rather than describing one.
+CROSS_SAMPLE <- "cross-sample"
+
+# Set per run by fn_sample_label(); every figure subtitle reads it through
+# fn_sample_note().
+SAMPLE_LABEL <- "<all samples>"
+
+# The seven files this stage reads out of each archive. The allele-count
+# matrices, the two RDS objects and the PNGs are never opened here.
+ARCHIVE_MEMBERS <- c(
+  "cell.variant_stats.tsv.gz",
+  "cell.variant_stats_mgatk_original.tsv.gz",
+  "cell.cell_heteroplasmic_df.tsv.gz",
+  "cell.cell_heteroplasmic_df_mgatk_original.tsv.gz",
+  "cell.cell_heteroplasmic_df_raw.tsv.gz",
+  "cell.depthTable.txt",
+  "cell.coverage.txt.gz"
+)
 
 # Paths --------------------------------------------------------------------
 # .env stores REPODIR and HIGHRESDIR with a leading "~", so every env-derived
-# path is expanded before use.
-stage_paths <- function() {
+# path is expanded before use. sample_id = NULL selects the cross-sample leaf.
+stage_paths <- function(sample_id = NULL) {
   repodir <- fs::path_expand(Sys.getenv("REPODIR"))
-  indir <- fs::path_expand(fs::path(Sys.getenv("ISILON_BASE"), STAGE))
+  root <- fs::path_expand(fs::path(Sys.getenv("ISILON_BASE"), STAGE))
   stagedir <- fs::path(repodir, "newplots", STAGE)
+  leaf <- if (is.null(sample_id)) CROSS_SAMPLE else sample_id
 
   list(
     repodir = repodir,
-    indir = indir,
-    cachedir = fs::path(indir, "derived"),
+    root = root,
+    indir = fs::path(root, "samples", leaf),
+    cachedir = fs::path(root, "derived", leaf),
     stagedir = stagedir,
-    figdir = fs::path(stagedir, "figures"),
-    tabdir = fs::path(stagedir, "tables"),
+    figroot = fs::path(stagedir, "figures"),
+    tabroot = fs::path(stagedir, "tables"),
+    figdir = fs::path(stagedir, "figures", leaf),
+    tabdir = fs::path(stagedir, "tables", leaf),
     colorfile = fs::path(
       fs::path_expand(Sys.getenv("HIGHRESDIR")),
       "00-colors.R"
@@ -183,6 +235,83 @@ fn_sample_note <- function() {
   glue::glue("sample {SAMPLE_LABEL}")
 }
 
+# Stops with the valid list rather than letting a typo build paths under a
+# directory that will never exist.
+fn_check_sample <- function(sample_id) {
+  if (length(sample_id) != 1L || !nzchar(sample_id)) {
+    stop(
+      "--sample is required. One of: ",
+      paste(SAMPLE_IDS, collapse = ", ")
+    )
+  }
+  if (!sample_id %in% SAMPLE_IDS) {
+    stop(
+      "unknown sample '",
+      sample_id,
+      "'. One of: ",
+      paste(SAMPLE_IDS, collapse = ", ")
+    )
+  }
+  sample_id
+}
+
+fn_sample_label <- function(sample_id) {
+  i <- match(sample_id, SAMPLES$sample_id)
+  as.character(glue::glue(
+    "{SAMPLES$gse[i]} {SAMPLES$gsm[i]} ({SAMPLES$chemistry[i]})"
+  ))
+}
+
+# A panel for an arm or a group that turned out to be empty. Four of the five
+# samples have zero variants in the original-mgatk arm, and a zero there is a
+# result: the figure has to be written and say so, not be skipped.
+fn_empty_panel <- function(title, subtitle, note) {
+  ggplot2::ggplot() +
+    ggplot2::annotate(
+      "text",
+      x = 0,
+      y = 0,
+      label = paste(strwrap(note, width = 46), collapse = "\n"),
+      size = 4,
+      color = "grey35"
+    ) +
+    ggplot2::xlim(-1, 1) +
+    ggplot2::ylim(-1, 1) +
+    fn_theme() +
+    ggplot2::theme(
+      axis.text = ggplot2::element_blank(),
+      axis.ticks = ggplot2::element_blank(),
+      panel.border = ggplot2::element_blank()
+    ) +
+    ggplot2::labs(title = title, subtitle = subtitle, x = NULL, y = NULL)
+}
+
+# Returns `plot` when `ok`, otherwise the placeholder. `plot` is a promise, so
+# a panel that would error on an empty group is never evaluated.
+fn_or_empty <- function(ok, plot, title, note) {
+  if (isTRUE(ok)) plot else fn_empty_panel(title, fn_sample_note(), note)
+}
+
+# TRUE when a two-group comparison has enough variants on both sides to be
+# worth testing. Below this the medians are still reported, with P = NA.
+CUTOFF_MIN_GROUP <- 3
+
+fn_testable <- function(g) {
+  n <- table(droplevels(as.factor(g)))
+  length(n) == 2L && all(n >= CUTOFF_MIN_GROUP)
+}
+
+# Every per-sample table carries its sample id in the first column, so the
+# cross-sample step can bind them without re-deriving provenance.
+fn_export_tab <- function(d, paths, name, sample_id) {
+  out <- data.table::as.data.table(d)
+  out <- data.table::copy(out)
+  data.table::set(out, j = "sample", value = sample_id)
+  data.table::setcolorder(out, "sample")
+  export(out, as.character(fs::path(paths$tabdir, name)))
+  invisible(out)
+}
+
 # Subtitles here carry N and every threshold, so they routinely run past the
 # panel width. ggplot2 does not wrap them; applied at save time.
 fn_wrap_labs <- function(p, width = 95) {
@@ -285,10 +414,28 @@ fn_scmocha_gate <- function(detection_long, blacklisted_variants) {
 # cell that is nowhere near carrying the variant, including the zero-alt cells.
 # Excluding them would bias the estimate upward.
 fn_background_rate <- function(detection_long) {
-  detection_long[
-    depth >= CUTOFF_MIN_READS & (is.na(af) | af < 0.01),
-    sum(round(af * depth), na.rm = TRUE) / sum(depth, na.rm = TRUE)
-  ]
+  d <- detection_long[depth >= CUTOFF_MIN_READS & (is.na(af) | af < 0.01)]
+  total_depth <- sum(d$depth, na.rm = TRUE)
+  rate <- if (total_depth > 0) {
+    sum(round(d$af * d$depth), na.rm = TRUE) / total_depth
+  } else {
+    NA_real_
+  }
+
+  # A shallow sample can carry no background alt read, or no background cell at
+  # all. Either way the estimate is 0 or undefined, which makes the binomial
+  # carrier test vacuous: with rate 0 every cell holding one alt read passes,
+  # and with the degenerate rate 1 no cell ever does. Fall back to the smallest
+  # rate the reads in hand could have resolved.
+  if (!is.finite(rate) || rate <= 0) {
+    resolvable <- max(total_depth, sum(detection_long$depth, na.rm = TRUE), 1)
+    rate <- 1 / resolvable
+    log_warn(
+      "background alt rate not estimable from {total_depth} background ",
+      "reads; floored at 1/{resolvable} = {signif(rate, 3)}"
+    )
+  }
+  rate
 }
 
 # Heteroplasmy among the cells that carry the variant, on three definitions.

@@ -139,6 +139,18 @@ color_af_bin <- c(
   "#F9CCF9"
 )
 
+# The five samples compared in newplots/compare-with-mgatk. Each takes its
+# chemistry's anchor from color_chemistry so a sample's colour stays tied to
+# its library type; the two SC3Pv3 samples are separated by lightness with
+# prismatic::clr_darken("#35B779", 0.35).
+color_sample <- c(
+  "GSE149689_GSM4509019_3PV3" = "#35B779",
+  "GSE163314_GSM4976997_3PV2" = "#FDE725",
+  "GSE163668_GSM4995445_5PR2" = "#31688E",
+  "GSE181279_GSM5494116_5PPE" = "#440154",
+  "GSE271107_GSM8369876_3PV3" = "#047548"
+)
+
 color_xlsx_hdr <- "#4D4D4D"
 color_xlsx_note <- "#7F7F7F"
 color_xlsx_white <- "#FFFFFF"
