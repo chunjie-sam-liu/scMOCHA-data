@@ -33,9 +33,10 @@ Defined in `pixi.toml`. Run from the repository root.
 | `pixi run format`     | `air format .`                                           |
 | `pixi run clean`      | remove `*.tar.gz`, `*.Rcheck`                            |
 
-`air` is **not** a pixi dependency. `pixi run format` only works because the
-Posit Air VS Code extension puts `air` on `PATH`. Outside that environment,
-install `air` separately or the task fails.
+`air` is not yet a declared dependency of this package repository, so
+`pixi run format` currently works only because the Posit Air VS Code extension
+puts `air` on `PATH`. That is a known gap, not the pattern to copy: the fix is
+`pixi add air` (install ladder rung 1), never a hand-install into `$HOME`.
 
 Ad-hoc commands:
 

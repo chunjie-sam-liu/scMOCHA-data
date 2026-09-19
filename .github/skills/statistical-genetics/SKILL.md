@@ -16,6 +16,7 @@ software choice come from the repository's `.github/instructions/` bindings and
 its project charter. Those take precedence where they conflict.
 
 Related skills: `data-verification` (schema and key checks before any join),
+`data-catalog` (the catalog row that records each input's build and join keys),
 `analysis-pipeline` (the plan/decision files that record which of the choices
 below were made), `r-figure` (QQ and Manhattan plots).
 
@@ -47,8 +48,9 @@ The single cheapest source of silently wrong results.
 
 - Carry the build in the column name or the object name, not in a comment:
   `pos_hg38`, `start_hg19`. A bare `pos` column is a defect.
-- Record the build of every coordinate-bearing input in the provenance file at
-  the point the input is registered, not later.
+- Record the build of every coordinate-bearing input in the repository's data
+  catalog (`DATA.md`, see `data-catalog`) at the point the input is registered,
+  not later.
 - A cross-build join must go through an explicit liftover step that reports how
   many records failed to map and why. Silent inner-join shrinkage is the
   failure mode: the join succeeds, the row count drops, and nobody looks.

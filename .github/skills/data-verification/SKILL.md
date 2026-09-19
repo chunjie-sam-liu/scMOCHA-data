@@ -9,6 +9,15 @@ Two failure modes dominate data work: assuming a schema that does not exist,
 and trusting an exit code that does not mean success. Both are cheap to
 prevent and expensive to discover late.
 
+Every command below runs inside the project environment. Prefix each with
+`pixi run` when calling it from a login shell, or source the stage config first
+and call it bare — a bare `duckdb` or `bcftools` from the login shell may
+resolve to a hand-installed copy of an unknown version, or to nothing at all.
+
+A schema fact worth verifying twice is worth recording once: when the file is a
+shared input, put the grain, the real unique key, the join-key format, and the
+build on its `DATA.md` row. -> `data-catalog`
+
 ---
 
 ## 1. Verify the schema before writing code
@@ -16,19 +25,20 @@ prevent and expensive to discover late.
 **Never assume column names, types, or key formats.** Inspect the real file
 first, using the cheapest check that answers the question.
 
-| Format            | Check                                                                                                                                                                                                                               |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| TSV / CSV         | `head -1 file.tsv`, `head -3 file.tsv`, `awk -F'\t' 'NR==1{print; exit}' file.tsv`                                                                                                                                                  |
-| Compressed text   | `zcat file.tsv.gz \| head -3`                                                                                                                                                                                                       |
-| Parquet           | `duckdb -c "describe select * from 'file.parquet'"`, or `pixi run Rscript -e 'print(arrow::open_dataset(f)$schema)'`; for rows, `dplyr::collect(head(arrow::open_dataset(f), 3))`                                                   |
-| Excel             | `pixi run Rscript -e 'readxl::excel_sheets(f)'`, then `readxl::read_excel(f, n_max = 3)`                                                                                                                                            |
-| RDS               | `pixi run Rscript -e 'str(readRDS(f), max.level=1)'`                                                                                                                                                                                |
-| qs2               | `pixi run Rscript -e 'str(qs2::qs_read(f), max.level=1)'`                                                                                                                                                                           |
-| VCF               | `bcftools view -h file.vcf.gz \| tail -1`; the same for `.vcf.bgz`. Also `bcftools view -h f \| grep -m1 '##reference'` for the build, and `bcftools query -l f \| head -3` for the sample-ID format                                |
-| PLINK             | `head -2 file.fam`, `head -2 file.bim`, `head -1 file.psam`                                                                                                                                                                         |
-| IDAT              | `pixi run Rscript -e 'x <- illuminaio::readIDAT(f); str(x[c("ChipType","nSNPsRead")])'`; one file, never a directory                                                                                                                |
-| Matrix (beta / M) | shape and keys, not values: `ncol` equals the expected array count, `colnames` are the row-unique sample key, `nrow` equals the probe universe; `pixi run Rscript -e 'm <- qs2::qs_read(f); str(dimnames(m), max.level=1); dim(m)'` |
-| Database          | list tables, then `describe`/`PRAGMA table_info` on the target                                                                                                                                                                      |
+| Format            | Check                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| TSV / CSV         | `head -1 file.tsv`, `head -3 file.tsv`, `awk -F'\t' 'NR==1{print; exit}' file.tsv`                                                                                                                                                                                                                                                                                 |
+| Compressed text   | `zcat file.tsv.gz \| head -3`                                                                                                                                                                                                                                                                                                                                      |
+| Parquet           | `duckdb -c "describe select * from 'file.parquet'"`, or `pixi run Rscript -e 'print(arrow::open_dataset(f)$schema)'`; for rows, `dplyr::collect(head(arrow::open_dataset(f), 3))`                                                                                                                                                                                  |
+| Excel             | `pixi run Rscript -e 'readxl::excel_sheets(f)'`, then `readxl::read_excel(f, n_max = 3)`                                                                                                                                                                                                                                                                           |
+| RDS               | `pixi run Rscript -e 'str(readRDS(f), max.level=1)'`                                                                                                                                                                                                                                                                                                               |
+| qs2               | `pixi run Rscript -e 'str(qs2::qs_read(f), max.level=1)'`                                                                                                                                                                                                                                                                                                          |
+| VCF               | `bcftools view -h file.vcf.gz \| tail -1`; the same for `.vcf.bgz`. For the build try `bcftools view -h f \| grep -m1 '##reference'` **and** `bcftools view -h f \| grep -m1 'assembly='` — many files carry it only on the `##contig` lines, and some carry it nowhere, which is a finding, not a pass. `bcftools query -l f \| head -3` for the sample-ID format |
+| PLINK             | `head -2 file.fam`, `head -2 file.bim`, `head -1 file.psam`                                                                                                                                                                                                                                                                                                        |
+| IDAT              | `pixi run Rscript -e 'x <- illuminaio::readIDAT(f); str(x[c("ChipType","nSNPsRead")])'`; one file, never a directory                                                                                                                                                                                                                                               |
+| Matrix (beta / M) | shape and keys, not values: `ncol` equals the expected array count, `colnames` are the row-unique sample key, `nrow` equals the probe universe. Read the dimnames without loading the values — for GDS/HDF5 that is the only workable route at whole-array scale                                                                                                   |
+| GDS / HDF5        | `pixi run Rscript -e 'f <- gdsfmt::openfn.gds(p); print(f); gdsfmt::closefn.gds(f)'` prints every node and its dimensions. For one node's keys, `gdsfmt::read.gdsn(gdsfmt::index.gdsn(f, "sample.id"))`. Never read the value matrix to learn its shape                                                                                                            |
+| Database          | list tables, then `describe`/`PRAGMA table_info` on the target                                                                                                                                                                                                                                                                                                     |
 
 Rules:
 

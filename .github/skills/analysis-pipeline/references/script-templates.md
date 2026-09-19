@@ -114,10 +114,35 @@ Every stage with shell scripts ships a `config.sh` that:
    `set -o allexport ; source "${repodir}/.env" ; set +o allexport`. A repo with
    more than one track sources its own track's file; the repository bindings
    name them.
-3. Activates pixi once for the whole process:
-   `eval "$(pixi shell-hook --manifest-path "${repodir}/pixi.toml")"`. Never
-   conda, mamba, or Miniforge. After this line `Rscript`, `python`, and every
-   other pixi binary are on `PATH` — do not wrap them in `pixi run` again.
+3. Activates pixi once for the whole process, filtering the hook's
+   bash-completion loop and disabling `set -u` across the `eval` only:
+
+   ```bash
+   _pixi_hook=$(pixi shell-hook --manifest-path "${repodir}/pixi.toml") || {
+     echo "FATAL: pixi shell-hook failed" >&2
+     return 1 2>/dev/null || exit 1
+   }
+   if [[ $- == *u* ]]; then had_u=1; set +u; else had_u=0; fi
+   eval "$(
+     printf '%s\n' "${_pixi_hook}" |
+       awk '/^for _pixi_f in .*bash-completion/ { skip = 1 }
+            skip { if ($0 == "done") skip = 0; next }
+            { print }'
+   )"
+   if [[ ${had_u} -eq 1 ]]; then set -u; fi
+   unset _pixi_hook had_u
+   ```
+
+   Both guards are load-bearing. The hook's trailing bash-completion loop
+   sources files that use `< <(...)`, which bash 4.4 -- still the system bash on
+   many compute nodes -- cannot parse, and a syntax error in a sourced file
+   kills a non-interactive shell, so every batch task exits 2 in seconds with no
+   program output. The hook also sources conda `activate.d` scripts that
+   dereference variables with no default, so a caller running `set -euo
+pipefail` dies on an unbound variable. Never conda, mamba, or Miniforge.
+   After this block `Rscript`, `python`, and every other pixi binary are on
+   `PATH` -- do not wrap them in `pixi run` again. -> `pixi-env`
+
 4. Defines every input prefix, output root, run name, and model/unit list.
 5. Runs `mkdir -p` for every output directory it advertises, including
    `logs/<stage>/`, which the scheduler will not create for itself.

@@ -1,0 +1,6 @@
+# 80 matches air.toml so R and Python wrap at the same column.
+line-length = 80
+target-version = "py312"
+
+# Ruff also formats Python blocks inside Markdown, which would fight prettier.
+extend-exclude = ["*.md", ".pixi", "data", "results", "logs", "tmp"]

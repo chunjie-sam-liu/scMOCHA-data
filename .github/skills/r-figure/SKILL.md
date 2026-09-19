@@ -34,8 +34,11 @@ from the repository's `.github/instructions/` bindings or `AGENTS.md`.
 1. **Family A saves with `saveplot()`, never `ggsave()`.** `saveplot()` is the
    jutils wrapper; it creates the directory, defaults to 300 dpi and a white
    background, and accepts a list of plots for a multi-page PDF.
-2. **Family B always closes its device.** Wrap in `on.exit(dev.off())` or keep
-   the `pdf()` / `dev.off()` pair adjacent so an error cannot leave the device
+2. **Family B always closes its device.** `on.exit()` at the top level of a
+   script is a no-op — it only fires when a _function_ frame exits — so it
+   cannot protect a device. Either keep the `pdf()` / `dev.off()` pair adjacent
+   with nothing that can fail between them, or wrap the drawing in
+   `tryCatch(..., finally = dev.off())`, so an error cannot leave the device
    open and the file truncated.
 3. **PDF is the default device.** Use PNG only when the consumer needs a raster
    (slide deck, GitHub comment) or when a Manhattan plot has too many points.
@@ -95,7 +98,7 @@ source("src/NN-stage/config.R")     # stage constants, fn_theme(), path helper
 source("src/color.R")               # the track color file, every color used
 
 paths <- stage_paths()
-dir_create(paths$figdir)
+dir_create(paths$figuredir)
 ```
 
 The section order is the one every step script uses (Metainfo /
@@ -291,7 +294,7 @@ one genuinely does not, say so and name the replacement before writing code.
 
 ```r
 p <- Reduce(`+`, plots) + patchwork::plot_layout(nrow = 1)
-saveplot(as.character(paths$figdir / "rg_heatmap.pdf"), p,
+saveplot(as.character(paths$figuredir / "rg_heatmap.pdf"), p,
          width = 5 * length(plots), height = 5)
 ```
 
@@ -316,7 +319,7 @@ its own file, or draw them onto successive pages of one `pdf()` device.
 ```r
 # Family A
 saveplot(
-  as.character(paths$figdir / "maf_by_qc_status.pdf"),
+  as.character(paths$figuredir / "maf_by_qc_status.pdf"),
   p_hist,
   width = 8,
   height = 5
@@ -324,11 +327,13 @@ saveplot(
 log_info("Saved maf_by_qc_status.pdf ({nrow(d)} leads)")
 
 # Family B
-pdf(as.character(paths$figdir / "discovery_landscape.pdf"),
+pdf(as.character(paths$figuredir / "discovery_landscape.pdf"),
     width = 9, height = max(7, 0.12 * nrow(M)))
-ComplexHeatmap::draw(ht, annotation_legend_list = list(state_leg),
-                     merge_legend = TRUE)
-dev.off()
+tryCatch(
+  ComplexHeatmap::draw(ht, annotation_legend_list = list(state_leg),
+                       merge_legend = TRUE),
+  finally = dev.off()
+)
 log_info("Wrote discovery_landscape.pdf ({nrow(M)} loci x {ncol(M)} traits)")
 ```
 

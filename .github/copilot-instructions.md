@@ -72,26 +72,36 @@ skill stands for "a stage inside any track" in both layouts.
 Load the matching skill before doing that kind of work. Each holds the full
 detail that used to live in this file.
 
-| Skill                  | Load when                                                                                                                                                                                |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `analysis-pipeline`    | Creating or modifying anything inside a track (`src/NN-stage/`, `pipeline/`, `workflow/`, a flat pipeline dir); writing a `PLAN.md`, `PROGRESS.md`, or `DECISION.md`; porting a pipeline |
-| `data-verification`    | Writing parse/merge/join/filter logic, or verifying a generated file                                                                                                                     |
-| `data-result-layout`   | Choosing an output path, creating an output directory, or needing a temp directory                                                                                                       |
-| `long-running-jobs`    | Anything over ~60 s: builds, installs, model fits, tmux; or writing an LSF/SLURM array                                                                                                   |
-| `lsf-resource-planner` | Choosing `-n`, `-R "rusage[mem=]"`, `-W`, or `-q` for a `.lsf` or `bsub`; a job needs lots of memory or cores; an array pends too long or is too wide                                    |
-| `subagent-delegation`  | Task spans >2 files, files are unknown, or a command/review must be delegated                                                                                                            |
-| `statistical-genetics` | Fitting or reviewing any association model (QTL, GWAS, EWAS, interaction); choosing a threshold, correction, or covariate set; handling genotypes, builds, ancestry, fine-mapping, coloc |
-| `jutils`               | Writing R scripts (import/export, plotting, parallel, DuckDB)                                                                                                                            |
-| `r-figure`             | Writing or editing any R code that produces a figure, ggplot2 or otherwise: theme, colors, labels, panel assembly, save call                                                             |
-| `excel-export`         | Writing or editing any R code that produces an `.xlsx`: sheets, number formats, styled headers, summary tables                                                                           |
-| `palette`              | Any color enters the code: a new palette, a new category, a one-off status or highlight color, an Excel fill                                                                             |
-| `image-prompt`         | Writing an image-generation prompt for a figure, flowchart, or diagram; creating or editing a `DIAGRAM.md`                                                                               |
+| Skill                  | Load when                                                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `brainstorm`           | The shape of the work is not yet clear and a plan would be premature: scoping a new analysis, comparing tools or methods, an unfamiliar tool, mapping blockers, writing a `BRAINSTORM.md`     |
+| `analysis-pipeline`    | Creating or modifying anything inside a track (`src/NN-stage/`, `pipeline/`, `workflow/`, a flat pipeline dir); writing a `PLAN.md`, `PROGRESS.md`, or `DECISION.md`; porting a pipeline      |
+| `markdown-doc`         | Creating or substantially editing any `.md`: choosing between Mermaid, table, task list, code block, and prose; Mermaid direction and palette; structuring a progress document for resumption |
+| `data-catalog`         | Reading the env file; a variable, input, or shared artifact is added, replaced, or retired; auditing `DATA.md` for drift                                                                      |
+| `data-verification`    | Writing parse/merge/join/filter logic, or verifying a generated file                                                                                                                          |
+| `data-result-layout`   | Choosing an output path, creating an output directory, or needing a temp directory                                                                                                            |
+| `long-running-jobs`    | Anything over ~60 s: builds, installs, model fits, tmux; or writing an LSF/SLURM array                                                                                                        |
+| `lsf-resource-planner` | Choosing `-n`, `-R "rusage[mem=]"`, `-W`, or `-q` for a `.lsf` or `bsub`; a job needs lots of memory or cores; an array pends too long or is too wide                                         |
+| `subagent-delegation`  | Task spans >2 files, files are unknown, or a command/review must be delegated                                                                                                                 |
+| `pixi-env`             | Scaffolding a new repository; adding a dependency and choosing a rung; a bioconductor package installs but does not work; activating pixi in a shell/cluster script; the lab-remote mirror    |
+| `statistical-genetics` | Fitting or reviewing any association model (QTL, GWAS, EWAS, interaction); choosing a threshold, correction, or covariate set; handling genotypes, builds, ancestry, fine-mapping, coloc      |
+| `jutils`               | Writing R scripts (import/export, plotting, parallel, DuckDB)                                                                                                                                 |
+| `r-figure`             | Writing or editing any R code that produces a figure, ggplot2 or otherwise: theme, colors, labels, panel assembly, save call                                                                  |
+| `excel-export`         | Writing or editing any R code that produces an `.xlsx`: sheets, number formats, styled headers, summary tables                                                                                |
+| `palette`              | Any color enters the code: a new palette, a new category, a one-off status or highlight color, an Excel fill                                                                                  |
+| `image-prompt`         | Writing an image-generation prompt for a figure, flowchart, or diagram; creating or editing a `DIAGRAM.md`                                                                                    |
 
 `analysis-pipeline` + `jutils` are the default pair for any work inside a
-track. R code that draws a figure always loads `r-figure`, and R code
-that writes an `.xlsx` always loads `excel-export`, before the code is written.
-Any code that introduces a color always loads `palette` first, whatever the
-output format. A scheduler wrapper loads `long-running-jobs` for the launch and
+track. `brainstorm` comes before both when the design is still open: it is the
+pre-plan document and it hands its settled questions to `PLAN.md` and
+`DECISION.md`. `markdown-doc` loads alongside whichever of them owns the file
+being written: those skills fix the required sections, `markdown-doc` fixes how
+each section is rendered. `data-catalog` loads the moment a task reads the env
+file or produces an artifact another stage will read; `data-verification`
+supplies the checks whose results its rows record. R code that draws a figure
+always loads `r-figure`, and R code that writes an `.xlsx` always loads
+`excel-export`, before the code is written. Any code that introduces a color
+always loads `palette` first, whatever the output format. A scheduler wrapper loads `long-running-jobs` for the launch and
 array contract and `lsf-resource-planner` for the numbers in its header. Any
 code that fits, filters, or summarizes an association statistic loads
 `statistical-genetics` before the model is written, and any review of such code
@@ -113,9 +123,11 @@ file.
   that needs 400 lines for one task is fine; two unrelated tasks in one
   100-line file are not.
 - Run the cheapest check that can fail first. Where a project has a test suite,
-  it is the first rung. Where it does not, the ladder is: syntax parse ->
-  one-unit smoke run (one chromosome, one trait, array index `[1-1]`) -> full
-  run. Never launch the full run when a cheaper rung would have caught the bug.
+  it is the first rung. The full ladder is: test suite -> formatter and linter
+  on the changed files -> syntax parse -> one-unit smoke run (one chromosome,
+  one trait, array index `[1-1]`) -> full run. Skip a rung only when the
+  project does not have it. Never launch the full run when a cheaper rung would
+  have caught the bug.
 - Focus on functionality before optimization.
 - Assume your first hypothesis may be wrong. Consider multiple causes and
   validate assumptions with evidence before deciding.
@@ -157,6 +169,11 @@ These are summaries; the linked skill has the procedure.
 - **Never leave the pixi environment.** No conda / mamba / Miniforge, no bare
   `Rscript` or `python` from the login shell, no `install.packages()` into a
   live session. -> "Environment and Execution" below
+- **Never install software by hand.** Every tool a script calls is installed by
+  the project: `pixi add` into the root `pixi.toml` first, a separate pixi
+  project under `tools/` when versions conflict, `tools/opt/` only when no
+  conda channel ships it. Never into `$HOME`, a system path, or a module.
+  -> `pixi-env`, "Installing Software" below
 - **Never report success on an unverified file.** A zero exit code is not proof.
   Confirm fresh, non-empty, sane contents; explain any empty result.
   -> `data-verification`
@@ -190,14 +207,26 @@ These are summaries; the linked skill has the procedure.
   `config.sh` + `config.sh.md` and `config.R` + `config.R.md`; a stage with
   both shell and R steps ships both pairs. Older `00-config.R` /
   `00-config.md` names stay as they are. -> `analysis-pipeline`
+- **Never default to prose in a Markdown file.** Dependencies and flow are a
+  Mermaid diagram, repeated attributes are a table, actionable work is a task
+  list, anything meant to be copied is a code block; prose carries only
+  interpretation, rationale, and warnings. Diagrams are `flowchart TD` unless
+  the chain is tiny, and their color comes from the fixed documentation palette
+  rather than an invented hex. A progress or debugging document leads with its
+  current verified state, not with its history, and marks every number measured
+  or projected. -> `markdown-doc`
 - **Never leave `AGENTS.md` behind the code.** Every track has one, updated in
   the same change set as any change to a run command, entry point, argument,
   output path, or newly found pitfall. -> "Track Guide" below
 - **Never introduce an input without a `DATA.md` row.** Every data-valued
-  variable in the env file, and every file received from a person, is recorded
-  at the repository root in the same change set. -> "Input Provenance" below
+  variable in the env file, every file received from a person, and every
+  artifact a second stage or track reads is recorded at the repository root in
+  the same change set. -> `data-catalog`, "Data Catalog" below
 - **Never poll with `sleep`.** Launch long work in tmux or the scheduler, report
-  the ID and an estimate, then stop. -> `long-running-jobs`
+  the ID and an estimate, then stop. Once every stage has passed its one-unit
+  smoke rung, submit the remaining stages as one dependency chain instead of one
+  per session, and resume a broken chain from the stage that failed rather than
+  from the first. -> `long-running-jobs`
 
 # Error Fixing
 
@@ -260,32 +289,30 @@ implement before the user approves the plan.** Every contested decision is
 written into the plan as a `Q1..Qn` block with a recommended answer -- never
 asked in chat, never silently decided. See "Where to Ask" above.
 
+When the gate applies but the design is still open -- an unfamiliar tool, no
+agreed cohort, several plausible shapes -- load `brainstorm` first and settle
+the forks in a `BRAINSTORM.md` before writing the plan. A brainstorm creates no
+scripts and invalidates nothing, so it never triggers the gate itself; it is
+what removes the guesses from the plan that does.
+
 Plan, progress, and decision files come in two tiers. Each stage owns one
-`PLAN.md` (stage charter), one `PROGRESS.md` (stage dashboard + campaign
-index), and one `DECISION.md` (stage decision log: each cross-cutting choice,
-the alternative it beat, and why). Each specific question inside that stage
-owns a `{date}-{short-title}.PLAN.md`, `.PROGRESS.md`, and `.DECISION.md` set
-sharing one stem, where `{date}` is `YYYY-MM-DD` and `{short-title}` is
-lowercase kebab-case. A new stage starts with the stage-level set only; every
-later question gets its own dated set plus a row in the `PROGRESS.md` index.
-Never open a new dated section inside `PROGRESS.md` or `DECISION.md` for a new
-question -- a new question is a new set of files.
+`PLAN.md` (the design), one `PROGRESS.md` (the run state), and one
+`DECISION.md` (the choices). Each specific question inside that stage owns a
+`{date}-{short-title}.PLAN.md`, `.PROGRESS.md`, and `.DECISION.md` set sharing
+one stem. **Never open a new dated section inside `PROGRESS.md` or
+`DECISION.md` for a new question** -- a new question is a new set of files.
 
 The decision file exists because the plan says what and the progress file says
-where, but neither records which alternatives were weighed at each fork and
-why one won -- and that otherwise dies with the chat session. It holds
-decisions only, never reasoning narrative: numbered `D1..Dn` entries of the
-form "chose X over Y because Z", each with its evidence, dated and
-append-only. It is created together with the plan, gains an entry the moment a
-choice is made or a `Q` is approved or overridden, marks a choice taken without
-the user `provisional`, and is read second on resume: `PROGRESS.md`, then
-`DECISION.md`, then `PLAN.md`. -> `analysis-pipeline`
+where, but neither records which alternative was rejected at each fork and why,
+and that otherwise dies with the chat session. **The resume order is always
+`PROGRESS.md`, then `DECISION.md`, then `PLAN.md`.** Which tier to write, the
+naming rules, the `D1..Dn` entry contract, and the templates all live in
+`analysis-pipeline` and its `plan-and-progress.md` reference.
 
 A repository that predates this convention keeps its lowercase `plan.md` and
 dated `*.progress.md` files as history: read them when resuming, but never
-rename or rewrite them. A stage with no decision file yet gets one the next
-time it is touched, starting at `D1` with the first decision made that day. The
-project's own instructions list which legacy names are in play.
+rename or rewrite them. The project's own instructions list which legacy names
+are in play.
 
 # Track Guide (`AGENTS.md`)
 
@@ -324,58 +351,50 @@ progress file, the progress file wins** -- say so in the file itself.
 - Keep it scannable. When a section outgrows a screen, move the detail into the
   paired `.md` of the step it describes and leave a one-line pointer.
 
-# Input Provenance (`DATA.md`)
+# Data Catalog (`DATA.md`)
 
 One `DATA.md` at the repository root, never one per track: inputs are shared
-across tracks, so a per-track copy forks immediately.
+across tracks, so a per-track copy forks immediately. It does two jobs --
+**provenance** (where a file came from, when, from whom, whether it is still
+the one to use) and **description** (what one row is, which column is really
+unique, which columns join to what, which genome build).
 
-Every row carries these five facts. The column layout may differ between
-sections -- an external input records who sent it, a derived input records the
-script that built it -- but a row missing any of these is incomplete.
+It is read **before** touching data, so a stale catalog is worse than none: it
+is believed. Keeping it current is part of the work, not a cleanup step.
 
-| Fact        | Rule                                                                                                      |
-| ----------- | --------------------------------------------------------------------------------------------------------- |
-| Path        | Repository-relative and exact. Never abbreviate a long name with an ellipsis; the row has to be greppable |
-| Origin      | A person's name or the producing script. Never "the cluster"                                              |
-| Date        | Received, downloaded, or built                                                                            |
-| Variable    | The env-file variable that exposes it, or "none" when no variable names it                                |
-| Consumed by | The tracks or stages that read it                                                                         |
+Every row carries five facts -- path, origin, date, env variable, consumers --
+plus the genome build for anything with coordinates.
 
-A coordinate-bearing input carries one more: the **genome build**. An input
-whose build is not known is recorded as unknown and confirmed with the producer
-before anything joins on its positions.
+**The env file is the watch list, and it drifts in both directions.** Every
+variable pointing at a data file or a directory of inputs needs a row; every
+file sitting in an input directory needs one too, even when no variable names
+it. Audit both directions whenever the env file changes, before writing code
+that reads an input, and when resuming work in an unfamiliar repository.
 
-**The env file is the watch list.** Every variable in it that points at a data
-file, or at a directory of inputs, must have a row. Compare the two whenever
-the env file changes and before writing code that reads an input, and close the
-gap in the same change set. A variable added to the env file without a
-`DATA.md` row is an incomplete change. Adding the row is not a reason to edit
-the env file: report a missing or wrong variable and let the user change it.
+**Every catalog update lands in the same change set that caused it**, never
+batched to the end of a session -- a row written from memory later is a row
+written wrong. Load `data-catalog` for the full trigger list, the audit
+commands, the variable-classification table, the row contract, and the
+schema-fact block.
 
-Also triggered by: a file arriving from a person, a re-download of published
-reference data, a producing script changing what it writes, and an input being
-retired.
-
+- **A job is not finished when it exits 0.** An output earns a row the moment a
+  _second_ stage or track reads it, because that is when it stops being a
+  pipeline output and becomes somebody's input. The row is owed by the change
+  set that adds the read, not by the producer.
 - **Never edit a row in place when an input is replaced.** Add a `Superseded`
-  entry naming the replacement, the reason, and whether anything still reads
-  the old file. An input retired upstream but still consumed downstream is the
-  most valuable thing this file records, and it is never resolved by editing
-  `DATA.md` -- it needs a plan, because it changes the analysis meaning.
-- **Never duplicate a provenance record that already exists.** When a directory
-  ships its own `SOURCES.tsv`, checksum list, or summary table, link it and say
-  what it covers.
-- **Never write a date, size, or count you did not just read.** Provenance is
-  worthless when it is inferred; get it from the file, the env file, the
-  producing script, or the user.
-- Pipeline outputs do not belong here. They belong to the stage that produces
-  them.
-- Retiring an input follows the normal rule: rename `_stale-YYYY-MM-DD`, never
-  delete, and only once nothing links to it.
+  entry. An input retired upstream but still consumed downstream is the most
+  valuable thing this file records, and resolving it changes the analysis
+  meaning, so it needs a plan rather than an edit.
+- **Never write a date, size, count, key, or build you did not just read.**
+  Inferred provenance is worse than none, because it is trusted. `UNKNOWN` and
+  `Pending` are legitimate entries -- a guess is not.
 
 # Environment and Execution
 
 Every project here is a Pixi project: one `pixi.toml` at the repository root
 owns the R, Python, and CLI toolchain. How to enter it depends on the caller.
+Load `pixi-env` to scaffold a new repository, to add a dependency, or when the
+environment itself misbehaves.
 
 **Interactive commands, R and Python scripts** — run from the directory that
 owns `pixi.toml`:
@@ -393,11 +412,36 @@ stage `config.sh`, which activates the environment once for the whole process:
 ```bash
 repodir=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 set -o allexport; source "${repodir}/.env"; set +o allexport
-eval "$(pixi shell-hook --manifest-path "${repodir}/pixi.toml")"
+
+# The hook ends with a loop that sources every file in
+# share/bash-completion/completions. Several of those use `< <(...)`, which
+# bash 4.4 -- still the system bash on many compute nodes -- cannot parse, and a
+# syntax error in a sourced file kills a non-interactive shell outright. Left
+# in, every batch task exits 2 in seconds with no output from the real program.
+# Completions are interactive-only, so strip the loop.
+_pixi_hook=$(pixi shell-hook --manifest-path "${repodir}/pixi.toml") || {
+  echo "FATAL: pixi shell-hook failed" >&2
+  return 1 2>/dev/null || exit 1
+}
+# The hook also sources conda activate.d scripts that dereference variables with
+# no default, so `set -u` must be off across the eval or the caller dies.
+if [[ $- == *u* ]]; then had_u=1; set +u; else had_u=0; fi
+eval "$(
+  printf '%s\n' "${_pixi_hook}" |
+    awk '/^for _pixi_f in .*bash-completion/ { skip = 1 }
+         skip { if ($0 == "done") skip = 0; next }
+         { print }'
+)"
+if [[ ${had_u} -eq 1 ]]; then set -u; fi
+unset _pixi_hook had_u
 ```
 
 After `shell-hook`, `Rscript`, `python`, `plink2`, and every other pixi-provided
 binary are on `PATH`. Do not prefix them with `pixi run` again in that script.
+
+Both guards are load-bearing and neither is optional: **never simplify this back
+to a bare `eval "$(pixi shell-hook ...)"`.** The failure it causes is silent and
+only reproduces in batch, never in an interactive login shell. -> `pixi-env`
 
 The `BASH_SOURCE` form above is how `config.sh` locates itself. A `.lsf` or
 `.sbatch` cannot use it to _find_ `config.sh`, because the scheduler runs a
@@ -412,13 +456,44 @@ submit from the repository root. -> `analysis-pipeline`
   (`renv` is an R package installed by pixi, not an env to activate.)
 - A bare `Rscript` or `python` from the login shell. It resolves to the system
   toolchain and silently misses project packages.
-- `install.packages()` or `pip install` into a live session. Conda-installable
-  packages go in `pixi.toml`; GitHub-only R packages go in `package.R`, then
-  `pixi run remote-install`.
+- `install.packages()` or `pip install` into a live session, or any install
+  into `$HOME`, a system path, or a module system. -> "Installing Software"
+  below.
 
 **Other languages:** TypeScript/JavaScript uses existing `package.json` scripts
 via pnpm; Python is `pixi run python` here, and `uv run` only in a repository
 that has no `pixi.toml`; shell prefers the narrowest direct command.
+
+## Installing Software
+
+Every tool a script calls is installed by the project, so that a fresh clone on
+a fresh machine can rebuild it. Take the first rung that works; `pixi-env` has
+the full procedure for each.
+
+1. **`pixi add <pkg>` into the root `pixi.toml`.** The default, and it covers R
+   packages, Python packages, and CLI binaries alike. Anything on conda-forge or
+   bioconda stops here.
+2. **`package.R`, then `pixi run remote-install`.** For an R package that exists
+   only on GitHub. Never `install.packages()` or `remotes::install_github()`
+   into a live session.
+3. **Its own pixi project under `tools/<tool>/pixi.toml`.** For a tool that is
+   installable but whose version constraints conflict with the root env. Call it
+   with `pixi run --manifest-path tools/<tool>/pixi.toml <cmd>`, and give the
+   directory a `README.md` naming the conflict that forced the split.
+4. **`tools/opt/`.** Only when no conda channel ships it and it must be built or
+   vendored. The installer -- `tools/opt/install-<tool>.sh` -- is tracked and
+   idempotent, the built artifacts are git-ignored, and `tools/opt/README.md`
+   gains a row saying what the tool is and why pixi could not install it.
+
+**Never resolve a version conflict by downgrading, pinning, or removing a
+package the root env already provides.** One working root env serves every
+track; no single tool is worth breaking it. Escalate to rung 3 instead.
+
+Rungs 3 and 4 are exceptions and are written down where the next person will
+look: the separate manifest or installer script is committed, and the
+`AGENTS.md` of every track that uses the tool records the exact command that
+reaches it. A hand-built tool nobody recorded is indistinguishable from a broken
+environment on the next machine.
 
 # Script Header Template
 
@@ -479,8 +554,8 @@ Error Fixing. Before finishing implementation, additionally verify:
 - The paired `.md` or other documentation is updated if behavior changed.
 - `AGENTS.md` still matches the code, if a run command, entry point, argument,
   output path, or active campaign changed.
-- `DATA.md` still covers the env file, if an input was added, replaced, or
-  retired.
+- `DATA.md` still covers the env file in both directions, if an input was
+  added, replaced, retired, or newly produced for another stage to read.
 
 # Reporting Back
 

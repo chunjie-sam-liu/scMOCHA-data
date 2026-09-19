@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# @AUTHOR: Chunjie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2026-08-31
+# @DESCRIPTION: Before a push to the personal remote is allowed, mirror the same
+#   commit into the lab repository and push it there. Any failure aborts the
+#   push so the two remotes never drift apart.
+# @VERSION: v0.1.0
+
+set -euo pipefail
+
+# pre-push feeds "<local ref> <local sha> <remote ref> <remote sha>" on stdin.
+# An all-zero local sha means the ref is being deleted; nothing to mirror.
+rev=""
+while read -r _local_ref local_sha _remote_ref _remote_sha; do
+  [[ ${local_sha} =~ ^0+$ ]] && continue
+  rev="${local_sha}"
+  break
+done
+
+[[ -n ${rev} ]] || exit 0
+
+repodir=$(git rev-parse --show-toplevel)
+"${repodir}/tools/sync-lab.sh" --rev "${rev}"

@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------------------
+# pixi
+#   .pixi/ is the built environment and is never committed, but
+#   .pixi/config.toml is: it carries run-post-link-scripts, without which every
+#   bioconductor-* package installs and then fails to work.
+#   pixi.lock stays tracked so a clone rebuilds the same environment.
+# ---------------------------------------------------------------------------
+.pixi/*
+!.pixi/config.toml
+
+# ---------------------------------------------------------------------------
+# Storage roots. Usually symlinks into project storage outside the repository.
+# ---------------------------------------------------------------------------
+/data
+/results
+/logs
+/tmp
+
+# ---------------------------------------------------------------------------
+# Environment. Machine-specific absolute paths.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+.envrc
+
+# ---------------------------------------------------------------------------
+# R
+# ---------------------------------------------------------------------------
+.Rhistory
+.Rapp.history
+.RData
+*.RData
+.Rproj.user/
+*.Rproj
+.Ruserdata
+renv/library/
+renv/staging/
+renv/local/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[codz]
+*$py.class
+*.so
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Editor and OS
+# ---------------------------------------------------------------------------
+.vscode/
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+*~
+*.swp

@@ -8,6 +8,12 @@ decision file is worse than none.
 They exist at two tiers. Tier 1 describes the stage; tier 2 describes one
 specific question inside it.
 
+This file fixes **which sections each document has**. How a section is rendered
+-- Mermaid for dependencies, a table for repeated attributes, a checklist for
+actionable work, a code block for anything copyable, prose for interpretation --
+is owned by `markdown-doc`, along with the resume-first ordering and the
+measured-vs-projected rule.
+
 ```
 src/NN-stage-name/
   PLAN.md                             tier 1 — stage charter
@@ -26,9 +32,7 @@ naming the question rather than the stage. The uppercase `.PLAN.md` /
 `.PROGRESS.md` / `.DECISION.md` suffix is what distinguishes a live tier-2 file
 from a historical lowercase `{date}-{short-name}.progress.md`.
 
-When to create which tier is in `SKILL.md` section 1.1. In short: a new stage
-starts with the tier-1 set only; every later question gets its own tier-2 set
-and a row in the tier-1 index.
+When to create which tier is in `SKILL.md` section 1.1.
 
 ---
 
@@ -162,6 +166,11 @@ Copy-paste prompt for a new session: what is done, what is pending,
 which commands check status, what to run next. Point at the decision file
 for what is already settled and which entries are still provisional.
 
+### Pipeline graph
+
+<the Mermaid state graph, section D.1. Required once any step has been
+submitted; omit it only for a stage with a single step.>
+
 ## Todo list
 
 - [x] 01-step-name — done YYYY-MM-DD, 698 rows out
@@ -170,8 +179,12 @@ for what is already settled and which entries are still provisional.
 
 ## Job table
 
-| Job ID | Name | Array | DONE | RUN | PEND | Est. time |
-| 12345678 | la-rfmix | 1-22 | 4 | 18 | 0 | ~30-40 min/task |
+| Job ID | Name | Array | Depends on | DONE | RUN | PEND | Est. time |
+| 12345678 | la-rfmix | 1-22 | - | 4 | 18 | 0 | ~30-40 min/task |
+| 12345679 | la-collate | 1-1 | `numdone(12345678,*)` | 0 | 0 | 1 | ~10 min |
+
+State file (when the chain was submitted in one call):
+`logs/lsf-pipeline/<name>-<stamp>.tsv`
 
 ## Output file counts
 
@@ -190,6 +203,92 @@ for what is already settled and which entries are still provisional.
 - Logs: `logs/NN-stage/`
 ```
 
+### D.1 The pipeline graph
+
+A running pipeline has a **shape** and a **state**, and a table shows neither at
+a glance. The graph shows both: it is the DAG that was actually submitted, with
+one of six classes per stage. It goes in the Resume block, above the todo list,
+because it is the first thing a resuming session — or the user at 7 a.m. —
+reads.
+
+| Class  | State                                                    | What it asks for                         |
+| ------ | -------------------------------------------------------- | ---------------------------------------- |
+| `done` | finished **and outputs verified**                        | nothing                                  |
+| `run`  | RUN now                                                  | wait; the label carries the estimate     |
+| `pend` | submitted, waiting for a slot or for its dependency      | wait                                     |
+| `todo` | not submitted yet                                        | submit it, or chain it behind its parent |
+| `fail` | EXIT, or DONE with missing or short outputs              | read the first `.err` files, fix, rerun  |
+| `dead` | submitted, PEND behind a condition that can never be met | `bkill`, then resume from the break      |
+
+`done` means verified, not DONE. A DONE array with missing outputs is `fail` —
+the masked-failure rule in `long-running-jobs` section 6.
+
+`dead` only exists once a whole chain is submitted in one call, and it is the
+state that costs a night when it is not visible: a failed stage leaves every
+downstream job PEND on a condition the scheduler will never satisfy, so the
+queue looks busy while nothing can ever run. -> `long-running-jobs` section 7.
+
+Node label: the stage id, then **the path of the script that runs it**, then the
+state with a count or an estimate, separated by `<br/>`. Put the dependency
+expression on the edge when it is not obvious. Graph the stages, not the files;
+a terminal artifact node is fine when it is what the campaign delivers.
+
+The script path is not decoration. Where the repository has the LSF DAG
+submitter, **this block is the submission input** — it reads the node ids, the
+script paths, and the edges, and submits the chain from them. That is why there
+is no separate spec file to keep in sync: the graph the user reads is the graph
+that ran, because it would not have submitted otherwise. Consequences for how
+the block is written:
+
+- Node id = stage id, `[A-Za-z0-9_]` only.
+- A node whose label carries no `.lsf` / `.sbatch` path is display-only — an
+  artifact box — and is skipped at submission along with its edges.
+- `ext_<jobid>` names a job already in the queue.
+- `:::class` is display state. The submitter never reads it, so a stale class
+  cannot cause a wrong submission; it only misleads a human.
+- The array spec in the label is display too. Array-ness is re-read from the
+  script's `#BSUB -J` at submit time, so a stale `[1-10]` cannot swap `numdone`
+  for `done`.
+
+```mermaid
+flowchart TD
+  export["export<br/>track/run_export.lsf [1-2]<br/>323076535 done 2/2"]:::done
+  matrix["matrix<br/>track/run_matrix.lsf [1-10]<br/>323076536 fail 7/10"]:::fail
+  harmonize["harmonize<br/>track/run_harmonize.lsf [1-1]<br/>323076537 run, ~1.1 h"]:::run
+  release["release<br/>track/run_release.lsf [1-2]<br/>323076538 dead, bkill first"]:::dead
+  docs["docs<br/>track/run_docs.lsf<br/>not submitted"]:::todo
+  OUT["release/v2<br/>10 matrix stems + docs"]:::todo
+
+  export -- "numdone(323076535,*)" --> matrix
+  export -- "numdone(323076535,*)" --> harmonize
+  matrix -- "numdone(323076536,*)" --> release
+  release --> docs
+  release --> OUT
+
+  classDef done fill:#D0E9E6,stroke:#2A9D8F,stroke-width:2px,color:#1B665D
+  classDef run  fill:#CCE3F2,stroke:#1982C4,stroke-width:2px,color:#10557F
+  classDef pend fill:#FCE6D0,stroke:#F28E2B,stroke-width:2px,color:#9D5C1C
+  classDef todo fill:#E3DFDE,stroke:#BAB0AC,stroke-width:1px,color:#79706E
+  classDef fail fill:#FADFD9,stroke:#E76F51,stroke-width:3px,color:#B13E06
+  classDef dead fill:#DED8E7,stroke:#6A4C93,stroke-width:2px,stroke-dasharray:4 3,color:#453160
+```
+
+Copy the `classDef` block **verbatim**. It is fixed documentation chrome, not a
+figure palette: it does not belong in a track `color.R`, and it is not
+re-derived per campaign. Six classes, no more — a seventh state nobody acts on
+differently is noise. These six are the state half of the shared documentation
+palette; the structural half, the `TD` direction rule, and the rest of the
+diagram library live in `markdown-doc`
+[references/mermaid-patterns.md](../../markdown-doc/references/mermaid-patterns.md).
+
+**Write the graph with the plan, before the first submission**, every node
+`todo` and no job IDs. That is when the DAG is decided and approved, and it
+makes the approved plan and the submission input the same artifact.
+
+**Update it in the same edit as the todo list and the job table**, never
+batched. This is a paste, not a drawing exercise: the submitter prints the block
+at submission, and `--status <state.tsv>` reprints it with live classes.
+
 ## E. Tier-1 `PROGRESS.md` — stage dashboard
 
 One screen. Says where the stage stands and points at the campaign that owns
@@ -203,6 +302,11 @@ Decisions: [DECISION.md](DECISION.md)
 ## Current state
 
 Two or three sentences: what is complete, what is running, what is blocked.
+
+### Pipeline graph
+
+<the Mermaid state graph, section D.1, at stage granularity: one node per
+campaign or per step chain, not per array task.>
 
 ## Campaigns
 
@@ -360,7 +464,36 @@ Each time the user asks to "check progress" or "go ahead":
 8. **Update the progress file** with the error, the fix, new job IDs, and new
    counts — the tier-2 file for the active campaign, or `PROGRESS.md` when the
    stage has no tier-2 campaigns — and the decision file with any `D` entry
-   from step 6, in the same edit.
+   from step 6, in the same edit. Re-class the pipeline graph in that same edit.
+
+### G.1 When the whole chain was submitted at once
+
+A chained pipeline changes steps 2 and 7. The rest of the cycle is unchanged.
+
+**Step 2 becomes: check the graph, not the queue.** After a mid-chain failure
+every downstream job is PEND, which looks healthy in `bjobs`. One pass over the
+state file classifies every stage and marks the ones stranded behind the break:
+
+```bash
+submit_lsf_pipeline.sh --status logs/lsf-pipeline/<name>-<stamp>.tsv
+```
+
+**Step 7 becomes: resume from the break, never from the first stage.** In order:
+
+1. `bkill` the `dead` jobs. They can never run, and they still carry the old
+   dependency on the job that failed. The status output prints the exact line.
+   Killing queued work is irreversible, so propose the command and let the user
+   approve it — never run it silently.
+2. Rerun **only the failed indices**: `bsub -J "<name>[3,7]" < <step>.lsf`. A
+   command-line `-J` overrides the one in the file.
+3. Requeue the tail behind that rerun:
+   `submit_lsf_pipeline.sh --graph <PROGRESS.md> --after <new-jobid> --from <next-stage>`.
+4. Paste the new graph and the new job IDs into the progress file.
+
+Depending on the rerun array alone is correct: the elements that already
+finished are DONE and verified, and the rerun covers exactly the ones that were
+not. Re-running a verified stage to "be safe" costs hours and, where a step is
+not idempotent, can destroy a good output. -> `long-running-jobs` section 7.
 
 ## H. Deciding what to re-run
 
@@ -370,6 +503,9 @@ After a mid-pipeline fix, assess each downstream step independently:
 - Consumes it, and its outputs are newer than the change → do NOT re-run.
 - Consumes it, and its outputs are missing or older than the change → re-run
   only that step. Compare with `stat -c '%Y %n' <changed-file> <output>`.
+
+The same test picks the resume point of a chain: `--from` names the earliest
+stage that must re-run, and everything upstream of it stays as it is.
 
 ## I. Time estimates
 
@@ -386,3 +522,8 @@ commands to run, and the matching decision file must hold every choice the
 pending work rests on, with any taken without the user marked `provisional`.
 The next session resumes from those two files alone, reached in one hop from
 the `PROGRESS.md` campaign index.
+
+When the work was submitted as one dependency chain, the handoff also carries
+the pipeline graph with its current classes and the path of the state file the
+submitter wrote. Without the state file, the next session cannot tell a job that
+is merely waiting from one that is stranded behind a failure.

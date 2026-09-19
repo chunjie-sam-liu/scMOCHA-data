@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# @AUTHOR: Chunjie Liu
+# @CONTACT: chunjie.sam.liu.at.gmail.com
+# @DATE: 2026-09-02
+# @DESCRIPTION: Format the staged sources before the commit is created, so what
+#   lands in history is already air / ruff / shfmt / prettier clean. Any
+#   formatter failure aborts the commit.
+# @VERSION: v0.1.0
+
+set -euo pipefail
+
+repodir=$(git rev-parse --show-toplevel)
+"${repodir}/tools/format.sh" --staged

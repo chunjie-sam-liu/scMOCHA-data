@@ -18,8 +18,8 @@ You are a command runner. Your job is to execute the narrowest useful command fo
 
 ## Language-Specific Guidance
 
-- **R**: Run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, `pixi run --manifest-path /abs/path/pixi.toml Rscript ...` when the cwd is elsewhere, or `pixi run <task>` when a Pixi task exists. Inside a `.sh` / `.lsf` / `.sbatch` script, source the stage `config.sh` (which runs `eval "$(pixi shell-hook --manifest-path "${repodir}/pixi.toml")"`) and then call `Rscript` directly. Never any conda / mamba / Miniforge env: no `conda activate <env>`, no `conda run -n <env> ...`, no hard-coded `.../miniforge3/envs/<env>/bin/Rscript`
-- **Python**: Run from the project directory that owns `pixi.toml` with `pixi run python ...`, or call `python` directly only inside a script that has already sourced the stage `config.sh` (`pixi shell-hook`). Never a bare `python` from the login shell. `uv run` only in a repository that has no `pixi.toml`
+- **R**: Run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, `pixi run --manifest-path /abs/path/pixi.toml Rscript ...` when the cwd is elsewhere, or `pixi run <task>` when a Pixi task exists. Inside a `.sh` / `.lsf` / `.sbatch` script, source the stage `config.sh` (which activates pixi once through a filtered `pixi shell-hook` -- never the bare `eval` form, see `pixi-env`) and then call `Rscript` directly. Never any conda / mamba / Miniforge env: no `conda activate <env>`, no `conda run -n <env> ...`, no hard-coded `.../miniforge3/envs/<env>/bin/Rscript`
+- **Python**: Run from the project directory that owns `pixi.toml` with `pixi run python ...`, or call `python` directly only inside a script that has already sourced the stage `config.sh` (the filtered `pixi shell-hook`). Never a bare `python` from the login shell. `uv run` only in a repository that has no `pixi.toml`
 - **TypeScript/JavaScript**: Prefer existing package scripts or project runtime commands
 - **Shell**: Prefer the narrowest direct command
 

@@ -1,6 +1,6 @@
 ---
 name: palette
-description: Use whenever any color enters R code - choosing, deriving, standardizing, validating, or applying it - with paletteer, prismatic, ggplot2 scales, ComplexHeatmap color functions, openxlsx2 fills, and project-level color files such as src/color.R, src_<variant>/color.R, src/colors.R, or src/plot_colors.R. This includes a one-off status or highlight color, an Excel header or block fill, and a color added to a stage config, since every color belongs in the track's one color file rather than inline in the consuming script.
+description: Use whenever any color enters R code - choosing, deriving, standardizing, validating, or applying it - with paletteer, prismatic, ggplot2 scales, ComplexHeatmap color functions, openxlsx2 fills, and the one color file each track owns at its root, whether that track is staged (src/color.R, src_<variant>/color.R, src/colors.R, src/plot_colors.R) or flat (pipeline/color.R, workflow/color.R, <name>_pipeline/color.R, meth_<engine>/color.R). This includes a one-off status or highlight color, an Excel header or block fill, a diagram or prompt palette, and a color added to a stage config, since every color belongs in the track's one color file rather than inline in the consuming script. Also covers the bundled scripts for inspecting a paletteer palette, previewing a palette to PDF, and auditing an existing color file for duplicates and contrast.
 ---
 
 # Palette
@@ -41,6 +41,18 @@ frozen come from the repository's `.github/instructions/` bindings or
   script, not in an export script, not in a stage `config.R` or the older
   `00-config.R`. A stage config that needs a palette aliases one
   (`COHORT_COLORS <- color_newgroup`) instead of defining a hex.
+- **Reference documents may quote a hex, never originate one.** A `DIAGRAM.md`
+  palette table and an image-generation prompt both have to carry literal hex
+  values, because their renderer cannot read R. Copy them out of the color file
+  and name the object each one came from, so the quote can be re-derived. A hex
+  that appears in one of these and nowhere in a color file is still a defect.
+- **The Mermaid documentation palette is the one exception.** The twelve fixed
+  `classDef` lines that carry run state (`done` `run` `pend` `todo` `fail`
+  `dead`) and structural role (`input` `step` `output` `fork` `blocked` `ext`)
+  in a Markdown diagram are chrome: identical in every repository, encoding no
+  cohort, trait, ancestry, or outcome. They are copied verbatim from
+  `markdown-doc`, never re-derived, and never added to a color file. Any other
+  hex in a Mermaid block is a defect. -> `markdown-doc`
 - Existing stage-local palettes are frozen history. Leave them exactly as they
   are - their figures were produced with those hexes, so migrating one silently
   changes a deliverable. Migrate only when the user asks for that specific
@@ -106,6 +118,9 @@ Validate before committing the color:
 prismatic::contrast_ratio(new_color, "white")            # >= 3 behind text
 plot(prismatic::color(prismatic::clr_deutan(palette)))   # still separable
 ```
+
+`contrast_ratio()` takes one color at a time; a vector errors. Check a whole
+palette with `vapply(palette, prismatic::contrast_ratio, numeric(1), "white")`.
 
 Two colors that must never be confused - two ancestries, a discovery versus a
 replication cohort, a reference cloud under study points - are checked against

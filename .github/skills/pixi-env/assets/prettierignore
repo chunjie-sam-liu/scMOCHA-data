@@ -1,0 +1,13 @@
+# Symlinked storage roots and generated trees.
+.pixi
+data
+results
+logs
+tmp
+pixi.lock
+
+# Plan and progress documents are hand-wrapped; keep prettier out of them.
+PLAN.md
+PROGRESS.md
+*.PLAN.md
+*.PROGRESS.md

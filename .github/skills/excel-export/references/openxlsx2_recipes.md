@@ -71,7 +71,7 @@ PCT1_FMT <- "0.0"       # already scaled 0-100, no % sign (e.g. power)
 
 ## `add_block()` - stacked titled tables on one sheet
 
-Returns the next free row, so blocks chain and cannot overlap. Leaves three
+Returns the next free row, so blocks chain and cannot overlap. Leaves two
 blank rows between blocks.
 
 ```r

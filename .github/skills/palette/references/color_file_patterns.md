@@ -96,7 +96,8 @@ wb$add_fill(
 ```
 
 `wb_color(hex = )` needs a 6-digit hex. Strip an alpha suffix first:
-`substr(color_group$nhw, 1, 7)`.
+`substr(color_group[["nhw"]], 1, 7)`. A color file object is a named character
+vector, not a list, so `$` errors on it — always subset with `[[`.
 
 ## pheatmap
 
@@ -126,4 +127,3 @@ Before using a named vector, check that names match observed levels:
 setdiff(levels(obj$celltype), names(color_celltype))
 setdiff(names(color_celltype), levels(obj$celltype))
 ```
-

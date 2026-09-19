@@ -1,0 +1,6 @@
+# Bioconductor conda packages ship post-link scripts. Pixi does not run them by
+# default, so without this line those packages install but do not work.
+#
+# This file is tracked on purpose: the root .gitignore excludes .pixi/* and then
+# re-includes .pixi/config.toml. A clone that loses it gets a broken env.
+run-post-link-scripts = "insecure"

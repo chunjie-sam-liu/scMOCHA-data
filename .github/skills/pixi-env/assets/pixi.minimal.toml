@@ -1,0 +1,58 @@
+[workspace]
+authors = ["chunjie-sam-liu <chunjie-sam-liu@foxmail.com>"]
+channels = ["conda-forge", "bioconda"]
+name = "PROJECT_NAME"
+platforms = ["linux-64", "osx-arm64"]
+version = "0.1.0"
+
+
+[tasks]
+remote-install = "Rscript package.R"
+update-jutils = "Rscript -e 'remotes::install_github(\"chunjie-sam-liu/jutils\")'"
+sync-lab = "bash tools/sync-lab.sh"
+format = "bash tools/format.sh"
+
+
+# Toolchain only: what every project needs to run an R script, read and write
+# the usual formats, and pass `pixi run format`. Grow it with `pixi add`.
+[dependencies]
+r-base = "4.4.*"
+python = "3.12.*"
+pip = "*"
+r-remotes = "*"
+r-biocmanager = "*"
+r-cli = ">=3.6.6,<4"
+r-fs = ">=2.1.0,<3"
+r-glue = ">=1.8.1,<2"
+r-rlang = ">=1.2.0,<2"
+r-conflicted = ">=1.2.0,<2"
+r-optparse = ">=1.8.2,<2"
+"r-data.table" = ">=1.17.8,<2"
+r-tidyverse = "*"
+r-arrow = ">=24.0.0,<25"
+r-readxl = ">=1.5.0,<2"
+r-jsonlite = ">=2.0.0,<3"
+r-yaml = ">=2.3.12,<3"
+r-paletteer = ">=1.7.0,<2"
+r-prismatic = ">=1.1.2,<2"
+numpy = "*"
+pandas = "*"
+pyarrow = "*"
+python-dotenv = ">=1.2.2,<2"
+ripgrep = ">=15.1.0,<16"
+# Formatter toolchain behind `pixi run format`; tools/format.sh needs all three.
+air = ">=0.11.0,<0.12"
+go-shfmt = ">=3.14.0,<4"
+prettier = ">=3.9.6,<4"
+
+
+[target.linux-64.dependencies]
+gcc = "*"
+gxx = "*"
+gfortran = "*"
+r-openxlsx2 = "*"
+
+[target.osx-arm64.dependencies]
+"clang_osx-arm64" = "*"
+"clangxx_osx-arm64" = "*"
+"gfortran_osx-arm64" = "*"

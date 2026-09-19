@@ -1,0 +1,6 @@
+# Allowlist. Installed artifacts are ignored; the installers and this README
+# stay tracked so tools/opt can be rebuilt from scratch on a new machine.
+*
+!.gitignore
+!README.md
+!install-*.sh

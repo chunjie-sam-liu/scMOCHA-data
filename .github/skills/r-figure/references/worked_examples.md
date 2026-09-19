@@ -66,7 +66,7 @@ p <- ggplot(d, aes(maf_plot, fill = status)) +
       "{nrow(d)} leads \u00b7 {n_zero} monomorphic, floored for display ",
       "\u00b7 dashed line at MAF = {THRESH}"
     ),
-    x = "MAF (log scale)",
+    x = "MAF (log scale; monomorphic floored for display)",
     y = "leads",
     fill = NULL
   ) +
@@ -231,8 +231,11 @@ P_SUGG <- 1e-5
 THIN_P <- 0.01
 THIN_PCT <- 5
 
-# Thin against the full N so the QQ expected quantiles stay correct.
+# Rank against the full set BEFORE thinning, so each kept point carries its
+# true rank and the QQ diagonal stays honest.
 n_total <- nrow(gw)
+data.table::setorder(gw, P)
+gw[, rank_full := .I]
 keep <- gw$P < THIN_P | runif(n_total) < THIN_PCT / 100
 plot_dt <- gw[keep]
 data.table::setorder(plot_dt, CHR, POS)
@@ -246,7 +249,7 @@ plot_dt[, `:=`(
   chr_band = data.table::fifelse(CHR %% 2 == 0, "even", "odd")
 )]
 data.table::setorder(plot_dt, P)
-plot_dt[, expected := -log10((seq_len(.N) - 0.5) / n_total)]
+plot_dt[, expected := -log10((rank_full - 0.5) / n_total)]
 
 ticks <- plot_dt[, .(center = (min(cum_pos) + max(cum_pos)) / 2),
                  by = CHR][order(CHR)]
@@ -278,7 +281,7 @@ if (nrow(hits) > 0) {
 }
 saveplot("manhattan.png", p_man, width = 10, height = 4)
 
-lambda_gc <- median(qchisq(1 - plot_dt$P, 1)) / qchisq(0.5, 1)
+lambda_gc <- median(qchisq(1 - gw$P, 1)) / qchisq(0.5, 1)
 p_qq <- ggplot(plot_dt, aes(expected, logp)) +
   geom_abline(slope = 1, intercept = 0, color = "grey60", linewidth = 0.4) +
   geom_point(size = 0.35, alpha = 0.75, color = "#80cbc4") +
@@ -294,6 +297,10 @@ saveplot("qq.png", p_qq, width = 4.5, height = 4.5)
 
 Two things that are easy to get wrong:
 
-- The QQ expected quantiles must be computed against the **unthinned** `n_total`,
-  or the diagonal shifts and the plot lies.
+- Every genome-wide number must come from the **unthinned** data. Dividing by
+  `n_total` is not enough: a thinned point's position in the kept set is not
+  its position in the full set, so carry `rank_full` from before the thinning,
+  and compute `lambda_gc` from `gw$P`, never `plot_dt$P`. Computing lambda on
+  the thinned set inflates it badly — the thinning keeps every significant
+  point and only 5% of the null body, so the median is no longer the median.
 - Label only the genome-wide subset. Repelling thousands of labels hangs.

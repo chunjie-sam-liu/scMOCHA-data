@@ -1,6 +1,6 @@
 ---
 name: analysis-pipeline
-description: "Author, run, and monitor multi-step analysis pipelines organized as numbered stage directories (src/NN-stage/) with paired script + .md files. Use when adding or modifying a pipeline stage, porting a lab pipeline, writing a PLAN.md, PROGRESS.md, or DECISION.md, scaffolding config.sh/.env/env-manager activation, running the plan -> approve -> implement -> syntax-check -> progress -> run -> verify cycle, or resuming a pipeline across sessions. Covers script headers, stage layout, paired documentation, plan-first gating, progress tracking, and the decision log that carries each choice, the alternative it beat, and why between sessions. Applies to HPC/cluster bioinformatics (GWAS, ancestry, RNA-seq, methylation, single-cell) and any cohort-scale or batch data pipeline."
+description: "Author, run, and monitor multi-step analysis pipelines in either layout: numbered stage directories (src/NN-stage/), or a flat track where the track directory itself is the single stage (pipeline/, workflow/, <name>_pipeline/, meth_<engine>/), both with paired script + .md files. Use when adding or modifying a pipeline stage or any step of a flat track, porting a lab pipeline, writing a PLAN.md, PROGRESS.md, or DECISION.md, scaffolding config.sh/config.R/.env/env-manager activation, running the plan -> approve -> implement -> syntax-check -> progress -> run -> verify cycle, or resuming a pipeline across sessions. Covers script headers, stage layout, paired documentation, plan-first gating, progress tracking, and the decision log that carries each choice, the alternative it beat, and why between sessions. Applies to HPC/cluster bioinformatics (GWAS, ancestry, RNA-seq, methylation, single-cell) and any cohort-scale or batch data pipeline."
 ---
 
 # Analysis pipeline stages
@@ -14,9 +14,12 @@ color files, scheduler, and legacy naming exceptions come from the repository's
 `.github/instructions/` bindings, its `copilot-instructions.md`, or its
 `AGENTS.md`. Those take precedence where they conflict.
 
-Related skills: `long-running-jobs` (tmux / cluster arrays),
-`data-verification` (schema + output checks), `data-result-layout`
-(where outputs go), `image-prompt` (the stage's `DIAGRAM.md` figure brief).
+Related skills: `brainstorm` (the pre-plan discussion that settles the design
+forks before a `PLAN.md` is written), `markdown-doc` (how each section of these
+documents is rendered: Mermaid, table, checklist, code block, or prose),
+`long-running-jobs` (tmux / cluster arrays), `data-verification` (schema +
+output checks), `data-result-layout` (where outputs go), `image-prompt` (the
+stage's `DIAGRAM.md` figure brief).
 
 ---
 
@@ -86,11 +89,8 @@ choice or proposing an alternative that was already rejected.
 - `{date}-{short-title}.DECISION.md` — decisions for that question only,
   including the outcome of each `Q` once approved or overridden.
 
-Naming: `{date}` is `YYYY-MM-DD` of the day the plan is written;
-`{short-title}` is lowercase kebab-case, 2-5 words, naming the _question_
-(`gwas-replication-exact-match`), not the stage. The `.PLAN.md` /
-`.PROGRESS.md` / `.DECISION.md` suffix is uppercase — that is what separates a
-live tier-2 file from a historical lowercase `*.progress.md`.
+Naming rules and the full templates for every file above:
+[references/plan-and-progress.md](./references/plan-and-progress.md).
 
 Which tier to write:
 
@@ -156,22 +156,13 @@ otherwise claim `config.md`.
 
 ## 4. Plan-first gate (mandatory)
 
-Applies when BOTH hold:
+**The gate definition is not in this file.** It lives in
+`copilot-instructions.md` under "Plan-First Gate", because whether the gate
+applies has to be decidable before any skill is loaded — a definition that
+required loading this skill could never fire in the one case that matters.
+Read it there and do not re-derive it from here.
 
-- The work creates or modifies scripts inside any track the bindings list:
-  `src/NN-stage/`, `src_*/NN-stage/`, or a step of a `pipeline/`, `workflow/`,
-  or flat pipeline directory, AND
-- It creates a new stage, adds a new step to an existing stage, or would
-  invalidate existing outputs under any output root the bindings list for that
-  track: `results/`, `data/intermediate/`, or a flat track's own data root. A
-  file under a track's env-bound root counts exactly like one under
-  `results/`.
-
-A new stage or a new step always triggers the gate, even though it invalidates
-nothing. When the change only edits an existing step, decide by naming which
-already-produced files it invalidates. "None" means act directly -- that covers
-a bug fix inside one existing script, re-running an existing step, and
-doc/config edits.
+What follows is the cycle to run once the gate applies.
 
 1. **Plan** — write the plan file for this question (section 1.1: tier-1
    `PLAN.md` for a new stage, tier-2 `{date}-{short-title}.PLAN.md` for a later
@@ -238,10 +229,18 @@ matches the plan file for this question (section 1.1) before the first run. It
 is the single source of truth for the current run state, for both the user and
 any future agent session.
 
-Required sections: Resume block, Todo list, Job table, Output file counts,
-Error log, Key paths. A tier-2 progress file carries all of them for its own
-question; the stage `PROGRESS.md` keeps the one-screen current state plus the
-campaign index table and never duplicates a tier-2 job table.
+Required sections: Resume block (carrying the Mermaid pipeline graph),
+Todo list, Job table, Output file counts, Error log, Key paths. A tier-2
+progress file carries all of them for its own question; the stage `PROGRESS.md`
+keeps the one-screen current state plus the campaign index table and never
+duplicates a tier-2 job table.
+
+The pipeline graph is the DAG as submitted, one of six classes per stage
+(`done` `run` `pend` `todo` `fail` `dead`), and it is re-classed in the same
+edit as the job table. Where the repository has the LSF DAG submitter the block
+is also the **submission input**, so its node labels carry each stage's script
+path. Contract, class table, and the fixed `classDef` block:
+[references/plan-and-progress.md](./references/plan-and-progress.md) section D.1.
 
 **Update immediately** — never batch or defer — after: a step completes, a job
 is submitted, an error is diagnosed, a script/config is modified, a job is
@@ -278,13 +277,20 @@ cycle: [references/plan-and-progress.md](./references/plan-and-progress.md).
 
 - Test one unit before the full array: submit index `[1-1]`, verify its output
   is non-empty and correct, then submit the full range.
+- **Once every stage has passed its one-unit rung, submit the rest of the
+  pipeline as one dependency chain** rather than one stage per session. Waiting
+  for stage N to finish before submitting stage N+1 wastes every hour between
+  "it finished" and "somebody noticed". The dependency expressions, the DAG
+  submitter, and the resume-from-the-break procedure are in
+  `long-running-jobs` section 7.
 - The inline / tmux / cluster thresholds are owned by the `long-running-jobs`
   skill. Never poll with `sleep`.
 - Verify real outputs after an array finishes (`ls <pattern> | wc -l`, row
   counts) — a DONE status does not prove the work happened.
 - When a script or config is fixed mid-pipeline, re-run a downstream step if it
   consumes the changed file AND its outputs are missing, or older than the
-  change (compare `stat -c '%Y %n'` on both).
+  change (compare `stat -c '%Y %n'` on both). In a chain, that test also picks
+  the stage the resume starts from; never resubmit from the first stage.
 
 ## 8. Porting an external pipeline
 

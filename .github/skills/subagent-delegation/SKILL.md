@@ -34,8 +34,8 @@ work is mostly cluster arrays uses `monitor` more than any other agent.
 `coordinator` is the entry point for a whole multi-step task and is the only
 one the model cannot start on its own (`disable-model-invocation: true`). The
 other five are `user-invocable: true` as well, so the user can call any of them
-directly. Sections 2-6 are duplicated inside `coordinator.agent.md` so the
-coordinator carries them without loading this skill — change one, change both.
+directly. `coordinator.agent.md` points at sections 2-6 of this skill rather
+than copying them, so this file is the only place they are written.
 
 The editor also ships a built-in `Explore` agent. Prefer `explorer` for work in
 this repository, since it carries the repo's conventions; use `Explore` only for
@@ -45,16 +45,16 @@ a generic throwaway lookup.
 
 Start a subagent without being asked when any of these hold:
 
-| Signal                                                               | Action                          |
-| -------------------------------------------------------------------- | ------------------------------- |
-| "where is X", "how does X work", "what calls X", "trace"             | `explorer`                      |
-| Task touches more than 2 files, or the right files are unknown       | `explorer` first                |
-| A code edit is needed and the target path is known                   | `worker`                        |
-| A script, test, build, install, or `bsub`/`sbatch` must run          | `runner`                        |
-| "check on the job", "is it done", a job finished, DONE but no output | `monitor`                       |
-| Non-trivial edits are complete                                       | `reviewer`                      |
-| An association model was written or changed                          | `reviewer`, statistical pass    |
-| Several independent areas must be understood                         | multiple `explorer` in parallel |
+| Signal                                                                             | Action                          |
+| ---------------------------------------------------------------------------------- | ------------------------------- |
+| "where is X", "how does X work", "what calls X", "trace"                           | `explorer`                      |
+| Task touches more than 2 files, or the right files are unknown                     | `explorer` first                |
+| A code edit is needed and the target path is known                                 | `worker`                        |
+| A script, test, build, install, or `bsub`/`sbatch` must run, or its output checked | `runner`                        |
+| "check on the job", "is it done", a job finished, DONE but no output               | `monitor`                       |
+| Non-trivial edits are complete                                                     | `reviewer`                      |
+| An association model was written or changed                                        | `reviewer`, statistical pass    |
+| Several independent areas must be understood                                       | multiple `explorer` in parallel |
 
 Do NOT delegate a single-file typo fix, a one-line config change, or a question
 already answerable from loaded context.
@@ -70,9 +70,10 @@ already answerable from loaded context.
 - **Submit to the cluster**: `explorer` -> `worker` -> `runner` (submits, then
   the turn ends) -> `monitor` (next turn, once the job has had time to run)
 
-A cluster task is not finished when `runner` returns. Never close it out on a
-submission; the next step is `monitor`, and it happens in a later turn without
-polling.
+A cluster task is not finished when `runner` returns. A `bsub` exit code says
+the job was accepted, nothing more. Report the job ID and stop; never close the
+task out on a submission, and never poll. The next step is `monitor`, in a
+later turn.
 
 Summarize each subagent result before assigning the next step. Report the
 synthesized outcome to the user, not raw subagent transcripts.

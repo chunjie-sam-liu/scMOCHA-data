@@ -143,18 +143,26 @@ draw a plot in Mermaid.
 - **VS Code** needs an extension for the built-in Markdown preview; the common
   one is `bierner.markdown-mermaid`. Without it the block shows as fenced text,
   which is still readable but not rendered.
-- **Command line**, when a raster is genuinely needed for a message thread:
+- **Command line**, when a raster is genuinely needed for a message thread.
+  `mermaid-cli` is a project dependency like any other, so install it through
+  the environment rather than by hand: `pixi add nodejs`, then run it from the
+  activated environment. Never `npx -y`, which downloads into `$HOME` and
+  bypasses the install ladder.
 
   ```bash
-  npx -y @mermaid-js/mermaid-cli@11 -i preview.mmd -o preview.png -w 1400 -b white
+  scratch="${tmpdir}/mermaid-preview" && mkdir -p "${scratch}"
+  pixi run npx @mermaid-js/mermaid-cli@11 \
+    -i "${scratch}/preview.mmd" -o "${scratch}/preview.png" -w 1400 -b white
   ```
 
   On a headless or containerized host, add a puppeteer config so Chromium
-  starts:
+  starts. It is scratch, so it goes in the same task folder, never the cwd:
 
   ```bash
-  printf '{"args":["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]}' > pc.json
-  npx -y @mermaid-js/mermaid-cli@11 -p pc.json -i preview.mmd -o preview.png -w 1400 -b white
+  printf '{"args":["--no-sandbox","--disable-setuid-sandbox","--disable-dev-shm-usage"]}' \
+    > "${scratch}/pc.json"
+  pixi run npx @mermaid-js/mermaid-cli@11 -p "${scratch}/pc.json" \
+    -i "${scratch}/preview.mmd" -o "${scratch}/preview.png" -w 1400 -b white
   ```
 
   Write that raster to the repository's `tmp/` root (`tmpdir` in the env file),

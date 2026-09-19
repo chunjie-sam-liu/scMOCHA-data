@@ -86,6 +86,13 @@ MAX_JOB_ARRAY_SIZE        = 4000
 MAX_PEND_JOBS             = 2147483647
 MAX_PEND_SLOTS            = 2147483647
 DEFAULT_QUEUE             = standard
+
+CLEAN_PERIOD                    = 86400
+CLEAN_PERIOD_DONE               = not configured
+JOB_DEP_LAST_SUB                = 1
+EVALUATE_JOB_DEPENDENCY         = 1000
+EVALUATE_JOB_DEPENDENCY_TIMEOUT = 0 (milliseconds)
+DETECT_IDLE_JOB_AFTER           = 20 (minutes)
 ```
 
 Every CPU queue carries:
@@ -200,6 +207,68 @@ are all `SLOTS = 0` reservations that fence off other groups' hardware
 Both `large_mem` and `large_core_count` use `FAIRSHARE=USER_SHARES[[default,1]]`,
 equal shares for everyone, so a low-usage user dispatches quickly there.
 `standard` shares are weighted (`appdpcbauto` 5, `compbio@` 2, default 1).
+
+### Job dependencies, read 2026-09-16
+
+Evidence for `SKILL.md` section 10. From `bparams -l`, `man bsub`, and
+`man lsb.params` on this cluster.
+
+`bparams -l`, under "Used with job dependency scheduling":
+
+```
+JOB_DEP_LAST_SUB = 1
+EVALUATE_JOB_DEPENDENCY = 1000
+```
+
+`man lsb.params`, `JOB_DEP_LAST_SUB`:
+
+```
+If set to 1, whenever dependency conditions use a job name that belongs to
+multiple jobs, LSF evaluates only the most recently submitted job.
+Otherwise, all the jobs with the specified name must satisfy the dependency
+condition.
+```
+
+`man bsub`, the array-aware counting conditions. These are the documented way to
+express "the whole parent array succeeded":
+
+```
+numdone(job_ID, operator number | *)
+    For a job array, the number of jobs in the DONE state satisfies the test.
+    Use * (with no operator) to specify all the jobs in the array.
+
+numended(job_ID, operator number | *)   DONE or EXIT
+numexit(job_ID, operator number | *)    EXIT
+numpend(job_ID, operator number | *)    PEND
+numrun(job_ID, operator number | *)     RUN
+```
+
+`man bsub`, the `[*]` form, which is **not** a whole-array condition:
+
+```
+Use the * with dependency conditions to define one-to-one dependency among job
+array elements such that each element of one array depends on the corresponding
+element of another array. The job array size must be identical.
+
+        bsub -w "done(myarrayA[*])" -J "myArrayB[1-10]" myJob2
+
+indicates that before element 1 of myArrayB can start, element 1 of myArrayA
+must be completed, and so on.
+```
+
+The plain state conditions:
+
+```
+done(job_ID | "job_name" ...)    The job state is DONE.
+ended(job_ID | "job_name")       The job state is EXIT or DONE.
+exit(job_ID | "job_name" [,[operator] exit_code])
+started(job_ID | "job_name")     The job state is RUN.
+```
+
+Not found anywhere in `man bsub`: any statement that a bare array job ID applies
+the condition to all elements, and any "dependency condition never satisfied"
+cleanup. No site parameter kills a job whose dependency became unsatisfiable, so
+such a job pends until someone runs `bkill`.
 
 ## 5. Queue pressure snapshot, 2026-09-03
 

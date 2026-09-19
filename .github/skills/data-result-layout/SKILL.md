@@ -98,7 +98,9 @@ data*/intermediate/  intermediatedir   per-stage intermediates, section 2
 
 Something used by exactly one stage stays in `data/intermediate/<stage>/`.
 Promote it to a top-level directory only once a second stage needs it, and add
-the matching env variable in the same change.
+the matching env variable in the same change. That second reader is also what
+turns the file into a shared input, so the same change set owes it a `DATA.md`
+row. -> `data-catalog`
 
 The table is the recommended default, not an inventory. Only the variables the
 repository's env file actually defines exist; check it, and add a missing one
@@ -204,5 +206,10 @@ src/NN-stage/               ->  src/NN-stage_stale-2026-08-20/
   under `src/` and `src_*/`.
 - Write the old-path -> new-path table into the active `PLAN.md` /
   `PROGRESS.md` before renaming, so existing references stay resolvable.
+- This section governs what the project **produces** — its own scripts, data,
+  and output directories — where the rename and the reference updates land in
+  one change set. A shared **input** other tracks still read is not renamed at
+  all while they read it; it gets a `Superseded` entry instead. ->
+  `data-catalog`
 - Deleting is allowed only when the user explicitly asks for it in the current
   message.

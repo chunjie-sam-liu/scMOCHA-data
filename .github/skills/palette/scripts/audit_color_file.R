@@ -81,15 +81,18 @@ if (nzchar(levels_arg)) {
 
 if (!is.null(output) && nzchar(output)) {
   grDevices::pdf(output, width = 8, height = 6)
-  on.exit(grDevices::dev.off(), add = TRUE)
-
-  if (requireNamespace("prismatic", quietly = TRUE)) {
-    plot(prismatic::color(colors), main = object)
-    plot(prismatic::clr_deutan(colors), main = paste(object, "deutan"))
-    plot(prismatic::clr_protan(colors), main = paste(object, "protan"))
-    plot(prismatic::clr_tritan(colors), main = paste(object, "tritan"))
-  } else {
-    plot.new()
-    text(0.5, 0.5, "Install prismatic for color previews.")
-  }
+  tryCatch(
+    {
+      if (requireNamespace("prismatic", quietly = TRUE)) {
+        plot(prismatic::color(colors), main = object)
+        plot(prismatic::clr_deutan(colors), main = paste(object, "deutan"))
+        plot(prismatic::clr_protan(colors), main = paste(object, "protan"))
+        plot(prismatic::clr_tritan(colors), main = paste(object, "tritan"))
+      } else {
+        plot.new()
+        text(0.5, 0.5, "Install prismatic for color previews.")
+      }
+    },
+    finally = grDevices::dev.off()
+  )
 }

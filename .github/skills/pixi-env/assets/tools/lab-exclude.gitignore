@@ -1,0 +1,65 @@
+# ---------------------------------------------------------------------------
+# Local-only: AI assistant config, editor config, toolchain, environment paths.
+# Keep these out of the lab remote. Last matching rule wins, so this block
+# overrides the templated rules above.
+#
+# Appended to the mirrored .gitignore by tools/sync-lab.sh, which also uses the
+# combined file to decide which paths are shareable. Edit the policy here, not
+# in the lab repository.
+# ---------------------------------------------------------------------------
+
+# AI assistant customization
+.github/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.claude/
+.codex/
+.cursor/
+.gemini/
+.continue/
+.windsurf/
+.opencode/
+.roo*
+.aider*
+.memories/
+
+# Editor / IDE
+.vscode/
+.idea/
+
+# Toolchain and formatter/linter config
+.pixi/
+pixi.toml
+pixi.lock
+air.toml
+jarl.toml
+.lintr
+.prettierignore
+
+# Environment (machine-specific absolute paths)
+.env
+.env.*
+*.env
+
+# Local toolchain bootstrap
+package.R
+
+# Sync tooling itself; belongs to the personal repository only
+tools/
+
+# ---------------------------------------------------------------------------
+# Markdown: excluded everywhere, then re-included by exact allowlist below.
+# Covers paired script docs, plan/progress notes, and diagram briefs in any
+# directory, including new top-level pipeline folders. Add a path to the
+# allowlist only when it is a deliberate deliverable for the lab remote.
+# ---------------------------------------------------------------------------
+*.md
+
+# Allowlist: repository entry points and deliberate shared documents.
+# Anchor each path with a leading slash so it names one exact file.
+!README.md
+# !/<shared-document>.md
+# !/<track>/README.md
+
+*.code-workspace

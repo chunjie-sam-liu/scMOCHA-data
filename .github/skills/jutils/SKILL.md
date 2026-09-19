@@ -1,6 +1,6 @@
 ---
 name: jutils
-description: Guide for using the jutils R package - a personal utility toolkit for data import/export, DuckDB database workflows, parallel processing, and plotting helpers. Use when writing R code that needs to read/write files (CSV, TSV, Parquet, Excel, JSON, YAML, RDS, QS, FST), work with DuckDB databases, run parallel computations with progress bars, format numbers for plots, save plots, or load multiple packages efficiently.
+description: Guide for using the jutils R package - a personal utility toolkit for data import/export, DuckDB database workflows, parallel processing, and number-formatting helpers. Use when writing R code that needs to read/write files (CSV, TSV, Parquet, Excel, JSON, YAML, RDS, QS, FST), work with DuckDB databases, run parallel computations with progress bars, format numbers and P-values for axis labels, or load multiple packages efficiently. Covers the saveplot() API only; how a figure is built, themed, colored, or laid out belongs to the r-figure skill, which is loaded instead whenever the task is the figure itself.
 ---
 
 # jutils R Package

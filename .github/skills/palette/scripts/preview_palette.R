@@ -71,10 +71,13 @@ plot_colors <- function(colors, title) {
   }
 }
 
-if (!is.null(output) && nzchar(output)) {
+to_file <- !is.null(output) && nzchar(output)
+if (to_file) {
   grDevices::pdf(output, width = 8, height = 2)
-  on.exit(grDevices::dev.off(), add = TRUE)
 }
 
-plot_colors(colors, paste(type, palette))
+tryCatch(
+  plot_colors(colors, paste(type, palette)),
+  finally = if (to_file) grDevices::dev.off()
+)
 cat(paste(colors, collapse = "\n"), "\n", sep = "")

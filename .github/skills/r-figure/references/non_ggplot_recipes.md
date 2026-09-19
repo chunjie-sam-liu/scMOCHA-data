@@ -283,7 +283,9 @@ Notes:
 - Set `use_raster = TRUE` above ~200 rows or the PDF becomes huge.
 - Height scales with rows: `height = max(7, 0.12 * nrow(M))`.
 - `pdf()` and `dev.off()` stay adjacent. If anything between them can error,
-  put `on.exit(dev.off())` right after `pdf()`.
+  wrap the drawing in `tryCatch(..., finally = dev.off())`. A top-level
+  `on.exit(dev.off())` does nothing — it only fires when a function frame
+  exits, and a script body is not one.
 
 ---
 

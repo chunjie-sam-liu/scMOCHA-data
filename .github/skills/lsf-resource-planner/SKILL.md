@@ -1,6 +1,6 @@
 ---
 name: lsf-resource-planner
-description: 'Size and place an LSF job on this site before writing the .lsf file. Use when creating or editing any .lsf wrapper or bsub command; when choosing -n, -R "rusage[mem=]", -M, -W, or -q; when a job needs a lot of memory or many cores on one host; when a job was killed for exceeding memory; when an array pends too long or would be too wide; when deciding whether to split work into many narrow tasks or bundle it into one wide task; when partitioning large-scale work into array tasks or chunks; or when asked which queue or node dispatches fastest. Covers the wide-and-thin vs narrow-and-fat shape decision, the per-slot memory trap, the queue decision table, the dispatch-speed probe, per-user and per-queue caps, array throttling, and chunking. Site-bound: carries a dated inventory of this cluster''s nodes, queues, and limits.'
+description: 'Size and place an LSF job on this site before writing the .lsf file. Use when creating or editing any .lsf wrapper or bsub command; when choosing -n, -R "rusage[mem=]", -M, -W, or -q; when a job needs a lot of memory or many cores on one host; when a job was killed for exceeding memory; when an array pends too long or would be too wide; when deciding whether to split work into many narrow tasks or bundle it into one wide task; when partitioning large-scale work into array tasks or chunks; when writing a -w dependency expression or chaining stages into one submission; or when asked which queue or node dispatches fastest. Covers the wide-and-thin vs narrow-and-fat shape decision, the per-slot memory trap, the queue decision table, the dispatch-speed probe, per-user and per-queue caps, array throttling, chunking, and the site dependency facts. Site-bound: carries a dated inventory of this cluster''s nodes, queues, and limits.'
 ---
 
 # LSF resource planner
@@ -98,7 +98,7 @@ a comment on the same line so the next reader does not have to redo the math:
 
 ```bash
 #BSUB -n 8
-#BSUB -R "rusage[mem=64000]"     # 8 x 64000 MB = 512 GB reserved and enforced
+#BSUB -R "rusage[mem=64000]"     # 8 x 64000 MB = 512000 MB = 500 GB, reserved and enforced
 ```
 
 That single value sets both numbers: the scheduler reserves `n x mem`, and the
@@ -224,12 +224,15 @@ only 19 nodes.
 
 | Option             | Directive                                  | Verdict                                                                        |
 | ------------------ | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| Naive              | `-q standard -n 32 -R "rusage[mem=16000]"` | 512 GB, but 32 slots behind ~114000 pending jobs                               |
-| Better on standard | `-q standard -n 4 -R "rusage[mem=128000]"` | 512 GB on 4 slots; dispatches far sooner, memory is not the constraint on rome |
-| Correct            | `-q large_mem -n 8 -R "rusage[mem=64000]"` | 512 GB, matches the queue's purpose, pending is 0                              |
+| Naive              | `-q standard -n 32 -R "rusage[mem=16000]"` | 500 GB, but 32 slots behind ~114000 pending jobs                               |
+| Better on standard | `-q standard -n 4 -R "rusage[mem=128000]"` | 500 GB on 4 slots; dispatches far sooner, memory is not the constraint on rome |
+| Correct            | `-q large_mem -n 8 -R "rusage[mem=64000]"` | 500 GB, matches the queue's purpose, pending is 0                              |
 
-Take the third when the work genuinely needs 500 GB. Take the second when the
-real need is 300-450 GB and `large_mem` would be an abuse.
+All three reserve the same 512000 MB; only the slot count and the queue differ.
+Remember that `mem` is MB and 1 GB is 1024 MB, so 64000 is not 64 GB of a
+512 GB total — it is 62.5 GB of a 500 GB one. Take the third when the work
+genuinely sits at or above 500 GB. Take the second when the real need is
+300-450 GB and `large_mem` would be an abuse.
 
 **Two queues that are not for arrays.** `large_core_count` has 4 nodes and
 `superdome` has 3. A wide array on either will starve everyone including itself.
@@ -409,14 +412,14 @@ this skill's business.
 No `%K`, no `span[hosts=1]`. At `-n 1` about 1000 tasks can start immediately
 and LSF backfills the rest as slots free up.
 
-**Narrow and fat** -- 2 units, each needing 8 threads over one 512 GB object:
+**Narrow and fat** -- 2 units, each needing 8 threads over one 500 GB object:
 
 ```bash
 #BSUB -J <stage>-<step>[1-2]%2
 #BSUB -o logs/<stage>/<step>_%J_%I.out
 #BSUB -e logs/<stage>/<step>_%J_%I.err
 #BSUB -n 8
-#BSUB -R "rusage[mem=64000]"     # 8 x 64000 MB = 512 GB total
+#BSUB -R "rusage[mem=64000]"     # 8 x 64000 MB = 512000 MB = 500 GB total
 #BSUB -R "span[hosts=1]"
 #BSUB -W 48:00
 #BSUB -q large_mem
@@ -426,8 +429,9 @@ and LSF backfills the rest as slots free up.
   spread the slots across hosts and the threads cannot see each other.
 - `-W` above the worst expected task, since the task is killed at the limit, but
   not absurdly above it: a tight `-W` helps backfill scheduling place the job.
-- The three array traps (`BASH_SOURCE`, reserved array names, swallowed exit
-  code) are in `long-running-jobs` section 6. They still apply.
+- The array traps still apply: the `BASH_SOURCE` anchoring rule is in
+  `long-running-jobs` section 5, and the two silent array bugs (reserved array
+  name, swallowed exit code) are in its section 6.
 
 ## 9. Smoke test, measure, retune
 
@@ -450,7 +454,45 @@ reserved five times what it used and pended five times longer than it needed to.
 If its units were independent, `-n 1 -R "rusage[mem=18000]"` would have run the
 same work with roughly eight times the concurrency.
 
-## 10. Diagnose
+## 10. Chain stages into one submission
+
+`long-running-jobs` section 7 owns the method and the DAG submitter. This
+section holds only the site facts that decide whether a chain works here.
+Verified 2026-09-16 from `bparams -a`, `bparams -l`, `man bsub`, and
+`man lsb.params`.
+
+| Fact                                         | Setting                          | Consequence                                                                                                                                                                              |
+| -------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Finished job records are purged after 24 h   | `CLEAN_PERIOD = 86400`           | `-w` on a job that finished more than a day ago can never resolve. Verify its outputs on disk and start a fresh root instead                                                             |
+| A name dependency resolves to the newest job | `JOB_DEP_LAST_SUB = 1`           | `-w "done(meth-matrix)"` tests only the **most recently submitted** job of that name. Convenient, and a trap after a smoke `[1-1]` under the same `-J`. **Depend on job IDs, not names** |
+| Dependencies are re-evaluated in batches     | `EVALUATE_JOB_DEPENDENCY = 1000` | a satisfied child does not start the instant its parent finishes; a few seconds of lag is normal, not a stuck job                                                                        |
+| Arrays still cap at 4000                     | `MAX_JOB_ARRAY_SIZE = 4000`      | chaining changes nothing here; each array in the chain is capped separately                                                                                                              |
+
+**The whole-array success condition is `numdone(<jid>,*)`.** This site's
+`man bsub` documents `numdone(job_ID, operator number | *)` as "the number of
+jobs in the DONE state satisfies the test. Use `*` (with no operator) to specify
+all the jobs in the array." Its `numended`, `numexit`, `numrun` and `numpend`
+siblings take the same form; `numexit(<jid>, >0)` is the matching "did anything
+fail" test.
+
+**`done(<jid>[*])` is element-wise, not whole-array.** The same man page: "Use
+the `*` with dependency conditions to define one-to-one dependency among job
+array elements such that each element of one array depends on the corresponding
+element of another array. The job array size must be identical." Writing it to
+mean "wait until the whole parent array succeeded" is wrong, and when the two
+arrays differ in size LSF pairs only what it can.
+
+`done(<jid>)` on a bare array job ID is accepted here — the `methylation_pipeline`
+release-v2 chain used it, with `323076538` held on `done(323076536)` — but this
+site's man page does not document its array semantics. Prefer
+`numdone(<jid>,*)`, which does.
+
+Pending jobs are free: `MAX_PEND_JOBS` is effectively unlimited and dynamic
+priority falls with **running** slots, not pending ones (section 7). A chain
+that sits queued all night costs no fairshare while it waits, so there is no
+reason to hold stages back and submit them one at a time.
+
+## 11. Diagnose
 
 | Symptom                                     | Command                                   | What it means                                                                                                                          |
 | ------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
@@ -460,6 +502,7 @@ same work with roughly eight times the concurrency.
 | Killed unexpectedly                         | `bhist -l <jobid> \| grep TERM_`          | `TERM_MEMLIMIT` = over the esub's `n` x `mem` threshold; `TERM_RUNLIMIT` = over `-W`; `TERM_CPULIMIT` = over `short`'s CPU-time budget |
 | Reserved vs used                            | `bjobs -o "... memlimit max_mem" <jobid>` | the retune input from step 9                                                                                                           |
 | Queue changed                               | rerun the step 6 probe                    | queue pressure moves hourly                                                                                                            |
+| Child still PEND after its parent finished  | `bjobs -l <child> \| grep -i -A2 depend`  | if the parent array had **any** EXIT element, `numdone(parent,*)` can never be satisfied and the child pends forever. Section 10       |
 
 A wide array reporting DONE is not proof. Count real outputs, per
 `long-running-jobs` section 6.

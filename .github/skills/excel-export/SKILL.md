@@ -152,6 +152,8 @@ INT_COLS <- c("POS", "DISC_N", "REP_N", "MAC")
 HDR_FILL <- color_xlsx_hdr     # both from the track color.R
 WHITE <- color_xlsx_white
 
+load_pkg(openxlsx2)            # not one of the packages jutils auto-loads
+
 wb <- openxlsx2::wb_workbook()
 
 # R6 methods mutate wb in place, so these helpers need no reassignment.
