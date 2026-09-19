@@ -1,1 +1,7 @@
 run-post-link-scripts = "insecure"
+
+# $HOME is GPFS here, which pixi detects as a network filesystem and redirects
+# the repodata cache to /tmp/pixi-cache-$USER on every run and every compute
+# node. "never" keeps it in ~/.cache/rattler/cache.
+[cache]
+netfs-redirect = "never"

@@ -313,6 +313,13 @@ d[,
 
 d_d <- d[!is.na(vmr_mgatk) & !is.na(strand_mgatk) & vmr_mgatk > 0]
 
+# The plane panels show only the three arm-specific classes. "Both arms" and
+# "Neither arm" are dropped: neither distinguishes the callers, and "Neither
+# arm" is the grey mass that hides the classes the panels exist to show. Both
+# keep their counts in the exported tables.
+ARM_PLANE_DROP <- c("Both arms", "Neither arm")
+d_d_plot <- droplevels(d_d[!arm_label %in% ARM_PLANE_DROP])
+
 arm_label_colors <- c(
   "Both arms" = unname(color_variant_set["Both"]),
   "Original mgatk only" = unname(color_arm[ARM_MGATK]),
@@ -321,7 +328,7 @@ arm_label_colors <- c(
   "Neither arm" = "grey85"
 )
 
-p_d <- d_d[order(-as.integer(arm_label))] |>
+p_d <- d_d_plot[order(-as.integer(arm_label))] |>
   ggplot(aes(x = strand_mgatk, y = vmr_mgatk, color = arm_label)) +
   geom_point(size = 1.1, alpha = 0.8) +
   geom_hline(
@@ -352,17 +359,17 @@ p_d <- d_d[order(-as.integer(arm_label))] |>
   )
 
 p_d <- fn_or_empty(
-  nrow(d_d) > 0L,
+  nrow(d_d_plot) > 0L,
   p_d,
   "Which arm reports each variant, in mgatk's decision plane",
-  "No variant has a usable mgatk vmr and strand correlation in this sample."
+  "No arm-specific variant has a usable mgatk vmr and strand correlation."
 )
 
 # e: the same plane, faceted by arm membership ------------------------------
-p_e <- d_d |>
+p_e <- d_d_plot |>
   ggplot(aes(x = strand_mgatk, y = vmr_mgatk)) +
   geom_point(
-    data = d_d[, .(strand_mgatk, vmr_mgatk)],
+    data = d_d_plot[, .(strand_mgatk, vmr_mgatk)],
     color = "grey88",
     size = 0.7
   ) +
@@ -385,7 +392,8 @@ p_e <- d_d |>
   labs(
     title = "Arm membership across mgatk's decision plane",
     subtitle = glue::glue(
-      "grey points are all S1 variants, repeated in every panel \u00b7 dashed ",
+      "grey points are every arm-specific variant, repeated in every panel ",
+      "\u00b7 dashed ",
       "lines are mgatk's vmr > {CUTOFF_VMR_MGATK} and strand r > ",
       "{CUTOFF_STRAND_MGATK} \u00b7 {fn_sample_note()}"
     ),
@@ -394,10 +402,10 @@ p_e <- d_d |>
   )
 
 p_e <- fn_or_empty(
-  nrow(d_d) > 0L,
+  nrow(d_d_plot) > 0L,
   p_e,
   "Arm membership across mgatk's decision plane",
-  "No variant has a usable mgatk vmr and strand correlation in this sample."
+  "No arm-specific variant has a usable mgatk vmr and strand correlation."
 )
 
 log_info(
@@ -433,10 +441,11 @@ d_f[, `:=`(
   cells_ok = n_cells_gate >= CUTOFF_NOTRELIABLE,
   reads_ok = alt_median >= CUTOFF_ALT_READS
 )]
+d_f_plot <- droplevels(d_f[!arm_label %in% ARM_PLANE_DROP])
 
 # n_cells_gate is 0 for a variant no cell carries above the AF floor, which a
 # log axis cannot show; pseudo-log keeps those points on the panel.
-p_f <- d_f[order(-as.integer(arm_label))] |>
+p_f <- d_f_plot[order(-as.integer(arm_label))] |>
   ggplot(aes(x = n_cells_gate, y = alt_median, color = arm_label)) +
   geom_point(size = 1.1, alpha = 0.8) +
   geom_vline(
@@ -480,10 +489,10 @@ p_f <- d_f[order(-as.integer(arm_label))] |>
   )
 
 p_f <- fn_or_empty(
-  nrow(d_f) > 0L,
+  nrow(d_f_plot) > 0L,
   p_f,
   "Which arm reports each variant, in scMOCHA's decision plane",
-  "No S1 variant has a cell with alt-read support in this sample."
+  "No arm-specific S1 variant has a cell with alt-read support."
 )
 
 tab_f <- d_f[,
@@ -504,10 +513,10 @@ log_info(
 # A median over small integer counts lands most low-support variants on y = 1
 # or 2, so in the combined panel the arms occlude each other. Faceting is the
 # only honest fix: jittering a median would move points off their own value.
-p_g <- d_f |>
+p_g <- d_f_plot |>
   ggplot(aes(x = n_cells_gate, y = alt_median)) +
   geom_point(
-    data = d_f[, .(n_cells_gate, alt_median)],
+    data = d_f_plot[, .(n_cells_gate, alt_median)],
     color = "grey88",
     size = 0.7
   ) +
@@ -535,10 +544,10 @@ p_g <- d_f |>
   labs(
     title = "Arm membership across scMOCHA's decision plane",
     subtitle = glue::glue(
-      "grey points are all S1 variants, repeated in every panel \u00b7 ",
-      "dashed lines are scMOCHA's \u2265 {CUTOFF_NOTRELIABLE}-cell gate and ",
-      "the {CUTOFF_ALT_READS}-alt-read per-cell requirement \u00b7 the ",
-      "original mgatk panel is the one to read against 05e \u00b7 ",
+      "grey points are every arm-specific variant, repeated in every panel ",
+      "\u00b7 dashed lines are scMOCHA's \u2265 {CUTOFF_NOTRELIABLE}-cell ",
+      "gate and the {CUTOFF_ALT_READS}-alt-read per-cell requirement \u00b7 ",
+      "the original mgatk panel is the one to read against 05e \u00b7 ",
       "{fn_sample_note()}"
     ),
     x = glue::glue(
@@ -549,10 +558,10 @@ p_g <- d_f |>
   )
 
 p_g <- fn_or_empty(
-  nrow(d_f) > 0L,
+  nrow(d_f_plot) > 0L,
   p_g,
   "Arm membership across scMOCHA's decision plane",
-  "No S1 variant has a cell with alt-read support in this sample."
+  "No arm-specific S1 variant has a cell with alt-read support."
 )
 
 # save ---------------------------------------------------------------------

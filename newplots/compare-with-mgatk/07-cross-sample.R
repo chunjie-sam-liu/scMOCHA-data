@@ -84,12 +84,45 @@ cell_inclusion <- data.table::dcast(
 cell_inclusion[, sample := factor(sample, levels = SAMPLE_IDS)]
 
 sample_lab <- stats::setNames(
-  as.character(glue::glue_data(SAMPLES, "{gse}\n{chemistry}")),
+  as.character(glue::glue_data(SAMPLES, "{gse}\n{gsm}")),
   SAMPLES$sample_id
 )
 
+# Two samples share a chemistry, so it cannot identify a sample; GSE plus GSM
+# can. Chemistry stays in the SAMPLES registry and the workbook's 00_Samples.
+SAMPLE_DISPLAY <- stats::setNames(
+  as.character(glue::glue_data(SAMPLES, "{gse}_{gsm}")),
+  SAMPLES$sample_id
+)
+
+# Tables are read next to the figures, so their sample column carries the same
+# label the panels show; sample_id keeps the join back to the per-sample dirs.
+fn_relabel <- function(d) {
+  out <- data.table::copy(data.table::as.data.table(d))
+  out[, sample_id := as.character(sample)]
+  out[, sample := SAMPLE_DISPLAY[sample_id]]
+  data.table::setcolorder(out, c("sample", "sample_id"))
+  out[]
+}
+
+# Applied to the panels only. Every table below is still built from the
+# unfiltered object, so the excluded samples keep their rows in the record.
+# Levels are dropped so an excluded sample leaves no empty facet or legend key.
+fn_fig_subset <- function(d) {
+  out <- data.table::as.data.table(d)[sample %in% CROSS_SAMPLE_FIG_IDS]
+  if (is.factor(out$sample)) {
+    out[, sample := droplevels(sample)]
+  }
+  out[]
+}
+
 log_info(
   "loaded {nrow(variants)} variant rows from {length(SAMPLE_IDS)} samples"
+)
+log_info(
+  "cross-sample figures show {length(CROSS_SAMPLE_FIG_IDS)} samples; ",
+  "excluded from panels only: ",
+  "{paste(CROSS_SAMPLE_FIG_EXCLUDE, collapse = ', ')}"
 )
 
 # a: variants retained by each arm ------------------------------------------
@@ -119,9 +152,11 @@ d_a[,
 
 n_zero_mgatk <- d_a[arm == ARM_MGATK & n_variants == 0, .N]
 
-# A zero is the headline here, so the axis has to be able to show it: a log
-# scale drops the bar and its label silently.
-p_a <- d_a |>
+d_a_fig <- fn_fig_subset(d_a)
+n_zero_fig <- d_a_fig[arm == ARM_MGATK & n_variants == 0, .N]
+
+# A zero is the headline here, so the axis has to be able to show it.
+p_a <- d_a_fig |>
   ggplot(aes(x = sample, y = n_variants, fill = arm)) +
   geom_col(position = position_dodge2(width = 0.8, preserve = "single")) +
   geom_text(
@@ -132,8 +167,6 @@ p_a <- d_a |>
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
-    transform = scales::transform_pseudo_log(base = 10),
-    breaks = c(0, 10, 100, 1000),
     labels = scales::comma,
     expand = expansion(mult = c(0, 0.18))
   ) +
@@ -142,10 +175,12 @@ p_a <- d_a |>
   labs(
     title = "Variants retained by each arm, in every sample",
     subtitle = glue::glue(
-      "original mgatk retains nothing in {n_zero_mgatk} of ",
-      "{length(SAMPLE_IDS)} samples: every S1 variant there fails its ",
-      "strand r > {CUTOFF_STRAND_MGATK} floor \u00b7 pseudo-log axis so a ",
-      "zero is still drawn"
+      "original mgatk retains nothing in {n_zero_fig} of ",
+      "{length(CROSS_SAMPLE_FIG_IDS)} samples shown: every S1 variant there ",
+      "fails its strand r > {CUTOFF_STRAND_MGATK} floor \u00b7 linear axis, ",
+      "so the zero bars are labelled rather than drawn \u00b7 the ",
+      "{length(CROSS_SAMPLE_FIG_EXCLUDE)} 5' samples are left out of this ",
+      "panel and kept in the tables"
     ),
     x = NULL,
     y = "Variants retained",
@@ -162,7 +197,7 @@ d_b <- cell_inclusion[, .(
 )]
 d_b[, frac_dropped := cells_dropped_mgatk / cells_total]
 
-p_b <- d_b |>
+p_b <- fn_fig_subset(d_b) |>
   ggplot(aes(x = sample, y = frac_dropped)) +
   geom_col(aes(fill = sample), width = 0.6) +
   geom_text(
@@ -235,9 +270,15 @@ log_info(
   "{paste(d_c_stat$sample, d_c_stat$n_above_floor, sep = ' above=', collapse = '; ')}"
 )
 
+d_c_fig <- fn_fig_subset(d_c)
+n_no_floor_fig <- d_c_fig[,
+  sum(strand_mgatk > CUTOFF_STRAND_MGATK) == 0L,
+  by = sample
+][V1 == TRUE, .N]
+
 p_c <- fn_or_empty(
-  nrow(d_c) > 0L,
-  d_c |>
+  nrow(d_c_fig) > 0L,
+  d_c_fig |>
     ggplot(aes(x = sample, y = strand_mgatk, color = sample)) +
     geom_jitter(width = 0.2, height = 0, size = 0.8, alpha = 0.55) +
     stat_summary(
@@ -259,11 +300,11 @@ p_c <- fn_or_empty(
     labs(
       title = "Strand correlation of mgatk's own S1 variants",
       subtitle = glue::glue(
-        "{nrow(d_c)} variants with n_cells_conf_detected \u2265 ",
+        "{nrow(d_c_fig)} variants with n_cells_conf_detected \u2265 ",
         "{CUTOFF_NCELLS_CONF} under mgatk's rule \u00b7 dashed line is its ",
-        "strand r > {CUTOFF_STRAND_MGATK} floor \u00b7 in {n_no_floor} of ",
-        "{length(SAMPLE_IDS)} samples not one variant reaches it \u00b7 bar ",
-        "is the median"
+        "strand r > {CUTOFF_STRAND_MGATK} floor \u00b7 in {n_no_floor_fig} ",
+        "of {length(CROSS_SAMPLE_FIG_IDS)} samples shown not one variant ",
+        "reaches it \u00b7 bar is the median"
       ),
       x = NULL,
       y = "Strand correlation (original mgatk)"
@@ -276,9 +317,11 @@ p_c <- fn_or_empty(
 d_d <- variants[s1_mgatk == TRUE, .N, by = .(sample, excl_mgatk)]
 d_d[, frac := N / sum(N), by = sample]
 
+d_d_fig <- fn_fig_subset(d_d)
+
 p_d <- fn_or_empty(
-  nrow(d_d) > 0L,
-  d_d |>
+  nrow(d_d_fig) > 0L,
+  d_d_fig |>
     ggplot(aes(x = sample, y = frac, fill = excl_mgatk)) +
     geom_col(width = 0.6) +
     scale_x_discrete(labels = sample_lab) +
@@ -290,8 +333,8 @@ p_d <- fn_or_empty(
       subtitle = glue::glue(
         "every variant with n_cells_conf_detected \u2265 ",
         "{CUTOFF_NCELLS_CONF} under mgatk's rule, attributed to the first ",
-        "criterion it fails \u00b7 {d_d[, sum(N)]} variants over ",
-        "{length(SAMPLE_IDS)} samples"
+        "criterion it fails \u00b7 {d_d_fig[, sum(N)]} variants over ",
+        "{length(CROSS_SAMPLE_FIG_IDS)} samples shown"
       ),
       x = NULL,
       y = "Fraction of mgatk S1 variants",
@@ -354,9 +397,11 @@ log_info(
 
 # Points with a median crossbar rather than a violin: several samples carry
 # only a handful of variants, where a density estimate would be fiction.
+d_e_fig <- fn_fig_subset(d_e)
+
 p_e <- fn_or_empty(
-  nrow(d_e) > 0L,
-  d_e |>
+  nrow(d_e_fig) > 0L,
+  d_e_fig |>
     ggplot(aes(x = gate_call, y = af_carrier_median, color = gate_call)) +
     geom_jitter(width = 0.18, height = 0, size = 1.1, alpha = 0.7) +
     stat_summary(
@@ -378,9 +423,10 @@ p_e <- fn_or_empty(
         "variants passing the scMOCHA reliability gate, split by mgatk's ",
         "vmr > {CUTOFF_VMR_MGATK} and strand r > {CUTOFF_STRAND_MGATK} ",
         "\u00b7 the test is computable in ",
-        "{d_e_stat[testable == TRUE, .N]} of {length(SAMPLE_IDS)} samples; ",
-        "elsewhere mgatk's gate passes nothing, so there is no comparison ",
-        "group \u00b7 bar is the median"
+        "{d_e_stat[testable == TRUE & sample %in% CROSS_SAMPLE_FIG_IDS, .N]} ",
+        "of {length(CROSS_SAMPLE_FIG_IDS)} samples shown; elsewhere mgatk's ",
+        "gate passes nothing, so there is no comparison group \u00b7 bar is ",
+        "the median"
       ),
       x = NULL,
       y = "Median AF across carrier cells (log scale)",
@@ -416,22 +462,40 @@ d_ov <- merge(
 )
 stopifnot(nrow(d_ov) == length(SAMPLE_IDS))
 
+# The overview is keyed on sample_id rather than sample, so it is relabelled
+# directly instead of through fn_relabel().
+d_ov_out <- data.table::copy(d_ov)
+d_ov_out[, chemistry := NULL]
+d_ov_out[, sample := SAMPLE_DISPLAY[sample_id]]
+data.table::setcolorder(d_ov_out, c("sample", "sample_id"))
+
 # save ---------------------------------------------------------------------
-export(d_ov, as.character(fs::path(paths$tabdir, "07-sample-overview.tsv")))
 export(
-  d_a[, .(sample, arm, n_variants)],
+  d_ov_out,
+  as.character(fs::path(paths$tabdir, "07-sample-overview.tsv"))
+)
+export(
+  fn_relabel(d_a[, .(sample, arm, n_variants)]),
   as.character(fs::path(paths$tabdir, "07-arm-yield.tsv"))
 )
-export(d_b, as.character(fs::path(paths$tabdir, "07-cell-filter.tsv")))
 export(
-  d_c_stat,
+  fn_relabel(d_b),
+  as.character(fs::path(paths$tabdir, "07-cell-filter.tsv"))
+)
+export(
+  fn_relabel(d_c_stat),
   as.character(fs::path(paths$tabdir, "07-strand-support.tsv"))
 )
 export(
-  d_d[, .(sample, excluded_by = as.character(excl_mgatk), n_variants = N)],
+  fn_relabel(
+    d_d[, .(sample, excluded_by = as.character(excl_mgatk), n_variants = N)]
+  ),
   as.character(fs::path(paths$tabdir, "07-exclusion-reasons.tsv"))
 )
-export(d_e_stat, as.character(fs::path(paths$tabdir, "07-gate-test.tsv")))
+export(
+  fn_relabel(d_e_stat),
+  as.character(fs::path(paths$tabdir, "07-gate-test.tsv"))
+)
 
 saveplot(
   as.character(fs::path(paths$figdir, "07a-arm-yield.pdf")),
@@ -470,7 +534,9 @@ saveplot(
 )
 
 log_info(
-  "07: {length(SAMPLE_IDS)} samples; mgatk retains nothing in ",
-  "{n_zero_mgatk}; gate test computable in ",
-  "{d_e_stat[testable == TRUE, .N]}. 5 figures and 6 tables written"
+  "07: {length(SAMPLE_IDS)} samples in the tables, ",
+  "{length(CROSS_SAMPLE_FIG_IDS)} in the figures; mgatk retains nothing in ",
+  "{n_zero_mgatk}; no variant reaches the strand floor in {n_no_floor}; ",
+  "gate test computable in {d_e_stat[testable == TRUE, .N]}. ",
+  "5 figures and 6 tables written"
 )

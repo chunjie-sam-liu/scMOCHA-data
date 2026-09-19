@@ -2,8 +2,8 @@
 
 ## Purpose
 
-What holds across all five samples rather than inside one. Steps 01 to 05
-answer the comparison per sample; this step puts the five answers side by side
+What holds across all eight samples rather than inside one. Steps 01 to 05
+answer the comparison per sample; this step puts the eight answers side by side
 so a claim can be made about the method instead of about GSE181279.
 
 - **07a** variants retained by each of the three arms, in every sample
@@ -12,10 +12,11 @@ so a claim can be made about the method instead of about GSE181279.
 - **07d** which mgatk cutoff rejects each of its own S1 variants
 - **07e** heteroplasmy of the variants mgatk's gate discards, per sample
 
-The headline is 07a: original mgatk retains **zero** variants in four of the
-five samples, while the scMOCHA call retains 20, 9, 20, 736 and 2. 07c and 07d
-say which cutoff produced those zeros - in every one of the four it is the
-strand-correlation floor, not VMR and not the cell count.
+The headline is 07a: original mgatk retains **zero** variants in seven of the
+eight samples, while the scMOCHA call retains 20, 6, 9, 20, 736, 24, 1 and 2 in
+registry order. 07c and 07d say which cutoff produced those zeros - in every
+one of the seven it is the strand-correlation floor, not VMR and not the cell
+count.
 
 ## Inputs
 
@@ -24,7 +25,7 @@ For every sample in `SAMPLES`:
 - `${ISILON_BASE}/compare-with-mgatk/derived/<sample_id>/03-variant-gated.qs`
 - `newplots/compare-with-mgatk/tables/<sample_id>/02-cell-inclusion.tsv`
 
-Both are required for all five samples. A missing cache stops the step with
+Both are required for all eight samples. A missing cache stops the step with
 the `--sample=` command that would rebuild it, because a silently absent
 sample would be indistinguishable from a sample with no variants.
 
@@ -115,9 +116,38 @@ original-mgatk arm, so a panel that would error or silently drop a group is
 drawn through `fn_or_empty()` with a note stating why it is empty, rather than
 skipped. A skipped figure looks like a failed run; a zero is the result.
 
-**Counts are never read off a log axis.** 07a uses
-`scales::transform_pseudo_log(base = 10)` so the four zero bars and their
-labels are still drawn, which a log scale would drop without warning.
+**Counts are never read off a log axis.** 07a uses a plain linear axis with
+`scales::comma`, so the four zero bars sit on the baseline and carry a printed
+`0` label. A log scale drops a zero bar and its label without warning, and the
+zero is the headline of this step.
+
+**Samples are labelled by GSE and GSM, never by chemistry.** Several samples
+share a chemistry, so chemistry cannot identify a sample; axis labels use
+`{gse}\n{gsm}` and every cross-sample table carries `sample` as `{gse}_{gsm}`
+alongside a `sample_id` column that keeps the join back to the per-sample
+directories. Chemistry stays in the `SAMPLES` registry and in the workbook's
+`00_Samples` sheet, which is where a reader looks it up.
+
+**The panels draw a subset; the tables never do.** `CROSS_SAMPLE_FIG_EXCLUDE`
+in `config.R` lists the samples kept out of the figures - currently the two 5'
+libraries, so the panels compare within one library family. `fn_fig_subset()`
+is applied at each `ggplot()` call and nowhere else; every `export()` below
+uses the unfiltered object, so all eight samples keep their rows. Any subtitle
+that quotes a sample count quotes the count actually drawn, not
+`length(SAMPLE_IDS)`.
+
+**That exclusion removes the only informative sample.** GSE181279 is the one
+sample where mgatk retains variants and the only one where the gate test is
+computable. With it out of the panels, `07a` shows mgatk at zero everywhere and
+`07e` shows no computable test at all. Neither is a claim about the resource;
+both are a property of the six samples drawn. `07-gate-test.tsv` and
+`07-arm-yield.tsv` carry the full picture.
+
+**07d colours the retained slice red.** `Retained` is the one outcome a reader
+looks for first, so it carries the NEJM red in `color_exclusion`; every
+exclusion reason is a non-red hue. The four classes that co-occur in 07d -
+retained, `strand r only`, `VMR and strand r`, `VMR only` - are mutually
+distinguishable.
 
 **Aggregations are merged back onto `SAMPLES`.** A `by = sample` summary emits
 no row for a sample with no qualifying variants, and a missing row cannot be

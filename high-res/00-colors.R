@@ -106,16 +106,19 @@ color_arm <- c(
 )
 
 # Why a variant is absent from an arm. ggsci NEJM anchors, same source as
-# color_disease and color_caller.
+# color_disease and color_caller. "Retained" carries the NEJM red because it is
+# the one outcome a reader looks for first in 07d; every exclusion reason is
+# therefore a non-red hue, and the four that co-occur in 07d (retained, strand
+# r only, VMR and strand r, VMR only) are mutually distinguishable.
 color_exclusion <- c(
-  "Retained" = "#7F7F7F",
+  "Retained" = "#BC3C29",
   "Not proposed as candidate" = "#BEBEBE",
   "< 3 confident cells" = "#7876B1",
-  "VMR and strand r" = "#BC3C29",
+  "VMR and strand r" = "#6F99AD",
   "VMR only" = "#EE4C97",
   "strand r only" = "#FFDC91",
   "Blacklisted position" = "#20854E",
-  "< 10 cells at AF >= 0.05" = "#6F99AD"
+  "< 10 cells at AF >= 0.05" = "#7F7F7F"
 )
 
 color_cell_inclusion <- c(
@@ -139,16 +142,22 @@ color_af_bin <- c(
   "#F9CCF9"
 )
 
-# The five samples compared in newplots/compare-with-mgatk. Each takes its
+# The eight samples compared in newplots/compare-with-mgatk. Each takes its
 # chemistry's anchor from color_chemistry so a sample's colour stays tied to
-# its library type; the two SC3Pv3 samples are separated by lightness with
-# prismatic::clr_darken("#35B779", 0.35).
+# its library type. Five samples share SC3Pv3, so they are separated along a
+# lightness ladder off that anchor: prismatic::clr_lighten("#35B779", 0.45) and
+# 0.20, the anchor itself, then clr_darken() at 0.28 and 0.52. Under
+# clr_deutan() the ladder stays monotonic in lightness, so the five remain
+# distinguishable.
 color_sample <- c(
-  "GSE149689_GSM4509019_3PV3" = "#35B779",
+  "GSE149689_GSM4509019_3PV3" = "#6CE1A3",
+  "GSE155673_GSM4712895_3PV3" = "#50C98B",
   "GSE163314_GSM4976997_3PV2" = "#FDE725",
   "GSE163668_GSM4995445_5PR2" = "#31688E",
   "GSE181279_GSM5494116_5PPE" = "#440154",
-  "GSE271107_GSM8369876_3PV3" = "#047548"
+  "GSE188632_GSM5687372_3PV3" = "#35B779",
+  "GSE220189_GSM6793474_3PV3" = "#058250",
+  "GSE271107_GSM8369876_3PV3" = "#025734"
 )
 
 color_xlsx_hdr <- "#4D4D4D"

@@ -22,12 +22,16 @@ implemented, run to completion, and verified.
 | `high-res/00-colors.R`, `color_sample` | done |
 | `config.R` registry, paths, helpers | done |
 | `00-extract-archives.sh`, `run-all.sh` | done |
-| `01`..`05` per sample | done, all five samples |
+| `01`..`05` per sample | done, all eight samples |
 | `07-cross-sample.R` | done |
 | `06-summary-workbook.R` | done, 23 sheets |
 | Paired `.md`, `AGENTS.md` | done |
 | `README.md`, `DIAGRAM.md` | done, 2026-09-18 |
 | `05f` / `05g`, scMOCHA decision plane | done, 2026-09-18 |
+| Presentation pass: GSM labels, linear 07a, red retained, arm-specific planes | done, 2026-09-18, see `M8` |
+| Three samples added (GSE155673, GSE188632, GSE220189) | done, 2026-09-18, see `M9` |
+| Cross-sample figures restricted to the six 3' samples | done, 2026-09-18, see `M9` |
+| Registry-driven extraction; 04f guard fixed | done, 2026-09-18, see `M10` |
 
 Outputs: 22 figures and 13 tables per sample, 5 figures and 7 tables
 cross-sample, one 22-sheet workbook. No zero-byte file. All sources ASCII.
@@ -36,7 +40,7 @@ cross-sample, one 22-sheet workbook. No zero-byte file. All sources ASCII.
 
 ### Yield, the headline
 
-**Original mgatk retains zero variants in four of the five samples.**
+**Original mgatk retains zero variants in seven of the eight samples.**
 
 | Sample | Chemistry | Cells | Dropped by mgatk | S1 scMOCHA | S1 mgatk | mgatk final | scMOCHA call | scMOCHA AF>5% |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -80,7 +84,7 @@ sample, so panel `07c` is descriptive only (`M4`).
 - **`Q8`, provenance: answered in part.** The archives come from Ting (stated
   2026-09-18) and `DATA.md` records that. Still outstanding: the scMOCHA and
   mgatk versions used, and written confirmation that both arms ran on identical
-  allele counts in all five samples. Stage decision `D1` still rests on that
+  allele counts in all eight samples. Stage decision `D1` still rests on that
   assumption; schema and candidate counts are consistent with it, but
   consistency is not confirmation.
 - **The four shallow samples cannot answer the editor's question directly.**

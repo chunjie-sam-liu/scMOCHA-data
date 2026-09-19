@@ -11,7 +11,7 @@ remain the charter and are still read first on resume.
 
 ## What this stage is
 
-A criterion-by-criterion comparison of **three calling arms** on **five
+A criterion-by-criterion comparison of **three calling arms** on **eight
 samples** where the callers ran on the same allele counts. It exists to answer
 the Cell Metabolism editorial concern recorded in `EDITOR.md`.
 
@@ -21,15 +21,25 @@ the Cell Metabolism editorial concern recorded in `EDITOR.md`.
 | scMOCHA variant call | what the caller emits, no AF filter |
 | scMOCHA AF>5% | plus the downstream gate in `src/06.1-collect-variants-new.R` |
 
-Variants retained, per sample:
+Variants retained, per sample. **Fig** marks the six samples the cross-sample
+panels draw; the two 5' libraries are in every table but no panel
+(`CROSS_SAMPLE_FIG_EXCLUDE` in `config.R`).
 
-| Sample | Chemistry | Original mgatk | scMOCHA call | scMOCHA AF>5% |
-| --- | --- | ---: | ---: | ---: |
-| GSE149689_GSM4509019_3PV3 | SC3Pv3 | **0** | 20 | 20 |
-| GSE163314_GSM4976997_3PV2 | SC3Pv2 | **0** | 9 | 9 |
-| GSE163668_GSM4995445_5PR2 | SC5P-R2 | **0** | 20 | 18 |
-| GSE181279_GSM5494116_5PPE | SC5P-PE | 230 | 736 | 216 |
-| GSE271107_GSM8369876_3PV3 | SC3Pv3 | **0** | 2 | 0 |
+| Sample | Chemistry | Fig | Original mgatk | scMOCHA call | scMOCHA AF>5% |
+| --- | --- | :-: | ---: | ---: | ---: |
+| GSE149689_GSM4509019_3PV3 | SC3Pv3 | yes | **0** | 20 | 20 |
+| GSE155673_GSM4712895_3PV3 | SC3Pv3 | yes | **0** | 6 | 6 |
+| GSE163314_GSM4976997_3PV2 | SC3Pv2 | yes | **0** | 9 | 9 |
+| GSE163668_GSM4995445_5PR2 | SC5P-R2 | no | **0** | 20 | 18 |
+| GSE181279_GSM5494116_5PPE | SC5P-PE | no | 230 | 736 | 216 |
+| GSE188632_GSM5687372_3PV3 | SC3Pv3 | yes | **0** | 24 | 22 |
+| GSE220189_GSM6793474_3PV3 | SC3Pv3 | yes | **0** | 1 | 1 |
+| GSE271107_GSM8369876_3PV3 | SC3Pv3 | yes | **0** | 2 | 0 |
+
+GSE181279 is the only sample where mgatk retains anything and the only one
+where the gate test is computable, and it is excluded from the panels. The
+cross-sample figures therefore understate what mgatk does on deep 5' data; the
+tables carry it.
 
 `DIAGRAM.md` holds the Mermaid version of all three arms with their cutoffs.
 
@@ -43,7 +53,13 @@ cd "$(git rev-parse --show-toplevel)"
 bash newplots/compare-with-mgatk/run-all.sh
 ```
 
-That is the whole stage: extract, five samples x five steps, then the
+Scratch goes to `~/tmp`, never `/tmp`. Two repository settings enforce that and
+both are load-bearing: `[activation.env] TMPDIR = "$HOME/tmp"` in `pixi.toml`,
+without which R silently writes `tempdir()` into `/tmp`, and
+`[cache] netfs-redirect = "never"` in `.pixi/config.toml`, without which pixi
+mirrors its repodata cache into `/tmp/pixi-cache-$USER` on every node.
+
+That is the whole stage: extract, eight samples x five steps, then the
 cross-sample step and the workbook. About four minutes after extraction.
 `run-all.sh GSE181279_GSM5494116_5PPE` restricts it to named samples but still
 rebuilds the cross-sample layer, which needs every sample's cache.
@@ -114,14 +130,25 @@ Schema and input traps:
 - **A mgatk S1 variant can be absent from the scMOCHA raw AF matrix.** Step 01
   warns and carries on with depth 0 rather than asserting.
 
-Degenerate arms, which four of the five samples have:
+Degenerate arms, which seven of the eight samples have:
 
 - **Original mgatk retains zero variants in four samples.** That is the result,
   not a failure. Every panel that groups or tests must tolerate an empty group;
   `fn_or_empty()` and `fn_testable()` in `config.R` are how. See `M1`.
 - **Never put a count on a log scale here.** A zero bar and its label both
-  vanish silently, and the zero is the headline. Use
-  `scales::transform_pseudo_log(base = 10)`.
+  vanish silently, and the zero is the headline. 07a uses a plain linear axis;
+  where a wide range forces one, use
+  `scales::transform_pseudo_log(base = 10)`, as 05f and 05g do on their x axis.
+- **Label samples by GSE and GSM, never by chemistry.** Two samples share
+  `SC3Pv3`, so chemistry does not identify a sample. Cross-sample panels use
+  `{gse}\n{gsm}`; cross-sample tables carry `sample` as `{gse}_{gsm}` plus a
+  `sample_id` join key. Chemistry lives in `SAMPLES` and the `00_Samples`
+  sheet.
+- **The plane panels show only the three arm-specific classes.** 05d, 05e, 05f
+  and 05g drop `Both arms` and `Neither arm`: neither separates the callers,
+  and `Neither arm` is a grey mass that hides the classes the panels exist to
+  show. Both keep their counts in the exported tables, which are built from the
+  unfiltered data.
 - **A `by = sample` aggregation drops samples with no rows.** A missing row
   looks identical to a failed run, so cross-sample tables are merged back onto
   `SAMPLES` and carry an explicit zero.

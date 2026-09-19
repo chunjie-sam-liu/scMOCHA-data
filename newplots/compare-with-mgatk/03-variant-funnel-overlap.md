@@ -107,7 +107,7 @@ The scMOCHA gate is evaluated on **all cells of the sample for every arm**, so
 panel 03c isolates the gate. Folding the cell filter in as well would conflate
 C1 with C4/C6; C1 is quantified on its own in step 02.
 
-Four of the five samples have an **empty original-mgatk arm**. Every panel
+Seven of the eight samples have an **empty original-mgatk arm**. Every panel
 that groups or tests here goes through `fn_or_empty()`, so an empty arm is
 drawn as a panel that states why it is empty rather than skipped - a missing
 figure reads as a failed run, while the zero is the result.

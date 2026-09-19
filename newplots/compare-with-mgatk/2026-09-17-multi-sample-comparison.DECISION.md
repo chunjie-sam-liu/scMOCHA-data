@@ -179,3 +179,101 @@ small integer counts lands most low-support variants on y = 1 or 2, so the arms
 occlude each other exactly in the region the figure exists to show. `05g`
 facets by arm for that reason; jittering was rejected because it would move a
 median off its own value.
+
+---
+
+## M8 - Cross-sample presentation: GSM labels, linear counts, red retained, arm-specific planes
+
+**Date:** 2026-09-18
+**Chosen:** Four presentation changes, all requested by the user on 2026-09-18.
+
+1. Chemistry is no longer used anywhere in the cross-sample layer. Panels label
+   samples `{gse}\n{gsm}`; tables carry `sample` as `{gse}_{gsm}` plus a
+   `sample_id` join key.
+2. 07a moves from `transform_pseudo_log` to a plain linear axis.
+3. `color_exclusion["Retained"]` becomes the NEJM red `#BC3C29`; the hue it
+   displaced moves to `VMR and strand r`, and `< 10 cells at AF >= 0.05` takes
+   the grey that `Retained` gave up.
+4. 05d, 05e, 05f and 05g plot only the three arm-specific classes; `Both arms`
+   and `Neither arm` are dropped from the panels.
+
+**Beat:** Keeping chemistry as the axis label; keeping the pseudo-log axis;
+keeping grey for `Retained`; keeping all five arm classes in the planes.
+**Why:** (1) Two of the five samples are `SC3Pv3`, so chemistry does not
+identify a sample and a reader cannot tell those two panels apart. GSE plus GSM
+is unique and is what a reader can look up. (2) The pseudo-log axis was adopted
+so a zero bar would still be drawn, but with a maximum of 736 a linear axis
+shows the zeros just as well and does not distort the 230-vs-736 comparison,
+which is the thing the panel is for. (3) `Retained` is the outcome a reader
+looks for first in 07d and red is where the eye goes; the constraint this
+creates - every exclusion reason must be non-red - is satisfied and checked
+against the four classes that actually co-occur in 07d. (4) `Both arms` and
+`Neither arm` do not separate the callers, and `Neither arm` is the largest
+class, so it rendered as a grey mass covering the arm-specific points the
+panels exist to show.
+**Evidence:** `grep -l "SC5P\|SC3Pv" tables/cross-sample/*.tsv` returns
+nothing. 07a renders all four zero bars with printed `0` labels on a linear
+axis to 800. In 07d the four co-occurring classes are red, steel blue, pink and
+pale yellow. Step 05 and step 07 re-ran for all five samples at exit 0 with no
+warnings; the workbook rebuilt at 23 sheets.
+**Consequence:** The exported tables are unchanged in content - `tab_f` and the
+mgatk-plane table are still built from the unfiltered data, so `Both arms` and
+`Neither arm` keep their counts. Only the panels are filtered. `sample_id` is
+retained in every cross-sample table because it is the join key back to
+`figures/<sample_id>/` and `tables/<sample_id>/`; it still carries the
+chemistry suffix as part of the directory name.
+
+---
+
+## M9 - Eight samples, and the cross-sample figures restricted to the 3' libraries
+
+**Date:** 2026-09-18
+**Chosen:** Add GSE155673_GSM4712895_3PV3, GSE188632_GSM5687372_3PV3 and
+GSE220189_GSM6793474_3PV3 to the registry, taking the stage to eight samples.
+Exclude `GSE163668_GSM4995445_5PR2` and `GSE181279_GSM5494116_5PPE` from the
+cross-sample FIGURES only, via `CROSS_SAMPLE_FIG_EXCLUDE` in `config.R`; every
+cross-sample table still carries all eight.
+**Beat:** Excluding the two 5' samples from the tables as well, which was the
+other reading of the request.
+**Why:** The user asked for figures only and confirmed it explicitly. Keeping
+the tables complete means the exclusion is a presentation choice a reader can
+undo, not a deletion. Restricting the panels to the 3' libraries makes them a
+comparison within one library family rather than across three chemistries.
+**Consequence, and it is a real one:** GSE181279 is the only sample in which
+mgatk retains any variant (230) and the only one in which the gate test is
+computable, and it is one of the two excluded. The panels as drawn therefore
+show mgatk retaining nothing in 6 of 6 and no computable test anywhere. That is
+a property of the six samples drawn, not of the resource, and every affected
+subtitle now says how many samples it is describing. `07-arm-yield.tsv` and
+`07-gate-test.tsv` carry the full eight-sample picture. Anyone quoting a panel
+without the table will understate what mgatk does on deep 5' data.
+**Evidence:** Verified before use, per archive: all three new archives carry
+the same 17-file layout and the same 14-column `variant_stats` schema. New
+counts - GSE155673 s1_scmocha 6 / s1_mgatk 19, GSE188632 24 / 32, GSE220189
+1 / 6; `s2_mgatk` is 0 in all three, with max strand correlation 0.196, 0.503
+and 0.013 against the 0.65 floor. Across all eight, mgatk retains nothing in
+seven and no variant reaches the strand floor in seven.
+
+---
+
+## M10 - Two defects found by adding samples
+
+**Date:** 2026-09-18
+
+**(a) The extraction script kept its own copy of the sample list.**
+`00-extract-archives.sh` held a hard-coded `archives=()` array duplicating the
+`SAMPLES` registry, so adding three registry rows extracted nothing and the
+three new samples had to be unpacked by hand. A second copy of a list is a
+second source of truth and this one failed silently: the script exited 0 and
+reported skipping five samples. It now reads `sample_id` and `archive` from
+`config.R` at run time and prints how many the registry lists. Verified: the
+script reports `registry lists 8 samples` and skips all eight as present.
+
+**(b) 04f guarded on the wrong condition.** `fn_or_empty(nrow(d_e) > 0L, ...)`
+is true whenever the rejected group has variants, so in a sample where mgatk's
+gate passes nothing the panel still drew: all four `median_passed` values NA,
+`geom_line()` with one observation per group, and `Removed 4 rows containing
+missing values` from the log scale. The rendered panel was four lone points
+that read as a real comparison. The guard now requires at least one measure
+with both medians present. Verified: the warning is gone for all eight samples
+and the panel states why it is empty.

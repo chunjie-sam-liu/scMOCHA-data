@@ -10,6 +10,10 @@ verify-r = "Rscript -e 'cat(R.version.string, \"\\n\")'"
 update-jutils = "Rscript -e 'remotes::install_github(\"chunjie-sam-liu/jutils\")'"
 remote-install = "Rscript package.R"
 
+# Without this R lands its scratch in /tmp, which is node-local and not ours.
+[activation.env]
+TMPDIR = "$HOME/tmp"
+
 [dependencies]
 r-base = "4.4.*"
 python = "3.12.*"

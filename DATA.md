@@ -36,7 +36,7 @@ repository. Use `find -L`, `du -L`, `rsync -L` on them.
 Paired scMOCHA and original-mgatk variant-calling output, one archive per
 sample, produced by Ting. Both arms were run on the same allele counts, which
 is what makes the criterion-level comparison valid; that is confirmed for
-GSE181279 and **not yet confirmed in writing for the other four** (see
+GSE181279 and **not yet confirmed in writing for the other seven** (see
 Unknowns).
 
 Root: `${ISILON_BASE}/compare-with-mgatk`.
@@ -48,9 +48,14 @@ Root: `${ISILON_BASE}/compare-with-mgatk`.
 | `${ISILON_BASE}/compare-with-mgatk/GSE163314_GSM4976997_3PV2.zip` | Ting | 2026-09-11 | `ISILON_BASE` | same |
 | `${ISILON_BASE}/compare-with-mgatk/GSE163668-GSM4995445_5PR2.zip` | Ting | 2026-09-11 | `ISILON_BASE` | same |
 | `${ISILON_BASE}/compare-with-mgatk/GSE149689_GSM4509019_3PV3.zip` | Ting | 2026-09-11 | `ISILON_BASE` | same |
+| `${ISILON_BASE}/compare-with-mgatk/GSE155673_GSM4712895_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
+| `${ISILON_BASE}/compare-with-mgatk/GSE188632_GSM5687372_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
+| `${ISILON_BASE}/compare-with-mgatk/GSE220189_GSM6793474_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
 
 Origin stated by Chun-Jie Liu on 2026-09-18. Dates are the file modification
-times read from the filesystem on 2026-09-17.
+times read from the filesystem: the first five on 2026-09-17, the last three on
+2026-09-18. All eight carry the identical 17-file layout and the identical
+14-column `variant_stats` schema, verified per archive before use.
 
 Each archive holds the same 17-file flat layout. `00-extract-archives.sh`
 unpacks seven of them per sample into
@@ -83,13 +88,13 @@ reads `samples/GSE181279_GSM5494116_5PPE/` instead.
 
 ## Unknowns
 
-- **Pipeline versions behind the five `compare-with-mgatk` archives.** Origin
+- **Pipeline versions behind the eight `compare-with-mgatk` archives.** Origin
   is recorded (Ting, 2026-09-18). Still needed: the scMOCHA and mgatk versions
   used, and written confirmation that the scMOCHA and original-mgatk arms ran
   on identical allele-count matrices for every sample. Decision `D1` of
   `newplots/compare-with-mgatk/DECISION.md` assumes they did, and that
   assumption is the basis of the whole comparison. Schema and candidate counts
-  are consistent with it for all five samples, but consistency is not
+  are consistent with it for all eight samples, but consistency is not
   confirmation.
 
 ## Superseded

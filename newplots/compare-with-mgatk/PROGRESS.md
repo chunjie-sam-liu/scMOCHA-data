@@ -94,8 +94,8 @@ its S1 set is smaller. The variants only mgatk reports carry a median of
   carries GSE, GSM and chemistry for every sample, and `fn_sample_label()`
   builds the subtitle from it. No figure says `<pending>`.
 - ~~**One sample only.**~~ Closed by campaign
-  `2026-09-17-multi-sample-comparison`: five samples, three chemistries.
-  Original mgatk retains zero variants in four of them.
+  `2026-09-17-multi-sample-comparison`: eight samples, four chemistries.
+  Original mgatk retains zero variants in seven of them.
 - **No orthogonal truth set.** Nothing here is a sensitivity or recall
   measurement, and the figures must not be described as one.
 - **P = 0.044 on one sample.** The gate test is nominally significant but not

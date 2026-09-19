@@ -120,6 +120,14 @@ arms occlude each other in the combined panel; 05g exists because faceting is
 the only honest fix, as jittering a median would move points off their own
 value.
 
-All seven panels go through `fn_or_empty()`. Four of the five samples have an
+All seven panels go through `fn_or_empty()`. Seven of the eight samples have an
 empty original-mgatk arm, so a panel with no points is drawn with a note
 saying why rather than skipped; a missing figure would read as a failed run.
+
+**The four plane panels show only the three arm-specific classes.** 05d, 05e,
+05f and 05g drop `Both arms` and `Neither arm`. Neither class separates the
+two callers, and `Neither arm` is by far the largest group, so leaving it in
+draws a grey mass over exactly the points the panels exist to show. Both
+classes keep their counts in `05-arm-in-mgatk-plane.tsv` and
+`05-arm-in-scmocha-plane.tsv`, which are built from the unfiltered data, so
+nothing is lost from the record.

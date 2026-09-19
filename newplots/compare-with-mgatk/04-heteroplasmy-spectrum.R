@@ -540,11 +540,18 @@ p_f <- data.table::melt(
     color = NULL
   )
 
+# Both groups must exist, not just d_e: where mgatk's gate passes nothing the
+# four median_passed values are all NA, which a log scale silently drops while
+# warning, leaving four lone points that read as a real comparison.
 p_f <- fn_or_empty(
-  nrow(d_e) > 0L,
+  nrow(d_e) > 0L &&
+    d_f[!is.na(median_passed) & !is.na(median_rejected), .N] > 0L,
   p_f,
   "The conclusion under four carrier definitions",
-  "No variant passes the scMOCHA reliability gate in this sample."
+  paste(
+    "mgatk's gate passes no variant in this sample, so no carrier",
+    "definition has two groups to compare."
+  )
 )
 
 log_info(

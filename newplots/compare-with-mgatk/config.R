@@ -19,30 +19,71 @@ STAGE <- "compare-with-mgatk"
 SAMPLES <- data.table::data.table(
   sample_id = c(
     "GSE149689_GSM4509019_3PV3",
+    "GSE155673_GSM4712895_3PV3",
     "GSE163314_GSM4976997_3PV2",
     "GSE163668_GSM4995445_5PR2",
     "GSE181279_GSM5494116_5PPE",
+    "GSE188632_GSM5687372_3PV3",
+    "GSE220189_GSM6793474_3PV3",
     "GSE271107_GSM8369876_3PV3"
   ),
   archive = c(
     "GSE149689_GSM4509019_3PV3.zip",
+    "GSE155673_GSM4712895_3PV3.zip",
     "GSE163314_GSM4976997_3PV2.zip",
     "GSE163668-GSM4995445_5PR2.zip",
     "GSE181279-GSM5494116_5PPE.zip",
+    "GSE188632_GSM5687372_3PV3.zip",
+    "GSE220189_GSM6793474_3PV3.zip",
     "GSE271107_GSM8369876_3PV3.zip"
   ),
-  gse = c("GSE149689", "GSE163314", "GSE163668", "GSE181279", "GSE271107"),
+  gse = c(
+    "GSE149689",
+    "GSE155673",
+    "GSE163314",
+    "GSE163668",
+    "GSE181279",
+    "GSE188632",
+    "GSE220189",
+    "GSE271107"
+  ),
   gsm = c(
     "GSM4509019",
+    "GSM4712895",
     "GSM4976997",
     "GSM4995445",
     "GSM5494116",
+    "GSM5687372",
+    "GSM6793474",
     "GSM8369876"
   ),
-  chemistry = c("SC3Pv3", "SC3Pv2", "SC5P-R2", "SC5P-PE", "SC3Pv3")
+  chemistry = c(
+    "SC3Pv3",
+    "SC3Pv3",
+    "SC3Pv2",
+    "SC5P-R2",
+    "SC5P-PE",
+    "SC3Pv3",
+    "SC3Pv3",
+    "SC3Pv3"
+  )
 )
 
 SAMPLE_IDS <- SAMPLES$sample_id
+
+# Samples kept out of the cross-sample FIGURES only. The 5' libraries are the
+# two odd ones out: restricting the panels to the 3' samples makes them a
+# comparison within one library family rather than across three. Every
+# cross-sample TABLE still carries all of SAMPLE_IDS, so nothing is hidden from
+# the record -- and GSE181279, the only sample where mgatk retains anything at
+# all, is one of the two excluded, so the panels alone understate what mgatk
+# does on deep 5' data. Read the tables alongside them.
+CROSS_SAMPLE_FIG_EXCLUDE <- c(
+  "GSE163668_GSM4995445_5PR2",
+  "GSE181279_GSM5494116_5PPE"
+)
+
+CROSS_SAMPLE_FIG_IDS <- setdiff(SAMPLE_IDS, CROSS_SAMPLE_FIG_EXCLUDE)
 
 # Output leaf for everything that spans samples rather than describing one.
 CROSS_SAMPLE <- "cross-sample"

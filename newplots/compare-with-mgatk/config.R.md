@@ -71,7 +71,7 @@ for the uncensored AF measure and appears in neither caller.
   because `i` cannot see a function argument through `..name`.
 - `fn_empty_panel()` / `fn_or_empty()` - the placeholder drawn when an arm or a
   group is empty. `fn_or_empty()` takes the real plot as a promise, so a panel
-  that would fail on an empty group is never evaluated. Four of the five
+  that would fail on an empty group is never evaluated. Seven of the eight
   samples retain no original-mgatk variant at all, and a zero there is a result
   that has to be drawn rather than skipped.
 - `fn_testable()` - TRUE when a two-group comparison has at least
@@ -91,8 +91,11 @@ for the uncensored AF measure and appears in neither caller.
   makes the estimate 0 or undefined. Either value breaks the carrier test in
   opposite directions - rate 0 calls every cell holding one alt read a carrier,
   rate 1 calls nothing a carrier - so it is floored at one alt read over all
-  observed depth, with a warning. Three of the five samples hit that floor;
-  GSE181279 does not.
+  observed depth, with a warning. Shallow samples with no qualifying background
+  cell hit that floor - `GSE155673_GSM4712895_3PV3` and
+  `GSE220189_GSM6793474_3PV3` did on the 2026-09-18 run; the deep GSE181279
+  does not. Check the step 03 log for the `not estimable` warning rather than
+  assuming.
 - `fn_carrier_stats()` - carrier-level heteroplasmy on three definitions.
 
 ## The three heteroplasmy measures

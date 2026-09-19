@@ -117,6 +117,14 @@ an untestable sample is still described rather than blank. Reporting NA rather
 than omitting the row matters: a missing row cannot be told apart from a step
 that never ran.
 
-The panels go through `fn_or_empty()` for the same reason. In the four samples
+The panels go through `fn_or_empty()` for the same reason. In the seven samples
 where mgatk retains nothing, 04e and 04f are drawn as a panel stating why they
 are empty instead of being skipped.
+
+**04f needs both groups, not just a non-empty `d_e`.** Its guard once tested
+`nrow(d_e) > 0`, which is true whenever the *rejected* group has variants. With
+no passing variant all four `median_passed` values are NA, so the panel drew
+four lone points, `geom_line()` had one observation per group, and the log
+scale dropped the NAs with a `Removed 4 rows containing missing values`
+warning. Four lone points read as a real comparison. The guard now requires a
+measure with both medians present.

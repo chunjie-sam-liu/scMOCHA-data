@@ -41,15 +41,26 @@ members=(
   cell.coverage.txt.gz
 )
 
-# sample_id:archive. Two archives separate GSE from GSM with "-"; sample_id
-# normalises that so one token is safe as a path and as a factor level.
-archives=(
-  "GSE149689_GSM4509019_3PV3:GSE149689_GSM4509019_3PV3.zip"
-  "GSE163314_GSM4976997_3PV2:GSE163314_GSM4976997_3PV2.zip"
-  "GSE163668_GSM4995445_5PR2:GSE163668-GSM4995445_5PR2.zip"
-  "GSE181279_GSM5494116_5PPE:GSE181279-GSM5494116_5PPE.zip"
-  "GSE271107_GSM8369876_3PV3:GSE271107_GSM8369876_3PV3.zip"
+# sample_id:archive, read from the SAMPLES registry in config.R rather than
+# repeated here. A second copy of this list silently stops extracting whatever
+# was added to the registry but not to the copy, and the failure only surfaces
+# much later as a missing sample.
+mapfile -t archives < <(
+  pixi run --manifest-path "${repodir}/pixi.toml" Rscript -e '
+    source(file.path(
+      path.expand(Sys.getenv("REPODIR")),
+      "newplots", "compare-with-mgatk", "config.R"
+    ))
+    cat(paste(SAMPLES$sample_id, SAMPLES$archive, sep = ":"), sep = "\n")
+  ' 2> /dev/null
 )
+
+if [[ "${#archives[@]}" -eq 0 ]]; then
+  echo "could not read SAMPLES from config.R" >&2
+  exit 1
+fi
+
+echo "registry lists ${#archives[@]} samples"
 
 mkdir -p "${outroot}"
 
