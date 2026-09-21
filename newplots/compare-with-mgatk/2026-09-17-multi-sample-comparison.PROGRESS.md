@@ -22,7 +22,7 @@ implemented, run to completion, and verified.
 | `high-res/00-colors.R`, `color_sample` | done |
 | `config.R` registry, paths, helpers | done |
 | `00-extract-archives.sh`, `run-all.sh` | done |
-| `01`..`05` per sample | done, all eight samples |
+| `01`..`05` per sample | done, all ten samples |
 | `07-cross-sample.R` | done |
 | `06-summary-workbook.R` | done, 23 sheets |
 | Paired `.md`, `AGENTS.md` | done |
@@ -40,7 +40,8 @@ cross-sample, one 22-sheet workbook. No zero-byte file. All sources ASCII.
 
 ### Yield, the headline
 
-**Original mgatk retains zero variants in seven of the eight samples.**
+**Original mgatk retains zero variants in seven of the ten samples, and one in
+two more.**
 
 | Sample | Chemistry | Cells | Dropped by mgatk | S1 scMOCHA | S1 mgatk | mgatk final | scMOCHA call | scMOCHA AF>5% |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -84,7 +85,7 @@ sample, so panel `07c` is descriptive only (`M4`).
 - **`Q8`, provenance: answered in part.** The archives come from Ting (stated
   2026-09-18) and `DATA.md` records that. Still outstanding: the scMOCHA and
   mgatk versions used, and written confirmation that both arms ran on identical
-  allele counts in all eight samples. Stage decision `D1` still rests on that
+  allele counts in all ten samples. Stage decision `D1` still rests on that
   assumption; schema and candidate counts are consistent with it, but
   consistency is not confirmation.
 - **The four shallow samples cannot answer the editor's question directly.**

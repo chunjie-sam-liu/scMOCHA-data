@@ -58,11 +58,11 @@ mgatk, 486 dropped; 127,998 cell-level detections of which 4,130 sit in the
 discarded cells; 14 variants fall below the 10-cell reliability threshold when
 those cells are removed.
 
-Cells total and cells dropped by mgatk across the eight samples, in registry
-order: 721 / 389, 5805 / 4381, 7949 / 7673, 191 / 21, 7210 / 486,
-17919 / 16099, 5639 / 5018, 8645 / 7155. Most of the shallow 3' samples lose
-the bulk of their cells to the coverage filter, which is why this step is per
-sample and its eight tables are compared in step 07.
+Cells total and cells dropped by mgatk across the ten samples, in registry
+order: 721 / 389, 5805 / 4381, 7949 / 7673, 191 / 21, 5993 / 3236, 7210 / 486,
+17919 / 16099, 5639 / 5018, 8645 / 7155, 6510 / 973. Most of the 3' samples
+lose the bulk of their cells to the coverage filter, which is why this step is
+per sample and its ten tables are compared in step 07.
 
 ## Notes
 

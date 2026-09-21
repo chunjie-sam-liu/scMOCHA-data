@@ -11,7 +11,7 @@ remain the charter and are still read first on resume.
 
 ## What this stage is
 
-A criterion-by-criterion comparison of **three calling arms** on **eight
+A criterion-by-criterion comparison of **three calling arms** on **ten
 samples** where the callers ran on the same allele counts. It exists to answer
 the Cell Metabolism editorial concern recorded in `EDITOR.md`.
 
@@ -21,7 +21,7 @@ the Cell Metabolism editorial concern recorded in `EDITOR.md`.
 | scMOCHA variant call | what the caller emits, no AF filter |
 | scMOCHA AF>5% | plus the downstream gate in `src/06.1-collect-variants-new.R` |
 
-Variants retained, per sample. **Fig** marks the six samples the cross-sample
+Variants retained, per sample. **Fig** marks the eight samples the cross-sample
 panels draw; the two 5' libraries are in every table but no panel
 (`CROSS_SAMPLE_FIG_EXCLUDE` in `config.R`).
 
@@ -31,12 +31,14 @@ panels draw; the two 5' libraries are in every table but no panel
 | GSE155673_GSM4712895_3PV3 | SC3Pv3 | yes | **0** | 6 | 6 |
 | GSE163314_GSM4976997_3PV2 | SC3Pv2 | yes | **0** | 9 | 9 |
 | GSE163668_GSM4995445_5PR2 | SC5P-R2 | no | **0** | 20 | 18 |
+| GSE175499_GSM5335510_3PV3 | SC3Pv3 | yes | **1** | 14 | 10 |
 | GSE181279_GSM5494116_5PPE | SC5P-PE | no | 230 | 736 | 216 |
 | GSE188632_GSM5687372_3PV3 | SC3Pv3 | yes | **0** | 24 | 22 |
 | GSE220189_GSM6793474_3PV3 | SC3Pv3 | yes | **0** | 1 | 1 |
 | GSE271107_GSM8369876_3PV3 | SC3Pv3 | yes | **0** | 2 | 0 |
+| GSE279945_GSM8583916_3PV3 | SC3Pv3 | yes | **1** | 25 | 21 |
 
-GSE181279 is the only sample where mgatk retains anything and the only one
+GSE181279 is the only sample where mgatk retains a usable set and the only one
 where the gate test is computable, and it is excluded from the panels. The
 cross-sample figures therefore understate what mgatk does on deep 5' data; the
 tables carry it.
@@ -59,7 +61,7 @@ without which R silently writes `tempdir()` into `/tmp`, and
 `[cache] netfs-redirect = "never"` in `.pixi/config.toml`, without which pixi
 mirrors its repodata cache into `/tmp/pixi-cache-$USER` on every node.
 
-That is the whole stage: extract, eight samples x five steps, then the
+That is the whole stage: extract, ten samples x five steps, then the
 cross-sample step and the workbook. About four minutes after extraction.
 `run-all.sh GSE181279_GSM5494116_5PPE` restricts it to named samples but still
 rebuilds the cross-sample layer, which needs every sample's cache.
@@ -130,11 +132,14 @@ Schema and input traps:
 - **A mgatk S1 variant can be absent from the scMOCHA raw AF matrix.** Step 01
   warns and carries on with depth 0 rather than asserting.
 
-Degenerate arms, which seven of the eight samples have:
+Degenerate arms, which nine of the ten samples have:
 
-- **Original mgatk retains zero variants in four samples.** That is the result,
-  not a failure. Every panel that groups or tests must tolerate an empty group;
-  `fn_or_empty()` and `fn_testable()` in `config.R` are how. See `M1`.
+- **Original mgatk retains zero variants in seven samples and one in two
+  more.** That is the result, not a failure. Every panel that groups or tests
+  must tolerate an empty or single-member group; `fn_or_empty()` and
+  `fn_testable()` in `config.R` are how. A group of exactly one also breaks
+  `geom_density()` and `geom_violin()`, which drop it with a warning rather
+  than an error - see `M11`. See `M1`.
 - **Never put a count on a log scale here.** A zero bar and its label both
   vanish silently, and the zero is the headline. 07a uses a plain linear axis;
   where a wide range forces one, use

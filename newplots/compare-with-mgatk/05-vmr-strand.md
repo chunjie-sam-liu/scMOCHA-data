@@ -120,7 +120,7 @@ arms occlude each other in the combined panel; 05g exists because faceting is
 the only honest fix, as jittering a median would move points off their own
 value.
 
-All seven panels go through `fn_or_empty()`. Seven of the eight samples have an
+All seven panels go through `fn_or_empty()`. Seven of the ten samples have an
 empty original-mgatk arm, so a panel with no points is drawn with a note
 saying why rather than skipped; a missing figure would read as a failed run.
 

@@ -277,3 +277,75 @@ missing values` from the log scale. The rendered panel was four lone points
 that read as a real comparison. The guard now requires at least one measure
 with both medians present. Verified: the warning is gone for all eight samples
 and the panel states why it is empty.
+
+---
+
+## M11 - Ten samples, a chemistry-agnostic palette, and a headline that had to change
+
+**Date:** 2026-09-20
+**Chosen:** Add `GSE175499_GSM5335510_3PV3` and `GSE279945_GSM8583916_3PV3`,
+taking the stage to ten samples. Restate the headline: original mgatk retains
+zero variants in **seven of ten** and exactly **one** in two more, rather than
+"zero in all but the deep sample". Replace the chemistry-anchored
+`color_sample` with the categorical `ggthemes::Classic_10`.
+**Beat:** Keeping the "mgatk retains nothing anywhere except GSE181279"
+wording; keeping the chemistry-anchored palette.
+**Why:** The two new samples are the first outside GSE181279 in which a variant
+clears mgatk's strand floor - max strand correlation 0.673 and 0.919 against
+the 0.65 cutoff, one variant each. The previous wording would have been false
+for them, and this is a rebuttal to an editor, so the claim has to match the
+data exactly. The weaker statement is still decisive: across ten samples mgatk
+yields 0, 0, 0, 0, 1, 230, 0, 0, 0, 1 while the scMOCHA call yields 1 to 736.
+On the palette: seven of the ten samples are SC3Pv3, so anchoring colour to
+chemistry would have meant seven greens, and `M8` already removed chemistry
+from the cross-sample layer entirely, so the anchoring no longer carried
+meaning. `Classic_10` has the best worst-case separation of the ten-colour
+candidates checked under `clr_deutan()` (minimum pairwise distance 26.3 against
+8.1 for Tableau_10); sample is also on the x axis wherever the palette is used,
+so colour is a redundant encoding.
+**Evidence:** Per-archive verification before use: both new archives carry the
+17-file layout and the 14-column `variant_stats` schema. GSE175499 s1_scmocha
+14 / s1_mgatk 20 / s2_mgatk 1; GSE279945 25 / 29 / 1. Cross-sample run reports
+`10 samples in the tables, 8 in the figures; mgatk retains nothing in 7`.
+**Consequence:** `fn_testable()` still refuses both new samples - one variant
+is below the three-per-side minimum - so the gate test remains computable in
+GSE181279 alone and `M2` stands unchanged.
+
+---
+
+## M12 - A group of exactly one broke two panels quietly
+
+**Date:** 2026-09-20
+**Chosen:** In 04b build the density from classes with at least two variants and
+name any dropped class in the subtitle; in 04e compute the violin layer only
+over groups with at least two members, leaving the boxplot to cover the rest.
+**Beat:** Leaving ggplot to drop them with a warning.
+**Why:** The two new samples are the first with a variant class of size exactly
+one. `geom_density()` dropped that class from 04b entirely - the class vanished
+from the panel with nothing but a console warning to say so, which is the same
+silent-omission failure `M10(b)` fixed in 04f. 04e was less severe because the
+boxplot still drew the one-variant group, but the warning is noise that hides
+real ones.
+**Evidence:** Before: `Groups with fewer than two data points have been
+dropped` and `Removed 1 row containing missing values` on 04b, and `Groups with
+fewer than two datapoints have been dropped` on 04e, for GSE175499 and
+GSE279945. After: step 04 re-run across all ten samples, every sample CLEAN.
+
+---
+
+## M13 - The background-rate warning was reporting depth as reads
+
+**Date:** 2026-09-20
+**Chosen:** Reword the `fn_background_rate()` fallback warning to say
+"{total_depth} background depth carried 0 alt reads" instead of "not estimable
+from {total_depth} background reads".
+**Beat:** Leaving it.
+**Why:** The variable interpolated is the summed *depth* of background cells,
+not an alt-read count. On GSE175499 it printed "not estimable from 22845
+background reads", which reads as a contradiction - 22,845 reads is plenty to
+estimate from - and cost an investigation to establish that the logic was in
+fact correct: 22,845 depth carrying zero alt reads. A log line that makes
+correct code look broken is a defect in its own right.
+**Evidence:** `fn_background_rate()` floors only when `rate <= 0`, and rate is
+`sum(round(af * depth)) / total_depth`, so the trigger is zero alt reads, not
+low depth.

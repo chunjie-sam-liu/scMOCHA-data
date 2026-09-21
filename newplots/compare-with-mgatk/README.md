@@ -1,7 +1,7 @@
 # Reading this stage
 
 A criterion-by-criterion comparison of three mitochondrial variant-calling
-arms across **eight samples**, built to answer the Cell Metabolism editorial
+arms across **ten samples**, built to answer the Cell Metabolism editorial
 concern in `EDITOR.md`:
 
 > "...concerns regarding the reliance on mgatk, which is biased toward
@@ -23,13 +23,14 @@ criteria differ at four points, and the difference the editor is describing is
 mgatk's post-hoc gate, `vmr > 0.01 AND strand correlation > 0.65`. **scMOCHA
 does not apply it at all.**
 
-Across eight samples that gate does not merely bias the output, it eliminates
-it: **original mgatk retains zero variants in seven of the eight samples**,
-while scMOCHA reports 1 to 736. In the one deep sample where mgatk does return
-a set, the variants its gate discards sit at median carrier heteroplasmy 0.069
-against 0.205 for the ones it keeps (Wilcoxon P = 0.0029), and of the 171
-variants scMOCHA AF>5% reports and mgatk does not, **149 (87%) are lost to the
-strand-correlation cutoff alone**.
+Across ten samples that gate does not merely bias the output, it very nearly
+eliminates it: **original mgatk retains zero variants in seven of the ten, and
+exactly one in two more**, while scMOCHA reports 1 to 736. Only the single deep
+5' sample gives mgatk a usable set at all. In that one sample the variants its
+gate discards sit at median carrier heteroplasmy 0.069 against 0.205 for the
+ones it keeps (Wilcoxon P = 0.0029), and of the 171 variants scMOCHA AF>5%
+reports and mgatk does not, **149 (87%) are lost to the strand-correlation
+cutoff alone**.
 
 Running the other way: scMOCHA requires 10 alt reads in a cell where mgatk
 requires 4, which is why scMOCHA's call set is smaller at the S1 stage in the
@@ -39,9 +40,9 @@ so what that criterion removes is weak read support, not low heteroplasmy.
 
 ---
 
-## 2. The eight samples
+## 2. The ten samples
 
-Read from `tables/cross-sample/07-sample-overview.tsv`. **Fig** marks the six
+Read from `tables/cross-sample/07-sample-overview.tsv`. **Fig** marks the eight
 samples the cross-sample panels show; the two 5' libraries are excluded from
 those panels and kept in every table.
 
@@ -51,20 +52,22 @@ those panels and kept in every table.
 | GSE155673_GSM4712895 | SC3Pv3 | yes | 5,805 | 4,381 (75%) | 6 | 19 | **0** | 6 | 6 |
 | GSE163314_GSM4976997 | SC3Pv2 | yes | 7,949 | 7,673 (97%) | 9 | 4 | **0** | 9 | 9 |
 | GSE163668_GSM4995445 | SC5P-R2 | no | 191 | 21 (11%) | 20 | 21 | **0** | 20 | 18 |
+| GSE175499_GSM5335510 | SC3Pv3 | yes | 5,993 | 3,236 (54%) | 14 | 20 | **1** | 14 | 10 |
 | GSE181279_GSM5494116 | SC5P-PE | no | 7,210 | 486 (6.7%) | 736 | 1,247 | **230** | 736 | 216 |
 | GSE188632_GSM5687372 | SC3Pv3 | yes | 17,919 | 16,099 (90%) | 24 | 32 | **0** | 24 | 22 |
 | GSE220189_GSM6793474 | SC3Pv3 | yes | 5,639 | 5,018 (89%) | 1 | 6 | **0** | 1 | 1 |
 | GSE271107_GSM8369876 | SC3Pv3 | yes | 8,645 | 7,155 (83%) | 2 | 6 | **0** | 2 | 0 |
+| GSE279945_GSM8583916 | SC3Pv3 | yes | 6,510 | 973 (15%) | 25 | 29 | **1** | 25 | 21 |
 
 GSE181279 is the only deep sample and the only one that can carry a
-distribution comparison. The other seven are shallow 10x libraries where 11% to
-97% of cells fail mgatk's own coverage filter. **Treat the two groups as
+distribution comparison. The other nine are shallower 10x libraries where 11%
+to 97% of cells fail mgatk's own coverage filter. **Treat the two groups as
 answering different questions** - see section 8.
 
-### Why mgatk returns nothing in seven samples
+### Why mgatk returns almost nothing in nine samples
 
-Not missing data. Every one of the 107 mgatk S1 variants in those seven samples
-fails the strand-correlation floor:
+Not missing data. Of the 156 mgatk S1 variants in those nine samples, exactly
+two clear the strand-correlation floor:
 
 | Sample | mgatk S1 | median strand r | max strand r | reaching r > 0.65 |
 | --- | ---: | ---: | ---: | ---: |
@@ -72,14 +75,17 @@ fails the strand-correlation floor:
 | GSE155673 | 19 | -0.062 | 0.196 | 0 |
 | GSE163314 | 4 | -0.106 | 0.006 | 0 |
 | GSE163668 | 21 | 0.007 | 0.590 | 0 |
+| GSE175499 | 20 | 0.024 | 0.673 | **1** |
 | GSE181279 | 1,247 | 0.229 | 1.000 | 300 |
 | GSE188632 | 32 | 0.102 | 0.503 | 0 |
 | GSE220189 | 6 | -0.089 | 0.013 | 0 |
 | GSE271107 | 6 | -0.206 | 0.048 | 0 |
+| GSE279945 | 29 | -0.087 | 0.919 | **1** |
 
-The highest strand correlation seen anywhere in the seven shallow samples is
-**0.590**, and many values are negative. Both `vmr` and `strand_correlation`
-are populated, so this is a real rejection, not an `NA` artefact.
+Seven of the nine have a maximum strand correlation below the 0.65 floor, and
+many values are negative. The two that clear it do so with a single variant
+each. Both `vmr` and `strand_correlation` are populated throughout, so these
+are real rejections, not `NA` artefacts.
 
 ---
 
@@ -107,9 +113,9 @@ analysis, not to variant calling, which is why it is a separate arm.
 
 ## 4. Cross-sample figures
 
-5 PDFs in `figures/cross-sample/`. **These carry the eight-sample claim.**
+5 PDFs in `figures/cross-sample/`. **These carry the ten-sample claim.**
 
-**The panels show six samples; the tables show all eight.** The two 5'
+**The panels show eight samples; the tables show all ten.** The two 5'
 libraries, `GSE163668_GSM4995445_5PR2` and `GSE181279_GSM5494116_5PPE`, are
 excluded from the cross-sample panels so those panels compare within one
 library family. The list is `CROSS_SAMPLE_FIG_EXCLUDE` in `config.R`.
@@ -122,10 +128,10 @@ the six samples drawn, not of the resource. Read the tables alongside them.
 
 | Figure | Shows | Read it as |
 | --- | --- | --- |
-| **`07a-arm-yield`** | variants retained per arm per sample, linear axis | the headline: mgatk 0 in all six panels shown, and in seven of the eight samples overall |
-| `07b-cell-filter` | fraction of cells mgatk's coverage filter discards, per sample | 6.7% in the deep sample, 54% to 97% across the shallow ones |
+| **`07a-arm-yield`** | variants retained per arm per sample, linear axis | the headline: of the eight panels drawn mgatk returns 0 in six and 1 in two, and across all ten samples it returns 0 in seven |
+| `07b-cell-filter` | fraction of cells mgatk's coverage filter discards, per sample | 6.7% in the deep sample, 11% to 97% across the rest |
 | `07c-strand-correlation` | distribution of mgatk strand correlation per sample, floor drawn | **descriptive only** - see the caveat below |
-| `07d-exclusion-reasons` | which mgatk cutoff rejects each S1 variant, per sample; **retained is red**, every exclusion reason a non-red hue | strand correlation is implicated in every rejection in all eight samples |
+| `07d-exclusion-reasons` | which mgatk cutoff rejects each S1 variant, per sample; **retained is red**, every exclusion reason a non-red hue | strand correlation is implicated in every rejection in all ten samples |
 | **`07e-gate-rejected-af`** | carrier AF of gate-rejected vs gate-passed variants, per sample | testable in GSE181279 only; the other four have no passed group |
 
 **Samples are labelled by GSE and GSM.** Two of the five share `SC3Pv3`, so
@@ -146,19 +152,21 @@ n = 19 and n = 21. So `07c` documents *that* the floor rejects everything in
 shallow data; it does **not** establish *why*. Do not quote it as a mechanism.
 See `M4` in the campaign decision log.
 
-**The `07e` caveat.** Seven of the eight samples have zero variants passing
-mgatk's gate, so the split has one level and the Wilcoxon is undefined. Those
-panels show the rejected group only and are labelled as having no comparison
-group. The one testable sample, GSE181279, is excluded from the panels, so
-`07e` as drawn contains no computable test at all; `07-gate-test.tsv` carries
-it. There is **no pooled or combined test across samples** - with one sample
-contributing both groups, a stratified test collapses to that sample and a
-combined p-value would be one p-value wearing a meta-analysis label (`M2`).
+**The `07e` caveat.** Nine of the ten samples cannot support the test: seven
+have zero variants passing mgatk's gate and two have exactly one, below the
+three-per-side minimum in `fn_testable()`. Those panels show the rejected group
+only and are labelled as having no comparison group. The one testable sample,
+GSE181279, is excluded from the panels, so `07e` as drawn contains no
+computable test at all; `07-gate-test.tsv` carries it. There is **no pooled or
+combined test across samples** - with one sample contributing both groups, a
+stratified test collapses to that sample and a combined p-value would be one
+p-value wearing a meta-analysis label (`M2`).
 
 | Sample | Passed | Rejected | Median AF passed | Median AF rejected | P |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | **GSE181279** (not in panels) | 54 | 215 | **0.205** | **0.069** | **0.0029** |
-| all seven others | 0 | 0 to 20 | - | - | not testable |
+| GSE175499, GSE279945 | 1 | 9 to 20 | - | - | not testable, one variant |
+| the seven others | 0 | 0 to 24 | - | - | not testable, no passed group |
 
 ---
 
@@ -233,9 +241,10 @@ follow the step that produced them. **Every number quoted below is GSE181279**,
 the only sample where these panels are well populated; the same panels exist
 for the other four and are mostly near-empty by construction.
 
-In the seven shallow samples `03b`, `03d`, `03e`, `04e` and `04f` are drawn
-with an explicit "no variants in this arm" annotation rather than left blank,
-so a missing comparison is distinguishable from a failed run.
+In the nine samples where mgatk retains at most one variant, `03b`, `03d`,
+`03e`, `04e` and `04f` are drawn with an explicit "no variants in this arm"
+annotation rather than left blank, so a missing comparison is distinguishable
+from a failed run.
 
 ### 02 - what the cell filter costs (criteria C1, C2)
 
@@ -389,9 +398,9 @@ variant appears in one arm and not another, find it there.
   caller as a stand-in for truth, which is circular (`D4`).
 - **No mechanism for the strand floor.** rho = -0.013, P = 0.66 in the only
   sample large enough to test it, so `07c` is descriptive only (`M4`).
-- **No pooled or combined test across samples.** Seven of the eight have no
+- **No pooled or combined test across samples.** Nine of the ten have no usable
   comparison group, so a stratified test collapses to GSE181279 (`M2`).
-- **The seven shallow samples do not answer the editor's question.** They answer
+- **The nine shallower samples do not answer the editor's question.** They answer
   a simpler and different one: original mgatk returns nothing at all on them.
   Do not present the two results as the same result.
 - **P = 0.0029 rests on one sample.** Stable across carrier definitions, but
@@ -399,7 +408,7 @@ variant appears in one arm and not another, find it there.
 - **Neither caller was re-run.** Both output sets already existed and came from
   the same allele-count matrices, so the two differ only in filtering logic.
   The archives come from Ting; the pipeline versions and written confirmation
-  that both arms used identical allele counts in all eight samples are still
+  that both arms used identical allele counts in all ten samples are still
   outstanding (`DATA.md`, Unknowns).
 
 ---
@@ -412,7 +421,7 @@ bash newplots/compare-with-mgatk/run-all.sh
 ```
 
 That extracts the archives if they are not already extracted, runs steps 01 to
-05 for each of the eight samples, then `07-cross-sample.R` and
+05 for each of the ten samples, then `07-cross-sample.R` and
 `06-summary-workbook.R`. To rebuild one sample:
 
 ```bash

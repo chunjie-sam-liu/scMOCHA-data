@@ -142,22 +142,25 @@ color_af_bin <- c(
   "#F9CCF9"
 )
 
-# The eight samples compared in newplots/compare-with-mgatk. Each takes its
-# chemistry's anchor from color_chemistry so a sample's colour stays tied to
-# its library type. Five samples share SC3Pv3, so they are separated along a
-# lightness ladder off that anchor: prismatic::clr_lighten("#35B779", 0.45) and
-# 0.20, the anchor itself, then clr_darken() at 0.28 and 0.52. Under
-# clr_deutan() the ladder stays monotonic in lightness, so the five remain
-# distinguishable.
+# The ten samples compared in newplots/compare-with-mgatk. Chemistry is
+# deliberately NOT the basis: seven of the ten are SC3Pv3, so a
+# chemistry-anchored ramp would be seven greens, and the cross-sample layer
+# does not label by chemistry anyway. paletteer_d("ggthemes::Classic_10"),
+# hard-coded so sourcing this file needs no runtime palette dependency.
+# Smallest pairwise distance under clr_deutan() is 26.3, the best of the
+# ten-colour candidates checked. Sample is also on the x axis wherever this is
+# used, so colour is a redundant encoding rather than the only one.
 color_sample <- c(
-  "GSE149689_GSM4509019_3PV3" = "#6CE1A3",
-  "GSE155673_GSM4712895_3PV3" = "#50C98B",
-  "GSE163314_GSM4976997_3PV2" = "#FDE725",
-  "GSE163668_GSM4995445_5PR2" = "#31688E",
-  "GSE181279_GSM5494116_5PPE" = "#440154",
-  "GSE188632_GSM5687372_3PV3" = "#35B779",
-  "GSE220189_GSM6793474_3PV3" = "#058250",
-  "GSE271107_GSM8369876_3PV3" = "#025734"
+  "GSE149689_GSM4509019_3PV3" = "#1F77B4",
+  "GSE155673_GSM4712895_3PV3" = "#FF7F0E",
+  "GSE163314_GSM4976997_3PV2" = "#2CA02C",
+  "GSE163668_GSM4995445_5PR2" = "#D62728",
+  "GSE175499_GSM5335510_3PV3" = "#9467BD",
+  "GSE181279_GSM5494116_5PPE" = "#8C564B",
+  "GSE188632_GSM5687372_3PV3" = "#E377C2",
+  "GSE220189_GSM6793474_3PV3" = "#7F7F7F",
+  "GSE271107_GSM8369876_3PV3" = "#BCBD22",
+  "GSE279945_GSM8583916_3PV3" = "#17BECF"
 )
 
 color_xlsx_hdr <- "#4D4D4D"

@@ -51,11 +51,14 @@ Root: `${ISILON_BASE}/compare-with-mgatk`.
 | `${ISILON_BASE}/compare-with-mgatk/GSE155673_GSM4712895_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
 | `${ISILON_BASE}/compare-with-mgatk/GSE188632_GSM5687372_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
 | `${ISILON_BASE}/compare-with-mgatk/GSE220189_GSM6793474_3PV3.zip` | Ting | 2026-09-18 | `ISILON_BASE` | same |
+| `${ISILON_BASE}/compare-with-mgatk/GSE175499_GSM5335510_3PV3.zip` | Ting | 2026-09-20 | `ISILON_BASE` | same |
+| `${ISILON_BASE}/compare-with-mgatk/GSE279945_GSM8583916_3PV3.zip` | Ting | 2026-09-20 | `ISILON_BASE` | same |
 
 Origin stated by Chun-Jie Liu on 2026-09-18. Dates are the file modification
-times read from the filesystem: the first five on 2026-09-17, the last three on
-2026-09-18. All eight carry the identical 17-file layout and the identical
-14-column `variant_stats` schema, verified per archive before use.
+times read from the filesystem: the first five on 2026-09-17, the next three on
+2026-09-18, the last two on 2026-09-20. All ten carry the identical 17-file
+layout and the identical 14-column `variant_stats` schema, verified per archive
+before use.
 
 Each archive holds the same 17-file flat layout. `00-extract-archives.sh`
 unpacks seven of them per sample into
@@ -94,7 +97,7 @@ reads `samples/GSE181279_GSM5494116_5PPE/` instead.
   on identical allele-count matrices for every sample. Decision `D1` of
   `newplots/compare-with-mgatk/DECISION.md` assumes they did, and that
   assumption is the basis of the whole comparison. Schema and candidate counts
-  are consistent with it for all eight samples, but consistency is not
+  are consistent with it for all ten samples, but consistency is not
   confirmation.
 
 ## Superseded

@@ -140,7 +140,25 @@ p_a <- fn_or_empty(
 )
 
 # b: maximum heteroplasmy ---------------------------------------------------
-p_b <- d_af |>
+# A class holding one variant has no density. ggplot drops it with a warning,
+# which removes the class from the panel without saying so, so the drop is made
+# explicit here and named in the subtitle.
+d_b <- d_af[, if (.N >= 2L) .SD, by = variant_set]
+classes_dropped_b <- setdiff(
+  as.character(unique(d_af$variant_set)),
+  as.character(unique(d_b$variant_set))
+)
+
+note_b <- if (length(classes_dropped_b) > 0) {
+  glue::glue(
+    "not drawn, fewer than two variants: ",
+    "{paste(classes_dropped_b, collapse = ', ')} \u00b7 "
+  )
+} else {
+  ""
+}
+
+p_b <- d_b |>
   ggplot(aes(x = af_carrier_max, fill = variant_set)) +
   geom_density(alpha = 0.4, color = NA) +
   scale_fill_manual(values = color_variant_set) +
@@ -149,7 +167,7 @@ p_b <- d_af |>
     title = "Maximum per-cell heteroplasmy of each variant class",
     subtitle = glue::glue(
       "{nrow(d_af)} variants with at least one carrier cell \u00b7 ",
-      "{fn_sample_note()}"
+      "{note_b}{fn_sample_note()}"
     ),
     x = "Maximum allele frequency across carrier cells",
     y = "Density",
@@ -157,11 +175,11 @@ p_b <- d_af |>
   )
 
 p_b <- fn_or_empty(
-  nrow(d_af) >= 2L,
+  nrow(d_b) >= 2L,
   p_b,
   "Maximum per-cell heteroplasmy of each variant class",
   glue::glue(
-    "Only {nrow(d_af)} final variants have a carrier cell in this sample, ",
+    "No variant class has two carrier-bearing variants in this sample, ",
     "too few to draw a density."
   )
 )
@@ -417,7 +435,13 @@ p_e <- if (nrow(d_e) == 0L) {
 } else {
   d_e |>
     ggplot(aes(x = gate_call, y = af_carrier_median, fill = gate_call)) +
-    geom_violin(color = NA, alpha = 0.6, scale = "width") +
+    # A one-variant group has no violin; the boxplot below still draws it.
+    geom_violin(
+      data = d_e[, if (.N >= 2L) .SD, by = gate_call],
+      color = NA,
+      alpha = 0.6,
+      scale = "width"
+    ) +
     geom_boxplot(width = 0.15, outlier.size = 0.4, fill = "white") +
     scale_x_discrete(labels = scales::label_wrap(20), drop = FALSE) +
     scale_y_log10(labels = scales::label_number()) +

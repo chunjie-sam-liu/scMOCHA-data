@@ -71,7 +71,7 @@ for the uncensored AF measure and appears in neither caller.
   because `i` cannot see a function argument through `..name`.
 - `fn_empty_panel()` / `fn_or_empty()` - the placeholder drawn when an arm or a
   group is empty. `fn_or_empty()` takes the real plot as a promise, so a panel
-  that would fail on an empty group is never evaluated. Seven of the eight
+  that would fail on an empty group is never evaluated. Seven of the ten
   samples retain no original-mgatk variant at all, and a zero there is a result
   that has to be drawn rather than skipped.
 - `fn_testable()` - TRUE when a two-group comparison has at least

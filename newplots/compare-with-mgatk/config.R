@@ -22,47 +22,57 @@ SAMPLES <- data.table::data.table(
     "GSE155673_GSM4712895_3PV3",
     "GSE163314_GSM4976997_3PV2",
     "GSE163668_GSM4995445_5PR2",
+    "GSE175499_GSM5335510_3PV3",
     "GSE181279_GSM5494116_5PPE",
     "GSE188632_GSM5687372_3PV3",
     "GSE220189_GSM6793474_3PV3",
-    "GSE271107_GSM8369876_3PV3"
+    "GSE271107_GSM8369876_3PV3",
+    "GSE279945_GSM8583916_3PV3"
   ),
   archive = c(
     "GSE149689_GSM4509019_3PV3.zip",
     "GSE155673_GSM4712895_3PV3.zip",
     "GSE163314_GSM4976997_3PV2.zip",
     "GSE163668-GSM4995445_5PR2.zip",
+    "GSE175499_GSM5335510_3PV3.zip",
     "GSE181279-GSM5494116_5PPE.zip",
     "GSE188632_GSM5687372_3PV3.zip",
     "GSE220189_GSM6793474_3PV3.zip",
-    "GSE271107_GSM8369876_3PV3.zip"
+    "GSE271107_GSM8369876_3PV3.zip",
+    "GSE279945_GSM8583916_3PV3.zip"
   ),
   gse = c(
     "GSE149689",
     "GSE155673",
     "GSE163314",
     "GSE163668",
+    "GSE175499",
     "GSE181279",
     "GSE188632",
     "GSE220189",
-    "GSE271107"
+    "GSE271107",
+    "GSE279945"
   ),
   gsm = c(
     "GSM4509019",
     "GSM4712895",
     "GSM4976997",
     "GSM4995445",
+    "GSM5335510",
     "GSM5494116",
     "GSM5687372",
     "GSM6793474",
-    "GSM8369876"
+    "GSM8369876",
+    "GSM8583916"
   ),
   chemistry = c(
     "SC3Pv3",
     "SC3Pv3",
     "SC3Pv2",
     "SC5P-R2",
+    "SC3Pv3",
     "SC5P-PE",
+    "SC3Pv3",
     "SC3Pv3",
     "SC3Pv3",
     "SC3Pv3"
@@ -472,8 +482,8 @@ fn_background_rate <- function(detection_long) {
     resolvable <- max(total_depth, sum(detection_long$depth, na.rm = TRUE), 1)
     rate <- 1 / resolvable
     log_warn(
-      "background alt rate not estimable from {total_depth} background ",
-      "reads; floored at 1/{resolvable} = {signif(rate, 3)}"
+      "background alt rate not estimable: {total_depth} background depth ",
+      "carried 0 alt reads; floored at 1/{resolvable} = {signif(rate, 3)}"
     )
   }
   rate

@@ -2,8 +2,8 @@
 
 ## Purpose
 
-What holds across all eight samples rather than inside one. Steps 01 to 05
-answer the comparison per sample; this step puts the eight answers side by side
+What holds across all ten samples rather than inside one. Steps 01 to 05
+answer the comparison per sample; this step puts the ten answers side by side
 so a claim can be made about the method instead of about GSE181279.
 
 - **07a** variants retained by each of the three arms, in every sample
@@ -13,10 +13,10 @@ so a claim can be made about the method instead of about GSE181279.
 - **07e** heteroplasmy of the variants mgatk's gate discards, per sample
 
 The headline is 07a: original mgatk retains **zero** variants in seven of the
-eight samples, while the scMOCHA call retains 20, 6, 9, 20, 736, 24, 1 and 2 in
-registry order. 07c and 07d say which cutoff produced those zeros - in every
-one of the seven it is the strand-correlation floor, not VMR and not the cell
-count.
+ten samples and exactly one in two more, while the scMOCHA call retains 20, 6,
+9, 20, 14, 736, 24, 1, 2 and 25 in registry order. 07c and 07d say which cutoff
+produced those zeros - in every one of them it is the strand-correlation floor,
+not VMR and not the cell count.
 
 ## Inputs
 
@@ -25,7 +25,7 @@ For every sample in `SAMPLES`:
 - `${ISILON_BASE}/compare-with-mgatk/derived/<sample_id>/03-variant-gated.qs`
 - `newplots/compare-with-mgatk/tables/<sample_id>/02-cell-inclusion.tsv`
 
-Both are required for all eight samples. A missing cache stops the step with
+Both are required for all ten samples. A missing cache stops the step with
 the `--sample=` command that would rebuild it, because a silently absent
 sample would be indistinguishable from a sample with no variants.
 
@@ -132,7 +132,7 @@ directories. Chemistry stays in the `SAMPLES` registry and in the workbook's
 in `config.R` lists the samples kept out of the figures - currently the two 5'
 libraries, so the panels compare within one library family. `fn_fig_subset()`
 is applied at each `ggplot()` call and nowhere else; every `export()` below
-uses the unfiltered object, so all eight samples keep their rows. Any subtitle
+uses the unfiltered object, so all ten samples keep their rows. Any subtitle
 that quotes a sample count quotes the count actually drawn, not
 `length(SAMPLE_IDS)`.
 

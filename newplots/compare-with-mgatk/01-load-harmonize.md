@@ -10,7 +10,7 @@ cell-by-variant AF submatrix restricted to the S1 union.
 Nothing downstream reads the raw inputs again.
 
 One sample per run, selected with `--sample`. Every path below is per sample,
-so the eight samples never share a cache file.
+so the ten samples never share a cache file.
 
 ## Inputs
 
@@ -57,9 +57,10 @@ pixi run Rscript -e 'suppressMessages(library(jutils)); a <- import("~/project/s
 Expected **for GSE181279_GSM5494116_5PPE**: 25746 variants, 736 scMOCHA S1,
 1247 mgatk S1, 230 mgatk S2; the AF submatrix is 7210 cells by 1249 variants.
 
-Across the eight samples, in registry order, the scMOCHA S0 counts are 1897,
-7801, 7077, 2484, 25746, 16457, 2963 and 7540; the scMOCHA S1 counts 20, 6, 9,
-20, 736, 24, 1 and 2; the mgatk S1 counts 19, 19, 4, 21, 1247, 32, 6 and 6.
+Across the ten samples, in registry order, the scMOCHA S0 counts are 1897,
+7801, 7077, 2484, 7503, 25746, 16457, 2963, 7540 and 9093; the scMOCHA S1
+counts 20, 6, 9, 20, 14, 736, 24, 1, 2 and 25; the mgatk S1 counts 19, 19, 4,
+21, 20, 1247, 32, 6, 6 and 29.
 
 ## Notes
 

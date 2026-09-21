@@ -1,7 +1,7 @@
 # DIAGRAM: three calling arms, their cutoffs, and their counts
 
-Eight samples. Every number below is read from
-`newplots/compare-with-mgatk/tables/`, generated 2026-09-18. Regenerate the
+Ten samples. Every number below is read from
+`newplots/compare-with-mgatk/tables/`, generated 2026-09-20. Regenerate the
 stage before quoting them.
 
 Sections 2 to 4 are drawn for **GSE181279_GSM5494116_5PPE**, the only sample
@@ -21,18 +21,20 @@ flowchart TB
         D3["<b>scMOCHA AF&gt;5%</b><br/>216"]
     end
 
-    subgraph SHALLOW["Seven shallow samples"]
+    subgraph SHALLOW["Nine shallower samples"]
         direction TB
         S1["GSE149689 / SC3Pv3 / 721 cells<br/>mgatk <b>0</b> &middot; call 20 &middot; AF&gt;5% 20"]
         S2["GSE155673 / SC3Pv3 / 5,805 cells<br/>mgatk <b>0</b> &middot; call 6 &middot; AF&gt;5% 6"]
         S3["GSE163314 / SC3Pv2 / 7,949 cells<br/>mgatk <b>0</b> &middot; call 9 &middot; AF&gt;5% 9"]
         S4["GSE163668 / SC5P-R2 / 191 cells<br/>mgatk <b>0</b> &middot; call 20 &middot; AF&gt;5% 18"]
-        S5["GSE188632 / SC3Pv3 / 17,919 cells<br/>mgatk <b>0</b> &middot; call 24 &middot; AF&gt;5% 22"]
-        S6["GSE220189 / SC3Pv3 / 5,639 cells<br/>mgatk <b>0</b> &middot; call 1 &middot; AF&gt;5% 1"]
-        S7["GSE271107 / SC3Pv3 / 8,645 cells<br/>mgatk <b>0</b> &middot; call 2 &middot; AF&gt;5% 0"]
+        S5["GSE175499 / SC3Pv3 / 5,993 cells<br/>mgatk <b>1</b> &middot; call 14 &middot; AF&gt;5% 10"]
+        S6["GSE188632 / SC3Pv3 / 17,919 cells<br/>mgatk <b>0</b> &middot; call 24 &middot; AF&gt;5% 22"]
+        S7["GSE220189 / SC3Pv3 / 5,639 cells<br/>mgatk <b>0</b> &middot; call 1 &middot; AF&gt;5% 1"]
+        S8["GSE271107 / SC3Pv3 / 8,645 cells<br/>mgatk <b>0</b> &middot; call 2 &middot; AF&gt;5% 0"]
+        S9["GSE279945 / SC3Pv3 / 6,510 cells<br/>mgatk <b>1</b> &middot; call 25 &middot; AF&gt;5% 21"]
     end
 
-    CAUSE["<b>Why mgatk returns nothing</b><br/>all 107 mgatk S1 variants in these seven<br/>fail strand r &gt; 0.65<br/>highest value observed: <b>0.590</b>"]
+    CAUSE["<b>Why mgatk returns almost nothing</b><br/>of 156 mgatk S1 variants in these nine,<br/>exactly <b>2</b> clear strand r &gt; 0.65<br/>seven samples peak below the floor<br/>(max 0.590); two reach it with one variant"]
 
     SHALLOW --> CAUSE
 
@@ -45,13 +47,13 @@ flowchart TB
     class D1 mg
     class D2 sc
     class D3 sc5
-    class S1,S2,S3,S4,S5,S6,S7 zero
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9 zero
     class CAUSE cause
 ```
 
-This is the eight-sample claim: the gate the editor is describing does not bias
+This is the ten-sample claim: the gate the editor is describing does not bias
 the output in shallow data, it empties it. `figures/cross-sample/07a-arm-yield`
-is the plotted version, and it draws six of the eight - the two 5' samples,
+is the plotted version, and it draws eight of the ten - the two 5' samples,
 GSE163668 and GSE181279, are excluded from the cross-sample panels and kept in
 the tables.
 

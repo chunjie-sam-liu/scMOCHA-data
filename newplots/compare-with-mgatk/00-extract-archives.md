@@ -13,7 +13,7 @@ is skipped, so re-running the driver costs nothing after the first extraction.
 
 ## Inputs
 
-The eight archives, all directly under `${ISILON_BASE}/compare-with-mgatk`:
+The ten archives, all directly under `${ISILON_BASE}/compare-with-mgatk`:
 
 | sample_id | Archive | Chemistry |
 | --- | --- | --- |
@@ -21,10 +21,12 @@ The eight archives, all directly under `${ISILON_BASE}/compare-with-mgatk`:
 | GSE155673_GSM4712895_3PV3 | `GSE155673_GSM4712895_3PV3.zip` | SC3Pv3 |
 | GSE163314_GSM4976997_3PV2 | `GSE163314_GSM4976997_3PV2.zip` | SC3Pv2 |
 | GSE163668_GSM4995445_5PR2 | `GSE163668-GSM4995445_5PR2.zip` | SC5P-R2 |
+| GSE175499_GSM5335510_3PV3 | `GSE175499_GSM5335510_3PV3.zip` | SC3Pv3 |
 | GSE181279_GSM5494116_5PPE | `GSE181279-GSM5494116_5PPE.zip` | SC5P-PE |
 | GSE188632_GSM5687372_3PV3 | `GSE188632_GSM5687372_3PV3.zip` | SC3Pv3 |
 | GSE220189_GSM6793474_3PV3 | `GSE220189_GSM6793474_3PV3.zip` | SC3Pv3 |
 | GSE271107_GSM8369876_3PV3 | `GSE271107_GSM8369876_3PV3.zip` | SC3Pv3 |
+| GSE279945_GSM8583916_3PV3 | `GSE279945_GSM8583916_3PV3.zip` | SC3Pv3 |
 
 Two archive names separate the GSE from the GSM with `-`; `sample_id`
 normalises that to `_` so one token is safe as a directory name, a factor
@@ -49,7 +51,7 @@ each holding exactly these seven files:
 - `cell.depthTable.txt`
 - `cell.coverage.txt.gz`
 
-About 2.7 GB in total across the eight samples. The allele-count matrices,
+About 3.4 GB in total across the ten samples. The allele-count matrices,
 `cell.rds`, `cell.signac.rds` and the PNG summaries stay inside the archives;
 nothing in this stage opens them.
 
