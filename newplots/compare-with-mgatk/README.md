@@ -133,6 +133,34 @@ the six samples drawn, not of the resource. Read the tables alongside them.
 | `07c-strand-correlation` | distribution of mgatk strand correlation per sample, floor drawn | **descriptive only** - see the caveat below |
 | `07d-exclusion-reasons` | which mgatk cutoff rejects each S1 variant, per sample; **retained is red**, every exclusion reason a non-red hue | strand correlation is implicated in every rejection in all ten samples |
 | **`07e-gate-rejected-af`** | carrier AF of gate-rejected vs gate-passed variants, per sample | testable in GSE181279 only; the other four have no passed group |
+| **`07f-call-af-spectrum`** | one dot per sample-variant call stacked by AF, drawn on **both** AF measures | 101 pooled calls; prevalence puts 5 below the 5% cutoff, carrier heteroplasmy puts **none** |
+| `07g-cell-af-depth` | one dot per cell-variant pair clearing scMOCHA's per-cell rule, AF against that cell's depth | 108,993 pairs from 36,673 of 59,181 cells; **1** sits below the 5% cutoff |
+
+**`07f` draws two panels on purpose.** The two AF measures disagree about
+exactly what the panel exists to show: on prevalence, 5 of the 101 calls fall
+below the 5% cutoff and the spectrum reaches 0.065%; on carrier heteroplasmy
+**none** do and the minimum is 11.8%. A one-panel version would silently commit
+the reader to one answer. `07-call-af-bins.tsv` carries the counts. See section
+5, and `D12` / `D17` / `M14`.
+
+**`07g` is about detectability, not biology.** A cell enters it when it clears
+scMOCHA's per-cell rule: 2 alt reads on **each strand**, at **10 reads of
+depth**. The depth floor is why nothing appears left of 10 on the x axis. The
+cache has no forward/reverse split, so the strand pair is approximated by its
+sum, 4 alt reads in total - permissive, since 4 reads all on one strand would
+pass here and fail in the caller.
+
+**The caller's source contradicts its own comment here.**
+`scmocha-mgatk-variant-calling.py` comments "minimum total coverage >=10" but
+the code applies `(fwd + rev) >= 10` to the **alt** matrices, which is 10 alt
+reads, not 10 reads of depth. The panel uses the depth reading. Which one the
+shipped `variant_stats` used is worth settling before publication (`M19`).
+
+**Almost nothing survives below the cutoff, and that is the result.** Pooled
+over the eight figure samples the median cell depth at a called position is
+**4 reads**. The rule leaves 108,993 pairs with a minimum AF of 3.77% and
+**1** below 5%. In these shallow 3' libraries there is essentially no cell deep
+enough to call a low-heteroplasmy variant.
 
 **Samples are labelled by GSE and GSM.** Two of the five share `SC3Pv3`, so
 chemistry cannot identify a sample and is not used on any cross-sample panel or
@@ -236,10 +264,10 @@ this measure; all six have a carrier maximum between 0.09 and 0.53.
 
 ## 6. Per-sample figures
 
-24 PDFs in `figures/<sample_id>/`, the same set for every sample. Panel letters
+26 PDFs in `figures/<sample_id>/`, the same set for every sample. Panel letters
 follow the step that produced them. **Every number quoted below is GSE181279**,
 the only sample where these panels are well populated; the same panels exist
-for the other four and are mostly near-empty by construction.
+for the other nine and are mostly near-empty by construction.
 
 In the nine samples where mgatk retains at most one variant, `03b`, `03d`,
 `03e`, `04e` and `04f` are drawn with an explicit "no variants in this arm"
@@ -315,6 +343,8 @@ them. That is what makes this plane readable.
 | `05c-read-support` | alt reads per carrier cell by variant class | mgatk-only 9, scMOCHA-only 38, shared 48 |
 | **`05f-arm-in-scmocha-plane`** | the mirror of `05d`: **scMOCHA's** decision plane, x = cells at AF >= 0.05 with depth >= 10, y = median alt reads per carrying cell | where **mgatk's** variants land under scMOCHA's criteria: **176 of the 185 mgatk-only variants fall short of the 10-cell gate** |
 | `05g-scmocha-plane-facets` | `05f` split one facet per arm, all variants repeated in grey | the readable version of `05f`; see the caveat below |
+| **`08a-call-af-spectrum`** | this sample's calls stacked by AF, on both AF measures | the per-sample version of `07f` |
+| `08b-cell-af-depth` | this sample's cell-level AF against cell depth | the per-sample version of `07g` |
 
 `05d` is the figure to put next to `03d`: one shows the count, the other shows
 the geometry behind it.
@@ -351,12 +381,13 @@ are built from the unfiltered data.
 
 ## 7. Tables
 
-**14 per sample** in `tables/<sample_id>/`, **7 cross-sample** in
+**16 per sample** in `tables/<sample_id>/`, **8 cross-sample** in
 `tables/cross-sample/`. Every table carries a leading `sample` column.
 
 `tables/cross-sample/06-compare-with-mgatk.xlsx` collects all of them into
-**23 sheets** and is the one to send out. `00_Samples`, `01_Criteria` and
-`02_Definitions` make it self-contained.
+**25 sheets** and is the one to send out. `00_Samples`, `01_Criteria` and
+`02_Definitions` make it self-contained. The one table deliberately left out is
+`08-cell-af-depth.tsv`, which runs to several hundred thousand rows.
 
 | Cross-sample file | Contents |
 | --- | --- |
@@ -366,6 +397,7 @@ are built from the unfiltered data.
 | `07-strand-support.tsv` | strand-correlation summary and the rho that failed to show a mechanism |
 | `07-exclusion-reasons.tsv` | which mgatk cutoff rejects each S1 variant |
 | `07-gate-test.tsv` | the gate test per sample, with a `testable` flag |
+| `07-call-af-bins.tsv` | the counts behind `07f`, per AF band per measure |
 | `06-criteria-comparison.tsv` | the criterion table, machine-readable |
 
 | Per-sample file | Contents |
@@ -384,6 +416,8 @@ are built from the unfiltered data.
 | `05-arm-in-mgatk-plane.tsv` | arm counts in `05d` |
 | `05-arm-in-scmocha-plane.tsv` | arm counts in `05f`, split by which scMOCHA axis the variant clears |
 | `05-read-support.tsv` | median alt reads per carrier cell |
+| `08-call-af.tsv` | one row per call per AF measure |
+| `08-cell-af-depth.tsv` | one row per cell-variant pair scMOCHA would call, behind `08b` and `07g` |
 
 `03-variant-membership.tsv` is the lookup table: to ask why one specific
 variant appears in one arm and not another, find it there.

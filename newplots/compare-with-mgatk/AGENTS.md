@@ -43,7 +43,10 @@ where the gate test is computable, and it is excluded from the panels. The
 cross-sample figures therefore understate what mgatk does on deep 5' data; the
 tables carry it.
 
-`DIAGRAM.md` holds the Mermaid version of all three arms with their cutoffs.
+`DIAGRAM.md` holds the Mermaid version of all three arms with their cutoffs,
+drawn for GSE181279. `DIAGRAM-CROSS-SAMPLE.md` holds the same arms pooled over
+the eight 3' samples (`CROSS_SAMPLE_FIG_IDS`), which is the view the
+cross-sample panels show.
 
 ## Run
 
@@ -75,15 +78,16 @@ pixi run Rscript newplots/compare-with-mgatk/02-cell-inclusion.R --sample=<id>
 pixi run Rscript newplots/compare-with-mgatk/03-variant-funnel-overlap.R --sample=<id>
 pixi run Rscript newplots/compare-with-mgatk/04-heteroplasmy-spectrum.R --sample=<id>
 pixi run Rscript newplots/compare-with-mgatk/05-vmr-strand.R --sample=<id>
+pixi run Rscript newplots/compare-with-mgatk/08-call-af-depth.R --sample=<id>
 pixi run Rscript newplots/compare-with-mgatk/07-cross-sample.R
 pixi run Rscript newplots/compare-with-mgatk/06-summary-workbook.R
 ```
 
 Order matters. Steps 02 to 05 read step 01's cache, 04 and 05 read step 03's
-cache, **07 reads every sample's step 03 cache and step 02 table**, and **06
-runs last** because it binds the tables 01 to 05 and 07 wrote. `<id>` is one of
-the `sample_id` values in `SAMPLES` in `config.R`; anything else stops with the
-valid list.
+cache, 08 reads step 01's and step 03's, **07 reads every sample's step 03
+cache and their step 02 and step 08 tables**, and **06 runs last** because it
+binds the tables 01 to 05, 07 and 08 wrote. `<id>` is one of the `sample_id`
+values in `SAMPLES` in `config.R`; anything else stops with the valid list.
 
 ## Layout
 
@@ -92,9 +96,9 @@ valid list.
 - `NN-*.R` + `NN-*.md` - one step per file, each with its contract.
 - `run-all.sh` - the driver.
 - `README.md` - reader's guide: how to read every figure and table.
-- `figures/<sample_id>/` - 24 PDFs each; `figures/cross-sample/` - 5 PDFs.
-- `tables/<sample_id>/` - 14 TSVs each; `tables/cross-sample/` - the workbook
-  plus 7 files.
+- `figures/<sample_id>/` - 26 PDFs each; `figures/cross-sample/` - 7 PDFs.
+- `tables/<sample_id>/` - 16 TSVs each; `tables/cross-sample/` - the workbook
+  plus 8 files.
 - `figures_stale-2026-09-17/`, `tables_stale-2026-09-17/` - the single-sample
   outputs this campaign replaced. History; do not write there.
 

@@ -436,6 +436,59 @@ p_e <- fn_or_empty(
   "No variant passes the scMOCHA reliability gate in any sample."
 )
 
+# f, g: the call spectrum and its read support, pooled over the figure samples
+# ---------------------------------------------------------------------------
+# Built from the step 08 tables rather than recomputed, so the pooled panels
+# and the per-sample ones are the same quantity by construction. Pooled over
+# CROSS_SAMPLE_FIG_IDS only, matching every other panel in this step.
+call_long_all <- data.table::rbindlist(
+  lapply(CROSS_SAMPLE_FIG_IDS, fn_sample_tab, name = "08-call-af.tsv"),
+  fill = TRUE
+)
+call_long_all[, measure := factor(measure, levels = CALL_AF_MEASURES)]
+call_long_all[, af_bin := fn_call_af_bin(af)]
+
+cells_all <- data.table::rbindlist(
+  lapply(CROSS_SAMPLE_FIG_IDS, fn_sample_tab, name = "08-cell-af-depth.tsv"),
+  fill = TRUE
+)
+
+pooled_note <- glue::glue(
+  "{length(CROSS_SAMPLE_FIG_IDS)} samples pooled"
+)
+
+# Denominator for 07g: every cell in the figure samples, not just the ones
+# holding a call.
+n_cells_fig <- cell_inclusion[
+  sample %in% CROSS_SAMPLE_FIG_IDS,
+  sum(cells_total)
+]
+
+p_f <- fn_or_empty(
+  nrow(call_long_all) > 0L,
+  fn_plot_call_af_spectrum(call_long_all, pooled_note),
+  "Allele frequency of every scMOCHA variant call",
+  "No sample has a scMOCHA variant call."
+)
+
+p_g <- fn_or_empty(
+  nrow(cells_all) > 0L,
+  fn_plot_cell_af_depth(cells_all, pooled_note, n_cells_fig),
+  "Read support behind each cell-level allele frequency",
+  "No cell holds an alt read at a called variant position."
+)
+
+n_calls_pooled <- call_long_all[
+  measure == levels(call_long_all$measure)[1],
+  .N
+]
+log_info(
+  "pooled call spectrum: {n_calls_pooled} calls over ",
+  "{data.table::uniqueN(call_long_all$variant)} distinct variants; ",
+  "{nrow(cells_all)} cell-variant pairs from ",
+  "{nrow(unique(cells_all[, .(sample, barcode)]))} of {n_cells_fig} cells"
+)
+
 # overview ------------------------------------------------------------------
 d_ov <- merge(
   SAMPLES,
@@ -497,6 +550,19 @@ export(
   as.character(fs::path(paths$tabdir, "07-gate-test.tsv"))
 )
 
+# The counts behind 07f, so "n of N calls below the cutoff" is auditable
+# rather than read off the panel.
+d_bins <- call_long_all[,
+  .(n_calls = .N),
+  by = .(measure = as.character(measure), af_bin)
+]
+d_bins[, fraction := n_calls / sum(n_calls), by = measure]
+data.table::setorder(d_bins, measure, af_bin)
+export(
+  d_bins,
+  as.character(fs::path(paths$tabdir, "07-call-af-bins.tsv"))
+)
+
 saveplot(
   as.character(fs::path(paths$figdir, "07a-arm-yield.pdf")),
   fn_wrap_labs(p_a, width = 95),
@@ -532,11 +598,25 @@ saveplot(
   height = 5,
   device = cairo_pdf
 )
+saveplot(
+  as.character(fs::path(paths$figdir, "07f-call-af-spectrum.pdf")),
+  fn_wrap_labs(p_f, width = 95),
+  width = 8.5,
+  height = 7,
+  device = cairo_pdf
+)
+saveplot(
+  as.character(fs::path(paths$figdir, "07g-cell-af-depth.pdf")),
+  fn_wrap_labs(p_g, width = 95),
+  width = 8.5,
+  height = 5.5,
+  device = cairo_pdf
+)
 
 log_info(
   "07: {length(SAMPLE_IDS)} samples in the tables, ",
   "{length(CROSS_SAMPLE_FIG_IDS)} in the figures; mgatk retains nothing in ",
   "{n_zero_mgatk}; no variant reaches the strand floor in {n_no_floor}; ",
   "gate test computable in {d_e_stat[testable == TRUE, .N]}. ",
-  "5 figures and 6 tables written"
+  "7 figures and 7 tables written"
 )

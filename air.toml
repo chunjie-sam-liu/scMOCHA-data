@@ -1,1 +1,3 @@
-/home/liuc9/github/dotfiles/air.toml
+[format]
+line-width = 80
+indent-width = 2

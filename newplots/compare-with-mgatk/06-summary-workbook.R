@@ -177,24 +177,29 @@ sheets <- list(
   "06_Strand_correlation" = read_tab("07-strand-support.tsv"),
   "07_Exclusion_pooled" = read_tab("07-exclusion-reasons.tsv"),
   "08_Gate_test_per_sample" = read_tab("07-gate-test.tsv"),
-  "09_Cell_inclusion" = read_sample_tab("02-cell-inclusion.tsv"),
-  "10_Funnel_counts" = read_sample_tab("03-funnel-counts.tsv"),
-  "11_Gate_crossapplied" = read_sample_tab("03-gate-crossapplied.tsv"),
-  "12_Exclusion_reasons" = read_sample_tab("03-exclusion-reasons.tsv"),
-  "13_Arm_combinations" = read_sample_tab("03-arm-combinations.tsv"),
-  "14_AF_bins" = read_sample_tab("04-af-bins.tsv"),
-  "15_AF_bins_own_definition" = read_sample_tab(
+  "09_Call_AF_bins_pooled" = read_tab("07-call-af-bins.tsv"),
+  "10_Cell_inclusion" = read_sample_tab("02-cell-inclusion.tsv"),
+  "11_Funnel_counts" = read_sample_tab("03-funnel-counts.tsv"),
+  "12_Gate_crossapplied" = read_sample_tab("03-gate-crossapplied.tsv"),
+  "13_Exclusion_reasons" = read_sample_tab("03-exclusion-reasons.tsv"),
+  "14_Arm_combinations" = read_sample_tab("03-arm-combinations.tsv"),
+  "15_AF_bins" = read_sample_tab("04-af-bins.tsv"),
+  "16_AF_bins_own_definition" = read_sample_tab(
     "04-af-bins-own-definition.tsv"
   ),
-  "16_Gate_test" = read_sample_tab("04-tests.tsv"),
-  "17_Measure_sensitivity" = read_sample_tab("04-measure-sensitivity.tsv"),
-  "18_VMR_strand_rejected" = read_sample_tab("05-vmr-strand-rejected.tsv"),
-  "19_Arm_in_mgatk_plane" = read_sample_tab("05-arm-in-mgatk-plane.tsv"),
-  "20_Arm_in_scmocha_plane" = read_sample_tab(
+  "17_Gate_test" = read_sample_tab("04-tests.tsv"),
+  "18_Measure_sensitivity" = read_sample_tab("04-measure-sensitivity.tsv"),
+  "19_VMR_strand_rejected" = read_sample_tab("05-vmr-strand-rejected.tsv"),
+  "20_Arm_in_mgatk_plane" = read_sample_tab("05-arm-in-mgatk-plane.tsv"),
+  "21_Arm_in_scmocha_plane" = read_sample_tab(
     "05-arm-in-scmocha-plane.tsv"
   ),
-  "21_Read_support" = read_sample_tab("05-read-support.tsv"),
-  "22_Variant_membership" = read_sample_tab("03-variant-membership.tsv")
+  "22_Read_support" = read_sample_tab("05-read-support.tsv"),
+  # The cell-level companion 08-cell-af-depth.tsv is deliberately not a sheet:
+  # it runs to several hundred thousand rows across the samples. It stays a
+  # TSV next to the figure it backs.
+  "23_Call_AF" = read_sample_tab("08-call-af.tsv"),
+  "24_Variant_membership" = read_sample_tab("03-variant-membership.tsv")
 )
 sheets <- sheets[!vapply(sheets, is.null, logical(1))]
 

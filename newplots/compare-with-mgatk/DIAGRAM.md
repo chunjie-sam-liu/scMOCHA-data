@@ -8,6 +8,10 @@ Sections 2 to 4 are drawn for **GSE181279_GSM5494116_5PPE**, the only sample
 deep enough for original mgatk to return a set at all. Section 1 is the
 cross-sample view.
 
+The same three arms pooled over the **eight 3' samples** the cross-sample
+panels draw - every sample except the two 5' libraries - are in
+`DIAGRAM-CROSS-SAMPLE.md`.
+
 ---
 
 ## 1. What each arm yields in each sample

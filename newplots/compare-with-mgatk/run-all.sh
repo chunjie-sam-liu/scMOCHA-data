@@ -13,17 +13,29 @@ set -euo pipefail
 stagedir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 repodir="$(cd "${stagedir}/../.." && pwd)"
 
-samples=(
-  GSE149689_GSM4509019_3PV3
-  GSE163314_GSM4976997_3PV2
-  GSE163668_GSM4995445_5PR2
-  GSE181279_GSM5494116_5PPE
-  GSE271107_GSM8369876_3PV3
+# Read from the SAMPLES registry in config.R, never a copy kept here. A second
+# list silently stops running whatever was added to the registry but not to the
+# copy; this file held five samples while the registry held ten.
+mapfile -t samples < <(
+  pixi run --manifest-path "${repodir}/pixi.toml" Rscript -e '
+    source(file.path(
+      path.expand(Sys.getenv("REPODIR")),
+      "newplots", "compare-with-mgatk", "config.R"
+    ))
+    cat(SAMPLE_IDS, sep = "\n")
+  ' 2> /dev/null
 )
+
+if [[ "${#samples[@]}" -eq 0 ]]; then
+  echo "could not read SAMPLE_IDS from config.R" >&2
+  exit 1
+fi
 
 if [[ $# -gt 0 ]]; then
   samples=("$@")
 fi
+
+echo "running ${#samples[@]} samples"
 
 steps=(
   01-load-harmonize
@@ -31,6 +43,7 @@ steps=(
   03-variant-funnel-overlap
   04-heteroplasmy-spectrum
   05-vmr-strand
+  08-call-af-depth
 )
 
 bash "${stagedir}/00-extract-archives.sh"
@@ -44,8 +57,9 @@ for s in "${samples[@]}"; do
   done
 done
 
-# 07 writes the cross-sample tables that 06 binds into the workbook, so it runs
-# first and 06 runs last.
+# 07 reads every sample's step 03 cache and the step 02 and 08 tables, and
+# writes the cross-sample tables that 06 binds into the workbook, so 07 runs
+# after all per-sample steps and 06 runs last.
 echo "=== cross-sample ==="
 pixi run Rscript newplots/compare-with-mgatk/07-cross-sample.R
 pixi run Rscript newplots/compare-with-mgatk/06-summary-workbook.R

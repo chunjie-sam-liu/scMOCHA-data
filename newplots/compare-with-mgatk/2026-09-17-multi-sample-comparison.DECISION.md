@@ -349,3 +349,198 @@ correct code look broken is a defect in its own right.
 **Evidence:** `fn_background_rate()` floors only when `rate <= 0`, and rate is
 `sum(round(af * depth)) / total_depth`, so the trigger is zero alt reads, not
 low depth.
+
+---
+
+## M14 - The call AF spectrum is drawn on both measures, never one
+
+**Date:** 2026-09-23
+**Chosen:** Add the call-level AF spectrum (panel C of the user's reference
+figure) and the cell-level AF-versus-depth panel (panel D), per sample as
+`08a` / `08b` and pooled over `CROSS_SAMPLE_FIG_IDS` as `07f` / `07g`. Draw the
+spectrum on **both** the prevalence measure and the carrier-heteroplasmy
+measure, as two facets of one figure, rather than choosing one.
+**Beat:** Picking one measure, which is what the reference figure does.
+**Why:** The two measures disagree about exactly the quantity the panel exists
+to show. Pooled over the eight figure samples: prevalence puts 5 of 101 calls
+below the 5% cutoff and reaches 0.065%; carrier heteroplasmy puts **zero**
+below it and bottoms out at 11.8%. Choosing prevalence would label a prevalence
+statistic "Variant AF", which `D12` and the README explicitly forbid - `mean`
+is total alt reads over total coverage across all cells, so it tracks how many
+cells carry a variant, not how strongly. Choosing carrier heteroplasmy would
+delete the low-AF tail that is the panel's entire subject, which is the
+censoring failure `D17` already fixed once. Drawing both is the only option
+that neither mislabels nor censors, and it makes the measure-dependence the
+reader's to judge.
+**Evidence:** `07-call-af-bins.tsv`. Prevalence: 1 call `<0.1%`, 2 `0.1-1%`,
+2 `1-5%`, 1 `5-20%`, 95 `20-100%`. Heteroplasmy: 1 `5-20%`, 100 `20-100%`.
+**Reconciliation with the reference figure:** our pooled call count is 101 over
+the same eight samples, matching it exactly, as do 89 for the AF>5% arm and 2
+for mgatk. Two numbers do not match and were not forced to: the reference
+reports 65 distinct variants for the call arm where we count 70 - our 65 is the
+AF>5% arm's distinct count, so the reference appears to have shifted that
+column by one row - and it reports 12 of 101 calls below 5%, which no measure
+in this stage reproduces; prevalence gives 5. Those two numbers should be
+checked against whoever produced the figure before either version is published.
+
+---
+
+## M15 - run-all.sh held the same duplicated sample list that M10 fixed elsewhere
+
+**Date:** 2026-09-23
+**Chosen:** Read `SAMPLE_IDS` from `config.R` at run time in `run-all.sh`, the
+same way `00-extract-archives.sh` now does, and print how many samples it is
+about to run.
+**Beat:** Leaving it.
+**Why:** `M10(a)` fixed a hard-coded `archives=()` array in the extraction
+script but missed the identical `samples=()` array in `run-all.sh`. That array
+still listed **five** samples while the registry held ten, so `bash run-all.sh`
+with no arguments would silently have processed half the stage and exited 0.
+The defect had been latent since the registry went from five to eight.
+**Evidence:** The array listed GSE149689, GSE163314, GSE163668, GSE181279 and
+GSE271107 only. After the change the script prints `running 10 samples`.
+**Consequence:** Step 08 was added to the per-sample step list in the same
+edit, and the comment above the cross-sample call now records that 07 depends
+on 08.
+
+---
+
+## M16 - The depth panel shows callable cells only, and the sub-5% region empties
+
+**Date:** 2026-09-23
+**Chosen:** A cell enters `08b` / `07g` only when the variant is callable in it,
+meaning at least `CUTOFF_CELL_ALT_CALLED` = 2 x `CUTOFF_ALT_STRAND` = 4 alt
+reads. Both axes use decade breaks; the y axis always spans at least 0.01% to
+100% but extends lower whenever the data do.
+**Beat:** Keeping every cell with one or more alt reads, which is what the
+panel did when it was first added.
+**Why:** The user asked for cells that hold the variant, defined as the variant
+being called there by mgatk or scMOCHA. mgatk's per-cell rule is 2 alt reads on
+each strand and scMOCHA's is that plus 10 in total, so the union of the two is
+mgatk's and the floor is 4. The strand half cannot be rebuilt from AF and
+depth, so this is a permissive upper bound on "the caller would have called it
+here", and the caption says so.
+**Consequence, and it is the substantive one:** the sub-5% region nearly
+vanishes. Pooled over the eight figure samples, median cell depth at a called
+position is 4 reads. Below-5% observations go from 196 at >= 1 alt read, to 21
+at >= 2, to **1** at >= 4, to **0** at >= 10, while n falls from 382,773 to
+197,158. The earlier version's low-AF cloud was background, not calls. The
+honest reading is that these shallow 3' libraries contain almost no cell deep
+enough to call a low-heteroplasmy variant, which is the panel's own title read
+back at the data.
+**Evidence:** Per-cell alt-read sweep over `CROSS_SAMPLE_FIG_IDS`, and the
+`n_low` count now printed in every subtitle.
+
+---
+
+## M17 - A fixed axis floor silently cropped 126 observations
+
+**Date:** 2026-09-23
+**Chosen:** Compute the y lower bound as
+`min(0.01, min(af_pct)) * 0.9` rather than pinning it at 0.01%.
+**Beat:** The fixed `limits = c(0.01, 100)` written when the decade axis was
+first added.
+**Why:** GSE181279 reaches 70,107 reads in a cell, so 4 alt reads there is an
+AF of 0.0057%. A hard floor at 0.01% put 126 real observations outside the
+scale, and ggplot removed them with a warning rather than an error. Same
+failure mode as `M10(b)` and `M12`: the panel looked fine and quietly held less
+data than it claimed.
+**Evidence:** `Removed 126 rows containing missing values` on GSE181279, min AF
+0.0063% against the 0.01% floor. After the change that sample runs warning-free
+and all ten samples report zero warnings.
+**Consequence:** The requested decades are still guaranteed - the bound only
+ever moves down, never up - so a sample with nothing below 0.01% still shows
+the full 0.01%-100% span and the empty band under the cutoff stays visible as
+an absence.
+
+---
+
+## M18 - M16 dropped scMOCHA's depth floor; the panel used mgatk's rule instead
+
+**Date:** 2026-09-23
+**Chosen:** A cell enters `08b` / `07g` only when **scMOCHA** would call the
+variant there: `round(AF x depth) >= CUTOFF_ALT_READS` (10) **and**
+`depth >= CUTOFF_MIN_READS` (10). `CUTOFF_CELL_ALT_CALLED` is removed.
+**Beat:** The `M16` rule, `>= 2 x CUTOFF_ALT_STRAND` = 4 alt reads with no
+depth condition.
+**Why:** `M16` reasoned that "callable by mgatk or scMOCHA" is the union of the
+two per-cell rules, and that the union is mgatk's because it is the weaker one.
+That is true as set algebra and wrong as a figure: mgatk imposes **no depth
+floor at all**, so the union silently discards scMOCHA's `depth >= 10`
+requirement. The panel then drew a large cloud between depth 4 and 10 - cells
+scMOCHA would never have called - on an x axis labelled as read depth. The user
+spotted it as "why are there so many dots below 10 on the x axis".
+**Rejected middle option:** `alt >= 4 & depth >= 10` keeps one more sub-5%
+observation, but it is mgatk's read floor bolted onto scMOCHA's depth floor and
+belongs to neither caller, so it cannot be described in one sentence.
+**Evidence:** Pooled over the eight figure samples, cell-variant pairs and the
+observed depth minimum: `alt>=4` 197,158 pairs at min depth **4**;
+`alt>=4 & depth>=10` 108,993 at min depth 10; `alt>=10 & depth>=10` 98,704 at
+min depth 10, min AF 6.97%, 0 below the 5% cutoff. After the change the pooled
+table reports min depth 10 exactly.
+**Consequence:** The sub-5% region is now empty rather than holding a single
+point, and the cell count backing the panel falls from 49,512 to 34,939 of
+59,181. Both are the honest consequence of applying the caller's own floors.
+
+---
+
+## M19 - The scMOCHA caller's code and its comment disagree on C2's third condition
+
+**Date:** 2026-09-23
+**Chosen:** The per-cell rule for `08b` / `07g` is
+`CUTOFF_ALT_STRAND` alt reads on each strand at `CUTOFF_MIN_READS` reads of
+**depth**, approximated as `round(AF x depth) >= 2 x CUTOFF_ALT_STRAND` and
+`depth >= CUTOFF_MIN_READS`. This supersedes `M18`, which read the third
+condition as 10 **alt** reads.
+**Beat:** `alt >= CUTOFF_ALT_READS & depth >= CUTOFF_MIN_READS` (`M18`).
+**Why:** The user, who is the caller's author, states the criterion is
+`fwd >= 2 AND rev >= 2 AND total depth >= 10`. The source supports the comment
+but not the code:
+
+```python
+# C.J. This the number of reads supporting the variant, requires >= 2 on both strands
+# C.J. minimum total coverage >=10
+variant_n_cells_conf_detected = (
+    (fwd_cell_variant_df >= 2)
+    & (rev_cell_variant_df >= 2)
+    & ((fwd_cell_variant_df + rev_cell_variant_df) >= low_coverage_threshold)
+).sum()
+```
+
+`fwd_cell_variant_df` and `rev_cell_variant_df` are per-base **alt** matrices -
+`base_coverage_dict[base][0]` and `[1]` - and `heteroplasmic_df` is
+`(fwd + rev) / total_coverage_variant_df`, so the third condition is 10 alt
+reads. `total_coverage_variant_df`, the depth, never enters the condition. The
+comment says coverage, the code says alt reads, and they are not
+interchangeable.
+**Open, and it matters:** the shipped `variant_stats` tables were produced by
+the code, so `n_cells_conf_detected` in the data reflects the alt reading
+whatever the intent was. The panel now uses the depth reading per the author's
+instruction, which means the panel and the upstream `n_cells_conf_detected`
+column are built on different thirds of C2. Settle which is intended before
+publishing, and note that `PLAN.md` section 2 and the README both describe C2
+as `(fwd + rev) >= 10` alt reads, matching the code, not the comment.
+**Evidence:** Pooled over the eight figure samples: `alt>=4 & depth>=10` gives
+108,993 pairs, min depth 10, min AF 3.77%, 1 below the 5% cutoff;
+`alt>=10 & depth>=10` gives 98,704, min AF 6.97%, 0 below. All ten samples
+re-run at exit 0 with no warnings.
+
+---
+
+## M20 - "25 - 21 = 4" is not four low-AF variants
+
+**Date:** 2026-09-23
+**Finding, recorded because the inference is natural and wrong:** in
+GSE279945 the scMOCHA call arm holds 25 variants and the AF>5% arm 21, but the
+four dropped are not four variants below 5%. Three are **blacklisted
+positions** dropped at high AF - `16192C>T` at 99.1% prevalence (mis-alignment
+window 16182-16194), `2617A>G` at 37.5% and `2617A>T` at 44.3% (RNA-editing
+list) - and only `385A>G` is dropped for cell count, with 7 qualifying cells
+against the 10 the gate requires.
+**Why it matters:** `385A>G` is also a clean illustration of `M14`: its
+prevalence AF is **0.065%** and its carrier AF is **96.9%**. Whether it counts
+as a low-AF variant depends entirely on which measure is quoted, which is why
+`07f` draws both and neither is presented alone.
+**Consequence:** the difference between the call arm and the AF>5% arm cannot
+be read as an AF statement. It is `blacklist + cell count`, and
+`03-exclusion-reasons.tsv` carries the split per sample.

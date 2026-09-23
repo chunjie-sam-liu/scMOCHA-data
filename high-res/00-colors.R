@@ -163,6 +163,22 @@ color_sample <- c(
   "GSE279945_GSM8583916_3PV3" = "#17BECF"
 )
 
+# AF bands used by the call-level spectrum and the cell-level depth panel
+# (steps 07 and 08). Ordered low to high, so a reader reads the legend as a
+# ramp. Every anchor is already in use elsewhere in this file rather than
+# invented: the NEJM blue, purple, orange and green, then the workbook grey.
+color_call_af_bin <- c(
+  "<0.1%" = "#0072B5",
+  "0.1-1%" = "#7876B1",
+  "1-5%" = "#E18727",
+  "5-20%" = "#20854E",
+  "20-100%" = "#4D4D4D"
+)
+
+# The line drawn at a threshold a reader is meant to read the panel against.
+# NEJM red, the same anchor color_exclusion uses for the outcome that matters.
+color_cutoff_line <- "#BC3C29"
+
 color_xlsx_hdr <- "#4D4D4D"
 color_xlsx_note <- "#7F7F7F"
 color_xlsx_white <- "#FFFFFF"

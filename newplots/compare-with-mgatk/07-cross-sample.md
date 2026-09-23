@@ -11,6 +11,8 @@ so a claim can be made about the method instead of about GSE181279.
 - **07c** strand correlation of mgatk's own S1 variants against its 0.65 floor
 - **07d** which mgatk cutoff rejects each of its own S1 variants
 - **07e** heteroplasmy of the variants mgatk's gate discards, per sample
+- **07f** every scMOCHA call stacked by AF, on both AF measures, pooled
+- **07g** cell-level AF against cell depth, pooled
 
 The headline is 07a: original mgatk retains **zero** variants in seven of the
 ten samples and exactly one in two more, while the scMOCHA call retains 20, 6,
@@ -24,6 +26,15 @@ For every sample in `SAMPLES`:
 
 - `${ISILON_BASE}/compare-with-mgatk/derived/<sample_id>/03-variant-gated.qs`
 - `newplots/compare-with-mgatk/tables/<sample_id>/02-cell-inclusion.tsv`
+
+For every sample in `CROSS_SAMPLE_FIG_IDS`, for panels 07f and 07g:
+
+- `newplots/compare-with-mgatk/tables/<sample_id>/08-call-af.tsv`
+- `newplots/compare-with-mgatk/tables/<sample_id>/08-cell-af-depth.tsv`
+
+**Step 08 therefore runs before this one.** 07f and 07g are built from step
+08's tables rather than recomputed here, so the pooled panels and the
+per-sample ones are the same quantity by construction.
 
 Both are required for all ten samples. A missing cache stops the step with
 the `--sample=` command that would rebuild it, because a silently absent

@@ -233,6 +233,36 @@ AF_BIN_LABELS <- c(
 )
 AF_BIN_NONE <- "No detected cell"
 
+# Bands for the call-level spectrum and the cell-level depth panel, steps 07
+# and 08. Separate from AF_BIN_* on purpose: those describe carrier AF of a
+# final variant set, these run two decades lower because a cell-level AF and a
+# prevalence measure both reach far below 1%.
+CALL_AF_BIN_BREAKS <- c(0, 0.001, 0.01, 0.05, 0.20, 1)
+CALL_AF_BIN_LABELS <- c("<0.1%", "0.1-1%", "1-5%", "5-20%", "20-100%")
+
+# Fixed log10 grid for stacking the call-level dots, so bin width is identical
+# across samples and across the two AF measures and the panels stay comparable.
+# Values below 1e-5 are clamped into the first bin and counted in the subtitle.
+CALL_AF_LOG_MIN <- -5
+CALL_AF_STACK_STEP <- 0.125
+
+# A cell counts as carrying the variant when it clears scMOCHA's per-cell rule:
+# CUTOFF_ALT_STRAND alt reads on each strand and CUTOFF_MIN_READS reads of
+# depth at the position.
+#
+# The cached data has AF and depth but not the forward/reverse split, so the
+# strand pair is approximated by its sum, 2 x CUTOFF_ALT_STRAND alt reads. That
+# is permissive: 4 alt reads all on one strand would pass here and fail in the
+# caller.
+#
+# Note that newplots/thecode/scmocha-mgatk-variant-calling.py disagrees with
+# itself on the third condition. The comment reads "minimum total coverage
+# >=10" but the code is
+#   (fwd >= 2) & (rev >= 2) & ((fwd + rev) >= low_coverage_threshold)
+# on the per-base alt matrices, which is 10 alt reads, not 10 reads of depth.
+# The depth reading is used here; see M19.
+CUTOFF_CELL_ALT_PAIR <- 2 * CUTOFF_ALT_STRAND
+
 CALLER_LEVELS <- c("Original mgatk", "scMOCHA")
 VARIANT_SET_LEVELS <- c("Both", "Original mgatk only", "scMOCHA only")
 
@@ -558,4 +588,223 @@ fn_carrier_stats <- function(detection_long, background_rate) {
     function(x, y) merge(x, y, by = "variant", all = TRUE),
     list(gated, loose, carrier)
   )
+}
+
+# Call-level AF spectrum and cell-level read support -----------------------
+# Shared by step 08 (one sample) and step 07 (the samples pooled), so the two
+# never drift into drawing the same quantity two ways.
+
+fn_call_af_bin <- function(af) {
+  factor(
+    as.character(cut(
+      af,
+      breaks = CALL_AF_BIN_BREAKS,
+      labels = CALL_AF_BIN_LABELS,
+      include.lowest = TRUE,
+      right = FALSE
+    )),
+    levels = CALL_AF_BIN_LABELS
+  )
+}
+
+# The two per-call AF measures are kept side by side rather than one being
+# chosen, because they answer different questions and the stage has twice
+# reported the wrong one; see D12, D17 and M14.
+CALL_AF_MEASURES <- c(
+  mean_scmocha = paste(
+    "Prevalence: alt reads / coverage,",
+    "pooled over every cell"
+  ),
+  af_carrier_median = paste(
+    "Heteroplasmy: median AF across",
+    "carrier cells"
+  )
+)
+
+# Long table of one row per (sample, variant, measure) for the call arm.
+fn_call_af_long <- function(variants) {
+  d <- data.table::as.data.table(variants)[arm_scmocha_call == TRUE]
+  out <- data.table::melt(
+    d[, .(sample, variant, mean_scmocha, af_carrier_median)],
+    id.vars = c("sample", "variant"),
+    variable.name = "measure",
+    value.name = "af",
+    variable.factor = FALSE
+  )
+  out <- out[!is.na(af)]
+  out[, measure := factor(CALL_AF_MEASURES[measure], levels = CALL_AF_MEASURES)]
+  out[, af_bin := fn_call_af_bin(af)]
+  out[]
+}
+
+# Stack position for each dot on a fixed log10 grid. Returns x at the bin
+# centre and y as the rank within the bin, which is what makes the panel a
+# dot histogram rather than a scatter.
+fn_call_af_stack <- function(d) {
+  out <- data.table::copy(data.table::as.data.table(d))
+  out[, af_plot := pmax(af, 10^CALL_AF_LOG_MIN)]
+  out[, lg := log10(af_plot)]
+  out[, bin := floor((lg - CALL_AF_LOG_MIN) / CALL_AF_STACK_STEP)]
+  out[,
+    x := 10^(CALL_AF_LOG_MIN + (bin + 0.5) * CALL_AF_STACK_STEP) * 100
+  ]
+  data.table::setorder(out, measure, bin, af)
+  out[, y := seq_len(.N), by = .(measure, bin)]
+  out[]
+}
+
+# Panel C. One dot per sample-variant call, stacked by AF.
+fn_plot_call_af_spectrum <- function(call_long, note) {
+  d <- fn_call_af_stack(call_long)
+  n_clamped <- d[af < 10^CALL_AF_LOG_MIN, .N]
+  n_low <- d[
+    measure == levels(d$measure)[1] & af < CUTOFF_HETEROPLASMIC,
+    .N
+  ]
+  n_calls <- d[measure == levels(d$measure)[1], .N]
+
+  clamp_note <- if (n_clamped > 0) {
+    glue::glue(
+      " \u00b7 {n_clamped} call(s) below ",
+      "{scales::percent(10^CALL_AF_LOG_MIN, accuracy = 0.001)} drawn in the ",
+      "first bin"
+    )
+  } else {
+    ""
+  }
+
+  ggplot2::ggplot(
+    d,
+    ggplot2::aes(x = x, y = y, color = af_bin)
+  ) +
+    ggplot2::geom_point(size = 1.6) +
+    ggplot2::geom_vline(
+      xintercept = CUTOFF_HETEROPLASMIC * 100,
+      linetype = "dashed",
+      color = "grey30"
+    ) +
+    ggplot2::facet_wrap(
+      ~measure,
+      ncol = 1,
+      scales = "free_y",
+      labeller = ggplot2::labeller(measure = scales::label_wrap(60))
+    ) +
+    ggplot2::scale_x_log10(
+      labels = scales::label_number(big.mark = ",", drop0trailing = TRUE)
+    ) +
+    ggplot2::scale_y_continuous(
+      expand = ggplot2::expansion(mult = c(0, 0.12))
+    ) +
+    ggplot2::scale_color_manual(values = color_call_af_bin, drop = FALSE) +
+    ggplot2::guides(
+      color = ggplot2::guide_legend(override.aes = list(size = 2.6))
+    ) +
+    fn_theme() +
+    ggplot2::labs(
+      title = "Allele frequency of every scMOCHA variant call",
+      subtitle = glue::glue(
+        "one dot per sample-variant call, not per distinct variant \u00b7 ",
+        "{n_calls} calls \u00b7 dashed line at the ",
+        "{scales::percent(CUTOFF_HETEROPLASMIC)} downstream cutoff \u00b7 ",
+        "{n_low} call(s) fall below it on the prevalence measure \u00b7 the ",
+        "two panels are different quantities and are not interchangeable",
+        "{clamp_note} \u00b7 {note}"
+      ),
+      x = "Variant AF (%, log scale)",
+      y = "Number of calls",
+      color = "AF range"
+    )
+}
+
+# Panel D. One dot per cell in which scMOCHA would call the variant, so the
+# axis pair shows what read support a given AF needs to be callable at all.
+# Cells below either scMOCHA floor are excluded upstream.
+fn_plot_cell_af_depth <- function(cells, note, n_cells_total = NA_integer_) {
+  d <- data.table::as.data.table(cells)[
+    !is.na(af) & af > 0 & !is.na(depth) & depth > 0
+  ]
+  d[, af_pct := af * 100]
+  d[, af_bin := fn_call_af_bin(af)]
+  n_low <- d[af < CUTOFF_HETEROPLASMIC, .N]
+
+  # A cell carries several called variants, so rows outnumber cells about four
+  # to one. Reporting rows as "cells" reads as a cell count and is wrong.
+  n_cells_seen <- nrow(unique(d[, .(sample, barcode)]))
+  n_calls <- nrow(unique(d[, .(sample, variant)]))
+  cells_note <- if (is.na(n_cells_total)) {
+    glue::glue("{format(n_cells_seen, big.mark = ',')} cells")
+  } else {
+    glue::glue(
+      "{format(n_cells_seen, big.mark = ',')} of ",
+      "{format(n_cells_total, big.mark = ',')} cells"
+    )
+  }
+
+  # ggplot only draws a key glyph for a level that appears in the data, so an
+  # AF band with no cells would render as a bare label. One invisible point
+  # per band forces every key, and override.aes makes the keys opaque.
+  keys <- data.table::data.table(
+    depth = 1,
+    af_pct = 0.01,
+    af_bin = factor(CALL_AF_BIN_LABELS, levels = CALL_AF_BIN_LABELS)
+  )
+
+  # Show at least 0.01%-100% so the requested decades are always on the axis,
+  # but never crop: a deep cell can report an AF below 0.01%, and a fixed floor
+  # silently dropped 126 of them in GSE181279.
+  y_lo <- min(0.01, min(d$af_pct, na.rm = TRUE)) * 0.9
+  x_lo <- min(1, min(d$depth, na.rm = TRUE))
+
+  ggplot2::ggplot(
+    d,
+    ggplot2::aes(x = depth, y = af_pct, color = af_bin)
+  ) +
+    ggplot2::geom_point(data = keys, alpha = 0, show.legend = TRUE) +
+    ggplot2::geom_point(size = 0.8, alpha = 0.65) +
+    ggplot2::geom_hline(
+      yintercept = CUTOFF_HETEROPLASMIC * 100,
+      linetype = "dashed",
+      color = color_cutoff_line
+    ) +
+    ggplot2::scale_x_log10(
+      limits = c(x_lo, NA),
+      breaks = 10^(0:6),
+      labels = scales::label_log()
+    ) +
+    ggplot2::scale_y_log10(
+      limits = c(y_lo, 100),
+      breaks = 10^(floor(log10(y_lo)):2),
+      labels = scales::label_log()
+    ) +
+    ggplot2::scale_color_manual(
+      values = color_call_af_bin,
+      limits = CALL_AF_BIN_LABELS,
+      drop = FALSE,
+      na.translate = FALSE
+    ) +
+    ggplot2::guides(
+      color = ggplot2::guide_legend(
+        override.aes = list(size = 2.6, alpha = 1)
+      )
+    ) +
+    fn_theme() +
+    ggplot2::labs(
+      title = "Read support behind each cell-level allele frequency",
+      subtitle = glue::glue(
+        "one dot per cell-variant pair, not per cell \u00b7 ",
+        "{format(nrow(d), big.mark = ',')} pairs from {cells_note}, over ",
+        "{n_calls} sample-variant calls ",
+        "({data.table::uniqueN(d$variant)} distinct variants) \u00b7 a pair ",
+        "is kept when the cell clears scMOCHA's per-cell rule: \u2265 ",
+        "{CUTOFF_ALT_STRAND} alt reads on each strand, approximated by ",
+        "\u2265 {CUTOFF_CELL_ALT_PAIR} in total, at \u2265 ",
+        "{CUTOFF_MIN_READS} reads of depth \u00b7 {n_low} pairs sit below the ",
+        "{scales::percent(CUTOFF_HETEROPLASMIC)} cutoff \u00b7 a cell can only ",
+        "report an AF as low as its depth allows, so the lower-left edge is a ",
+        "detection limit, not a biological floor \u00b7 {note}"
+      ),
+      x = "Cell mtDNA depth at the variant position (reads, log scale)",
+      y = "Variant AF in the cell (%, log scale)",
+      color = "AF range"
+    )
 }
