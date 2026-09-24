@@ -163,7 +163,7 @@ p_a <- d_a_fig |>
     aes(label = scales::comma(n_variants)),
     position = position_dodge2(width = 0.8, preserve = "single"),
     vjust = -0.4,
-    size = 3.4
+    size = 4.2
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
