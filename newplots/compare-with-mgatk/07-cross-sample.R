@@ -162,8 +162,9 @@ p_a <- d_a_fig |>
   geom_text(
     aes(label = scales::comma(n_variants)),
     position = position_dodge2(width = 0.8, preserve = "single"),
-    vjust = -0.4,
-    size = 4.2
+    vjust = -0.5,
+    size = 6,
+    fontface = "bold"
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
@@ -174,9 +175,10 @@ p_a <- d_a_fig |>
   fn_theme() +
   theme(
     legend.position = "bottom",
-    legend.text = element_text(size = 11),
-    axis.text = element_text(size = 11),
-    axis.title = element_text(size = 12)
+    legend.text = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold", angle = 45, hjust = 1),
+    axis.title = element_text(size = 14, face = "bold")
   ) +
   labs(
     title = "Variants retained by each arm, in every sample",
@@ -204,35 +206,40 @@ d_b <- cell_inclusion[, .(
 d_b[, frac_dropped := cells_dropped_mgatk / cells_total]
 
 p_b <- fn_fig_subset(d_b) |>
+  mutate(
+    sample = forcats::fct_reorder(sample, frac_dropped)
+  ) |>
   ggplot(aes(x = sample, y = frac_dropped)) +
-  geom_col(aes(fill = sample), width = 0.6) +
+  geom_col(aes(fill = sample), width = 0.8) +
   geom_text(
     aes(
       label = glue::glue(
-        "{scales::comma(cells_dropped_mgatk)} /\n{scales::comma(cells_total)}"
+        "{scales::comma(cells_dropped_mgatk)}/\n{scales::comma(cells_total)}"
       )
     ),
     vjust = -0.3,
-    size = 3.6,
+    size = 5,
     fontface = "bold"
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
     labels = scales::percent,
-    expand = expansion(mult = c(0, 0.2))
+    expand = expansion(add = c(0, 0.1), mult = c(0, 0.2))
   ) +
   scale_fill_manual(values = color_sample) +
   fn_theme() +
   theme(
     legend.position = "none",
-    axis.text = element_text(size = 11, face = "bold"),
-    axis.title = element_text(size = 12, face = "bold")
+    legend.text = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(size = 12, face = "bold", angle = 45, hjust = 1),
+    axis.title = element_text(size = 14, face = "bold")
   ) +
   labs(
     title = "Cells discarded by the mgatk coverage filter",
     subtitle = glue::glue(
-      "mean MT coverage > {CUTOFF_CELL_MEANCOV} \u00b7 scMOCHA applies no ",
-      "cell filter \u00b7 labels are dropped over total cells"
+      "mean MT coverage > {CUTOFF_CELL_MEANCOV}  scOCHA applies no ",
+      "cell filter labels are dropped over total cells"
     ),
     x = NULL,
     y = "Cells dropped"
