@@ -1,6 +1,6 @@
 ---
 name: analysis-pipeline
-description: "Author, run, and monitor multi-step analysis pipelines in either layout: numbered stage directories (src/NN-stage/), or a flat track where the track directory itself is the single stage (pipeline/, workflow/, <name>_pipeline/, meth_<engine>/), both with paired script + .md files. Use when adding or modifying a pipeline stage or any step of a flat track, porting a lab pipeline, writing a PLAN.md, PROGRESS.md, or DECISION.md, scaffolding config.sh/config.R/.env/env-manager activation, running the plan -> approve -> implement -> syntax-check -> progress -> run -> verify cycle, or resuming a pipeline across sessions. Covers script headers, stage layout, paired documentation, plan-first gating, progress tracking, and the decision log that carries each choice, the alternative it beat, and why between sessions. Applies to HPC/cluster bioinformatics (GWAS, ancestry, RNA-seq, methylation, single-cell) and any cohort-scale or batch data pipeline."
+description: "Author, run, and monitor multi-step analysis pipelines in either layout: numbered stage directories (src/NN-stage/), or a flat track where the track directory itself is the single stage (pipeline/, workflow/, <name>_pipeline/, meth_<engine>/), both with paired script + .md files. Use when adding or modifying a pipeline stage or any step of a flat track, porting a lab pipeline, writing a PLAN.md, PROGRESS.md, or DECISION.md, scaffolding config.sh/config.R activation, running the plan -> approve -> implement -> syntax-check -> progress -> run -> verify cycle, or resuming a pipeline across sessions. Covers script headers, stage layout, paired documentation, plan-first gating, progress tracking, and the decision log. Applies to HPC/cluster bioinformatics and any cohort-scale or batch data pipeline."
 ---
 
 # Analysis pipeline stages
@@ -91,6 +91,19 @@ choice or proposing an alternative that was already rejected.
 
 Naming rules and the full templates for every file above:
 [references/plan-and-progress.md](./references/plan-and-progress.md).
+
+**Optional, question-scoped:** `{date}-{short-title}.CONFIRM.md` — written only
+when a fact cannot be derived from any file because the data came from another
+person, and getting it wrong would change the analysis meaning. It carries the
+numbered questions, **the answer the pipeline is already assuming for each**,
+the evidence as tables of real numbers, what each plausible answer would cost,
+and an empty `CONFIRMED` section the user fills in after the discussion. Phrase
+every question so that yes means the guess is right, so a reviewer can confirm
+a row of yeses and stop only where the guess is wrong. An agent applying the
+outcome reads the `CONFIRMED` section and nothing else, then records it as a
+`D` entry. The full contract is
+[references/plan-and-progress.md](./references/plan-and-progress.md) section K.
+Never write one for a question the data can answer.
 
 Which tier to write:
 
@@ -207,6 +220,15 @@ whole-repository format from a skill when a changed-files form exists.
 
 ```bash
 find src/NN-stage -maxdepth 1 \( -name '*.sh' -o -name '*.lsf' -o -name '*.sbatch' \) -print0 | xargs -0 -r -n1 bash -n
+pixi run lint -- src/NN-stage
+```
+
+**An R linter parses before it lints, so it is the R syntax check too.** Where
+the repository has a lint task, the line above is the whole R gate -- a syntax
+error comes back with its line and column, which `parse()` does not give. Run
+the `parse()` loop only in a repository that has no linter:
+
+```bash
 pixi run Rscript -e 'for (f in list.files("src/NN-stage", "\\.R$", full.names=TRUE)) tryCatch(parse(f), error=function(e) stop(f, ": ", conditionMessage(e)))'
 ```
 

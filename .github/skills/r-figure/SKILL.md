@@ -1,6 +1,6 @@
 ---
 name: r-figure
-description: Write R plotting code in this repository, with ggplot2 or any other R graphics system. Use whenever generating, editing, or reviewing R code that produces a figure - histogram, scatter, forest, bar, heatmap, Manhattan, QQ, PCA, KM/CIF survival curve, Sankey/alluvial, UpSet, Venn, ComplexHeatmap, or a multi-panel assembly - or when choosing a theme, axis label, subtitle, figure size, output path, or save call. Covers the object-returning vs device-drawing families and which save path each needs, the shared fn_theme contract, saveplot instead of ggsave, package loading with load_pkg, colors from the track color file, glue subtitles that carry N and thresholds, log-axis flooring, patchwork and multi-page PDF assembly, and the ASCII-source rule.
+description: Write R plotting code in this repository, with ggplot2 or any other R graphics system. Use whenever generating, editing, or reviewing R code that produces a figure - histogram, scatter, forest, bar, heatmap, Manhattan, QQ, PCA, KM/CIF survival curve, Sankey/alluvial, UpSet, Venn, ComplexHeatmap, or a multi-panel assembly - or when choosing a theme, axis label, subtitle, figure size, output path, or save call. Covers the object-returning vs device-drawing families and which save path each needs, the shared fn_theme contract, saveplot instead of ggsave, package loading with load_pkg, colors from the track color file, glue subtitles carrying N and thresholds, patchwork assembly, and the ASCII-source rule.
 ---
 
 # R Figure

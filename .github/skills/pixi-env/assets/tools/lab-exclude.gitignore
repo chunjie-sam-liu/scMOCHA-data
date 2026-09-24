@@ -35,6 +35,7 @@ pixi.lock
 air.toml
 jarl.toml
 .lintr
+.prettierrc
 .prettierignore
 
 # Environment (machine-specific absolute paths)

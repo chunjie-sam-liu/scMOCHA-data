@@ -6,7 +6,9 @@ they beat). All three must be kept current — an out-of-date plan, progress, or
 decision file is worse than none.
 
 They exist at two tiers. Tier 1 describes the stage; tier 2 describes one
-specific question inside it.
+specific question inside it. A fourth document, `CONFIRM.md`, is optional and
+tier-2 only: section K, for the question whose answer belongs to a person
+rather than to a file.
 
 This file fixes **which sections each document has**. How a section is rendered
 -- Mermaid for dependencies, a table for repeated attributes, a checklist for
@@ -22,6 +24,7 @@ src/NN-stage-name/
   2026-08-20-exact-match-only.PLAN.md      tier 2 — one question, design + Q&A
   2026-08-20-exact-match-only.PROGRESS.md  tier 2 — that question's run state
   2026-08-20-exact-match-only.DECISION.md  tier 2 — that question's decisions
+  2026-08-20-exact-match-only.CONFIRM.md   tier 2 — optional, only when a person must answer
 ```
 
 Tier-2 naming: `{YYYY-MM-DD}-{short-title}.PLAN.md`,
@@ -527,3 +530,75 @@ When the work was submitted as one dependency chain, the handoff also carries
 the pipeline graph with its current classes and the path of the state file the
 submitter wrote. Without the state file, the next session cannot tell a job that
 is merely waiting from one that is stranded behind a failure.
+
+## K. `{date}-{short-title}.CONFIRM.md` — when the answer belongs to a person
+
+`PLAN.md`, `PROGRESS.md`, and `DECISION.md` are mandatory. **`CONFIRM.md` is
+not.** It is written only when a question cannot be answered from any file in
+the repository because the data was produced by somebody else, and the work
+cannot proceed honestly until that person answers.
+
+It is always dated and always scoped to one question:
+`{date}-{short-title}.CONFIRM.md`, in the stage that raised it. There is no
+tier-1 `CONFIRM.md`.
+
+**Write one when all three hold:**
+
+1. A fact is needed that no file records — what a column means, how an ID was
+   generated, whether two records are the same physical thing, what a code
+   value encodes.
+2. The data came from outside the repository, so the answer is somebody's
+   knowledge rather than a computation.
+3. Getting it wrong changes the analysis meaning, not just the code.
+
+Do **not** write one for a question the data can answer. Run the check instead.
+A `CONFIRM.md` that asks something derivable wastes a person's time and teaches
+the next reader that these files are noise.
+
+**It holds:**
+
+- **The ask** — who owns the answer, and why a person is needed at all.
+- **Numbered questions** `Q1..Qn`, each one answerable in a sentence.
+- **A guessed answer for every question.** See below — this is what makes the
+  document fast to answer.
+- **The evidence**, as tables with real numbers read from real files. Enough
+  that the person can judge without opening the repository.
+- **What changes per answer** — each plausible answer, what it implies, and how
+  much work it costs. This is what turns a vague question into a decision.
+- **Backing material** — exactly where the full detail lives.
+- **An empty `CONFIRMED` section** at the end, which the user fills in after
+  the discussion.
+
+**Every question carries the answer we are already assuming.** By the time a
+`CONFIRM.md` is written the pipeline is running on _some_ interpretation — that
+interpretation is the guess, and hiding it wastes the meeting. Phrase each
+question so that **yes means the guess is right**, then a reviewer can agree
+with a row of yeses and only stop where we are wrong. Each guess carries:
+
+| Part                      | Why                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| The answer                | `Yes` / `No` / a value                                                               |
+| How sure, in words        | Confidence is a judgement, not a number. "Near-certain", "least certain of the five" |
+| What it rests on          | The specific evidence, so the reader can attack it                                   |
+| What would prove it wrong | Names the observation that would flip it. Forces an honest guess                     |
+
+A guess is a statement of the current state, not a request for agreement.
+**Never soften a weak guess to make it easier to say yes**, and never mark
+something confident that rests on one small sample — say which question is the
+shakiest and why. Where the evidence is strong enough that the data has
+effectively answered the question, say so and ask only for confirmation.
+
+**The `CONFIRMED` section is the contract.** When it is filled in, an agent
+reads _that section and nothing else_ to apply the outcome, then records the
+result as a `D` entry in the stage `DECISION.md` and updates `PLAN.md` /
+`PROGRESS.md`. The evidence sections above it are never rewritten afterwards —
+they are why the question was asked, and they stay readable.
+
+Status runs `AWAITING CONFIRMATION` -> `CONFIRMED` -> applied. A file still
+awaiting an answer is listed in the stage `PROGRESS.md` under `Open`, with the
+owner's name.
+
+**Never write a number into a `CONFIRM.md` that was not just read from a file.**
+The same rule as `DATA.md`, and for the same reason: this document is handed to
+someone who will trust it. An unresolved question is recorded as unresolved, not
+guessed at.

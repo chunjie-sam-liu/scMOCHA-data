@@ -4,9 +4,10 @@
 # @DATE: 2026-09-15
 # @DESCRIPTION: Scaffold a pixi-managed project: pixi.toml, the tracked
 #   .pixi/config.toml that bioconductor packages need, package.R, the air /
-#   ruff / shfmt / prettier formatter behind `pixi run format`, the git hooks,
-#   and tools/opt. Copies files only -- nothing is installed and no existing
-#   file is overwritten unless --force is given.
+#   ruff / shfmt / prettier formatter behind `pixi run format`, the jarl
+#   linter behind `pixi run lint`, the git hooks, and tools/opt. Copies files
+#   only -- nothing is installed and no existing file is overwritten unless
+#   --force is given.
 # @VERSION: v0.1.0
 
 set -euo pipefail
@@ -37,9 +38,11 @@ Usage: init-pixi-project.sh [options] [<target-dir>]
 
 Writes, and nothing else:
 
-  pixi.toml  .pixi/config.toml  package.R  air.toml  ruff.toml  .prettierignore
+  pixi.toml  .pixi/config.toml  package.R  air.toml  ruff.toml
+  .prettierrc  .prettierignore  jarl.toml
   .gitignore (created, or the pixi block appended to an existing one)
-  tools/format.sh  tools/hooks/pre-commit  tools/opt/{README.md,.gitignore}
+  tools/format.sh  tools/lint.sh  tools/hooks/pre-commit
+  tools/opt/{README.md,.gitignore}
   tools/sync-lab.sh  tools/lab-exclude.gitignore  tools/hooks/pre-push  [--lab-sync]
 
 Then, by hand:
@@ -162,9 +165,15 @@ place "package.R" "package.R"
 
 place "air.toml" "air.toml"
 place "ruff.toml" "ruff.toml"
+place "prettierrc" ".prettierrc"
 place "prettierignore" ".prettierignore"
 place "tools/format.sh" "tools/format.sh" 755
 place "tools/hooks/pre-commit" "tools/hooks/pre-commit" 755
+
+# --- linter -----------------------------------------------------------------
+
+place "jarl.toml" "jarl.toml"
+place "tools/lint.sh" "tools/lint.sh" 755
 
 # --- tools/opt --------------------------------------------------------------
 
@@ -234,6 +243,7 @@ Next, from ${target}:
   pixi install              # build the environment (long; run it in tmux)
   pixi run remote-install   # GitHub-only R packages from package.R
   pixi run format           # air + ruff + shfmt + prettier on changed files
+  pixi run lint             # jarl on changed R files
 
 Commit pixi.toml, pixi.lock, and .pixi/config.toml together. A clone without
 .pixi/config.toml gets bioconductor packages that install but do not work.

@@ -41,7 +41,7 @@ When the change touches an association model, load the `statistical-genetics` sk
 
 ## Verification Commands
 
-You may run read-only commands to check a claim instead of trusting it: `head`, `tail`, `wc -l`, `ls`, `find -L`, `stat`, `du -shL`, `grep`, `git status`, `git diff`, `git log`, `bjobs`, `pdfinfo`, and `pixi run Rscript -e '<read-only expression>'`. The syntax gate is read-only too (`bash -n`, the `parse()` loop from `analysis-pipeline` section 5, a formatter in check mode): when the report for a change set does not show its result, run it yourself and report it. Remember that `data/`, `results/`, `logs/`, and `tmp/` are symlinks, so `find` and `du` need `-L`.
+You may run read-only commands to check a claim instead of trusting it: `head`, `tail`, `wc -l`, `ls`, `find -L`, `stat`, `du -shL`, `grep`, `git status`, `git diff`, `git log`, `bjobs`, `pdfinfo`, and `pixi run Rscript -e '<read-only expression>'`. The syntax gate is read-only too (`bash -n`, the repository's lint task or the `parse()` loop from `analysis-pipeline` section 5, a formatter in check mode): when the report for a change set does not show its result, run it yourself and report it. Remember that `data/`, `results/`, `logs/`, and `tmp/` are symlinks, so `find` and `du` need `-L`.
 
 ## Constraints
 

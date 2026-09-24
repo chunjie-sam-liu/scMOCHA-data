@@ -38,9 +38,8 @@ Those five sections used to be copied into this file so it would be
 self-contained without the skill. The copy drifted from the skill and neither
 side knew, so the copy is gone and the skill is now the only source.
 
-## Language-Specific Guidance
+## Environment
 
-- **R**: run from the project directory that owns `pixi.toml` with `pixi run Rscript ...`, `pixi run --manifest-path /abs/path/pixi.toml Rscript ...` when the cwd is elsewhere, or `pixi run <task>` when a Pixi task exists. Inside a `.sh` / `.lsf` / `.sbatch` script, source the stage `config.sh` (which activates pixi once through a filtered `pixi shell-hook` -- never the bare `eval` form, see `pixi-env`) and then call `Rscript` directly. Never any conda / mamba / Miniforge env: no `conda activate <env>`, no `conda run -n <env> ...`, no hard-coded `.../miniforge3/envs/<env>/bin/Rscript`
-- **Python**: `pixi run python ...` from the directory that owns `pixi.toml`, or `python` directly only inside a script that has sourced the stage `config.sh`. Never a bare `python` from the login shell. `uv run` only in a repository with no `pixi.toml`
-- **TypeScript/JavaScript**: prefer existing package scripts
-- **Shell**: prefer the narrowest direct command
+The "Environment and Execution" section of `.github/copilot-instructions.md` is already in your context, in full, and is the only copy of the pixi, conda, and per-language run rules. Follow it there.
+
+This file used to carry a verbatim copy of it, and of the delegation rules above. Both copies drifted without either side noticing. Neither is coming back: one source, no copies.

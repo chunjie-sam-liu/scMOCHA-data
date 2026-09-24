@@ -1,6 +1,6 @@
 ---
 name: palette
-description: Use whenever any color enters R code - choosing, deriving, standardizing, validating, or applying it - with paletteer, prismatic, ggplot2 scales, ComplexHeatmap color functions, openxlsx2 fills, and the one color file each track owns at its root, whether that track is staged (src/color.R, src_<variant>/color.R, src/colors.R, src/plot_colors.R) or flat (pipeline/color.R, workflow/color.R, <name>_pipeline/color.R, meth_<engine>/color.R). This includes a one-off status or highlight color, an Excel header or block fill, a diagram or prompt palette, and a color added to a stage config, since every color belongs in the track's one color file rather than inline in the consuming script. Also covers the bundled scripts for inspecting a paletteer palette, previewing a palette to PDF, and auditing an existing color file for duplicates and contrast.
+description: Use whenever any color enters R code - choosing, deriving, standardizing, validating, or applying it - with paletteer, prismatic, ggplot2 scales, ComplexHeatmap color functions, openxlsx2 fills, and the one color file each track owns at its root, whether that track is staged (src/color.R) or flat (pipeline/color.R, workflow/color.R, meth_/color.R). This includes a one-off status or highlight color, an Excel header or block fill, and a diagram or prompt palette, since every color belongs in the track's one color file rather than inline in the consuming script. Also covers the bundled scripts for inspecting, previewing, and auditing a palette.
 ---
 
 # Palette

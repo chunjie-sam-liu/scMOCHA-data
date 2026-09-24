@@ -1,6 +1,6 @@
 ---
 name: excel-export
-description: Write R code that exports .xlsx deliverables with openxlsx2. Use when a script must produce an Excel workbook, add or restyle a sheet, format P-values / betas / counts / percentages, build a multi-sheet funnel or lookup workbook, add a summary sheet with several stacked tables, freeze panes, autofilter, color column-group headers, or append a sheet to a workbook that already exists. Covers the two export tiers (jutils::export vs openxlsx2), wb_dims, the copy-on-write vs R6-chain gotcha, the number-format contract, the header and block-fill palette, sheet naming, migrating openxlsx v1 code, and the verification step before reporting success.
+description: Write R code that exports .xlsx deliverables with openxlsx2. Use when a script must produce an Excel workbook, add or restyle a sheet, format P-values / betas / counts / percentages, build a multi-sheet funnel or lookup workbook, add a summary sheet with several stacked tables, freeze panes, autofilter, color column-group headers, or append a sheet to a workbook that already exists. Covers the two export tiers (jutils::export vs openxlsx2), wb_dims, the copy-on-write vs R6-chain gotcha, the number-format contract, migrating openxlsx v1 code, and the verification step.
 ---
 
 # Excel Export
@@ -320,6 +320,21 @@ cell style unless `stack = TRUE`, whereas each openxlsx2 `add_*` touches only
 its own attribute; and v1 mutated `wb` in place from any call, whereas
 openxlsx2 only does so through the `wb$method()` form.
 
+## The `.qs` sidecar
+
+Every workbook ships with a `.qs` of the exact object that was written, same
+stem, same directory:
+
+```r
+export(dat, fs::path(out_dir, "book.qs"))
+```
+
+A workbook is a rendering, not the data. Number formats coerce what a cell
+shows, dates and long IDs come back as something else entirely, and the
+1,048,575-row ceiling truncates without asking. The `.qs` is the type-faithful
+copy, so it is both the cross-check for the workbook and the thing a later
+stage reads. **When the two disagree, the workbook is the defect.**
+
 ## Before reporting success
 
 A zero exit code is not proof the workbook is right. Run this:
@@ -346,6 +361,8 @@ Confirm, and state in the report:
 - each sheet's row count matches the in-R count that was logged;
 - the P column reads back as `1.00E-09`, not `0.00`;
 - an empty sheet is genuinely empty (explain why), not a failed filter;
+- the `.qs` sidecar exists beside the workbook, and reading it back gives the
+  same row count and the column types the workbook cannot carry;
 - the file mtime is from this run.
 
 ## References

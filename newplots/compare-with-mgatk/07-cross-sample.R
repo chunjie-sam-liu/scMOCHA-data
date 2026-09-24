@@ -163,7 +163,7 @@ p_a <- d_a_fig |>
     aes(label = scales::comma(n_variants)),
     position = position_dodge2(width = 0.8, preserve = "single"),
     vjust = -0.4,
-    size = 2.6
+    size = 3.4
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
@@ -172,6 +172,12 @@ p_a <- d_a_fig |>
   ) +
   scale_fill_manual(values = color_arm) +
   fn_theme() +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 11),
+    axis.text = element_text(size = 11),
+    axis.title = element_text(size = 12)
+  ) +
   labs(
     title = "Variants retained by each arm, in every sample",
     subtitle = glue::glue(
@@ -207,7 +213,8 @@ p_b <- fn_fig_subset(d_b) |>
       )
     ),
     vjust = -0.3,
-    size = 2.8
+    size = 3.6,
+    fontface = "bold"
   ) +
   scale_x_discrete(labels = sample_lab) +
   scale_y_continuous(
@@ -216,7 +223,11 @@ p_b <- fn_fig_subset(d_b) |>
   ) +
   scale_fill_manual(values = color_sample) +
   fn_theme() +
-  theme(legend.position = "none") +
+  theme(
+    legend.position = "none",
+    axis.text = element_text(size = 11, face = "bold"),
+    axis.title = element_text(size = 12, face = "bold")
+  ) +
   labs(
     title = "Cells discarded by the mgatk coverage filter",
     subtitle = glue::glue(
@@ -567,14 +578,14 @@ saveplot(
   as.character(fs::path(paths$figdir, "07a-arm-yield.pdf")),
   fn_wrap_labs(p_a, width = 95),
   width = 9,
-  height = 5.5,
+  height = 6,
   device = cairo_pdf
 )
 saveplot(
   as.character(fs::path(paths$figdir, "07b-cell-filter.pdf")),
   fn_wrap_labs(p_b, width = 85),
-  width = 8,
-  height = 5,
+  width = 10,
+  height = 5.5,
   device = cairo_pdf
 )
 saveplot(

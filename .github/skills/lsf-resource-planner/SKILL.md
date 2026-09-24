@@ -1,6 +1,6 @@
 ---
 name: lsf-resource-planner
-description: 'Size and place an LSF job on this site before writing the .lsf file. Use when creating or editing any .lsf wrapper or bsub command; when choosing -n, -R "rusage[mem=]", -M, -W, or -q; when a job needs a lot of memory or many cores on one host; when a job was killed for exceeding memory; when an array pends too long or would be too wide; when deciding whether to split work into many narrow tasks or bundle it into one wide task; when partitioning large-scale work into array tasks or chunks; when writing a -w dependency expression or chaining stages into one submission; or when asked which queue or node dispatches fastest. Covers the wide-and-thin vs narrow-and-fat shape decision, the per-slot memory trap, the queue decision table, the dispatch-speed probe, per-user and per-queue caps, array throttling, chunking, and the site dependency facts. Site-bound: carries a dated inventory of this cluster''s nodes, queues, and limits.'
+description: 'Size and place an LSF job on this site before writing the .lsf file. Use when creating or editing any .lsf wrapper or bsub command; when choosing -n, -R "rusage[mem=]", -M, -W, or -q; when a job needs a lot of memory or many cores on one host; when a job was killed for exceeding memory; when an array pends too long or would be too wide; when deciding between many narrow tasks and one wide task; when partitioning work into array tasks or chunks; when writing a -w dependency expression or chaining stages into one submission; or when asked which queue or node dispatches fastest. Covers the wide-and-thin vs narrow-and-fat shape decision, the per-slot memory trap, the queue decision table, array throttling, and chunking. Site-bound: carries a dated inventory of this cluster''s nodes, queues, and limits.'
 ---
 
 # LSF resource planner
@@ -13,8 +13,15 @@ this cluster. `long-running-jobs` owns the launch-and-never-poll rules and the
 array wrapper contract; `analysis-pipeline` owns the script template. This skill
 only decides the numbers that go into those headers.
 
-Full node table, queue table, raw config evidence, and refresh commands:
-[references/cluster-inventory.md](./references/cluster-inventory.md).
+The decision path is below. The evidence, recipes, templates, and symptom tables
+live in the references, so load only the one the task needs:
+
+| Reference                                                           | Holds                                                                          |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [cluster-inventory.md](./references/cluster-inventory.md)           | full node and queue tables, raw config evidence, refresh commands              |
+| [shape-and-queue.md](./references/shape-and-queue.md)               | the concurrency measurements, both shape recipes, the 500 GB and `short` cases |
+| [array-and-headers.md](./references/array-and-headers.md)           | the dispatch probe, throttle and split recipes, chunking, filled headers       |
+| [chaining-and-diagnosis.md](./references/chaining-and-diagnosis.md) | `-w` dependency semantics and the full diagnosis table                         |
 
 ---
 
@@ -33,20 +40,14 @@ Verified on `hpcf_research_cluster`, IBM Spectrum LSF 10.1.0.14, 2026-09-04.
 | **`short` limits CPU time, not wall clock** | `CPULIMIT = 30` on `short`, no `RUNLIMIT`                                     | see section 5. A fully loaded `-n 8` job dies after ~6 wall-clock minutes                                                                  |
 | Arrays cap at 4000                          | `MAX_JOB_ARRAY_SIZE=4000`                                                     | an index range wider than 4000 is rejected at submit time                                                                                  |
 
-Two of these are easy to get wrong.
-
-**Reservation and hard limit are different things, set by different mechanisms.**
-`RESOURCE_RESERVE_PER_TASK=Y` is stock LSF and only decides how much memory the
-scheduler holds on a host while placing the job. The value that kills the job is
-`LSB_SUB_RLIMIT_RSS`, which the site esub computes as
-`max(rusage_mem, -M, app_profile_limit) * ncores`. Stock `LSB_JOB_MEMLIMIT=y`
-would **not** by itself turn `rusage[mem]` into a limit: IBM ties that parameter
-to `-M` / queue `MEMLIMIT`, and no queue here sets `MEMLIMIT`. The
-`rusage` -> limit conversion is this site's policy script, a local convention
-rather than portable LSF behaviour. Code path and evidence:
+**Reservation and the hard limit are different things.**
+`RESOURCE_RESERVE_PER_TASK=Y` only decides how much memory the scheduler holds
+on a host while placing the job. What kills the job is `LSB_SUB_RLIMIT_RSS`,
+which the site esub computes as `max(rusage_mem, -M, app_profile_limit) *
+ncores`. That conversion is this site's policy script, not portable LSF
+behaviour; code path and evidence in
 [references/cluster-inventory.md](./references/cluster-inventory.md) section 3.
-
-Practical consequences of the esub formula:
+Three consequences:
 
 - Requesting no memory at all gets `default_mem() = 2499` MB per slot plus a
   stderr warning. Never rely on it.
@@ -54,7 +55,7 @@ Practical consequences of the esub formula:
   raises the kill threshold while leaving the reservation small. Use it only
   when the peak is genuinely uncertain, and know the node is then
   oversubscribed relative to what was reserved.
-- The `* ncores` multiplication happens in the esub. Changing `-n` moves the
+- The `* ncores` multiplication happens in the esub, so changing `-n` moves the
   kill threshold even when `rusage[mem]` is untouched.
 
 ## 2. Estimate the footprint
@@ -119,28 +120,13 @@ the rest of the plan is wrong.
 | **Mixed**          | 10-50 | 4-8               | 32-100 GB       | concurrency, but throttled |
 | **Narrow and fat** | 1-10  | >= 8, or > 100 GB | large           | **place precisely**        |
 
-### Width costs concurrency, superlinearly
-
-A task needs `n` free cores **on one host**. Measured on `rhel8_cpu`,
-2026-09-03:
-
-| `-n` | hosts with that many cores free | tasks that could start now |
-| ---- | ------------------------------- | -------------------------- |
-| 1    | 47                              | **1049**                   |
-| 2    | 41                              | 518                        |
-| 4    | 34                              | 250                        |
-| 8    | 26                              | 118                        |
-| 16   | 18                              | 52                         |
-| 32   | 14                              | 21                         |
-| 64   | 7                               | **7**                      |
-
-Every doubling of `-n` roughly halves how many tasks can start. `-n 1` places
-**150x** more tasks than `-n 64`. The absolute numbers move hourly; the shape of
-the curve does not. Refresh with the command in the inventory.
-
-**So `-n` is the throughput dial for a wide array, not `mem`.** Drop `-n` to
-what the code truly uses. Two `-n 1` tasks that start now beat one `-n 2` task
-that never does.
+**Width is the throughput dial, not memory.** A task needs `n` free cores on
+one host, and every doubling of `-n` roughly halves how many tasks can start:
+measured on `rhel8_cpu`, `-n 1` placed 1049 tasks where `-n 64` placed 7. On
+`standard`, `bjobs -p` shows cores blocking ~30 hosts against memory blocking
+4, so cutting `-n` buys far more dispatch speed than cutting memory. Measured
+table and evidence:
+[references/shape-and-queue.md](./references/shape-and-queue.md) section A.
 
 ### Split or bundle
 
@@ -154,49 +140,19 @@ One question decides between the two shapes: **is the memory shared?**
 | `N` is huge and a unit runs under ~2 min            | **Split, then chunk.** Narrow tasks, several units each    |
 
 The common mistake is bundling because the _total_ is large. 8 units x 64 GB is
-not a 512 GB job unless all 512 GB must be resident at once. Split gives 8 tasks
-that each need one host with 64 GB free, which is nearly every host. Bundled, it
-is one task needing 8 free cores **and** 512 GB on a single host, which right
-now is 26 hosts instead of 47.
+not a 512 GB job unless all 512 GB must be resident at once.
 
 ### Recipe per shape
 
-**Wide and thin** -> get more tasks running:
+**Wide and thin** -> `-n 1` or the true thread count, never padded; no
+`span[hosts=1]`; no `%K` on `standard`; chunk if a unit runs under ~2 min.
 
-1. `-n 1`, or the true thread count if higher. Never pad.
-2. Omit `span[hosts=1]`; it is meaningless at `-n 1` and only adds a constraint.
-3. Keep `rusage[mem]` tight but do not agonize: memory almost never blocks on
-   rome (section 6).
-4. Do **not** throttle on `standard`. It has no `JL/U`, and pending jobs cost no
-   fairshare -- only _running_ slots lower dynamic priority. Throttling here only
-   caps your own throughput.
-5. If a unit runs under ~2 min, chunk (section 7). Scheduling overhead otherwise
-   exceeds the work.
-6. Consider splitting the range across queues (section 7).
+**Narrow and fat** -> match the pool's RAM-per-core ratio, `span[hosts=1]` is
+mandatory, move to `large_mem` or `large_core_count`, target a node class with
+`select[maxmem>...]` rather than `-m <host>`, and let reservation gather slots.
 
-**Narrow and fat** -> get the one task placed:
-
-1. Match the pool's RAM-per-core ratio so the node is not left half-idle:
-   rome ~15.7 GB/core, nodelmr up to ~62, nodelcr ~23, nodesd ~54.
-2. `span[hosts=1]` is mandatory for anything shared-memory.
-3. Move to `large_mem` or `large_core_count` (section 5). Both are near-idle,
-   and a wide `-n` there competes with far fewer jobs.
-4. Target a node class with `select[]` when the memory needs it, scoped by the
-   queue's own host group:
-
-   ```bash
-   #BSUB -q standard
-   #BSUB -R "select[maxmem>1900000]"   # the 36 fat rome nodes, 1.9 TB each
-   ```
-
-   `maxmem` is the host's total RAM; `mem` is what is free right now. Prefer
-   `maxmem` -- a `mem` predicate re-evaluates and can leave the job pending on a
-   transient. Never pin with `-m <host>`.
-
-5. Let reservation work. `standard` accumulates slots for up to 7200 s
-   (`MAX_RESERVE_TIME`), `large_mem` and `large_core_count` for 1800 s, so a wide
-   task does not starve. `bjobs -l` shows `Reserved <N> job slots` while it
-   gathers.
+Both recipes in full, with the ratios and the `select[]` caveats:
+[references/shape-and-queue.md](./references/shape-and-queue.md) section C.
 
 ## 5. Choose the queue
 
@@ -217,98 +173,32 @@ to `standard`.
 The 500 GB boundary is the queue's own stated purpose ("For jobs that needs over
 500GB of memory to run"). `large_mem` has `USERS = all` and no minimum-memory
 admission check, so nothing stops a small job from landing there. Do not use
-that. It is empty precisely because people respect the boundary, and the pool is
-only 19 nodes.
+that -- it is empty precisely because people respect the boundary, and the pool
+is only 19 nodes. `large_core_count` (4 nodes) and `superdome` (3 nodes) take
+single large jobs, never arrays.
 
-**Worked example, the 500 GB case.**
+**`short` limits CPU time, not wall clock**, and that time sums across threads.
+The real allowance is ~45 CPU-minutes, so a fully loaded `-n 8` job dies after
+~6 wall-clock minutes; `short` is only useful for `-n 1` or `-n 2` work. **No
+CPU queue sets `RUNLIMIT`**, so a job submitted without `-W` has no wall-clock
+limit at all. `-W` is never optional, including on `short`.
 
-| Option             | Directive                                  | Verdict                                                                        |
-| ------------------ | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| Naive              | `-q standard -n 32 -R "rusage[mem=16000]"` | 500 GB, but 32 slots behind ~114000 pending jobs                               |
-| Better on standard | `-q standard -n 4 -R "rusage[mem=128000]"` | 500 GB on 4 slots; dispatches far sooner, memory is not the constraint on rome |
-| Correct            | `-q large_mem -n 8 -R "rusage[mem=64000]"` | 500 GB, matches the queue's purpose, pending is 0                              |
-
-All three reserve the same 512000 MB; only the slot count and the queue differ.
-Remember that `mem` is MB and 1 GB is 1024 MB, so 64000 is not 64 GB of a
-512 GB total — it is 62.5 GB of a 500 GB one. Take the third when the work
-genuinely sits at or above 500 GB. Take the second when the real need is
-300-450 GB and `large_mem` would be an abuse.
-
-**Two queues that are not for arrays.** `large_core_count` has 4 nodes and
-`superdome` has 3. A wide array on either will starve everyone including itself.
-Send single large jobs there; send arrays to `standard`, `priority`, or
-`large_mem`.
-
-### `short` is a CPU-time queue, not a 30-minute wall-clock queue
-
-`short` sets `CPULIMIT = 30` and **no `RUNLIMIT`**. Its own `DESCRIPTION` string
-says "hard run time limit of 30 minutes" and that description is wrong. Three
-consequences:
-
-1. **It limits CPU time, not wall clock.** An I/O-bound job that sleeps on the
-   filesystem for hours accrues almost no CPU time and is never killed.
-2. **The 30 is normalised to a reference host.** `bqueues -l short` reports
-   `30.0 min of svlprhpc02`, and `svlprhpc02` has `cpuf 60.0` while every compute
-   node has `cpuf 40.0`. The real allowance on a compute node is
-   `30 x 60/40 = 45` CPU-minutes.
-3. **CPU time sums across threads.** `LSF_HPC_EXTENSIONS="CUMULATIVE_RUSAGE"`
-   accumulates usage over all the job's processes, so a fully loaded multi-core
-   job burns the allowance `n` times faster.
-
-Safe wall-clock budget on `short`, assuming full CPU utilisation:
-
-| `-n` | CPU-minutes allowed | wall-clock before kill |
-| ---- | ------------------- | ---------------------- |
-| 1    | ~45                 | ~45 min                |
-| 2    | ~45                 | ~22 min                |
-| 4    | ~45                 | ~11 min                |
-| 8    | ~45                 | ~6 min                 |
-
-So `short` is only useful for `-n 1` or `-n 2` work. Still set `-W` on it: `-W`
-is the only wall-clock guard anywhere in the CPU queues, and a job that stalls
-on I/O will otherwise sit forever without ever tripping `CPULIMIT`.
-
-**No CPU queue sets `RUNLIMIT`.** Verified for `standard`, `priority`, `short`,
-`large_mem`, `large_core_count`, `superdome`, `heavy_io`, `interactive`, and
-`compbio`. The six queues that do set one are all cryoem or GPU queues. A job
-submitted without `-W` therefore has no wall-clock limit at all, which is why
-`-W` is not optional.
+The worked 500 GB comparison, the `short` CPU-time derivation, and the
+`RUNLIMIT` verification:
+[references/shape-and-queue.md](./references/shape-and-queue.md) sections D-E.
 
 ## 6. Probe dispatch speed before submitting
 
-Run this once before writing the `-q` line. It is a read, not a poll, so it does
-not violate the no-polling rule in `long-running-jobs`.
+Run the probe once before writing the `-q` line. It is a read, not a poll, so it
+does not violate the no-polling rule in `long-running-jobs`.
 
-```bash
-printf '%-18s %7s %7s %6s %9s %8s\n' QUEUE PEND RUN P/R FREESLOT FREEHOST
-for q in standard priority short large_mem large_core_count heavy_io interactive; do
-  read -r pend run <<<"$(bqueues -w "$q" 2>/dev/null | awk '
-    NR==1{for(i=1;i<=NF;i++){if($i=="PEND")p=i; if($i=="RUN")r=i}}
-    NR==2{print $p, $r}')"
-  hg=$(bqueues -l "$q" 2>/dev/null | awk '/^HOSTS:/{print $2}' | tr -d '/')
-  read -r fs fh <<<"$(bhosts -w "$hg" 2>/dev/null | awk 'NR>1 && $4!="-"{f=$4-$6; s+=f; if(f>0 && $2=="ok") h++} END{print s+0, h+0}')"
-  printf '%-18s %7s %7s %6s %9s %8s\n' "$q" "$pend" "$run" \
-    "$(awk -v p="$pend" -v r="$run" 'BEGIN{printf "%.1f",(r>0?p/r:p)}')" "$fs" "$fh"
-done
-```
+Read it as **`P/R` is the wait, `FREESLOT` is the headroom.** A queue with `P/R`
+near 0 and non-zero `FREESLOT` dispatches now; `standard` above 10 means hours
+to days for a wide array. Queue pressure moves hourly, so probe again before
+re-submitting.
 
-Read it as: **`P/R` is the wait, `FREESLOT` is the headroom.** A queue with
-`P/R` near 0 and non-zero `FREESLOT` dispatches now. `standard` at `P/R` above
-10 means hours to days for a wide array.
-
-**On `standard`, slots are the bottleneck and memory is not.** Of 220 rome/cn
-nodes, 210 have at least 800 GB free while only about 1900 of 14197 slots are
-free. LSF states this directly in `bjobs -p`:
-
-```
-Affinity resource requirement cannot be met because there are not enough
-processor units to satisfy the job affinity request: 30 hosts;
-Job's requirements for resource reservation not satisfied (Resource: mem): 4 hosts;
-```
-
-30 hosts blocked on cores, 4 on memory. So on `standard`, **cutting `-n` buys
-far more dispatch speed than cutting memory.** Reach for a smaller `n` with a
-larger `mem` per slot before reaching for a different queue.
+The probe script:
+[references/array-and-headers.md](./references/array-and-headers.md) section A.
 
 ## 7. Check the caps, then size the array
 
@@ -328,68 +218,27 @@ slots, the queue `JL/U`, and fairshare. LSF dynamic priority falls with
 pending backlog costs nothing and LSF self-limits as your tasks start.
 
 **Wide and thin: do not throttle `standard`.** No `JL/U`, no fairshare penalty
-for pending. Submit the full range and let LSF place whatever fits. A `%K` here
-caps only your own throughput.
+for pending. Submit the full range and let LSF place whatever fits; a `%K` here
+caps only your own throughput. The ceiling is `min(4000 / n, 4000)`.
 
 ```bash
 #BSUB -J stage-step[1-3000]      # -n 1, standard, no %K
 ```
 
-The ceiling is `min(4000 / n, 4000)`: the per-user running-slot cap and the
-array index cap. At `-n 1` both are 4000.
-
-**Split the range across queues when the backlog is long.** `priority`
-dispatches roughly 26x sooner than `standard` per job but caps at 400 jobs per
-user; `short` takes 300 more if every task finishes inside 30 minutes. Same
-script, three submissions, three job IDs to record in `PROGRESS.md`:
-
-```bash
-bsub -q priority < step.lsf      # edit -J to [1-400],    fills within minutes
-bsub -q short    < step.lsf      # edit -J to [401-700],  tasks under 30 min only
-bsub -q standard < step.lsf      # edit -J to [701-3000], absorbs the remainder
-```
-
-Only worth the extra bookkeeping when `standard` shows `P/R` above ~10 and the
-array is large. Never split a _dependent_ range this way.
-
-**Narrow and fat, or a small pool: throttle.** `%K` is the suffix on the array
-spec:
-
-```
-K = min( JL_U(queue), floor(4000 / n), floor(0.25 * FREESLOT(queue) / n) )
-```
-
+**Narrow and fat, or a small pool: throttle** with the `%K` suffix, where
+`K = min( JL_U(queue), floor(4000 / n), floor(0.25 * FREESLOT(queue) / n) )`.
 The third term keeps the job from taking more than a quarter of a pool's free
-slots. Round down to something readable.
-
-| Queue              | `n` | `JL/U` | `4000/n` | `0.25*free/n` | Use                             |
-| ------------------ | --- | ------ | -------- | ------------- | ------------------------------- |
-| `standard`         | 1   | none   | 4000     | ~260          | none, submit the full range     |
-| `standard`         | 2   | none   | 2000     | ~240          | none, or `%200` if being polite |
-| `standard`         | 8   | none   | 500      | ~60           | `%50`                           |
-| `large_mem`        | 8   | 300    | 500      | ~22           | `%20`                           |
-| `large_core_count` | 64  | 300    | 62       | ~1            | not an array queue              |
+slots.
 
 **When the unit count `N` exceeds 4000**, do not submit several arrays back to
-back. Chunk instead: keep the array narrow and give each task a contiguous slice.
+back. Chunk instead: keep the array narrow, give each task a contiguous slice,
+and size `-W` for the **chunk** rather than for one unit. Chunking also
+amortizes per-task startup, which matters below about two minutes per unit.
 
-```bash
-#BSUB -J stage-step[1-400]%200
-
-CHUNK=25                       # 400 tasks x 25 units = 10000 units
-TASKS=( ... )                  # never name this GROUPS; see long-running-jobs
-start=$(( (LSB_JOBINDEX - 1) * CHUNK ))
-fail=0
-for (( i = start; i < start + CHUNK && i < ${#TASKS[@]}; i++ )); do
-  unit="${TASKS[$i]}"
-  <command> --input "$unit" ; status=$?
-  if (( status != 0 )); then echo "[fail] $unit (exit $status)"; fail=1; fi
-done
-exit $fail
-```
-
-Chunking also amortizes per-task startup, which matters when a task is shorter
-than about two minutes. Size `-W` for the **chunk**, not for one unit.
+The split-across-queues recipe, the per-queue throttle table, and the chunking
+template:
+[references/array-and-headers.md](./references/array-and-headers.md)
+sections B-D.
 
 ## 8. Write the script
 
@@ -397,41 +246,9 @@ Use the template in `analysis-pipeline/references/script-templates.md` section B
 unchanged, and fill the header from steps 2 to 7. Only the resource lines are
 this skill's business.
 
-**Wide and thin** -- 3000 units, each single-threaded and about 6 GB:
-
-```bash
-#BSUB -J <stage>-<step>[1-3000]
-#BSUB -o logs/<stage>/<step>_%J_%I.out
-#BSUB -e logs/<stage>/<step>_%J_%I.err
-#BSUB -n 1
-#BSUB -R "rusage[mem=8000]"      # 1 x 8000 MB = 8 GB per task
-#BSUB -W 2:00
-#BSUB -q standard
-```
-
-No `%K`, no `span[hosts=1]`. At `-n 1` about 1000 tasks can start immediately
-and LSF backfills the rest as slots free up.
-
-**Narrow and fat** -- 2 units, each needing 8 threads over one 500 GB object:
-
-```bash
-#BSUB -J <stage>-<step>[1-2]%2
-#BSUB -o logs/<stage>/<step>_%J_%I.out
-#BSUB -e logs/<stage>/<step>_%J_%I.err
-#BSUB -n 8
-#BSUB -R "rusage[mem=64000]"     # 8 x 64000 MB = 512000 MB = 500 GB total
-#BSUB -R "span[hosts=1]"
-#BSUB -W 48:00
-#BSUB -q large_mem
-```
-
-- `span[hosts=1]` is required for anything shared-memory. Without it LSF may
-  spread the slots across hosts and the threads cannot see each other.
-- `-W` above the worst expected task, since the task is killed at the limit, but
-  not absurdly above it: a tight `-W` helps backfill scheduling place the job.
-- The array traps still apply: the `BASH_SOURCE` anchoring rule is in
-  `long-running-jobs` section 5, and the two silent array bugs (reserved array
-  name, swallowed exit code) are in its section 6.
+Filled headers for both shapes, with the `span[hosts=1]` and `-W` caveats:
+[references/array-and-headers.md](./references/array-and-headers.md) section E.
+The array traps themselves are `long-running-jobs` sections 5 and 6.
 
 ## 9. Smoke test, measure, retune
 
@@ -456,53 +273,35 @@ same work with roughly eight times the concurrency.
 
 ## 10. Chain stages into one submission
 
-`long-running-jobs` section 7 owns the method and the DAG submitter. This
-section holds only the site facts that decide whether a chain works here.
-Verified 2026-09-16 from `bparams -a`, `bparams -l`, `man bsub`, and
-`man lsb.params`.
+`long-running-jobs` section 7 owns the method and the DAG submitter. Four site
+facts decide whether a chain works here:
 
-| Fact                                         | Setting                          | Consequence                                                                                                                                                                              |
-| -------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Finished job records are purged after 24 h   | `CLEAN_PERIOD = 86400`           | `-w` on a job that finished more than a day ago can never resolve. Verify its outputs on disk and start a fresh root instead                                                             |
-| A name dependency resolves to the newest job | `JOB_DEP_LAST_SUB = 1`           | `-w "done(meth-matrix)"` tests only the **most recently submitted** job of that name. Convenient, and a trap after a smoke `[1-1]` under the same `-J`. **Depend on job IDs, not names** |
-| Dependencies are re-evaluated in batches     | `EVALUATE_JOB_DEPENDENCY = 1000` | a satisfied child does not start the instant its parent finishes; a few seconds of lag is normal, not a stuck job                                                                        |
-| Arrays still cap at 4000                     | `MAX_JOB_ARRAY_SIZE = 4000`      | chaining changes nothing here; each array in the chain is capped separately                                                                                                              |
+- **Finished job records are purged after 24 h** (`CLEAN_PERIOD = 86400`), so
+  `-w` on a job that finished more than a day ago can never resolve. Verify its
+  outputs on disk and start a fresh root instead.
+- **A name dependency resolves to the newest job of that name**
+  (`JOB_DEP_LAST_SUB = 1`) -- a trap after a smoke `[1-1]` under the same `-J`.
+  **Depend on job IDs, not names.**
+- **The whole-array success condition is `numdone(<jid>,*)`.** `done(<jid>[*])`
+  is element-wise pairing between two equal-sized arrays, not a whole-array
+  test; `numexit(<jid>, >0)` is the matching "did anything fail".
+- **Pending jobs are free.** Dynamic priority falls with running slots, not
+  pending ones, so there is no reason to hold stages back and submit them one
+  at a time.
 
-**The whole-array success condition is `numdone(<jid>,*)`.** This site's
-`man bsub` documents `numdone(job_ID, operator number | *)` as "the number of
-jobs in the DONE state satisfies the test. Use `*` (with no operator) to specify
-all the jobs in the array." Its `numended`, `numexit`, `numrun` and `numpend`
-siblings take the same form; `numexit(<jid>, >0)` is the matching "did anything
-fail" test.
-
-**`done(<jid>[*])` is element-wise, not whole-array.** The same man page: "Use
-the `*` with dependency conditions to define one-to-one dependency among job
-array elements such that each element of one array depends on the corresponding
-element of another array. The job array size must be identical." Writing it to
-mean "wait until the whole parent array succeeded" is wrong, and when the two
-arrays differ in size LSF pairs only what it can.
-
-`done(<jid>)` on a bare array job ID is accepted here — the `methylation_pipeline`
-release-v2 chain used it, with `323076538` held on `done(323076536)` — but this
-site's man page does not document its array semantics. Prefer
-`numdone(<jid>,*)`, which does.
-
-Pending jobs are free: `MAX_PEND_JOBS` is effectively unlimited and dynamic
-priority falls with **running** slots, not pending ones (section 7). A chain
-that sits queued all night costs no fairshare while it waits, so there is no
-reason to hold stages back and submit them one at a time.
+The `man bsub` wording, the dependency re-evaluation lag, and the evidence:
+[references/chaining-and-diagnosis.md](./references/chaining-and-diagnosis.md)
+sections A-B.
 
 ## 11. Diagnose
 
-| Symptom                                     | Command                                   | What it means                                                                                                                          |
-| ------------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| Pending for a long time                     | `bjobs -p <jobid>`                        | reports hosts blocked on cores vs on memory; act on whichever dominates                                                                |
-| Array running far fewer tasks than expected | recheck `-n` against the section 4 table  | width, not memory, is usually the cap                                                                                                  |
-| Array status                                | `bjobs -A <jobid>`                        | PEND / RUN / DONE / EXIT per array                                                                                                     |
-| Killed unexpectedly                         | `bhist -l <jobid> \| grep TERM_`          | `TERM_MEMLIMIT` = over the esub's `n` x `mem` threshold; `TERM_RUNLIMIT` = over `-W`; `TERM_CPULIMIT` = over `short`'s CPU-time budget |
-| Reserved vs used                            | `bjobs -o "... memlimit max_mem" <jobid>` | the retune input from step 9                                                                                                           |
-| Queue changed                               | rerun the step 6 probe                    | queue pressure moves hourly                                                                                                            |
-| Child still PEND after its parent finished  | `bjobs -l <child> \| grep -i -A2 depend`  | if the parent array had **any** EXIT element, `numdone(parent,*)` can never be satisfied and the child pends forever. Section 10       |
+| Symptom                 | Command                          | What it means                                                      |
+| ----------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| Pending for a long time | `bjobs -p <jobid>`               | hosts blocked on cores vs on memory; act on whichever dominates    |
+| Killed unexpectedly     | `bhist -l <jobid> \| grep TERM_` | `TERM_MEMLIMIT` / `TERM_RUNLIMIT` / `TERM_CPULIMIT` name the limit |
+| Child PEND, parent done | `bjobs -l <child>`               | one EXIT element makes `numdone(parent,*)` unsatisfiable, forever  |
 
 A wide array reporting DONE is not proof. Count real outputs, per
-`long-running-jobs` section 6.
+`long-running-jobs` section 6. Full symptom table:
+[references/chaining-and-diagnosis.md](./references/chaining-and-diagnosis.md)
+section C.

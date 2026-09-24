@@ -11,6 +11,7 @@ remote-install = "Rscript package.R"
 update-jutils = "Rscript -e 'remotes::install_github(\"chunjie-sam-liu/jutils\")'"
 sync-lab = "bash tools/sync-lab.sh"
 format = "bash tools/format.sh"
+lint = "bash tools/lint.sh"
 
 
 # Toolchain only: what every project needs to run an R script, read and write
@@ -44,6 +45,8 @@ ripgrep = ">=15.1.0,<16"
 air = ">=0.11.0,<0.12"
 go-shfmt = ">=3.14.0,<4"
 prettier = ">=3.9.6,<4"
+# R linter behind `pixi run lint`; rules in jarl.toml.
+jarl = ">=0.6.0,<0.7"
 
 
 [target.linux-64.dependencies]

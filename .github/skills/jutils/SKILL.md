@@ -1,6 +1,6 @@
 ---
 name: jutils
-description: Guide for using the jutils R package - a personal utility toolkit for data import/export, DuckDB database workflows, parallel processing, and number-formatting helpers. Use when writing R code that needs to read/write files (CSV, TSV, Parquet, Excel, JSON, YAML, RDS, QS, FST), work with DuckDB databases, run parallel computations with progress bars, format numbers and P-values for axis labels, or load multiple packages efficiently. Covers the saveplot() API only; how a figure is built, themed, colored, or laid out belongs to the r-figure skill, which is loaded instead whenever the task is the figure itself.
+description: Guide for the jutils R package - a personal utility toolkit for data import/export, DuckDB workflows, parallel processing, and number formatting. Use when writing R code that reads or writes files (CSV, TSV, Parquet, Excel, JSON, YAML, RDS, QS, FST), works with DuckDB, runs parallel computations with progress bars, formats numbers and P-values, or loads packages. Covers the saveplot() API only; how a figure is built, themed, colored, or laid out belongs to the r-figure skill, which is loaded instead whenever the task is the figure itself.
 ---
 
 # jutils R Package
@@ -78,8 +78,30 @@ code.** Several functions silently produce wrong files or wrong types.
 - Lazy by default for csv/tsv/parquet; call `collect()` to materialize
 - Eager types differ: csv/tsv → data.table, parquet/xlsx → tibble, fst →
   data.frame. Call `setDT()` when you need data.table semantics
-- **Name qs files `.qs`, never `.qs2`** — `export(df, "out.qs2")` writes
-  `out.qs`, so the round trip breaks
+- **`qs2` is the package; `.qs` is always the suffix.** This is settled — do
+  not re-derive it per script. `export()` writes through `qs2::qs_save()` and
+  `import()` reads through `qs2::qs_read()`. The old `qs` package is legacy:
+  it still has a branch and is still an undeclared runtime dependency, but
+  both branches call `build_path("qs")`, so **every qs file on disk ends
+  `.qs`** whatever the caller asked for. Never put `.qs2` in a path —
+  `export(df, "out.qs2")` produces `out.qs`, and the matching
+  `import("out.qs2")` then fails with "File does not exist".
+- **A CSV or TSV never ships alone.** Neither format stores a type, so the
+  round trip silently changes the data. Write parquet and `.qs` from the same
+  object, same stem, same directory:
+
+  ```r
+  export(df, "out.csv")
+  export(df, "out.parquet", lazy = FALSE) # lazy = TRUE writes a folder
+  export(df, "out.qs")
+
+  ```
+
+  `lazy = FALSE` is what makes the parquet a single file rather than a dataset
+  directory. A `format = c(...)` vector writes several at once from one base
+  name; check `references/io.md` for the valid format strings first, since the
+  string and the extension are not always the same word.
+
 - **`.gz` is the only compression suffix that works** with `import()`/
   `export()`, and only on the data.frame path. `.zst`/`.bz2`/`.xz`/`.zip` and
   Arrow inputs all error. Use `tbl_export()` or parquet for zstd
@@ -241,7 +263,8 @@ When writing R scripts that attach jutils, follow these conventions:
   always `collect()` before using as data.table/data.frame
 - After an eager `import()`, only csv/tsv are data.tables. Call
   `data.table::setDT()` for parquet, fst, and xlsx
-- Name qs files `.qs`, never `.qs2`
+- `qs2` is the package, `.qs` is always the suffix; never write `.qs2` in a
+  path
 - `.gz` is the only compression suffix `import()`/`export()` handle, and only
   for data.frame input
 - For DuckDB workflows, prefer `tbl_import()` + dplyr over `import()` to
@@ -270,8 +293,10 @@ When writing R scripts that attach jutils, follow these conventions:
 ### Parallel processing
 
 - Use `pbmclapply()` / `pbmcmapply()` instead of `parallel::mclapply()`
-- Wrap worker functions in `tryCatch()` for error isolation
-- Check the result for `try-error` elements — these functions never abort
+- Wrap worker functions in `tryCatch()` to isolate a failed element, never to
+  replace it with a default, an `NA`, or a placeholder
+- Check the result for `try-error` elements and report them — these functions
+  never abort, so an unchecked result hides every failure it contains
 - Decide `read_only` once per process; `db_conn()` ignores it for an
   already-pooled path
 - Always clean up DuckDB connections in parallel workers:

@@ -11,6 +11,7 @@ remote-install = "Rscript package.R"
 update-jutils = "Rscript -e 'remotes::install_github(\"chunjie-sam-liu/jutils\")'"
 sync-lab = "bash tools/sync-lab.sh"
 format = "bash tools/format.sh"
+lint = "bash tools/lint.sh"
 
 
 [dependencies]
@@ -204,6 +205,8 @@ duckdb-cli = ">=1.5.5,<2"
 air = ">=0.11.0,<0.12"
 go-shfmt = ">=3.14.0,<4"
 prettier = ">=3.9.6,<4"
+# R linter behind `pixi run lint`; rules in jarl.toml.
+jarl = ">=0.6.0,<0.7"
 
 # Modelling / teaching extras. Uncomment per project.
 # r-dotwhisker = ">=0.8.4,<0.9"

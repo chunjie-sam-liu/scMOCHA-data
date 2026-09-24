@@ -260,7 +260,7 @@ stage_paths <- function() {
 
 # --- Helpers --------------------------------------------------------------
 fn_load_cohort <- function(cohort, paths) {
-  f <- paths$interstage / glue::glue("{cohort}.qs2")
+  f <- paths$interstage / glue::glue("{cohort}.qs") # read .qs/.qs2 files
   if (!fs::file_exists(f)) cli::cli_abort("Not found: {.path {f}}")
   import(f)
 }

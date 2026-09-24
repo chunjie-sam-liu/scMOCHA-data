@@ -125,6 +125,13 @@ Always run before declaring a stage done:
 
 ```bash
 find src/NN-stage -maxdepth 1 \( -name '*.sh' -o -name '*.lsf' -o -name '*.sbatch' \) -print0 | xargs -0 -r -n1 bash -n
+pixi run lint -- src/NN-stage
+```
+
+The linter parses before it lints, so it covers the R syntax check. Only in a
+repository with no lint task, fall back to:
+
+```bash
 pixi run Rscript -e 'for (f in list.files("src/NN-stage", "\\.R$", full.names=TRUE)) tryCatch(parse(f), error=function(e) stop(f, ": ", conditionMessage(e)))'
 ```
 
@@ -174,3 +181,40 @@ The agent does NOT poll for completion; LSF + tmux are persistent.
 This grid is the canonical shape for any future ancestry / GWAS extension. The
 sibling `.md` required for every script (skill section 3) is elided from the
 table; a real stage ships one per file.
+
+## J. The track guide (`AGENTS.md`)
+
+Each track owns one `AGENTS.md` at its root; a staged track may give a stage its
+own as well. It is the orientation file: it answers **how do I work in here
+without breaking something**, and nothing else.
+
+It is read before starting work in a track, to learn the run commands and the
+pitfalls. It is not the resume file. **The resume order is always `PROGRESS.md`,
+then `DECISION.md`, then `PLAN.md`** -- `AGENTS.md` only points at which set is
+active.
+
+It holds, and holds only:
+
+- The exact run command for each step, including the directory it must be run
+  from and how the environment is entered.
+- Which script is the array wrapper and which is the single unit of work.
+- Pitfalls -- anything that has already cost a failed run, a wrong number, or an
+  hour of debugging. One line each.
+- Known drift: where the paired `.md` files or the plan now disagree with the
+  code.
+- Key output paths and the variables that hold them.
+- A pointer to the active `PLAN.md` / `PROGRESS.md` / `DECISION.md` set.
+
+It never holds run state (job IDs, counts, errors -- `PROGRESS.md`), design
+(`PLAN.md`), or rationale (`DECISION.md`). It is a guide, not a log: no dated
+sections and no append-only history. **When it disagrees with the active
+progress file, the progress file wins** -- say so in the file itself.
+
+- **Create** it the first time work happens in a track that has none.
+- **Update** it in the same change set that changes a run command, an entry
+  point, a CLI argument, an output path, or which campaign is active. Never
+  batch these to the end of a session.
+- **Add a pitfall the moment it costs something.** A failure that was diagnosed
+  and fixed but never written down gets paid for twice.
+- Keep it scannable. When a section outgrows a screen, move the detail into the
+  paired `.md` of the step it describes and leave a one-line pointer.

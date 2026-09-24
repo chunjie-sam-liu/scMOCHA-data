@@ -1,6 +1,6 @@
 ---
 name: statistical-genetics
-description: "Apply statistical-genetics conventions when writing or reviewing association analysis code. Use when fitting or reviewing a QTL, GWAS, EWAS, meQTL, eQTL, or interaction model; choosing a threshold or multiple-testing correction; selecting covariates; handling dosages, effect alleles, or strand; deciding a cis window; running ancestry-stratified or meta-analysis passes; fine-mapping or colocalizing; or judging whether a result is real. Covers the genome-build rule, the effect-allele contract, variant and sample QC, collinearity and latent-factor screening, selection-bias traps (screen-then-refit, winner's curse, double dipping), calibration (inflation, QQ, negative controls, permutation), molecular-QTL specifics (sample identity from SNP probes, probe-SNP artifacts, compositional cell fractions, technical batch, sex chromosomes), heterogeneity across ancestries, and the validity review that code review never catches."
+description: "Apply statistical-genetics conventions when writing or reviewing association analysis code. Use when fitting or reviewing a QTL, GWAS, EWAS, meQTL, eQTL, or interaction model; choosing a threshold or multiple-testing correction; selecting covariates; handling dosages, effect alleles, or strand; deciding a cis window; running ancestry-stratified or meta-analysis passes; fine-mapping or colocalizing; or judging whether a result is real. Covers the genome-build rule, the effect-allele contract, variant and sample QC, collinearity and latent-factor screening, selection-bias traps (screen-then-refit, winner's curse, double dipping), calibration, molecular-QTL specifics, heterogeneity across ancestries, and the validity review that code review never catches."
 ---
 
 # Statistical genetics
@@ -181,45 +181,33 @@ interaction scan, where true signal is sparse.
 
 Rules that apply when the outcome is a molecular phenotype measured on an
 array or by sequencing (methylation, expression, protein). Each is a failure
-mode the generic checks above do not catch.
+mode the generic checks above do not catch, and none of them inflates lambda --
+every one produces a clean QQ plot and a wrong answer.
 
-- **Sample identity before the first model.** A molecular dataset and a
-  genotype dataset are linked by a sample identifier that was typed by a
-  person. Before any QTL fit, verify identity with data: the array's own
-  genotyping probes (the SNP-probe betas an EPIC pipeline exports) or a
-  sequencing-derived genotype call against the WGS/array genotypes of the
-  supposedly same individual. Report concordance per sample, name the
-  threshold, and remove or reassign every discordant sample. A swap does not
-  inflate lambda; it silently deletes true cis signal and creates trans
-  artifacts. Sex-vs-genotype is a subset of this check, not a substitute.
-- **Probe-SNP artifacts.** A variant inside the probe body, at the extension
-  base, or at the CpG itself changes hybridization or the measured site, so a
-  cis association there is technical, not regulatory. Every cis result table
-  carries a flag column derived from the operative probe mask plus a computed
-  distance from the variant to the probe interval, and the calibration report
-  states what fraction of leads is flagged. Do not drop flagged pairs
-  silently; flag them, and report with and without.
-- **Cell-fraction covariates are compositional.** Estimated cell fractions
-  sum to one, so including all K with an intercept is exactly collinear and
-  the fit either fails or silently drops one. The plan states which coding is
-  used: K-1 fractions with the reference cell named, or a CLR/ILR transform.
-  Check the fraction estimates against the exposure and against genotype like
-  any other latent factor (section 4).
+- **Sample identity before the first model.** Verify the molecular-to-genotype
+  link with data -- the array's own SNP probes, or a sequencing-derived call --
+  not with the typed identifier. Report concordance per sample, name the
+  threshold, remove or reassign every discordant one. A swap silently deletes
+  true cis signal and creates trans artifacts.
+- **Probe-SNP artifacts.** A variant in the probe body, at the extension base,
+  or at the CpG itself makes a cis association technical, not regulatory. Carry
+  a flag column on every cis result table; flag, never drop silently, and report
+  with and without.
+- **Cell-fraction covariates are compositional.** All K plus an intercept is
+  exactly collinear. State the coding: K-1 with the reference cell named, or a
+  CLR/ILR transform. Screen the fractions like any other latent factor.
 - **Technical batch is a named covariate, not only a latent factor.** Slide,
-  plate, processing date, and array version are known and should be listed
-  explicitly with their confounding against the exposure reported. When two
-  array versions or platforms are pooled, the samples measured on both are the
-  only direct measurement of the cross-platform shift; a pooled model must
-  show that this shift is absorbed before the full scan.
-- **Sex chromosomes are a separate decision.** X and Y probes are not pooled
-  with autosomes under one model and one threshold. The plan says one of:
-  excluded; sex-stratified; or sex-adjusted with X dosage coded explicitly.
-  Y is male-only by construction. A filter that deliberately keeps sex-chromosome
-  probes has not made this decision yet; it still needs a `Q`.
-- **Outcome transform and outlier rule are per-feature.** Clamping, logit /
-  M-value transform, and outlier removal run per CpG or per gene, and the
-  per-feature N after outlier removal goes into the result table (section
-  11), not a single cohort N.
+  plate, processing date, array version, each with its confounding against the
+  exposure reported. Pooling two platforms requires showing the cross-platform
+  shift is absorbed, measured on the samples run on both.
+- **Sex chromosomes are a separate decision:** excluded, sex-stratified, or
+  sex-adjusted with X dosage coded explicitly. Not yet decided means a `Q`.
+- **Outcome transform and outlier rule are per-feature**, and the per-feature N
+  after outlier removal goes into the result table (section 11), not a single
+  cohort N.
+
+Each rule in full, with the evidence it demands:
+[references/molecular-qtl.md](./references/molecular-qtl.md).
 
 ## 9. Ancestry and heterogeneity
 

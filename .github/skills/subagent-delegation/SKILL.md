@@ -1,6 +1,6 @@
 ---
 name: subagent-delegation
-description: "Coordinate work across explorer, worker, runner, monitor, and reviewer subagents instead of doing everything inline. Use when a task spans more than two files, when the right files are not yet known, when tracing how code works or what calls what, when a script/test/build/cluster submission must run, when a submitted job must be checked or its outputs verified, when non-trivial edits need review, or when several independent areas must be understood in parallel. Covers the roles including the user-invocable coordinator, automatic delegation triggers, the subagent prompt contract, parallel vs sequential rules, the failure-and-retry loop, and model selection."
+description: "Coordinate work across explorer, worker, runner, monitor, and reviewer subagents instead of doing everything inline. Use when a task spans more than two files, when the right files are not yet known, when tracing how code works or what calls what, when a script/test/build/cluster submission must run, when a submitted job must be checked or its outputs verified, when non-trivial edits need review, or when several independent areas must be understood in parallel. Covers the roles including the user-invocable coordinator, automatic delegation triggers, the subagent prompt contract, parallel vs sequential rules, and model selection."
 ---
 
 # Subagent delegation
@@ -41,6 +41,24 @@ The editor also ships a built-in `Explore` agent. Prefer `explorer` for work in
 this repository, since it carries the repo's conventions; use `Explore` only for
 a generic throwaway lookup.
 
+### What a subagent inherits
+
+Measured 2026-09-21 with a smoke-test delegation, so no session has to guess at
+it or re-derive it. Delegation works; what does not carry over is listed on the
+right.
+
+| Inherited                                                                        | Not inherited                                                            |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `.github/copilot-instructions.md`, in full                                       | the `<agents>` list, so a subagent cannot delegate further               |
+| The `<skills>` list: name, description, path                                     | every `SKILL.md` body, which stays lazy-loaded                           |
+| The `.agent.md` body, injected as `<modeInstructions>`                           | the calling conversation, in any form                                    |
+| The `.github/instructions/` file list, with `applyTo` and description            | every `.instructions.md` body                                            |
+| The `tools:` frontmatter, enforced: `explorer` truly has no edit or execute tool | `tool_search`, so any deferred tool offered to a subagent is unreachable |
+
+A subagent therefore knows the rules and the name of every skill, but has read
+nothing. Name the skill it must load and the files it must open; never assume
+it has already seen them, and never send it after a deferred tool.
+
 ## 2. Automatic triggers
 
 Start a subagent without being asked when any of these hold:
@@ -64,7 +82,7 @@ already answerable from loaded context.
 - **Analysis only**: `explorer`
 - **Execute only**: `explorer` -> `runner`
 - **Implement only**: `explorer` -> `worker` -> `runner` (syntax gate only:
-  test suite if one exists, formatter, `bash -n`, `parse()`) -> `reviewer`.
+  test suite if one exists, formatter, `bash -n`, the lint task) -> `reviewer`.
   `worker` cannot run commands, so without this step nobody runs the gate
 - **Implement and run**: `explorer` -> `worker` -> `runner` -> `reviewer`
 - **Submit to the cluster**: `explorer` -> `worker` -> `runner` (submits, then
@@ -94,6 +112,11 @@ Never forward the whole conversation. Never ask a subagent to infer intent.
 The reply comes back only to the caller; the user never sees a subagent's
 output. Anything worth showing has to be restated in your own message.
 
+**Ask for the report in English.** A subagent inherits the language rule from
+`copilot-instructions.md` and answers in Chinese by default, but its report is
+read by you and rewritten before anyone sees it, so that translation is pure
+waste and one more place a number can shift.
+
 Pass along any hard environment rule the subagent could violate — for example,
 that scratch files go to the repository's own `tmp/` root as
 `"${tmpdir}/<task-name>/"`, never `/tmp` and never inside the repository tree,
@@ -122,6 +145,12 @@ Each subagent's model is pinned in its own `.agent.md` frontmatter:
 `monitor`, `reviewer` on `claude-sonnet-5`. The `runSubagent` `model` parameter
 overrides that for one call; use it only when a specific model is genuinely
 required.
+
+**The two fields take different spellings.** Frontmatter takes the model id
+(`claude-sonnet-5`). The `runSubagent` `model` parameter takes the display name
+`"<Model Name> (<vendor>)"` — `"Claude Sonnet 5 (copilot)"`. Passing the id
+there fails outright (verified 2026-09-21), so omit the parameter and let the
+frontmatter decide unless you have the exact display name.
 
 The frontmatter is the contract, not a verified fact about routing. Which model
 actually served a call cannot be confirmed from the local session store, so
